@@ -1,0 +1,81 @@
+import type { Treatment, TreatmentAssignment } from "../types/treatment.types"
+
+export const mockTreatments: Treatment[] = [
+  {
+    id: "trt_1",
+    name: "Limpieza dental",
+    category: "Odontología general",
+    description: "Profilaxis y control de placa bacteriana.",
+    durationMinutes: 30,
+    price: 35,
+    active: true,
+    consumption: [{ itemId: "inv_1", quantity: 1 }],
+    createdAt: "2025-09-01T08:00:00.000Z",
+  },
+  {
+    id: "trt_2",
+    name: "Ajuste de ortodoncia",
+    category: "Ortodoncia",
+    description: "Control mensual de brackets y alineación.",
+    durationMinutes: 45,
+    price: 40,
+    active: true,
+    consumption: [{ itemId: "inv_3", quantity: 4 }],
+    createdAt: "2025-09-05T08:00:00.000Z",
+  },
+  {
+    id: "trt_3",
+    name: "Endodoncia",
+    category: "Endodoncia",
+    description: "Tratamiento de conducto radicular.",
+    durationMinutes: 60,
+    price: 120,
+    active: true,
+    consumption: [
+      { itemId: "inv_2", quantity: 2 },
+      { itemId: "inv_1", quantity: 1 },
+    ],
+    createdAt: "2025-09-10T08:00:00.000Z",
+  },
+  {
+    id: "trt_4",
+    name: "Resina compuesta",
+    category: "Odontología general",
+    description: "Restauración estética con resina.",
+    durationMinutes: 40,
+    price: 55,
+    active: true,
+    consumption: [{ itemId: "inv_4", quantity: 1 }],
+    createdAt: "2025-09-15T08:00:00.000Z",
+  },
+]
+
+export const mockTreatmentAssignments: TreatmentAssignment[] = [
+  {
+    id: "asg_1",
+    treatmentId: "trt_2",
+    patientId: "pat_3",
+    totalSessions: 12,
+    completedSessions: 5,
+    status: "en_progreso",
+    startDate: "2025-11-01",
+  },
+  {
+    id: "asg_2",
+    treatmentId: "trt_1",
+    patientId: "pat_1",
+    totalSessions: 1,
+    completedSessions: 1,
+    status: "completado",
+    startDate: "2026-01-05",
+  },
+  {
+    id: "asg_3",
+    treatmentId: "trt_3",
+    patientId: "pat_4",
+    totalSessions: 3,
+    completedSessions: 1,
+    status: "en_progreso",
+    startDate: "2026-02-01",
+  },
+]

@@ -1,0 +1,48 @@
+import type { ClinicalHistoryEntry } from "../types/clinical-history.types"
+
+export const mockClinicalHistory: ClinicalHistoryEntry[] = [
+  {
+    id: "hist_1",
+    patientId: "pat_1",
+    professionalId: "prof_1",
+    date: "2025-11-10",
+    reason: "Dolor en molar inferior derecho.",
+    diagnosis: "Caries profunda en pieza 46.",
+    treatmentNotes: "Se realizó limpieza y se programó resina compuesta.",
+    attachments: ["radiografia-pieza46.jpg"],
+    createdAt: "2025-11-10T09:30:00.000Z",
+  },
+  {
+    id: "hist_2",
+    patientId: "pat_1",
+    professionalId: "prof_1",
+    date: "2026-01-05",
+    reason: "Control de rutina.",
+    diagnosis: "Sin hallazgos relevantes.",
+    treatmentNotes: "Limpieza dental preventiva realizada.",
+    attachments: [],
+    createdAt: "2026-01-05T10:00:00.000Z",
+  },
+  {
+    id: "hist_3",
+    patientId: "pat_3",
+    professionalId: "prof_2",
+    date: "2025-11-01",
+    reason: "Evaluación para tratamiento de ortodoncia.",
+    diagnosis: "Maloclusión clase II.",
+    treatmentNotes: "Se inicia plan de ortodoncia con brackets metálicos.",
+    attachments: ["evaluacion-ortodoncia.pdf"],
+    createdAt: "2025-11-01T11:00:00.000Z",
+  },
+  {
+    id: "hist_4",
+    patientId: "pat_4",
+    professionalId: "prof_3",
+    date: "2026-02-01",
+    reason: "Dolor intenso en pieza 36.",
+    diagnosis: "Pulpitis irreversible.",
+    treatmentNotes: "Se inicia tratamiento de endodoncia, primera sesión completada.",
+    attachments: ["radiografia-pieza36.jpg", "consentimiento-informado.pdf"],
+    createdAt: "2026-02-01T14:00:00.000Z",
+  },
+]
