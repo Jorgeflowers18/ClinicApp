@@ -19,9 +19,10 @@ Notificaciones para pacientes y/o personal de la clínica (recordatorios de cita
 - Toggle "Notificaciones habilitadas" en el alta/edición de paciente (`patients`), por defecto activado.
 - Indicador de "Cliente notificado" (sí/no + fecha) en el modal de detalle de cita (`appointments`).
 - Página de reporte `/notificaciones` con tabla filtrable por nombre, identificación y rango de fechas. Restringida a roles `admin` y `recepcion`.
+- Editor de la plantilla predeterminada de notificación (mensaje único con variables insertables tipo `[nombre del cliente]`, `[fecha de la cita]`, etc., con vista previa), en la misma página `/notificaciones`.
 - Detalle en [`arquitectura-frontend.md`](./arquitectura-frontend.md#notificaciones-a-pacientes).
 
-**Pendiente:** backend real (`GET /notifications`, persistencia de `notificationsEnabled` en `Patient`), definir disparadores automáticos de envío, canal real (hoy el modelo soporta email/SMS pero no hay integración), y si aplica a nivel de grupo (múltiples sedes).
+**Pendiente:** backend real (`GET/PUT /notifications/template`, `GET /notifications`, persistencia de `notificationsEnabled` en `Patient`), definir disparadores automáticos de envío, canal real (hoy el modelo soporta email/SMS pero no hay integración), si la plantilla debe variar por tipo de notificación (recordatorio/confirmación/cancelación) en vez de ser una sola, y si aplica a nivel de grupo (múltiples sedes).
 
 ## 2. Página de modificación de Perfil de la institución
 
