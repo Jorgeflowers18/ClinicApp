@@ -6,9 +6,10 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { PageHeader } from "@/shared/components/page-header"
 import { getErrorMessage } from "@/shared/lib/error-message"
 
@@ -42,6 +43,7 @@ export function PatientFormPage() {
           email: patient.email ?? "",
           address: patient.address ?? "",
           notes: patient.notes ?? "",
+          notificationsEnabled: patient.notificationsEnabled,
         }
       : undefined,
     defaultValues: {
@@ -54,6 +56,7 @@ export function PatientFormPage() {
       email: "",
       address: "",
       notes: "",
+      notificationsEnabled: true,
     },
   })
 
@@ -176,6 +179,27 @@ export function PatientFormPage() {
               {...register("notes")}
             />
             <FieldError errors={errors.notes ? [errors.notes] : undefined} />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldLabel htmlFor="notificationsEnabled" className="flex-1">
+              Notificaciones habilitadas
+              <FieldDescription>
+                El paciente recibirá recordatorios y avisos sobre sus citas. Desactívalo si prefiere no ser
+                contactado.
+              </FieldDescription>
+            </FieldLabel>
+            <Controller
+              control={control}
+              name="notificationsEnabled"
+              render={({ field }) => (
+                <Switch
+                  id="notificationsEnabled"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
           </Field>
         </FieldGroup>
 

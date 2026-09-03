@@ -12,6 +12,7 @@ export const mockPatients: Patient[] = [
     email: "maria.gonzalez@mail.com",
     address: "Av. Amazonas N34-12, Quito",
     notes: "Alergia a la penicilina.",
+    notificationsEnabled: true,
     createdAt: "2025-11-02T10:00:00.000Z",
   },
   {
@@ -25,6 +26,7 @@ export const mockPatients: Patient[] = [
     email: "carlos.perez@mail.com",
     address: "Calle Bolívar 456, Quito",
     notes: "",
+    notificationsEnabled: true,
     createdAt: "2025-11-15T14:30:00.000Z",
   },
   {
@@ -38,6 +40,7 @@ export const mockPatients: Patient[] = [
     email: "",
     address: "",
     notes: "Paciente en tratamiento de ortodoncia.",
+    notificationsEnabled: true,
     createdAt: "2025-12-01T09:15:00.000Z",
   },
   {
@@ -51,6 +54,7 @@ export const mockPatients: Patient[] = [
     email: "jorge.flores@mail.com",
     address: "Av. 6 de Diciembre 789, Quito",
     notes: "",
+    notificationsEnabled: false,
     createdAt: "2026-01-10T11:45:00.000Z",
   },
   {
@@ -64,6 +68,7 @@ export const mockPatients: Patient[] = [
     email: "valentina.suarez@mail.com",
     address: "",
     notes: "",
+    notificationsEnabled: true,
     createdAt: "2026-02-20T16:20:00.000Z",
   },
 ]

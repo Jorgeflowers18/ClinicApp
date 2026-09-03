@@ -18,6 +18,7 @@ export const patientSchema = z.object({
   email: z.string().email("Correo inválido").or(z.literal("")).optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
+  notificationsEnabled: z.boolean(),
 })
 
 export type PatientFormValues = z.infer<typeof patientSchema>

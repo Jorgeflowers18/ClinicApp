@@ -1,4 +1,5 @@
 import {
+  Bell,
   CalendarDays,
   FileText,
   LayoutDashboard,
@@ -32,6 +33,12 @@ export const navItems: NavItem[] = [
     label: "Inventario",
     to: "/inventario",
     icon: Package,
+    roles: ["admin", "recepcion"],
+  },
+  {
+    label: "Notificaciones",
+    to: "/notificaciones",
+    icon: Bell,
     roles: ["admin", "recepcion"],
   },
 ]

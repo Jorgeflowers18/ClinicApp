@@ -15,6 +15,7 @@ import { TreatmentsListPage } from "@/modules/treatments/pages/treatments-list-p
 import { InventoryItemDetailPage } from "@/modules/inventory/pages/inventory-item-detail-page"
 import { InventoryItemFormPage } from "@/modules/inventory/pages/inventory-item-form-page"
 import { InventoryListPage } from "@/modules/inventory/pages/inventory-list-page"
+import { NotificationsReportPage } from "@/modules/notifications/pages/notifications-report-page"
 
 import { AppLayout } from "./layout/app-layout"
 import { DashboardPage } from "./pages/dashboard-page"
@@ -55,6 +56,8 @@ export function AppRoutes() {
             <Route path="/inventario/nuevo" element={<InventoryItemFormPage />} />
             <Route path="/inventario/:id" element={<InventoryItemDetailPage />} />
             <Route path="/inventario/:id/editar" element={<InventoryItemFormPage />} />
+
+            <Route path="/notificaciones" element={<NotificationsReportPage />} />
           </Route>
         </Route>
       </Route>

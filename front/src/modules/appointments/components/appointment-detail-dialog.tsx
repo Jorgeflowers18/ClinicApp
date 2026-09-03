@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { formatDateTime, formatTime } from "@/shared/lib/date"
+import { useAppointmentNotifications } from "@/modules/notifications/api/notifications.queries"
 
 import { useUpdateAppointmentStatus } from "../api/appointments.queries"
 import { appointmentStatusLabels, type Appointment, type AppointmentStatus } from "../types/appointment.types"
@@ -43,8 +44,17 @@ export function AppointmentDetailDialog({
   onEdit,
 }: AppointmentDetailDialogProps) {
   const updateStatus = useUpdateAppointmentStatus()
+  const { data: notifications, isLoading: isLoadingNotifications } = useAppointmentNotifications(
+    appointment?.id
+  )
 
   if (!appointment) return null
+
+  const sentNotifications = (notifications ?? []).filter((log) => log.status === "enviada")
+  const wasNotified = sentNotifications.length > 0
+  const lastNotifiedAt = wasNotified
+    ? sentNotifications.reduce((latest, log) => (log.sentAt > latest ? log.sentAt : latest), sentNotifications[0].sentAt)
+    : undefined
 
   function changeStatus(status: AppointmentStatus) {
     if (!appointment) return
@@ -95,6 +105,21 @@ export function AppointmentDetailDialog({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Fin</span>
             <span className="font-medium">{formatTime(appointment.end)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Cliente notificado</span>
+            <div className="flex items-center gap-2">
+              {!isLoadingNotifications && (
+                <Badge variant={wasNotified ? "secondary" : "outline"}>
+                  {wasNotified ? "Sí" : "No"}
+                </Badge>
+              )}
+              {wasNotified && lastNotifiedAt && (
+                <span className="text-xs text-muted-foreground">
+                  {formatDateTime(lastNotifiedAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </div>
           </div>
           {appointment.notes && (
             <div className="border-t pt-2">

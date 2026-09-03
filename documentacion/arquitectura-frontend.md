@@ -45,6 +45,7 @@ src/
     clinical-history/
     treatments/
     inventory/
+    notifications/
 
   shared/                 # Código reutilizable entre módulos (no específico de un dominio)
     components/            # DataTable, PaginationBar, SearchInput, ConfirmDialog, PageHeader...
@@ -83,6 +84,13 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 | `treatments` | Catálogo de tratamientos, consumo de insumos por tratamiento (relación con inventario), asignaciones a pacientes con seguimiento de sesiones |
 | `clinical-history` | Registro cronológico por paciente, adjuntos (mock), acceso restringido a roles `admin` y `medico` |
 | `inventory` | CRUD de insumos, alertas de stock mínimo, historial de movimientos (entrada/salida) con ajuste de stock |
+| `notifications` | Registro (`NotificationLog`) de notificaciones enviadas a pacientes (recordatorio/confirmación/cancelación de cita, por email o SMS). Página de reporte con filtro por nombre/identificación del paciente y rango de fechas. Consumido también desde `appointments` para mostrar si el cliente ya fue notificado de una cita puntual. Solo lectura: no tiene páginas de creación/edición, las notificaciones las genera el backend |
+
+### Notificaciones a pacientes
+
+- **Preferencia por paciente:** `Patient` tiene un campo `notificationsEnabled: boolean`, editable como switch en `modules/patients/pages/patient-form-page.tsx` (crear y editar). El backend debe crear los pacientes con `notificationsEnabled: true` por defecto.
+- **Estado de una cita puntual:** `AppointmentDetailDialog` (`modules/appointments/components/appointment-detail-dialog.tsx`) consulta `useAppointmentNotifications(appointmentId)` del módulo `notifications` para mostrar si el paciente ya fue notificado de esa cita (y cuándo). Es un ejemplo del patrón ya usado en `appointments-calendar-page.tsx` de importar hooks de otro módulo de dominio directamente en vez de duplicar lógica.
+- **Reporte:** `modules/notifications/pages/notifications-report-page.tsx` lista el historial completo (`GET /notifications`), paginado y filtrable por nombre/identificación del paciente y por rango de fechas (`dateFrom`/`dateTo`). Restringido a los roles `admin` y `recepcion` (mismo criterio de acceso que `inventory`, ajustar si el negocio lo requiere distinto).
 
 ## Autenticación y autorización
 
@@ -175,6 +183,13 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - `DELETE /inventory/items/:id`
 - `GET /inventory/items/:id/movements`
 - `POST /inventory/items/:id/movements`
+
+**Notificaciones**
+- `GET /notifications` (query: `page`, `pageSize`, `search` — nombre o identificación del paciente —, `dateFrom`, `dateTo`) — reporte de notificaciones enviadas
+- `GET /notifications?appointmentId=:id` — notificaciones asociadas a una cita puntual, usado para mostrar si el paciente ya fue notificado
+
+**Pacientes (campo adicional)**
+- `POST /patients` y `PUT /patients/:id` ahora incluyen `notificationsEnabled: boolean` en el body. El backend debe persistirlo y crear los registros nuevos con `true` por defecto.
 
 ### Formato de error esperado (400)
 
