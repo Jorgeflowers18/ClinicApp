@@ -80,7 +80,9 @@ Sistema de agendamiento para citas odontológicas por especialista, tipo de proc
 
 Módulo clínico para registrar la evolución del paciente, diagnósticos, procedimientos realizados, planes de tratamiento, odontograma digital y seguimiento de cada caso.
 
-**Incluye:** odontograma, evolución por visita, diagnóstico, plan de tratamiento, consentimientos, fotos, radiografías, notas profesionales y exportación de documentos.
+**Incluye:** odontograma, periodontograma, evolución por visita, diagnóstico, plan de tratamiento, consentimientos, fotos, radiografías, notas profesionales y exportación de documentos.
+
+**Detalle adicional:** periodontograma con registro de bolsas periodontales, recesiones, sangrado, movilidad, furcaciones, placa y cálculo, además de seguimiento de salud periodontal por visita.
 
 ## 7. Inventario, compras y esterilización
 
@@ -168,3 +170,4 @@ Módulo propio para administrar proveedores de insumos/materiales como entidad (
 
 - Este backlog es de alto nivel; el detalle de diseño/implementación de cada ítem se discute al momento de tomarlo.
 - Ver [`arquitectura-frontend.md`](./arquitectura-frontend.md) para el contrato con el backend y las convenciones de módulo que debe seguir cualquier funcionalidad nueva.
+
