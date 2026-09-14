@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { addMinutes, format } from "date-fns"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -20,7 +21,12 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 import { usePatientsList } from "@/modules/patients/api/patients.queries"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
 
-import { useCreateAppointment, useProfessionals, useUpdateAppointment } from "../api/appointments.queries"
+import {
+  useCreateAppointment,
+  useProfessionals,
+  useRooms,
+  useUpdateAppointment,
+} from "../api/appointments.queries"
 import { appointmentSchema, type AppointmentFormValues } from "../types/appointment.types"
 import type { Appointment } from "../types/appointment.types"
 
@@ -40,6 +46,7 @@ export function AppointmentFormDialog({
   const isEditMode = Boolean(appointment)
   const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
   const { data: professionals } = useProfessionals()
+  const { data: rooms } = useRooms()
   const { data: treatments } = useActiveTreatments()
 
   const createAppointment = useCreateAppointment()
@@ -50,6 +57,8 @@ export function AppointmentFormDialog({
     control,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<AppointmentFormValues>({
     resolver: zodResolver(appointmentSchema),
@@ -57,6 +66,7 @@ export function AppointmentFormDialog({
       patientId: "",
       professionalId: "",
       treatmentId: "",
+      roomId: "",
       date: "",
       startTime: "",
       endTime: "",
@@ -74,6 +84,7 @@ export function AppointmentFormDialog({
         patientId: appointment.patientId,
         professionalId: appointment.professionalId,
         treatmentId: appointment.treatmentId ?? "",
+        roomId: appointment.roomId ?? "",
         date: toDateInputValue(start),
         startTime: toTimeInputValue(start),
         endTime: toTimeInputValue(end),
@@ -84,6 +95,7 @@ export function AppointmentFormDialog({
         patientId: "",
         professionalId: "",
         treatmentId: "",
+        roomId: "",
         date: initialSlot?.date ?? "",
         startTime: initialSlot?.startTime ?? "",
         endTime: initialSlot?.endTime ?? "",
@@ -91,6 +103,18 @@ export function AppointmentFormDialog({
       })
     }
   }, [open, appointment, initialSlot, reset])
+
+  function handleTreatmentChange(treatmentId: string | null, onChange: (value: string) => void) {
+    onChange(treatmentId ?? "")
+
+    const treatment = treatments?.find((item) => item.id === treatmentId)
+    const startTime = getValues("startTime")
+    if (!treatment || !startTime) return
+
+    const anchor = new Date(`2000-01-01T${startTime}`)
+    const endTime = format(addMinutes(anchor, treatment.durationMinutes), "HH:mm")
+    setValue("endTime", endTime, { shouldValidate: true, shouldDirty: true })
+  }
 
   async function onSubmit(values: AppointmentFormValues) {
     try {
@@ -114,8 +138,8 @@ export function AppointmentFormDialog({
           <DialogTitle>{isEditMode ? "Editar cita" : "Nueva cita"}</DialogTitle>
           <DialogDescription>
             {isEditMode
-              ? "Modifica los datos de la cita. Se valida disponibilidad del profesional."
-              : "Agenda una nueva cita. Se valida disponibilidad del profesional."}
+              ? "Modifica los datos de la cita. Se valida disponibilidad del profesional y del consultorio."
+              : "Agenda una nueva cita. Se valida disponibilidad del profesional y del consultorio."}
           </DialogDescription>
         </DialogHeader>
 
@@ -173,14 +197,39 @@ export function AppointmentFormDialog({
                 control={control}
                 name="treatmentId"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={(value) => handleTreatmentChange(value, field.onChange)}
+                  >
                     <SelectTrigger id="treatmentId" className="w-full">
                       <SelectValue placeholder="Selecciona un tratamiento..." />
                     </SelectTrigger>
                     <SelectContent>
                       {treatments?.map((treatment) => (
                         <SelectItem key={treatment.id} value={treatment.id}>
-                          {treatment.name}
+                          {treatment.name} · {treatment.durationMinutes} min
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="roomId">Consultorio (opcional)</FieldLabel>
+              <Controller
+                control={control}
+                name="roomId"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="roomId" className="w-full">
+                      <SelectValue placeholder="Selecciona un consultorio..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rooms?.map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

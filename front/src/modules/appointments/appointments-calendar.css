@@ -44,6 +44,25 @@
   text-decoration: line-through;
 }
 
+.rbc-event.rbc-event-no-show {
+  background-color: var(--destructive);
+  opacity: 0.35;
+  border: 1px dashed var(--destructive);
+}
+
+.rbc-event.rbc-event-block {
+  background-color: var(--muted-foreground);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.2) 4px,
+    rgba(255, 255, 255, 0.2) 8px
+  );
+  opacity: 0.6;
+  cursor: default;
+}
+
 .rbc-header,
 .rbc-time-header-content,
 .rbc-time-content,

@@ -44,17 +44,20 @@ export function RegisterMovementDialog({
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<MovementFormValues>({
     resolver: zodResolver(movementSchema),
-    defaultValues: { type: "entrada", quantity: 1, reason: "" },
+    defaultValues: { type: "entrada", quantity: 1, reason: "", expirationDate: "" },
   })
+
+  const type = watch("type")
 
   async function onSubmit(values: MovementFormValues) {
     try {
       await registerMovement.mutateAsync(values)
       toast.success("Movimiento registrado")
-      reset({ type: "entrada", quantity: 1, reason: "" })
+      reset({ type: "entrada", quantity: 1, reason: "", expirationDate: "" })
       onOpenChange(false)
     } catch (error) {
       toast.error(getErrorMessage(error))
@@ -98,6 +101,19 @@ export function RegisterMovementDialog({
               <Input id="quantity" type="number" min={1} aria-invalid={!!errors.quantity} {...register("quantity")} />
               <FieldError errors={errors.quantity ? [errors.quantity] : undefined} />
             </Field>
+
+            {type === "entrada" && (
+              <Field data-invalid={!!errors.expirationDate}>
+                <FieldLabel htmlFor="expirationDate">Fecha de vencimiento (opcional)</FieldLabel>
+                <Input
+                  id="expirationDate"
+                  type="date"
+                  aria-invalid={!!errors.expirationDate}
+                  {...register("expirationDate")}
+                />
+                <FieldError errors={errors.expirationDate ? [errors.expirationDate] : undefined} />
+              </Field>
+            )}
 
             <Field data-invalid={!!errors.reason}>
               <FieldLabel htmlFor="reason">Motivo</FieldLabel>

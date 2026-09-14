@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Bell,
   CalendarDays,
   FileText,
@@ -40,5 +41,11 @@ export const navItems: NavItem[] = [
     to: "/notificaciones",
     icon: Bell,
     roles: ["admin", "recepcion"],
+  },
+  {
+    label: "Reportes",
+    to: "/reportes",
+    icon: BarChart3,
+    roles: ["admin"],
   },
 ]

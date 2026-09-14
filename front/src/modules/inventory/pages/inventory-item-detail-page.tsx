@@ -9,10 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageHeader } from "@/shared/components/page-header"
-import { formatDateTime } from "@/shared/lib/date"
+import { formatDateOnly, formatDateTime } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
 
-import { useInventoryItem, useInventoryMovements } from "../api/inventory.queries"
+import { useInventoryItem, useInventoryLots, useInventoryMovements } from "../api/inventory.queries"
 import { RegisterMovementDialog } from "../components/register-movement-dialog"
 
 export function InventoryItemDetailPage() {
@@ -22,6 +22,7 @@ export function InventoryItemDetailPage() {
 
   const { data: item, isLoading, isError, error } = useInventoryItem(id)
   const { data: movements, isLoading: isLoadingMovements } = useInventoryMovements(id)
+  const { data: lots, isLoading: isLoadingLots } = useInventoryLots(id)
 
   if (isLoading) {
     return (
@@ -95,6 +96,50 @@ export function InventoryItemDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Lotes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingLots ? (
+            <Skeleton className="h-32 w-full" />
+          ) : lots && lots.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Recibido</TableHead>
+                  <TableHead>Cantidad restante</TableHead>
+                  <TableHead>Vencimiento</TableHead>
+                  <TableHead>Origen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lots.map((lot) => (
+                  <TableRow key={lot.id} className={lot.quantity === 0 ? "text-muted-foreground" : undefined}>
+                    <TableCell>
+                      {formatDateTime(lot.receivedAt, { year: "numeric", month: "short", day: "2-digit" })}
+                    </TableCell>
+                    <TableCell>
+                      {lot.quantity} {item.unit}
+                    </TableCell>
+                    <TableCell>
+                      {lot.expirationDate
+                        ? formatDateOnly(lot.expirationDate, { year: "numeric", month: "short", day: "2-digit" })
+                        : "Sin vencimiento"}
+                    </TableCell>
+                    <TableCell>{lot.purchaseOrderId ? "Compra" : "Manual"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Sin lotes registrados todavía.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -2,6 +2,7 @@ import { http } from "@/shared/lib/http"
 import { env } from "@/shared/lib/env"
 import { mockDelay, nextId, paginate } from "@/shared/lib/mock"
 import { ApiError, type PageQuery, type Paginated } from "@/shared/types/common"
+import { inventoryApi } from "@/modules/inventory/api/inventory.api"
 
 import { mockTreatmentAssignments, mockTreatments } from "./treatments.mock-data"
 import type { Treatment, TreatmentAssignment, TreatmentFormValues } from "../types/treatment.types"
@@ -70,6 +71,20 @@ async function advanceSessionMock(assignmentId: string): Promise<TreatmentAssign
     completedSessions,
     status: completedSessions >= assignment.totalSessions ? "completado" : assignment.status,
   }
+
+  const treatment = mockTreatments.find((item) => item.id === assignment.treatmentId)
+  if (treatment) {
+    for (const entry of treatment.consumption) {
+      await inventoryApi.registerConsumption({
+        itemId: entry.itemId,
+        quantity: entry.quantity,
+        reason: `Consumo clínico — ${treatment.name}`,
+        treatmentAssignmentId: assignment.id,
+        patientId: assignment.patientId,
+      })
+    }
+  }
+
   return mockTreatmentAssignments[index]
 }
 

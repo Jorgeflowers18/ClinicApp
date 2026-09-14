@@ -1,6 +1,6 @@
 import { http } from "@/shared/lib/http"
 import { env } from "@/shared/lib/env"
-import { mockDelay, paginate } from "@/shared/lib/mock"
+import { mockDelay, nextId, paginate } from "@/shared/lib/mock"
 import type { PageQuery, Paginated } from "@/shared/types/common"
 import { mockPatients } from "@/modules/patients/api/patients.mock-data"
 
@@ -9,7 +9,14 @@ import type {
   NotificationLog,
   NotificationTemplate,
   NotificationTemplateFormValues,
+  NotificationType,
 } from "../types/notification.types"
+
+export interface AppointmentEventInput {
+  patientId: string
+  appointmentId: string
+  type: NotificationType
+}
 
 export interface NotificationLogQuery extends PageQuery {
   dateFrom?: string
@@ -62,6 +69,30 @@ async function updateTemplateMock(values: NotificationTemplateFormValues): Promi
   return mockNotificationTemplate
 }
 
+/**
+ * Simula el disparo automático de una notificación al crear/cancelar una cita. Respeta
+ * `Patient.notificationsEnabled`. No genera `recordatorio_cita`: ese tipo requiere un
+ * scheduler que dispare por tiempo (X horas antes de la cita), algo que un mock puramente
+ * disparado por acciones del usuario no puede simular; sigue existiendo solo como dato semilla.
+ */
+async function logAppointmentEventMock(input: AppointmentEventInput): Promise<NotificationLog | null> {
+  await mockDelay(150)
+  const patient = mockPatients.find((item) => item.id === input.patientId)
+  if (!patient || !patient.notificationsEnabled) return null
+
+  const log: NotificationLog = {
+    id: nextId("ntf"),
+    patientId: input.patientId,
+    appointmentId: input.appointmentId,
+    type: input.type,
+    channel: "email",
+    status: "enviada",
+    sentAt: new Date().toISOString(),
+  }
+  mockNotifications.unshift(log)
+  return log
+}
+
 // TODO: conectar a endpoint real -> GET /notifications (API .NET), query params page/pageSize/search/dateFrom/dateTo
 async function listReal(query: NotificationLogQuery): Promise<Paginated<NotificationLog>> {
   const { data } = await http.get<Paginated<NotificationLog>>("/notifications", { params: query })
@@ -86,9 +117,17 @@ async function updateTemplateReal(values: NotificationTemplateFormValues): Promi
   return data
 }
 
+// No conecta a ningún endpoint: en producción el backend dispara esto por su cuenta desde sus
+// propios handlers de citas (POST /appointments, PATCH /appointments/:id/status), el frontend
+// no debe (ni puede) invocarlo.
+async function logAppointmentEventReal(): Promise<NotificationLog | null> {
+  return null
+}
+
 export const notificationsApi = {
   list: env.useMockApi ? listMock : listReal,
   listByAppointment: env.useMockApi ? listByAppointmentMock : listByAppointmentReal,
   getTemplate: env.useMockApi ? getTemplateMock : getTemplateReal,
   updateTemplate: env.useMockApi ? updateTemplateMock : updateTemplateReal,
+  logAppointmentEvent: env.useMockApi ? logAppointmentEventMock : logAppointmentEventReal,
 }

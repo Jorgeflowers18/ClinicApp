@@ -1,11 +1,17 @@
 import { addDays, setHours, setMinutes, startOfDay } from "date-fns"
 
-import type { Appointment, Professional } from "../types/appointment.types"
+import type { Appointment, Professional, Room, ScheduleBlock } from "../types/appointment.types"
 
 export const mockProfessionals: Professional[] = [
   { id: "prof_1", name: "Dra. Carla Ríos", specialty: "Odontología general" },
   { id: "prof_2", name: "Dr. Andrés Vega", specialty: "Ortodoncia" },
   { id: "prof_3", name: "Dra. Paula Nieto", specialty: "Endodoncia" },
+]
+
+export const mockRooms: Room[] = [
+  { id: "room_1", name: "Consultorio 1" },
+  { id: "room_2", name: "Consultorio 2" },
+  { id: "room_3", name: "Consultorio 3" },
 ]
 
 function at(dayOffset: number, hour: number, minute = 0) {
@@ -19,6 +25,7 @@ export const mockAppointments: Appointment[] = [
     patientId: "pat_1",
     professionalId: "prof_1",
     treatmentId: "trt_1",
+    roomId: "room_1",
     start: at(0, 9, 0),
     end: at(0, 9, 30),
     status: "confirmada",
@@ -30,6 +37,7 @@ export const mockAppointments: Appointment[] = [
     patientId: "pat_2",
     professionalId: "prof_2",
     treatmentId: "trt_2",
+    roomId: "room_2",
     start: at(0, 11, 0),
     end: at(0, 12, 0),
     status: "programada",
@@ -41,6 +49,7 @@ export const mockAppointments: Appointment[] = [
     patientId: "pat_3",
     professionalId: "prof_2",
     treatmentId: "trt_2",
+    roomId: "room_2",
     start: at(1, 15, 0),
     end: at(1, 16, 0),
     status: "programada",
@@ -76,6 +85,25 @@ export const mockAppointments: Appointment[] = [
     end: at(-2, 10, 0),
     status: "cancelada",
     notes: "Paciente reprogramó.",
+    createdAt: new Date().toISOString(),
+  },
+]
+
+export const mockScheduleBlocks: ScheduleBlock[] = [
+  {
+    id: "blk_1",
+    professionalId: "prof_1",
+    start: at(0, 13, 0),
+    end: at(0, 14, 0),
+    reason: "Almuerzo",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "blk_2",
+    roomId: "room_3",
+    start: at(1, 8, 0),
+    end: at(1, 12, 0),
+    reason: "Mantenimiento de equipo",
     createdAt: new Date().toISOString(),
   },
 ]

@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query"
 
 import { queryClient } from "@/shared/lib/query-client"
 import type { PageQuery } from "@/shared/types/common"
+import { inventoryKeys } from "@/modules/inventory/api/inventory.queries"
 
 import { treatmentsApi } from "./treatments.api"
 import type { TreatmentFormValues } from "../types/treatment.types"
@@ -83,6 +84,7 @@ export function useAdvanceSession(treatmentId: string) {
     mutationFn: (assignmentId: string) => treatmentsApi.advanceSession(assignmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: treatmentsKeys.assignments(treatmentId) })
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.all })
     },
   })
 }

@@ -1,11 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader } from "@/shared/components/page-header"
 import { getErrorMessage } from "@/shared/lib/error-message"
@@ -15,7 +16,7 @@ import {
   useInventoryItem,
   useUpdateInventoryItem,
 } from "../api/inventory.queries"
-import { inventoryItemSchema, type InventoryItemFormValues } from "../types/inventory.types"
+import { inventoryItemSchema, itemKindLabels, itemKinds, type InventoryItemFormValues } from "../types/inventory.types"
 
 export function InventoryItemFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -28,6 +29,7 @@ export function InventoryItemFormPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<InventoryItemFormValues>({
@@ -37,6 +39,7 @@ export function InventoryItemFormPage() {
           name: item.name,
           category: item.category,
           unit: item.unit,
+          kind: item.kind,
           minStock: item.minStock,
           unitCost: item.unitCost,
           supplier: item.supplier ?? "",
@@ -46,6 +49,7 @@ export function InventoryItemFormPage() {
       name: "",
       category: "",
       unit: "",
+      kind: "consumible",
       minStock: 0,
       unitCost: 0,
       supplier: "",
@@ -107,6 +111,30 @@ export function InventoryItemFormPage() {
               <FieldLabel htmlFor="unit">Unidad de medida</FieldLabel>
               <Input id="unit" placeholder="unidad, caja, ml..." aria-invalid={!!errors.unit} {...register("unit")} />
               <FieldError errors={errors.unit ? [errors.unit] : undefined} />
+            </Field>
+
+            <Field data-invalid={!!errors.kind}>
+              <FieldLabel htmlFor="kind">Tipo de insumo</FieldLabel>
+              <Controller
+                control={control}
+                name="kind"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="kind" className="w-full" aria-invalid={!!errors.kind}>
+                      <SelectValue placeholder="Selecciona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {itemKinds.map((kind) => (
+                        <SelectItem key={kind} value={kind}>
+                          {itemKindLabels[kind]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldError errors={errors.kind ? [errors.kind] : undefined} />
+              <FieldDescription>El instrumental esterilizable se puede registrar en ciclos de esterilización.</FieldDescription>
             </Field>
 
             <Field data-invalid={!!errors.minStock}>

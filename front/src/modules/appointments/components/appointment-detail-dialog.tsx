@@ -24,6 +24,7 @@ interface AppointmentDetailDialogProps {
   patientName: string
   professionalName: string
   treatmentName?: string
+  roomName?: string
   onEdit: () => void
 }
 
@@ -32,6 +33,7 @@ const STATUS_VARIANT: Record<AppointmentStatus, "default" | "outline" | "destruc
   confirmada: "default",
   completada: "secondary",
   cancelada: "destructive",
+  no_asistio: "destructive",
 }
 
 export function AppointmentDetailDialog({
@@ -41,6 +43,7 @@ export function AppointmentDetailDialog({
   patientName,
   professionalName,
   treatmentName,
+  roomName,
   onEdit,
 }: AppointmentDetailDialogProps) {
   const updateStatus = useUpdateAppointmentStatus()
@@ -90,6 +93,12 @@ export function AppointmentDetailDialog({
               <span className="font-medium">{treatmentName}</span>
             </div>
           )}
+          {roomName && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Consultorio</span>
+              <span className="font-medium">{roomName}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Inicio</span>
             <span className="font-medium">
@@ -136,16 +145,25 @@ export function AppointmentDetailDialog({
                 Confirmar
               </Button>
             )}
-            {appointment.status !== "completada" && appointment.status !== "cancelada" && (
-              <Button size="sm" variant="outline" onClick={() => changeStatus("completada")}>
-                Completar
-              </Button>
-            )}
-            {appointment.status !== "cancelada" && appointment.status !== "completada" && (
-              <Button size="sm" variant="outline" onClick={() => changeStatus("cancelada")}>
-                Cancelar cita
-              </Button>
-            )}
+            {appointment.status !== "completada" &&
+              appointment.status !== "cancelada" &&
+              appointment.status !== "no_asistio" && (
+                <Button size="sm" variant="outline" onClick={() => changeStatus("completada")}>
+                  Completar
+                </Button>
+              )}
+            {appointment.status !== "cancelada" &&
+              appointment.status !== "completada" &&
+              appointment.status !== "no_asistio" && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => changeStatus("no_asistio")}>
+                    Marcar inasistencia
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => changeStatus("cancelada")}>
+                    Cancelar cita
+                  </Button>
+                </>
+              )}
           </div>
           <Button size="sm" onClick={onEdit}>
             <Pencil />

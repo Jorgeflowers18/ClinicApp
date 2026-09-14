@@ -1,4 +1,44 @@
-import type { InventoryItem, StockMovement } from "../types/inventory.types"
+import type {
+  InventoryItem,
+  PurchaseOrder,
+  StockLot,
+  StockMovement,
+  SterilizationCycle,
+  Supplier,
+} from "../types/inventory.types"
+
+export const mockSuppliers: Supplier[] = [
+  {
+    id: "sup_1",
+    name: "Distribuidora Médica S.A.",
+    contactName: "Rosa Villacís",
+    phone: "022345678",
+    email: "ventas@distrimedica.com",
+    address: "Av. República 1200, Quito",
+    notes: "Entrega en 48h para bioseguridad.",
+    createdAt: "2025-09-01T08:00:00.000Z",
+  },
+  {
+    id: "sup_2",
+    name: "Farma Dental",
+    contactName: "Diego Paredes",
+    phone: "023456789",
+    email: "pedidos@farmadental.ec",
+    address: "Calle Los Cedros 45, Quito",
+    notes: "",
+    createdAt: "2025-09-05T08:00:00.000Z",
+  },
+  {
+    id: "sup_3",
+    name: "OrtoSupply",
+    contactName: "",
+    phone: "024567890",
+    email: "contacto@ortosupply.com",
+    address: "",
+    notes: "Solo pedidos mínimos de 50 unidades.",
+    createdAt: "2025-09-10T08:00:00.000Z",
+  },
+]
 
 export const mockInventoryItems: InventoryItem[] = [
   {
@@ -6,6 +46,7 @@ export const mockInventoryItems: InventoryItem[] = [
     name: "Guantes de nitrilo (caja x100)",
     category: "Bioseguridad",
     unit: "caja",
+    kind: "consumible",
     stock: 18,
     minStock: 10,
     unitCost: 8.5,
@@ -17,6 +58,7 @@ export const mockInventoryItems: InventoryItem[] = [
     name: "Anestesia local (cartucho)",
     category: "Odontología",
     unit: "unidad",
+    kind: "consumible",
     stock: 6,
     minStock: 15,
     unitCost: 1.2,
@@ -28,6 +70,7 @@ export const mockInventoryItems: InventoryItem[] = [
     name: "Brackets metálicos",
     category: "Ortodoncia",
     unit: "unidad",
+    kind: "consumible",
     stock: 120,
     minStock: 40,
     unitCost: 0.9,
@@ -39,6 +82,7 @@ export const mockInventoryItems: InventoryItem[] = [
     name: "Resina compuesta",
     category: "Odontología",
     unit: "jeringa",
+    kind: "consumible",
     stock: 9,
     minStock: 8,
     unitCost: 15.0,
@@ -50,11 +94,67 @@ export const mockInventoryItems: InventoryItem[] = [
     name: "Alcohol antiséptico 70% (litro)",
     category: "Bioseguridad",
     unit: "litro",
+    kind: "consumible",
     stock: 3,
     minStock: 5,
     unitCost: 3.4,
     supplier: "Distribuidora Médica S.A.",
     createdAt: "2025-10-20T08:00:00.000Z",
+  },
+  {
+    id: "inv_6",
+    name: "Espejo bucal",
+    category: "Instrumental",
+    unit: "unidad",
+    kind: "instrumental",
+    stock: 15,
+    minStock: 5,
+    unitCost: 4.5,
+    supplier: "Instrumental Dental Quito",
+    createdAt: "2025-11-01T08:00:00.000Z",
+  },
+]
+
+export const mockStockLots: StockLot[] = [
+  {
+    id: "lot_1",
+    itemId: "inv_1",
+    quantity: 18,
+    expirationDate: "2027-06-01",
+    receivedAt: "2026-01-05T09:00:00.000Z",
+  },
+  {
+    id: "lot_2",
+    itemId: "inv_2",
+    quantity: 6,
+    expirationDate: "2026-09-25",
+    receivedAt: "2025-12-20T09:00:00.000Z",
+  },
+  {
+    id: "lot_3",
+    itemId: "inv_3",
+    quantity: 120,
+    receivedAt: "2025-10-10T09:00:00.000Z",
+  },
+  {
+    id: "lot_4",
+    itemId: "inv_4",
+    quantity: 9,
+    expirationDate: "2026-12-01",
+    receivedAt: "2025-11-01T09:00:00.000Z",
+  },
+  {
+    id: "lot_5",
+    itemId: "inv_5",
+    quantity: 3,
+    expirationDate: "2026-10-05",
+    receivedAt: "2026-01-01T09:00:00.000Z",
+  },
+  {
+    id: "lot_6",
+    itemId: "inv_6",
+    quantity: 15,
+    receivedAt: "2025-11-01T09:00:00.000Z",
   },
 ]
 
@@ -73,6 +173,7 @@ export const mockStockMovements: StockMovement[] = [
     type: "entrada",
     quantity: 20,
     reason: "Compra a proveedor",
+    lotId: "lot_1",
     createdAt: "2026-01-05T09:00:00.000Z",
   },
   {
@@ -82,5 +183,60 @@ export const mockStockMovements: StockMovement[] = [
     quantity: 2,
     reason: "Reposición en consultorio",
     createdAt: "2026-01-12T11:30:00.000Z",
+  },
+]
+
+export const mockPurchaseOrders: PurchaseOrder[] = [
+  {
+    id: "po_1",
+    supplierId: "sup_1",
+    status: "recibida",
+    lines: [{ itemId: "inv_1", quantity: 20, unitCost: 8.5, expirationDate: "2027-06-01" }],
+    createdAt: "2026-01-04T08:00:00.000Z",
+    receivedAt: "2026-01-05T09:00:00.000Z",
+  },
+  {
+    id: "po_2",
+    supplierId: "sup_2",
+    status: "pendiente",
+    lines: [{ itemId: "inv_2", quantity: 30, unitCost: 1.25, expirationDate: "2027-02-01" }],
+    notes: "Reposición urgente, stock bajo mínimo.",
+    createdAt: "2026-01-13T08:00:00.000Z",
+  },
+  {
+    id: "po_3",
+    supplierId: "sup_3",
+    status: "cancelada",
+    lines: [{ itemId: "inv_3", quantity: 50, unitCost: 0.85 }],
+    notes: "Proveedor no pudo cumplir el plazo, se canceló.",
+    createdAt: "2025-12-01T08:00:00.000Z",
+  },
+]
+
+export const mockSterilizationCycles: SterilizationCycle[] = [
+  {
+    id: "stz_1",
+    itemIds: ["inv_6"],
+    performedAt: "2026-01-08",
+    result: "aprobado",
+    responsibleProfessionalId: "prof_1",
+    createdAt: "2026-01-08T09:00:00.000Z",
+  },
+  {
+    id: "stz_2",
+    itemIds: ["inv_6"],
+    performedAt: "2026-01-11",
+    result: "aprobado",
+    responsibleProfessionalId: "prof_3",
+    createdAt: "2026-01-11T09:00:00.000Z",
+  },
+  {
+    id: "stz_3",
+    itemIds: ["inv_6"],
+    performedAt: "2026-01-13",
+    result: "fallido",
+    responsibleProfessionalId: "prof_2",
+    notes: "Indicador biológico no viró correctamente, se repite el ciclo.",
+    createdAt: "2026-01-13T09:00:00.000Z",
   },
 ]

@@ -16,6 +16,7 @@ import { InventoryItemDetailPage } from "@/modules/inventory/pages/inventory-ite
 import { InventoryItemFormPage } from "@/modules/inventory/pages/inventory-item-form-page"
 import { InventoryListPage } from "@/modules/inventory/pages/inventory-list-page"
 import { NotificationsReportPage } from "@/modules/notifications/pages/notifications-report-page"
+import { ReportsPage } from "@/modules/reports/pages/reports-page"
 
 import { AppLayout } from "./layout/app-layout"
 import { DashboardPage } from "./pages/dashboard-page"
@@ -58,6 +59,10 @@ export function AppRoutes() {
             <Route path="/inventario/:id/editar" element={<InventoryItemFormPage />} />
 
             <Route path="/notificaciones" element={<NotificationsReportPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+            <Route path="/reportes" element={<ReportsPage />} />
           </Route>
         </Route>
       </Route>
