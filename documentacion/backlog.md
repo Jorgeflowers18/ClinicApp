@@ -8,7 +8,7 @@ Prioridades: **Alta** / **Media** / **Baja**. Estados: **Pendiente** / **En prog
 
 ## 1. Módulo de Notificaciones
 
-- **Estado:** En progreso
+- **Estado:** Completo
 - **Prioridad:** Alta
 - **Responsable:** Jorge Flores
 
@@ -52,13 +52,25 @@ Módulo central para registrar y administrar a los pacientes de la clínica odon
 
 ## 5. Agenda clínica y calendario de citas
 
-- **Estado:** Pendiente
+- **Estado:** Completado
 - **Prioridad:** Alta
 - **Responsable:** Jorge Flores
 
 Sistema de agendamiento para citas odontológicas por especialista, tipo de procedimiento, consultorio y duración estimada. Debe permitir bloqueo de horarios, reasignaciones, recordatorios automáticos y control de ausencias.
 
 **Incluye:** calendario semanal/mensual, agenda por profesional, disponibilidad por consultorio, tiempos de tratamiento, citas confirmadas y no-show.
+
+**Avance en frontend (mock):**
+- Consultorios como catálogo simple (`Room`, mismo patrón que `Professional`), asignable en el formulario de cita.
+- Hora de fin autocompletada según la duración del tratamiento elegido (sigue siendo editable).
+- Bloqueos de horario puntuales (profesional y/o consultorio, con motivo), creables/eliminables desde el calendario, con estilo visual propio.
+- Validación de disponibilidad extendida: choque de horario por profesional, por consultorio y contra bloqueos activos.
+- Nuevo estado "No asistió" (no-show) con su propio botón y color en el calendario.
+- Filtro por profesional sobre el calendario de citas.
+- Integración simulada con notificaciones: crear una cita genera un aviso de confirmación, cancelarla genera un aviso de cancelación (respeta `notificationsEnabled` del paciente); ver [`arquitectura-frontend.md`](./arquitectura-frontend.md#agenda-de-citas-consultorios-bloqueos-y-no-show).
+- Reasignaciones (cambiar profesional/consultorio/fecha/hora) ya cubiertas por el formulario de edición existente, sin pantalla adicional.
+
+**Pendiente:** backend real (nuevos endpoints `GET /rooms`, `GET/POST /schedule-blocks`, `DELETE /schedule-blocks/:id`, y que el backend dispare las notificaciones automáticas); vista de calendario con columnas por profesional (se optó por un filtro simple en esta iteración); recurrencia en bloqueos de horario (hoy solo puntuales); CRUD completo de consultorios (coordinar con el ítem 10 si el negocio lo necesita antes).
 
 ## 6. Historia clínica y tratamiento odontológico
 
@@ -72,13 +84,27 @@ Módulo clínico para registrar la evolución del paciente, diagnósticos, proce
 
 ## 7. Inventario, compras y esterilización
 
-- **Estado:** Pendiente
+- **Estado:** Completado
 - **Prioridad:** Media
 - **Responsable:** Jorge Flores
 
 Gestión del stock de insumos, materiales de consumo, equipos y productos específicos de odontología, incluyendo control de vencimientos, compras, niveles mínimos y procesos de esterilización.
 
-**Incluye:** proveedores, compras, ordenes de compra, stock crítico, trazabilidad de materiales, control de esterilización y alertas por faltantes.
+**Incluye:** compras/órdenes de compra, control de vencimientos por lote, trazabilidad de consumo clínico (vínculo real con `treatments`), stock crítico, control básico de esterilización (instrumental esterilizable + ciclos) y alertas por faltantes.
+
+**Fuera de este ítem:** gestión de proveedores como entidad propia — se separó como ítem propio, ver [ítem 11](#11-módulo-de-proveedores), ya construido: las órdenes de compra eligen el proveedor desde ese catálogo.
+
+**Avance en frontend (mock):**
+- Insumos ganan `kind` (consumible / instrumental esterilizable), con badge en el listado.
+- Control de vencimientos **por lote** (`StockLot`): cada entrada crea su propio lote con vencimiento opcional; las salidas se consumen por FEFO (primero en vencer, primero en salir). Tarjeta "Lotes" en el detalle del insumo.
+- Órdenes de compra básicas (`PurchaseOrder`: pendiente/recibida/cancelada), con líneas de insumo/cantidad/costo/vencimiento; al recibirlas se generan automáticamente los lotes y movimientos de entrada.
+- Ciclos de esterilización básicos (instrumentos incluidos, resultado, profesional responsable).
+- **Trazabilidad clínica real:** completar una sesión de un tratamiento ahora descuenta stock de verdad según `Treatment.consumption` (antes era solo un dato descriptivo sin ningún efecto).
+- Pestaña de "Stock crítico" (insumos en o bajo el mínimo).
+- `/inventario` se reorganizó en pestañas (Insumos / Compras / Esterilización / Stock crítico), sin rutas nuevas.
+- Detalle en [`arquitectura-frontend.md`](./arquitectura-frontend.md#inventario-lotes-compras-y-esterilización).
+
+**Pendiente:** backend real (nuevos endpoints de lotes/compras/esterilización, ver `back/backlog.md`). El stock crítico ya se expone como KPI en el dashboard y en `/reportes` (ítem 9).
 
 ## 8. Cobranza, pagos y facturación
 
@@ -92,13 +118,23 @@ Módulo financiero para manejo de pagos por tratamiento, cuotas, seguros, factur
 
 ## 9. Reportes, dashboard y administración
 
-- **Estado:** Pendiente
+- **Estado:** Completado
 - **Prioridad:** Media
 - **Responsable:** Jorge Flores
 
 Panel de gestión para supervisar indicadores de operación, productividad médica, volumen de pacientes, tratamiento activos, cumplimiento de agenda y salud financiera de la clínica.
 
 **Incluye:** dashboard ejecutivo, KPIs por especialista, productividad, ocupación, no-show, tratamientos activos, pagos pendientes, stock crítico y rendimiento por sede.
+
+**Avance en frontend (mock):**
+- Nuevo módulo `modules/reports` (sin datos propios: deriva todo de los demás módulos) con página `/reportes`, solo para `admin`.
+- Selector de periodo global (esta semana, este mes, últimos 30 días, este año, personalizado) aplicado a todas las pestañas.
+- Pestañas: **Agenda** (citas, completadas, no-show y tasa; gráfico por día; citas por estado; ocupación por consultorio), **Productividad** (por profesional: programadas/completadas/no asistió/canceladas/% cumplimiento + gráfico), **Tratamientos** (citas, asignaciones activas/completadas, sesiones, ingreso estimado), **Inventario** (stock crítico, compras del periodo con total, consumo del periodo).
+- Exportación CSV por tabla, generada en el navegador (`shared/lib/csv.ts`).
+- El dashboard `/` dejó de ser estático: consume los mismos hooks (pacientes, citas del mes, tratamientos en curso, insumos bajo mínimo, gráfico de citas del mes) y enlaza a `/reportes` para admin.
+- Detalle en [`arquitectura-frontend.md`](./arquitectura-frontend.md#reportes-y-dashboard).
+
+**Pendiente / fuera de este avance:** backend real (`GET /reports/*` con agregación SQL, ver `back/backlog.md`); **pagos pendientes e ingresos reales** dependen del ítem 8 (Josue Cevallos) — hoy el ingreso de tratamientos es solo estimado; **rendimiento por sede** depende del ítem 10 (no existe el concepto de sede); productividad por sesiones de tratamiento requiere agregar `professionalId` a `TreatmentAssignment` (gap de modelo, coordinar con el ítem 6); ocupación real contra horario de atención requiere los horarios institucionales del ítem 10.
 
 ## 10. Módulo de seguros, convenios y administración institucional
 
@@ -109,6 +145,22 @@ Panel de gestión para supervisar indicadores de operación, productividad médi
 Administración de la parte institucional de la clínica, incluyendo convenios, seguros, sedes, perfiles de usuarios, permisos por rol, configuración de horarios y parámetros operativos.
 
 **Incluye:** perfil de la institución, sedes, horarios de atención, permisos de roles, configuración de servicios, acuerdos con proveedores y logística interna.
+
+## 11. Módulo de Proveedores
+
+- **Estado:** Completado
+- **Prioridad:** Media
+- **Responsable:** Jorge Flores
+
+Módulo propio para administrar proveedores de insumos/materiales como entidad (no como texto libre): datos de contacto, condiciones comerciales, y relación con los insumos/órdenes de compra que abastecen. Se separó del ítem 7 (Inventario, compras y esterilización) porque merece su propio CRUD en vez de ser un campo suelto.
+
+**Avance en frontend (mock):**
+- Entidad `Supplier` (nombre, persona de contacto, teléfono, correo, dirección, notas/condiciones) dentro del módulo `inventory`.
+- Nueva pestaña "Proveedores" en `/inventario` con listado, alta, edición y eliminación (bloqueada si el proveedor tiene órdenes de compra asociadas).
+- El modal "Nueva orden" de Compras ahora elige el proveedor desde este catálogo (`supplierId`) en vez de texto libre; el detalle de orden muestra el nombre resuelto.
+- Detalle en [`arquitectura-frontend.md`](./arquitectura-frontend.md#inventario-lotes-compras-y-esterilización).
+
+**Pendiente:** backend real (`GET/POST /inventory/suppliers`, `PUT/DELETE /inventory/suppliers/:id`); migrar `InventoryItem.supplier` (proveedor habitual del insumo, hoy texto libre) a `supplierId`; coordinar con el ítem 10 (administración institucional, Josue Cevallos) para no duplicar "acuerdos con proveedores" si ese ítem termina cubriendo convenios a nivel institucional.
 
 ---
 

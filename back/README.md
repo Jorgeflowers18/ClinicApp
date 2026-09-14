@@ -4,6 +4,8 @@ Carpeta reservada para la API REST en .NET del sistema de gestión clínica. Aú
 
 El contrato completo que el frontend (`../front`) espera — endpoints, formato de error de validación (400), y notas de autenticación — está documentado en [`../documentacion/arquitectura-frontend.md`](../documentacion/arquitectura-frontend.md), sección "Endpoints que el backend .NET debe exponer".
 
+Ver [`backlog.md`](./backlog.md) para el desglose de TODOs pendientes por módulo.
+
 ## Resumen rápido
 
 - Autenticación basada en JWT (`POST /auth/login`, `POST /auth/logout`), con cookie `httpOnly` de refresh para restaurar sesión vía `GET /auth/me`.

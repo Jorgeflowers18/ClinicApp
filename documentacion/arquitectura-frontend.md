@@ -46,11 +46,12 @@ src/
     treatments/
     inventory/
     notifications/
+    reports/
 
   shared/                 # Código reutilizable entre módulos (no específico de un dominio)
     components/            # DataTable, PaginationBar, SearchInput, ConfirmDialog, PageHeader...
     hooks/                  # useDebounce, useTableQueryState
-    lib/                    # http.ts, query-client.ts, date.ts, mock.ts, error-message.ts, env.ts
+    lib/                    # http.ts, query-client.ts, date.ts, number.ts, csv.ts, mock.ts, error-message.ts, env.ts
     types/                  # Paginated<T>, ApiError, PageQuery
 
   components/ui/           # Componentes shadcn/ui (gestionados por el CLI, no editar a mano salvo necesidad)
@@ -70,6 +71,7 @@ modules/<dominio>/
     <dominio>.queries.ts        # Hooks de TanStack Query (useXList, useX, useCreateX, ...)
   components/                    # Componentes específicos del dominio (diálogos, formularios reutilizables)
   pages/                          # Páginas de listado, formulario (crear/editar) y detalle
+  lib/                            # (opcional) utilidades puras del dominio, ej. reports/lib/period.ts
 ```
 
 Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que cualquier desarrollador pueda abrir `modules/inventory` y entender `modules/treatments` por analogía, en vez de introducir una fábrica genérica de CRUD que ocultaría el comportamiento específico de cada dominio (validación de disponibilidad en citas, control de stock en inventario, etc.).
@@ -80,11 +82,43 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 |---|---|
 | `auth` | Login, store de sesión (Zustand), rutas protegidas por autenticación y por rol |
 | `patients` | CRUD completo: listado con búsqueda/paginación, formulario, detalle con tabs (citas, tratamientos, historial) |
-| `appointments` | Calendario visual (mes/semana/día) con `react-big-calendar`, crear/editar/reprogramar cita, cambio de estado, validación de disponibilidad del profesional |
+| `appointments` | Calendario visual (mes/semana/día) con `react-big-calendar`, crear/editar/reprogramar cita, cambio de estado (incluye no-show), validación de disponibilidad de profesional y consultorio, bloqueos puntuales de horario, filtro por profesional |
 | `treatments` | Catálogo de tratamientos, consumo de insumos por tratamiento (relación con inventario), asignaciones a pacientes con seguimiento de sesiones |
 | `clinical-history` | Registro cronológico por paciente, adjuntos (mock), acceso restringido a roles `admin` y `medico` |
-| `inventory` | CRUD de insumos, alertas de stock mínimo, historial de movimientos (entrada/salida) con ajuste de stock |
+| `inventory` | CRUD de insumos (consumibles/instrumental), control de vencimientos por lote (FEFO), compras/órdenes de compra, ciclos de esterilización, reporte de stock crítico, historial de movimientos con ajuste de stock |
 | `notifications` | Registro (`NotificationLog`) de notificaciones enviadas a pacientes (recordatorio/confirmación/cancelación de cita, por email o SMS). Página `/notificaciones` con editor de la plantilla predeterminada (`NotificationTemplate`, con variables insertables) y reporte del historial con filtro por nombre/identificación del paciente y rango de fechas. Consumido también desde `appointments` para mostrar si el cliente ya fue notificado de una cita puntual. Sin CRUD propio de logs: las notificaciones individuales las genera el backend, el frontend solo lee el historial y edita la plantilla |
+| `reports` | Reportería derivada (sin datos propios ni CRUD): KPIs de agenda, productividad por profesional, tratamientos e inventario, con selector de periodo global y exportación CSV en navegador. Página `/reportes` (solo `admin`). El dashboard `/` consume los mismos hooks, así portada y reportes nunca se contradicen |
+
+### Agenda de citas: consultorios, bloqueos y no-show
+
+- **Consultorios:** catálogo simple (`Room { id, name }`), mismo patrón que `Professional` (mock plano, sin CRUD propio, expuesto vía `useRooms()`). `Appointment.roomId` es opcional. Se decidió deliberadamente no construir un módulo de administración de consultorios en esta iteración; si el negocio necesita administrarlos desde la UI (equipamiento, estado, sede), coordinar con el ítem 10 del backlog (administración institucional/sedes) para no duplicar trabajo.
+- **Duración estimada:** al elegir un tratamiento en el formulario de cita, la hora de fin se autocompleta sumando `Treatment.durationMinutes` a la hora de inicio (`appointment-form-dialog.tsx`). Sigue siendo editable manualmente después.
+- **Bloqueos de horario (`ScheduleBlock`):** bloqueos puntuales (sin recurrencia) de un profesional y/o un consultorio, con motivo obligatorio. Viven en los mismos archivos que `Appointment` (`appointment.types.ts`, `appointments.api.ts`, etc.) porque la validación de choques es bidireccional entre citas y bloqueos. Se crean/eliminan desde el botón "Bloquear horario" en `/citas`; se muestran en el calendario con estilo rayado distintivo y no abren el diálogo de detalle de cita al hacer clic (abren una confirmación de eliminación).
+- **Disponibilidad:** `findAppointmentConflict` (en `appointments.api.ts`) valida, al crear/editar una cita, contra otras citas del mismo profesional, otras citas del mismo consultorio, y bloqueos de horario de cualquiera de los dos. `findScheduleBlockConflict` valida en sentido inverso: un bloqueo nuevo no puede crearse sobre una cita ya agendada (pero sí puede superponerse con otro bloqueo).
+- **No-show:** nuevo estado `no_asistio` en `AppointmentStatus`, con su propio botón "Marcar inasistencia" en `AppointmentDetailDialog` y su propia clase CSS en el calendario (distinta de "cancelada": borde punteado en vez de tachado).
+- **Filtro por profesional:** selector en `/citas` (estado local, no query param — a diferencia del filtro `?pacienteId=` que sí se enlaza desde el detalle de paciente) que filtra tanto citas como bloqueos mostrados en el calendario.
+
+### Inventario: lotes, compras y esterilización
+
+- **Tipo de insumo:** `InventoryItem.kind` distingue `consumible` de `instrumental` (instrumental esterilizable). El listado de insumos muestra un badge "Instrumental" solo para estos últimos.
+- **Lotes y vencimiento por lote (`StockLot`):** cada entrada de stock (compra o ajuste manual) crea su propio lote con cantidad restante y vencimiento opcional — un insumo puede tener varios lotes con vencimientos distintos. Las salidas se consumen por **FEFO** (primero en vencer, primero en salir): `consumeFefo` en `inventory.api.ts` recorre los lotes del insumo ordenados por vencimiento ascendente (sin vencimiento al final) y genera un `StockMovement` por cada lote tocado. El consumo automático (ver más abajo) **no bloquea si el stock no alcanza** — consume lo disponible y se detiene, a diferencia del movimiento manual de salida que sí valida no superar el stock disponible antes de ejecutarse.
+- **Compras / órdenes de compra (`PurchaseOrder`):** estado pendiente/recibida/cancelada, con líneas de insumo/cantidad/costo/vencimiento esperado. `supplierId` referencia a un `Supplier` del catálogo de proveedores (ver abajo). Al "recibir" una orden se generan automáticamente los lotes y movimientos de entrada de cada línea (`receivePurchaseOrder`), reemplazando el registro manual para compras. Las órdenes son inmutables una vez creadas: al hacer clic en una fila de la pestaña Compras se abre el mismo `PurchaseOrderFormDialog` de "Nueva orden" con la prop `order`, que lo pone en modo solo lectura (campos deshabilitados, sin agregar/quitar líneas, botón "Cerrar") — se reutiliza el formulario en vez de duplicar una vista de detalle.
+- **Proveedores (`Supplier`):** CRUD completo (nombre, contacto, teléfono, correo, dirección, notas/condiciones) en la pestaña "Proveedores" de `/inventario` (`suppliers-tab.tsx` + `supplier-form-dialog.tsx`, mismo diálogo para crear y editar vía prop `supplier`). No se puede eliminar un proveedor con órdenes de compra asociadas (`409` en el mock). Las órdenes de compra eligen el proveedor con un `Select` alimentado por `useSuppliersList()`, eliminando el texto libre anterior. `InventoryItem.supplier` (el proveedor habitual de un insumo) sigue siendo texto libre por ahora: migrarlo a `supplierId` es un pendiente menor del ítem 11.
+- **Esterilización (`SterilizationCycle`):** registro básico de ciclos (instrumentos incluidos, fecha, resultado aprobado/fallido, profesional responsable — reutiliza `Professional` de `appointments` vía `useProfessionals()`, no se creó un concepto de staff nuevo).
+- **Trazabilidad clínica real:** `treatments.api.ts` (`advanceSessionMock`) llama a `inventoryApi.registerConsumption(...)` por cada línea de `Treatment.consumption` al completar una sesión, generando movimientos de salida reales vinculados a `treatmentAssignmentId`/`patientId` — antes `consumption` era solo un dato descriptivo que nunca descontaba stock. `treatments.queries.ts`'s `useAdvanceSession` invalida además las queries de `inventory`, mismo patrón cross-módulo que ya usan `appointments`↔`notifications`.
+- **Stock crítico:** pestaña de solo lectura en `/inventario` (filtra `stock <= minStock` sobre `useInventoryList`), pensada para que el futuro dashboard (ítem 9 del backlog) la consuma como KPI sin duplicar la lógica.
+- **UI:** `/inventario` se organiza en pestañas (Insumos / Compras / Esterilización / Stock crítico) sobre el mismo `Tabs` ya usado en `patient-detail-page.tsx`; no se agregaron rutas nuevas.
+
+### Reportes y dashboard
+
+- **Sin mock-data propio:** `modules/reports/api/reports.api.ts` no tiene `reports.mock-data.ts`. Toda la reportería se deriva en memoria, en solo lectura, de los `mock*` de `appointments`, `treatments`, `inventory`, `patients` y `notifications` (mismo precedente que `notifications.api.ts` leyendo `mockPatients`). Con backend real la agregación es SQL del lado del servidor vía `GET /reports/*`; el navegador no agrega nada.
+- **Periodo:** `ReportPeriod { from, to }` en `YYYY-MM-DD`, inclusivo, hora local. Presets en `reports/lib/period.ts`: `semana`/`mes`/`año` usan el fin de calendario (incluyen citas futuras ya programadas; la etiqueta es "citas en el periodo", no "realizadas"), `últimos 30 días` es rodante hasta hoy. Campo de fecha que filtra cada entidad: citas → `start`, pacientes nuevos → `createdAt`, asignaciones → `startDate` (fecha pura, se parsea con `parseLocalDate` para evitar el desfase UTC), órdenes de compra y movimientos → `createdAt`, notificaciones → `sentAt`.
+- **KPIs puntuales vs por periodo:** `patientsTotal`, `activeTreatments` y `criticalStockItems` ignoran el periodo (son el estado actual); el resto filtra. `noShowRate = noShow / (completadas + noShow)`; `completionRate = completadas / (programadas − canceladas)`.
+- **Ingreso estimado** en tratamientos = precio × asignaciones completadas. Es provisional y está etiquetado así en la UI: no existe módulo de facturación (ítem 8 del backlog).
+- **Recálculo:** los hooks usan `refetchOnMount: "always"` en vez de invalidarse desde las mutaciones de otros módulos — la dependencia queda unidireccional (reports lee, nadie conoce a reports).
+- **CSV:** `shared/lib/csv.ts` (`downloadCsv(filename, rows, columns)`) genera el archivo en el navegador con BOM para que Excel abra acentos; cabeceras en español y orden determinista vía `columns`.
+- **Semillas mock:** las citas y notificaciones de ejemplo son relativas a hoy, pero pacientes, asignaciones y compras tienen fechas estáticas (nov-2025 a feb-2026). La página muestra un aviso solo en modo mock; no se reescribieron las semillas de otros módulos.
+- **Fuera de alcance (deliberado):** pagos pendientes / salud financiera (ítem 8) y rendimiento por sede (ítem 10) — no se muestran placeholders. Productividad por sesiones de tratamiento tampoco es posible: `TreatmentAssignment` no registra `professionalId`.
 
 ### Notificaciones a pacientes
 
@@ -92,6 +126,7 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 - **Estado de una cita puntual:** `AppointmentDetailDialog` (`modules/appointments/components/appointment-detail-dialog.tsx`) consulta `useAppointmentNotifications(appointmentId)` del módulo `notifications` para mostrar si el paciente ya fue notificado de esa cita (y cuándo). Es un ejemplo del patrón ya usado en `appointments-calendar-page.tsx` de importar hooks de otro módulo de dominio directamente en vez de duplicar lógica.
 - **Reporte:** `modules/notifications/pages/notifications-report-page.tsx` lista el historial completo (`GET /notifications`), paginado y filtrable por nombre/identificación del paciente y por rango de fechas (`dateFrom`/`dateTo`). Restringido a los roles `admin` y `recepcion` (mismo criterio de acceso que `inventory`, ajustar si el negocio lo requiere distinto).
 - **Plantilla predeterminada:** `modules/notifications/components/notification-template-editor.tsx` (usado en la misma página `/notificaciones`) edita un `NotificationTemplate` singleton (`GET`/`PUT /notifications/template`) con un único campo `message`. Los botones sobre el textarea insertan, en la posición del cursor, una variable de `notificationVariables` (`notification.types.ts`) — tokens con el formato `[nombre del cliente]`, `[fecha de la cita]`, etc. — que el backend debe reemplazar por el dato real de cada paciente/cita al momento de enviar. Incluye una vista previa que sustituye los tokens por valores de ejemplo para que el usuario vea el resultado final sin enviar nada.
+- **Disparo automático simulado:** `notificationsApi.logAppointmentEvent({ patientId, appointmentId, type })` genera un `NotificationLog` automáticamente al crear una cita (`confirmacion_cita`) y al cancelarla (`cancelacion_cita`), respetando `Patient.notificationsEnabled` (si está en `false`, no se genera nada). Se invoca desde `modules/appointments/api/appointments.queries.ts` (`useCreateAppointment`, `useUpdateAppointmentStatus`) — un módulo de dominio llamando a la API pública de otro, no a sus datos mock directamente. **Limitación conocida:** el tipo `recordatorio_cita` (aviso previo a la cita) no se puede simular así, porque requiere un disparador por tiempo (scheduler/cron) y no por una acción del usuario; en el mock solo existe como dato semilla estático. La versión real de `logAppointmentEvent` es un no-op documentado: en producción esto lo dispara el propio backend desde sus endpoints de citas.
 
 ## Autenticación y autorización
 
@@ -155,10 +190,14 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 **Citas**
 - `GET /appointments` (idealmente con filtro de rango de fechas)
 - `GET /appointments/:id`
-- `POST /appointments` (el backend debe validar disponibilidad del profesional)
+- `POST /appointments` (el backend debe validar disponibilidad del profesional y del consultorio, y disparar la notificación de confirmación)
 - `PUT /appointments/:id`
-- `PATCH /appointments/:id/status`
+- `PATCH /appointments/:id/status` (al pasar a `cancelada` el backend debe disparar la notificación de cancelación; `no_asistio` es un valor válido más de estado)
 - `GET /professionals`
+- `GET /rooms` — catálogo de consultorios
+- `GET /schedule-blocks` — bloqueos de horario vigentes
+- `POST /schedule-blocks` (el backend debe validar que no se solape con una cita ya agendada)
+- `DELETE /schedule-blocks/:id`
 
 **Historial clínico** (requiere autorización por rol en el backend, no solo en el frontend)
 - `GET /clinical-history`
@@ -174,22 +213,40 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - `PUT /treatments/:id`
 - `DELETE /treatments/:id`
 - `GET /treatments/:id/assignments`
-- `POST /treatment-assignments/:id/advance-session`
+- `POST /treatment-assignments/:id/advance-session` (el backend debe descontar stock de inventario por cada línea de `consumption` del tratamiento, igual que simula el mock)
 
 **Inventario**
 - `GET /inventory/items`
 - `GET /inventory/items/:id`
-- `POST /inventory/items`
+- `POST /inventory/items` (incluye `kind: "consumible" | "instrumental"`)
 - `PUT /inventory/items/:id`
 - `DELETE /inventory/items/:id`
 - `GET /inventory/items/:id/movements`
-- `POST /inventory/items/:id/movements`
+- `POST /inventory/items/:id/movements` (entrada admite `expirationDate` opcional, crea un lote nuevo)
+- `GET /inventory/items/:id/lots` — lotes del insumo con cantidad restante y vencimiento
+- `GET /inventory/suppliers`
+- `POST /inventory/suppliers`
+- `PUT /inventory/suppliers/:id`
+- `DELETE /inventory/suppliers/:id` (`409` si tiene órdenes de compra asociadas)
+- `GET /inventory/purchase-orders`
+- `POST /inventory/purchase-orders` (body con `supplierId`)
+- `POST /inventory/purchase-orders/:id/receive` (genera los lotes y movimientos de entrada de cada línea)
+- `POST /inventory/purchase-orders/:id/cancel`
+- `GET /inventory/sterilization-cycles`
+- `POST /inventory/sterilization-cycles`
 
 **Notificaciones**
 - `GET /notifications` (query: `page`, `pageSize`, `search` — nombre o identificación del paciente —, `dateFrom`, `dateTo`) — reporte de notificaciones enviadas
 - `GET /notifications?appointmentId=:id` — notificaciones asociadas a una cita puntual, usado para mostrar si el paciente ya fue notificado
 - `GET /notifications/template` — plantilla predeterminada de notificación (mensaje con variables sin reemplazar, ej. `[nombre del cliente]`)
 - `PUT /notifications/template` — actualiza el mensaje de la plantilla predeterminada (body: `{ message: string }`)
+
+**Reportes** (solo rol `admin`; `from`/`to` en `YYYY-MM-DD`, inclusivos, zona horaria de la clínica; las respuestas siguen las interfaces de `modules/reports/types/report.types.ts`)
+- `GET /reports/summary?from&to`
+- `GET /reports/agenda?from&to`
+- `GET /reports/productivity?from&to`
+- `GET /reports/treatments?from&to`
+- `GET /reports/inventory?from&to`
 
 **Pacientes (campo adicional)**
 - `POST /patients` y `PUT /patients/:id` ahora incluyen `notificationsEnabled: boolean` en el body. El backend debe persistirlo y crear los registros nuevos con `true` por defecto.
