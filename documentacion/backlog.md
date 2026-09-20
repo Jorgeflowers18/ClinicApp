@@ -104,13 +104,21 @@ Panel de gestión para supervisar indicadores de operación, productividad médi
 
 ## 10. Módulo de seguros, convenios y administración institucional
 
-- **Estado:** Pendiente
+- **Estado:** Completado
 - **Prioridad:** Media
 - **Responsable:** Josue Cevallos
 
 Administración de la parte institucional de la clínica, incluyendo convenios, seguros, sedes, perfiles de usuarios, permisos por rol, configuración de horarios y parámetros operativos.
 
 **Incluye:** perfil de la institución, sedes, horarios de atención, permisos de roles, configuración de servicios, acuerdos con proveedores y logística interna.
+
+**Avance realizado hoy:**
+- perfil institucional con edición y guardado persistente
+- identidad visual con carga de logo
+- creación manual de sedes desde la interfaz
+- primera vez: bloqueo de acceso hasta completar perfil del usuario
+- perfil de usuario editable más adelante desde el menú del usuario
+- soporte de modo claro y oscuro
 
 ---
 
