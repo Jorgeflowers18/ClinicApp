@@ -3,11 +3,21 @@ import { z } from "zod"
 export const roles = ["admin", "recepcion", "medico"] as const
 export type Role = (typeof roles)[number]
 
+export interface UserProfile {
+  fullName: string
+  title: string
+  specialty: string
+  bio: string
+  avatarColor: string
+  avatarImage: string | null
+}
+
 export interface AuthUser {
   id: string
   name: string
   email: string
   role: Role
+  profile: UserProfile | null
 }
 
 export interface LoginResponse {

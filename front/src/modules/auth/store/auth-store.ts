@@ -2,12 +2,13 @@ import { create } from "zustand"
 
 import { env } from "@/shared/lib/env"
 
-import type { AuthUser } from "../types/auth.types"
+import type { AuthUser, UserProfile } from "../types/auth.types"
 
 interface AuthState {
   accessToken: string | null
   user: AuthUser | null
   setSession: (token: string, user: AuthUser) => void
+  updateUserProfile: (profile: UserProfile | null) => void
   clearSession: () => void
 }
 
@@ -43,6 +44,21 @@ export const useAuthStore = create<AuthState>((set) => ({
       sessionStorage.setItem(MOCK_SESSION_KEY, JSON.stringify({ accessToken, user }))
     }
     set({ accessToken, user })
+  },
+  updateUserProfile: (profile) => {
+    set((state) => {
+      if (!state.user) {
+        return state
+      }
+
+      const nextUser = { ...state.user, profile }
+
+      if (env.useMockApi) {
+        sessionStorage.setItem(MOCK_SESSION_KEY, JSON.stringify({ accessToken: state.accessToken, user: nextUser }))
+      }
+
+      return { ...state, user: nextUser }
+    })
   },
   clearSession: () => {
     if (env.useMockApi) {

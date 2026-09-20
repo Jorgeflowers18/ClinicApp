@@ -2,7 +2,9 @@ import { useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { Navigate, useLocation } from "react-router-dom"
-import { Eye, EyeOff, Stethoscope } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
+
+import { readInstitutionProfile } from "@/modules/institution/types/institution.types"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +20,7 @@ export function LoginPage() {
   const location = useLocation()
   const login = useLogin()
   const [showPassword, setShowPassword] = useState(false)
+  const institutionProfile = readInstitutionProfile()
 
   const {
     register,
@@ -30,7 +33,8 @@ export function LoginPage() {
 
   if (user) {
     const redirectTo = (location.state as { from?: string } | null)?.from ?? "/"
-    return <Navigate to={redirectTo} replace />
+    const nextTarget = user.profile && user.profile.fullName.trim() ? redirectTo : "/perfil-usuario"
+    return <Navigate to={nextTarget} replace />
   }
 
   function onSubmit(values: LoginFormValues) {
@@ -41,10 +45,14 @@ export function LoginPage() {
     <div className="flex min-h-svh items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Stethoscope className="size-5" />
-          </div>
-          <h1 className="text-xl font-semibold">ClinicApp</h1>
+          {institutionProfile.logoImage ? (
+            <img src={institutionProfile.logoImage} alt="Logo de la clínica" className="size-11 rounded-xl object-cover" />
+          ) : (
+            <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground">
+              {institutionProfile.logoText || "CA"}
+            </div>
+          )}
+          <h1 className="text-xl font-semibold">{institutionProfile.name}</h1>
           <p className="text-sm text-muted-foreground">Inicia sesión para continuar</p>
         </div>
 

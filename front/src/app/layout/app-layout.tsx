@@ -1,5 +1,8 @@
-import { NavLink, Outlet } from "react-router-dom"
-import { LogOut, Stethoscope } from "lucide-react"
+import { NavLink, Outlet, useNavigate } from "react-router-dom"
+import { LogOut, MoonStar, SunMedium } from "lucide-react"
+import { useTheme } from "next-themes"
+
+import { readInstitutionProfile } from "@/modules/institution/types/institution.types"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -7,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -35,7 +37,10 @@ function getInitials(name: string) {
 export function AppLayout() {
   const user = useAuthStore((state) => state.user)
   const logout = useLogout()
+  const navigate = useNavigate()
+  const { theme, setTheme } = useTheme()
   const isLoggingOut = logout.isPending
+  const institutionProfile = readInstitutionProfile()
 
   const handleLogout = () => {
     if (!isLoggingOut) {
@@ -51,10 +56,14 @@ export function AppLayout() {
     <div className="grid min-h-svh grid-cols-[224px_1fr]">
       <aside className="flex flex-col border-r bg-muted/20">
         <div className="flex items-center gap-2 border-b px-4 py-4">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Stethoscope className="size-4" />
-          </div>
-          <span className="font-semibold">ClinicApp</span>
+          {institutionProfile.logoImage ? (
+            <img src={institutionProfile.logoImage} alt="Logo de la clínica" className="size-8 rounded-lg object-cover" />
+          ) : (
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
+              {institutionProfile.logoText || "CA"}
+            </div>
+          )}
+          <span className="font-semibold">{institutionProfile.name}</span>
         </div>
 
         <nav className="flex-1 space-y-1 p-3">
@@ -91,10 +100,23 @@ export function AppLayout() {
 
       <div className="flex min-w-0 flex-col">
         <header className="flex items-center justify-end gap-3 border-b px-6 py-3">
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="inline-flex size-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:text-foreground"
+            aria-label="Cambiar tema"
+          >
+            {theme === "dark" ? <SunMedium className="size-4" /> : <MoonStar className="size-4" />}
+          </button>
+
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted">
               <Avatar className="size-8">
-                <AvatarFallback>{user ? getInitials(user.name) : "?"}</AvatarFallback>
+                {user?.profile?.avatarImage ? (
+                  <img src={user.profile.avatarImage} alt="Avatar del usuario" className="size-full rounded-full object-cover" />
+                ) : (
+                  <AvatarFallback>{user ? getInitials(user.name) : "?"}</AvatarFallback>
+                )}
               </Avatar>
               <div className="text-left">
                 <p className="text-sm font-medium leading-none">{user?.name}</p>
@@ -104,7 +126,9 @@ export function AppLayout() {
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">{user?.email}</div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/perfil-usuario")}>Mi perfil</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}

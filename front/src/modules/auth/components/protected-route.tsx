@@ -15,6 +15,11 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
+  const profileNeedsSetup = !user.profile || !user.profile.fullName?.trim()
+  if (location.pathname !== "/perfil-usuario" && profileNeedsSetup) {
+    return <Navigate to="/perfil-usuario" replace state={{ from: location.pathname }} />
+  }
+
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/403" replace />
   }

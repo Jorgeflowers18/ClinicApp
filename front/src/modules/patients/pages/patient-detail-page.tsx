@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, CalendarDays, FileText, Pencil, Stethoscope } from "lucide-react"
+import { ArrowLeft, CalendarDays, FileText, Pencil, ShieldCheck, Stethoscope, UserRound } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,7 @@ import { calculateAge, formatDateOnly } from "@/shared/lib/date"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 
 import { usePatient } from "../api/patients.queries"
+import { treatmentStatusLabels } from "../types/patient.types"
 
 const GENDER_LABELS: Record<string, string> = {
   femenino: "Femenino",
@@ -100,10 +101,80 @@ export function PatientDetailPage() {
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Notas</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">Estado y observaciones</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm">{patient.notes || "Sin notas registradas."}</p>
+          <CardContent className="space-y-4 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">{treatmentStatusLabels[patient.treatmentStatus ?? "activo"]}</Badge>
+              <Badge variant={patient.notificationsEnabled ? "default" : "outline"}>
+                {patient.notificationsEnabled ? "Notificaciones activadas" : "Notificaciones desactivadas"}
+              </Badge>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Notas de atención</p>
+              <p>{patient.notes || "Sin notas registradas."}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Última visita</p>
+              <p>{patient.lastVisitAt ? formatDateOnly(patient.lastVisitAt) : "Sin registro"}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <UserRound className="size-4" />
+              Historial médico
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p className="font-medium">Antecedentes</p>
+            <p>{patient.medicalHistory || "Sin antecedentes médicos registrados."}</p>
+            <p className="font-medium">Alergias</p>
+            <p>{patient.allergies || "Sin alergias registradas."}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <ShieldCheck className="size-4" />
+              Emergencia y seguro
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div>
+              <p className="text-muted-foreground">Contacto</p>
+              <p className="font-medium">{patient.emergencyContactName || "—"}</p>
+              <p>{patient.emergencyContactPhone || "—"}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Seguro / convenio</p>
+              <p className="font-medium">{patient.insuranceProvider || "—"}</p>
+              <p>{patient.insurancePolicy || "—"}</p>
+            </div>
+            <p className="text-muted-foreground">Consentimiento informado</p>
+            <p>{patient.consentSigned ? "Firmado" : "No firmado"}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <FileText className="size-4" />
+              Documentos
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p className="font-medium">Historial del paciente</p>
+            <p>{patient.medicalHistory ? "Documentación clínica disponible" : "Sin documentación clínica registrada"}</p>
+            <p className="font-medium">Consentimientos</p>
+            <p>{patient.consentSigned ? "Consentimiento firmado" : "Consentimiento pendiente"}</p>
+            <p className="font-medium">Notificaciones</p>
+            <p>{patient.notificationsEnabled ? "Habilitadas" : "Deshabilitadas"}</p>
           </CardContent>
         </Card>
       </div>

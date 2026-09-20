@@ -20,7 +20,7 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 import { formatDateTime } from "@/shared/lib/date"
 
 import { useDeletePatient, usePatientsList } from "../api/patients.queries"
-import type { Patient } from "../types/patient.types"
+import { treatmentStatusLabels, type Patient } from "../types/patient.types"
 
 export function PatientsListPage() {
   const navigate = useNavigate()
@@ -48,6 +48,15 @@ export function PatientsListPage() {
     },
     { key: "phone", header: "Teléfono", cell: (row) => row.phone },
     { key: "email", header: "Correo", cell: (row) => row.email || "—" },
+    {
+      key: "treatmentStatus",
+      header: "Estado",
+      cell: (row) => (
+        <span className="inline-flex rounded-full border border-border px-2 py-1 text-xs font-medium">
+          {treatmentStatusLabels[row.treatmentStatus ?? "activo"]}
+        </span>
+      ),
+    },
     {
       key: "createdAt",
       header: "Registrado",

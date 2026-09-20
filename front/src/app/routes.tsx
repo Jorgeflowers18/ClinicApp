@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom"
 
 import { ProtectedRoute } from "@/modules/auth/components/protected-route"
 import { LoginPage } from "@/modules/auth/pages/login-page"
+import { UserProfilePage } from "@/modules/auth/pages/user-profile-page"
 import { PatientDetailPage } from "@/modules/patients/pages/patient-detail-page"
 import { PatientFormPage } from "@/modules/patients/pages/patient-form-page"
 import { PatientsListPage } from "@/modules/patients/pages/patients-list-page"
@@ -15,6 +16,7 @@ import { TreatmentsListPage } from "@/modules/treatments/pages/treatments-list-p
 import { InventoryItemDetailPage } from "@/modules/inventory/pages/inventory-item-detail-page"
 import { InventoryItemFormPage } from "@/modules/inventory/pages/inventory-item-form-page"
 import { InventoryListPage } from "@/modules/inventory/pages/inventory-list-page"
+import { InstitutionProfilePage } from "@/modules/institution/pages/institution-profile-page"
 import { NotificationsReportPage } from "@/modules/notifications/pages/notifications-report-page"
 import { ReportsPage } from "@/modules/reports/pages/reports-page"
 
@@ -30,6 +32,7 @@ export function AppRoutes() {
       <Route path="/403" element={<ForbiddenPage />} />
 
       <Route element={<ProtectedRoute />}>
+        <Route path="/perfil-usuario" element={<UserProfilePage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
 
@@ -62,6 +65,7 @@ export function AppRoutes() {
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+            <Route path="/perfil-institucion" element={<InstitutionProfilePage />} />
             <Route path="/reportes" element={<ReportsPage />} />
           </Route>
         </Route>

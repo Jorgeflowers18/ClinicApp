@@ -8,15 +8,33 @@ import type { AuthUser, LoginFormValues, LoginResponse } from "../types/auth.typ
 const MOCK_ACCOUNTS: Array<{ password: string; user: AuthUser }> = [
   {
     password: "admin123",
-    user: { id: "usr_1", name: "Ana Morales", email: "admin@clinica.com", role: "admin" },
+    user: {
+      id: "usr_1",
+      name: "Ana Morales",
+      email: "admin@clinica.com",
+      role: "admin",
+      profile: null,
+    },
   },
   {
     password: "recepcion123",
-    user: { id: "usr_2", name: "Luis Fernández", email: "recepcion@clinica.com", role: "recepcion" },
+    user: {
+      id: "usr_2",
+      name: "Luis Fernández",
+      email: "recepcion@clinica.com",
+      role: "recepcion",
+      profile: null,
+    },
   },
   {
     password: "medico123",
-    user: { id: "usr_3", name: "Dra. Carla Ríos", email: "medico@clinica.com", role: "medico" },
+    user: {
+      id: "usr_3",
+      name: "Dra. Carla Ríos",
+      email: "medico@clinica.com",
+      role: "medico",
+      profile: null,
+    },
   },
 ]
 
