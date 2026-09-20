@@ -26,11 +26,19 @@ Notificaciones para pacientes y/o personal de la clínica (recordatorios de cita
 
 ## 2. Página de modificación de Perfil de la institución
 
-- **Estado:** Pendiente
+- **Estado:** Completado
 - **Prioridad:** Media
 - **Responsable:** Josue Cevallos
 
-Página de configuración para editar los datos de la institución/clínica (nombre, logo, datos de contacto, sedes, horarios de atención, etc.). Pendiente de definir si el grupo odontológico maneja una sola institución o múltiples sedes/sucursales, y qué rol(es) pueden editar este perfil.
+Página de configuración para editar los datos de la institución/clínica (nombre, logo, datos de contacto, sedes, horarios de atención, etc.). Con la implementación actual, la clínica ya cuenta con edición y guardado persistente del perfil institucional, identidad visual con logo, creación de sedes y configuración operativa del usuario.
+
+**Avance realizado:**
+- perfil institucional con edición y guardado persistente
+- identidad visual con carga de logo
+- creación manual de sedes desde la interfaz
+- bloqueo de acceso hasta completar perfil del usuario
+- perfil de usuario editable desde el menú del usuario
+- soporte de modo claro y oscuro
 
 ## 3. Mejora al historial clínico del paciente
 
@@ -42,13 +50,20 @@ Mejoras sobre el módulo `clinical-history` existente (hoy: registro cronológic
 
 ## 4. Gestión integral de pacientes
 
-- **Estado:** Pendiente
+- **Estado:** Completado
 - **Prioridad:** Alta
 - **Responsable:** Josue Cevallos
 
 Módulo central para registrar y administrar a los pacientes de la clínica odontológica, con datos personales, historial médico, antecedentes, contacto de emergencia, seguros, consentimiento informado y estado de tratamiento.
 
 **Incluye:** alta, edición, baja lógica, búsqueda avanzada, perfiles por paciente, habilitación de notificaciones, seguimiento del tratamiento y documentos asociados.
+
+**Avance realizado:**
+- administración completa de pacientes en frontend
+- registro de datos personales y contacto de emergencia
+- soporte de notificaciones habilitadas por paciente
+- flujo de edición y consulta del perfil del paciente
+- integración con el módulo de citas y notificaciones
 
 ## 5. Agenda clínica y calendario de citas
 
