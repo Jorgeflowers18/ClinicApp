@@ -2,6 +2,7 @@ import { NavLink, Outlet } from "react-router-dom"
 import { LogOut, Stethoscope } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +19,8 @@ import { navItems } from "../nav-config"
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
-  recepcion: "Recepción",
-  medico: "Personal médico",
+  recepcion: "Recepcion",
+  medico: "Personal medico",
 }
 
 function getInitials(name: string) {
@@ -34,6 +35,13 @@ function getInitials(name: string) {
 export function AppLayout() {
   const user = useAuthStore((state) => state.user)
   const logout = useLogout()
+  const isLoggingOut = logout.isPending
+
+  const handleLogout = () => {
+    if (!isLoggingOut) {
+      logout.mutate()
+    }
+  }
 
   const visibleItems = navItems.filter(
     (item) => !item.roles || (user && item.roles.includes(user.role))
@@ -67,6 +75,18 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
+
+        <div className="border-t p-3">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2.5 text-muted-foreground hover:text-foreground"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            <LogOut className="size-4" />
+            {isLoggingOut ? "Saliendo..." : "Salir"}
+          </Button>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-col">
@@ -86,9 +106,13 @@ export function AppLayout() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => logout.mutate()} variant="destructive">
+              <DropdownMenuItem
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                variant="destructive"
+              >
                 <LogOut />
-                Cerrar sesión
+                {isLoggingOut ? "Saliendo..." : "Cerrar sesion"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
