@@ -14,4 +14,12 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    rolldownOptions: {
+      input: {
+        app: path.resolve(import.meta.dirname, 'index.html'),
+        odontogram: path.resolve(import.meta.dirname, 'odontogram.html'),
+      },
+    },
+  },
 })

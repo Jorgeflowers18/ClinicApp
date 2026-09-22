@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom"
+import { lazy, Suspense } from "react"
 
 import { ProtectedRoute } from "@/modules/auth/components/protected-route"
 import { LoginPage } from "@/modules/auth/pages/login-page"
@@ -18,12 +19,15 @@ import { InventoryItemFormPage } from "@/modules/inventory/pages/inventory-item-
 import { InventoryListPage } from "@/modules/inventory/pages/inventory-list-page"
 import { InstitutionProfilePage } from "@/modules/institution/pages/institution-profile-page"
 import { NotificationsReportPage } from "@/modules/notifications/pages/notifications-report-page"
+import { FinancePage } from "@/modules/finance/pages/finance-page"
 import { ReportsPage } from "@/modules/reports/pages/reports-page"
 
 import { AppLayout } from "./layout/app-layout"
 import { DashboardPage } from "./pages/dashboard-page"
 import { ForbiddenPage } from "./pages/forbidden-page"
 import { NotFoundPage } from "./pages/not-found-page"
+
+const DentalHistoryPage = lazy(() => import("@/modules/clinical-history/dental/dental-history-page").then((module) => ({ default: module.DentalHistoryPage })))
 
 export function AppRoutes() {
   return (
@@ -49,6 +53,7 @@ export function AppRoutes() {
           <Route path="/tratamientos/:id/editar" element={<TreatmentFormPage />} />
 
           <Route element={<ProtectedRoute allowedRoles={["admin", "medico"]} />}>
+            <Route path="/historial-clinico/paciente/:patientId/odontologia" element={<Suspense fallback={<p>Cargando historia odontológica…</p>}><DentalHistoryPage /></Suspense>} />
             <Route path="/historial-clinico" element={<ClinicalHistoryListPage />} />
             <Route path="/historial-clinico/nuevo" element={<ClinicalHistoryFormPage />} />
             <Route path="/historial-clinico/:id" element={<ClinicalHistoryDetailPage />} />
@@ -62,6 +67,7 @@ export function AppRoutes() {
             <Route path="/inventario/:id/editar" element={<InventoryItemFormPage />} />
 
             <Route path="/notificaciones" element={<NotificationsReportPage />} />
+            <Route path="/finanzas" element={<FinancePage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>

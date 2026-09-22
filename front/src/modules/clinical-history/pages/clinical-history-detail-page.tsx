@@ -53,10 +53,13 @@ export function ClinicalHistoryDetailPage() {
           title={patient ? `${patient.firstName} ${patient.lastName}` : "Registro clínico"}
           description={formatDateOnly(entry.date, { day: "2-digit", month: "long", year: "numeric" })}
           actions={
+            <div className="flex flex-wrap gap-2">
+            <Button onClick={() => navigate(`/historial-clinico/paciente/${entry.patientId}/odontologia`)}>Historia odontológica</Button>
             <Button variant="outline" onClick={() => navigate(`/historial-clinico/${entry.id}/editar`)}>
               <Pencil />
               Editar
             </Button>
+            </div>
           }
         />
       </div>

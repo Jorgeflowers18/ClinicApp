@@ -3,6 +3,7 @@ import {
   Bell,
   Building2,
   CalendarDays,
+  CreditCard,
   FileText,
   LayoutDashboard,
   Package,
@@ -41,6 +42,12 @@ export const navItems: NavItem[] = [
     label: "Notificaciones",
     to: "/notificaciones",
     icon: Bell,
+    roles: ["admin", "recepcion"],
+  },
+  {
+    label: "Finanzas",
+    to: "/finanzas",
+    icon: CreditCard,
     roles: ["admin", "recepcion"],
   },
   {

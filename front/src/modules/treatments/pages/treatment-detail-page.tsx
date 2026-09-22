@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Pencil, Plus } from "lucide-react"
+import { ArrowLeft, CreditCard, Pencil, Plus } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,7 @@ import {
   useTreatment,
   useTreatmentAssignments,
 } from "../api/treatments.queries"
+import { useTreatmentFinancialSummary } from "@/modules/finance/api/finance.queries"
 import { assignmentStatusLabels } from "../types/treatment.types"
 
 export function TreatmentDetailPage() {
@@ -28,6 +29,7 @@ export function TreatmentDetailPage() {
   const { data: assignments, isLoading: isLoadingAssignments } = useTreatmentAssignments(id)
   const { data: inventoryPage } = useInventoryList({ page: 1, pageSize: 100 })
   const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
+  const { data: financialSummary } = useTreatmentFinancialSummary(id)
   const advanceSession = useAdvanceSession(id ?? "")
 
   if (isLoading) {
@@ -68,10 +70,16 @@ export function TreatmentDetailPage() {
           title={treatment.name}
           description={treatment.category}
           actions={
-            <Button variant="outline" onClick={() => navigate(`/tratamientos/${treatment.id}/editar`)}>
-              <Pencil />
-              Editar
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => navigate(`/tratamientos/${treatment.id}/editar`)}>
+                <Pencil />
+                Editar
+              </Button>
+              <Button variant="secondary" onClick={() => navigate("/finanzas")}>
+                <CreditCard />
+                Ver finanzas
+              </Button>
+            </div>
           }
         />
       </div>
@@ -109,6 +117,40 @@ export function TreatmentDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Resumen financiero</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {financialSummary ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <div>
+                <p className="text-sm text-muted-foreground">Valor tratamiento</p>
+                <p className="text-xl font-semibold">${financialSummary.totalValue.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Seguro</p>
+                <p className="text-xl font-semibold">${financialSummary.insuranceCovered.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Responsabilidad paciente</p>
+                <p className="text-xl font-semibold">${financialSummary.patientResponsibility.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pagado</p>
+                <p className="text-xl font-semibold">${financialSummary.totalPaid.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pendiente</p>
+                <p className="text-xl font-semibold">${financialSummary.pendingBalance.toFixed(2)}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Sin información financiera disponible.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

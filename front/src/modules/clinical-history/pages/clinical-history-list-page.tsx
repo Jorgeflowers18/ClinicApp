@@ -1,4 +1,5 @@
 import { useNavigate, useSearchParams } from "react-router-dom"
+import { useState } from "react"
 import { Plus, X } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -20,6 +21,7 @@ export function ClinicalHistoryListPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const patientId = searchParams.get("pacienteId") ?? undefined
+  const [dentalPatientId, setDentalPatientId] = useState("")
 
   const { search, setSearch, debouncedSearch, page, setPage, pageSize } = useTableQueryState()
   const { data, isLoading, isError, error } = useClinicalHistoryList({
@@ -64,6 +66,21 @@ export function ClinicalHistoryListPage() {
           </Button>
         }
       />
+
+      <section className="flex flex-wrap items-end gap-4 rounded-xl border bg-card p-4">
+        <div className="min-w-0 flex-1 space-y-1">
+          <h2 className="font-medium">Historia y tratamiento odontológico</h2>
+          <p className="text-sm text-muted-foreground">Odontograma, periodontograma, evolución, planes de tratamiento y documentos por visita.</p>
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="dental-patient" className="text-sm font-medium">Paciente de la historia odontológica</label>
+          <select id="dental-patient" className="block h-9 w-full rounded-md border bg-background px-3 text-sm" value={dentalPatientId || patientId || ""} onChange={(event) => setDentalPatientId(event.target.value)}>
+            <option value="">Selecciona un paciente</option>
+            {patientsPage?.items.map((patient) => <option key={patient.id} value={patient.id}>{patient.firstName} {patient.lastName}</option>)}
+          </select>
+        </div>
+        <Button disabled={!(dentalPatientId || patientId)} onClick={() => navigate(`/historial-clinico/paciente/${dentalPatientId || patientId}/odontologia`)}>Abrir historia odontológica</Button>
+      </section>
 
       {filteredPatient && (
         <div className="flex w-fit items-center gap-2 rounded-lg border bg-muted/40 px-3 py-1.5 text-sm">
