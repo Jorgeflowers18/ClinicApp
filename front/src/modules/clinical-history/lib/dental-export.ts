@@ -1,4 +1,4 @@
-import { attachmentLabels, treatmentLabels, type DentalRecord, type DentalVisit } from "./types"
+import { attachmentLabels, treatmentLabels, type DentalRecord, type DentalVisit } from "../types/dental-record.types"
 
 export function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob)

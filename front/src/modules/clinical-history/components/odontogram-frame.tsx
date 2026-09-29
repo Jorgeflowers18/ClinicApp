@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { useTheme } from "next-themes"
-import type { ChartSnapshot, DentalVisit } from "./types"
+import type { ChartSnapshot, DentalVisit } from "../types/dental-record.types"
 
 export interface ChartHandle { snapshot: () => ChartSnapshot | null }
 

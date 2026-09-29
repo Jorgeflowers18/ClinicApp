@@ -27,7 +27,7 @@ import { DashboardPage } from "./pages/dashboard-page"
 import { ForbiddenPage } from "./pages/forbidden-page"
 import { NotFoundPage } from "./pages/not-found-page"
 
-const DentalHistoryPage = lazy(() => import("@/modules/clinical-history/dental/dental-history-page").then((module) => ({ default: module.DentalHistoryPage })))
+const DentalHistoryPage = lazy(() => import("@/modules/clinical-history/pages/dental-history-page").then((module) => ({ default: module.DentalHistoryPage })))
 
 export function AppRoutes() {
   return (

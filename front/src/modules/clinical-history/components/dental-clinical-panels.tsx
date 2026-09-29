@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { treatmentLabels, type DentalVisit, type TreatmentStage } from "./types"
+import { treatmentLabels, type DentalVisit, type TreatmentStage } from "../types/dental-record.types"
 
 type Props = { visit: DentalVisit; readOnly: boolean; update: (patch: Partial<DentalVisit>) => void }
 export const selectClass = "h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60"

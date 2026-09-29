@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { readRecord, writeRecord } from "./repository"
-import { newVisit, type DentalRecord, type DentalVisit } from "./types"
+import { readRecord, writeRecord } from "../api/dental-record.storage"
+import { newVisit, type DentalRecord, type DentalVisit } from "../types/dental-record.types"
 
 export function useDentalRecord(patientId: string, professional: string) {
   const [record, setRecord] = useState<DentalRecord | null>(null)

@@ -15,12 +15,12 @@ import { formatDateOnly } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { env } from "@/shared/lib/env"
 import type { Patient } from "@/modules/patients/types/patient.types"
-import { useDentalRecord } from "./use-dental-record"
-import { OdontogramFrame, type ChartHandle } from "./odontogram-frame"
-import { newVisit, type DentalVisit } from "./types"
-import { ConsultationPanel, ConsentPanel, TreatmentPanel } from "./clinical-panels"
-import { AttachmentsPanel } from "./attachments-panel"
-import { downloadBlob, exportRecord, printVisit, visitDocument } from "./export"
+import { useDentalRecord } from "../hooks/use-dental-record"
+import { OdontogramFrame, type ChartHandle } from "../components/odontogram-frame"
+import { newVisit, type DentalVisit } from "../types/dental-record.types"
+import { ConsultationPanel, ConsentPanel, TreatmentPanel } from "../components/dental-clinical-panels"
+import { AttachmentsPanel } from "../components/dental-attachments-panel"
+import { downloadBlob, exportRecord, printVisit, visitDocument } from "../lib/dental-export"
 
 export function DentalHistoryPage() {
   const { patientId } = useParams<{ patientId: string }>()

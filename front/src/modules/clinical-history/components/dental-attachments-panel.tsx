@@ -4,10 +4,10 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { readFile, storeFile } from "./repository"
-import { attachmentLabels, type AttachmentKind, type DentalAttachment, type DentalVisit } from "./types"
-import { downloadBlob } from "./export"
-import { selectClass } from "./clinical-panels"
+import { readFile, storeFile } from "../api/dental-record.storage"
+import { attachmentLabels, type AttachmentKind, type DentalAttachment, type DentalVisit } from "../types/dental-record.types"
+import { downloadBlob } from "../lib/dental-export"
+import { selectClass } from "./dental-clinical-panels"
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"])
 const maxSize = 20 * 1024 * 1024

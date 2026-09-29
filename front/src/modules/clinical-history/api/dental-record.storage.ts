@@ -1,5 +1,5 @@
 import { env } from "@/shared/lib/env"
-import type { DentalRecord } from "./types"
+import type { DentalRecord } from "../types/dental-record.types"
 
 // Local demo adapter. IndexedDB keeps binary attachments out of localStorage.
 // A revision check prevents another browser tab from silently overwriting a visit.
