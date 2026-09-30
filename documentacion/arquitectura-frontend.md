@@ -15,6 +15,7 @@ Este documento describe cómo está construido el frontend (`front/`) del sistem
 | Cliente HTTP | Axios con interceptores |
 | Gráficas | Recharts |
 | Calendario de citas | `react-big-calendar` con localizer de `date-fns` |
+| Odontograma / periodontograma | `react-advanced-odontogram` 2.6.0, instalado desde `front/vendor/react-advanced-odontogram-2.6.0.tgz` y ejecutado dentro de un iframe (segunda entrada de Vite: `odontogram.html`) |
 
 **Nota sobre shadcn/ui:** este proyecto usa el estilo `base-nova`, construido sobre `@base-ui/react` en vez de Radix UI. Los componentes generados usan props como `render` (polimorfismo, equivalente a `asChild` de Radix) y `checked`/`onCheckedChange` en switches. Al agregar nuevos componentes con `npx shadcn@latest add <componente>`, revisa el archivo generado antes de usarlo: algunos componentes del registro público (como `form`) no existen en este estilo — en su lugar se usa el primitivo `field` (`src/components/ui/field.tsx`) combinado manualmente con React Hook Form.
 
@@ -72,7 +73,11 @@ modules/<dominio>/
   components/                    # Componentes específicos del dominio (diálogos, formularios reutilizables)
   pages/                          # Páginas de listado, formulario (crear/editar) y detalle
   lib/                            # (opcional) utilidades puras del dominio, ej. reports/lib/period.ts
+  hooks/                          # (opcional) hooks del dominio que no son queries, ej. clinical-history/hooks/use-visit-autosave.ts
+  embed/                          # (opcional) código que corre en otro documento (iframe), ej. clinical-history/embed/odontogram-entry.tsx
 ```
+
+Los archivos cuyo nombre contiene `.mock-` (por ejemplo `<dominio>.mock-data.ts` o `clinical-history.mock-storage.ts`) son solo-mock: ver [Código solo-mock](#código-solo-mock).
 
 Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que cualquier desarrollador pueda abrir `modules/inventory` y entender `modules/treatments` por analogía, en vez de introducir una fábrica genérica de CRUD que ocultaría el comportamiento específico de cada dominio (validación de disponibilidad en citas, control de stock en inventario, etc.).
 
@@ -84,7 +89,7 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 | `patients` | CRUD completo: listado con búsqueda/paginación, formulario, detalle con tabs (citas, tratamientos, historial) |
 | `appointments` | Calendario visual (mes/semana/día) con `react-big-calendar`, crear/editar/reprogramar cita, cambio de estado (incluye no-show), validación de disponibilidad de profesional y consultorio, bloqueos puntuales de horario, filtro por profesional |
 | `treatments` | Catálogo de tratamientos, consumo de insumos por tratamiento (relación con inventario), asignaciones a pacientes con seguimiento de sesiones |
-| `clinical-history` | Registro cronológico por paciente, adjuntos (mock), acceso restringido a roles `admin` y `medico` |
+| `clinical-history` | Historia clínica odontológica única por paciente, organizada en visitas (borrador → cerrada): odontograma y periodontograma, evolución y diagnóstico, plan de tratamiento con el catálogo (crea asignaciones en `treatments`), consentimientos, fotos y documentos, indicadores periodontales y exportación. Lista global de visitas en `/historial-clinico` e historia del paciente en `/historial-clinico/paciente/:patientId`. Acceso restringido a roles `admin` y `medico`. Ver [Historia clínica odontológica](#historia-clínica-odontológica) |
 | `inventory` | CRUD de insumos (consumibles/instrumental), control de vencimientos por lote (FEFO), compras/órdenes de compra, ciclos de esterilización, reporte de stock crítico, historial de movimientos con ajuste de stock |
 | `notifications` | Registro (`NotificationLog`) de notificaciones enviadas a pacientes (recordatorio/confirmación/cancelación de cita, por email o SMS). Página `/notificaciones` con editor de la plantilla predeterminada (`NotificationTemplate`, con variables insertables) y reporte del historial con filtro por nombre/identificación del paciente y rango de fechas. Consumido también desde `appointments` para mostrar si el cliente ya fue notificado de una cita puntual. Sin CRUD propio de logs: las notificaciones individuales las genera el backend, el frontend solo lee el historial y edita la plantilla |
 | `reports` | Reportería derivada (sin datos propios ni CRUD): KPIs de agenda, productividad por profesional, tratamientos e inventario, con selector de periodo global y exportación CSV en navegador. Página `/reportes` (solo `admin`). El dashboard `/` consume los mismos hooks, así portada y reportes nunca se contradicen |
@@ -128,6 +133,32 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 - **Plantilla predeterminada:** `modules/notifications/components/notification-template-editor.tsx` (usado en la misma página `/notificaciones`) edita un `NotificationTemplate` singleton (`GET`/`PUT /notifications/template`) con un único campo `message`. Los botones sobre el textarea insertan, en la posición del cursor, una variable de `notificationVariables` (`notification.types.ts`) — tokens con el formato `[nombre del cliente]`, `[fecha de la cita]`, etc. — que el backend debe reemplazar por el dato real de cada paciente/cita al momento de enviar. Incluye una vista previa que sustituye los tokens por valores de ejemplo para que el usuario vea el resultado final sin enviar nada.
 - **Disparo automático simulado:** `notificationsApi.logAppointmentEvent({ patientId, appointmentId, type })` genera un `NotificationLog` automáticamente al crear una cita (`confirmacion_cita`) y al cancelarla (`cancelacion_cita`), respetando `Patient.notificationsEnabled` (si está en `false`, no se genera nada). Se invoca desde `modules/appointments/api/appointments.queries.ts` (`useCreateAppointment`, `useUpdateAppointmentStatus`) — un módulo de dominio llamando a la API pública de otro, no a sus datos mock directamente. **Limitación conocida:** el tipo `recordatorio_cita` (aviso previo a la cita) no se puede simular así, porque requiere un disparador por tiempo (scheduler/cron) y no por una acción del usuario; en el mock solo existe como dato semilla estático. La versión real de `logAppointmentEvent` es un no-op documentado: en producción esto lo dispara el propio backend desde sus endpoints de citas.
 
+### Historia clínica odontológica
+
+Ítem 6 del backlog. Reemplaza al "historial clínico clásico" (formularios `clinical-history-{form,detail}-page.tsx`, retirados) y homologa el odontograma, que antes guardaba en IndexedDB sin API ni React Query.
+
+- **Modelo (`types/clinical-history.types.ts`):** una sola entidad `DentalVisit` con estado `borrador → cerrada`. Hay como máximo un borrador por paciente y las visitas cerradas son de solo lectura. `DentalRecord { patientId, visits }` agrupa las visitas de un paciente. Cada visita guarda `professionalId` (ya no texto libre), `appointmentId` opcional, el estado completo del odontograma (`chart: ChartSnapshot`), el plan, los consentimientos y los adjuntos. `revision` implementa concurrencia optimista: cada guardado envía la revisión que leyó y un desfase responde `409`. La librería del odontograma solo se importa con `import type` fuera de `embed/`.
+- **Rutas:** `/historial-clinico` es la lista global de visitas (búsqueda por paciente, motivo o diagnóstico; filtros de paciente con `?pacienteId=`, profesional y estado). `/historial-clinico/paciente/:patientId` es la historia del paciente (carga diferida). La visita mostrada se elige por `?visita=`, luego por `?cita=`, luego el borrador en curso y por último la última visita cerrada. Las rutas antiguas redirigen (`pages/clinical-history-redirects.tsx`): `/…/paciente/:patientId/odontologia` → historia del paciente, `/historial-clinico/nuevo?pacienteId=` → historia del paciente, `/historial-clinico/:id` y `/:id/editar` → lista. Todas viven dentro de `ProtectedRoute allowedRoles={["admin", "medico"]}`.
+- **Página del paciente (`pages/patient-clinical-history-page.tsx`):** cabecera con selector de visita y botón "Nueva visita" / "Continuar borrador" (`components/visit-header.tsx`). "Nueva visita" abre `components/start-visit-dialog.tsx` (RHF + Zod: cita opcional, profesional y fecha). Elegir una cita precarga su fecha y su profesional; si no, el profesional por defecto es el del usuario logueado buscado por nombre (`hooks/use-default-professional.ts`, provisional hasta que `/auth/me` exponga `professionalId`). La visita nueva copia el odontograma de la última visita cerrada y arrastra los ítems "Propuesto" no asignados.
+- **Espacio de trabajo (`components/visit-workspace.tsx`):** un único `useForm` con `visitFormSchema` y `FormProvider`; cada pestaña es un componente que usa `useFormContext`. Pestañas: odontograma (`odontogram-frame.tsx`, siempre montado y, en las otras pestañas, oculto con `invisible` pero con su tamaño real, porque la librería mide el editor para exportar la imagen), evolución y diagnóstico (`consultation-tab.tsx`), plan (`treatment-plan-tab.tsx` + `plan-item-form.tsx`), consentimientos (`consents-tab.tsx`, `useFieldArray`), fotos y documentos (`attachments-tab.tsx`) y seguimiento (`follow-up-tab.tsx`). Encima, KPIs con `KpiCard` de `reports` y, debajo, la exportación (`export-card.tsx`). Las visitas cerradas muestran los campos con `readOnly` y los `Select` deshabilitados.
+- **Autoguardado (`hooks/use-visit-autosave.ts`):** el borrador se guarda solo, sin validar, con debounce de 350 ms y en serie (cada guardado usa la revisión devuelta por el anterior). Actualiza la caché con `updateCachedVisit` sin refetch, avisa antes de salir con cambios pendientes y guarda lo pendiente al desmontar. Un `409` muestra un `Alert` con "Recargar historia"; otros errores ofrecen "Reintentar". `useDentalRecord` usa `refetchOnWindowFocus: false` para que un refetch no pise el borrador en edición.
+- **Cierre de la visita:** "Cerrar visita" valida el formulario completo con Zod. Si hay errores, los muestra en línea con `FieldError`, marca la pestaña afectada con un punto y salta a la primera que los tiene. Tras confirmar con `ConfirmDialog`, `useCloseVisit` ejecuta la secuencia en el frontend (mismo criterio que citas → notificaciones):
+  1. crea una `TreatmentAssignment` por cada ítem "Aprobado · en curso" o "Realizado en esta visita" (`treatmentsApi.createAssignment`, idempotente por `sourcePlanItemId`), y avanza una sesión en los "Realizado" (lo que descuenta inventario);
+  2. guarda el borrador con los `assignmentId`, así un reintento no duplica asignaciones;
+  3. cierra la visita (`POST /clinical-history/visits/:id/close`); un `400` con `fieldErrors` se mapea a los campos con `form.setError`;
+  4. pasa la cita vinculada a "completada" si estaba programada o confirmada. Este paso no es fatal: si falla, la visita queda cerrada y se muestra un aviso.
+
+  Invalida historia clínica, tratamientos, inventario, finanzas y citas. Con backend real, esta secuencia debería ser una sola transacción del endpoint de cierre.
+- **Plan de tratamiento:** cada ítem se elige del catálogo de tratamientos activos (nombre y precio); los ítems de texto libre de la versión anterior se conservan con la etiqueta "Texto libre anterior" y no pueden aprobarse sin tratamiento. La pestaña muestra además los tratamientos asignados al paciente con su progreso real (`usePatientAssignments`), con enlace a `/tratamientos/:id`. Si una asignación no existe (deriva del mock, ver abajo) se muestra "Asignación no disponible".
+- **Citas:** vínculo opcional visita ↔ cita (una cita solo puede estar en una visita, `409` en caso contrario). El diálogo de detalle de cita tiene el botón "Abrir historia clínica" (solo `admin`/`medico`, citas programadas, confirmadas o completadas), que navega a `?cita=`: si la cita ya tiene visita la abre; si no, propone iniciarla con la cita preseleccionada.
+- **Indicadores (`lib/chart-indicators.ts`):** funciones puras sobre el payload del odontograma (la librería no exporta sus cálculos): piezas presentes, ausentes e implantes, piezas con caries, sitios sondeados, sitios con bolsa ≥ 4 mm, recesiones, % de sangrado al sondaje, índice de placa de O'Leary y piezas con movilidad, furcación y cálculo. La pestaña de seguimiento los muestra para la visita y grafica su evolución entre visitas con Recharts (`periodontal-evolution-chart.tsx`), con porcentajes y conteos en gráficos separados.
+- **Odontograma en iframe:** el editor corre en `/odontogram.html` (`embed/odontogram-entry.tsx`) para aislar sus estilos y dependencias pesadas. Se comunica con la página por `postMessage` en el canal `clinicapp:odontogram` (`ready`, `init`, `initialized`, `change`, `theme`, `theme-change`, `error`, y `capture-image` → `image` para pedir la imagen del odontograma). `odontogram-frame.tsx` envía al iframe los tokens reales del tema (`--background`, `--card`, `--foreground`, `--muted-foreground`, `--border`, `--primary`, `--chart-2`), que `embed/odontogram-theme.css` usa como variables `--clinic-*`, así que sigue el modo claro/oscuro de la app.
+- **Exportación (`lib/dental-export.ts` + `components/export-card.tsx`):** "Imprimir / Guardar PDF" y "Documento de la visita" generan el mismo documento HTML (todo dato del usuario se escapa) con la **imagen del odontograma incrustada** como PNG. La imagen la dibuja el exportador de la propia librería (`exportImage`), que entrega un SVG independiente del tema a un enlace de descarga; al recibir `capture-image`, el iframe intercepta solo ese clic y devuelve el PNG en vez de descargarlo, y reintenta si la librería está ocupada con otra exportación. Durante la captura se oculta el aviso de progreso de la librería y los números de las piezas se fuerzan a un color oscuro, porque el fondo de la imagen siempre es blanco. Si no se obtiene la imagen, el documento sale igual con el aviso "Imagen del odontograma no disponible". La ventana de impresión se abre dentro del mismo clic, para que el navegador no la bloquee, y se imprime cuando la imagen termina de cargar. El menú «Exportar» del editor no cambia: sigue ofreciendo su propio informe PDF, imágenes, SVG y FHIR. "Historia completa JSON" exporta el registro completo; en modo mock sirve de respaldo de lo guardado en el navegador.
+- **Detalle del paciente:** la pestaña "Historial clínico" muestra `components/patient-clinical-summary.tsx` (visitas cerradas, última visita, próximo control y borrador en curso) con un único botón "Abrir historia clínica". Se quitó el botón duplicado del encabezado.
+- **Integración con Tratamientos y Finanzas:** `TreatmentAssignment` tiene `sourceVisitId` y `sourcePlanItemId` opcionales. `treatmentsApi` suma `listAssignmentsByPatient` y `createAssignment`, y `useAdvanceSession` también invalida las asignaciones por paciente. En `finance.mock-data.ts`, la cartera pasó de una constante calculada al cargar el módulo a `buildPortfolioRows()`, calculada en cada llamada, para que las asignaciones nuevas aparezcan en Finanzas.
+- **Persistencia mock:** IndexedDB `clinicapp-dental-v1` (versión 1, almacenes `records` y `files`) en `api/clinical-history.mock-storage.ts`. Las visitas guardadas con la forma anterior se normalizan al leer (`api/clinical-history.mock-migration.ts`), sin reescribirse hasta el siguiente guardado: el profesional en texto libre se convierte en `professionalId` por nombre y se conserva en `legacyProfessionalName`. Los 4 registros de ejemplo del historial clásico se insertan una sola vez como visitas cerradas (`api/clinical-history.mock-data.ts`, bandera `clinicapp-clinical-history-seeded-v1` en `localStorage`). **Deriva conocida:** citas y asignaciones viven en memoria y se reinician al recargar, mientras las visitas persisten en IndexedDB; por eso una visita puede referenciar una asignación que ya no existe.
+- **Pruebas:** `front/tests/dental-history.spec.ts` (Playwright) cubre la visita completa (odontograma real, tema oscuro, validación al cerrar, plan con catálogo, recarga del borrador, cierre con asignación, exportaciones con la imagen del odontograma incrustada y no en blanco, el menú «Exportar» del editor y adjuntos), la visita iniciada desde una cita, las redirecciones y el `403` para recepción.
+
 ## Autenticación y autorización
 
 - **Login:** `modules/auth/pages/login-page.tsx` usa React Hook Form + Zod. Al autenticar, `useLogin` (TanStack Query mutation) guarda `{ accessToken, user }` en el store de Zustand (`modules/auth/store/auth-store.ts`).
@@ -160,6 +191,26 @@ export const patientsApi = {
 ```
 
 Las funciones `*Real` ya están escritas contra los endpoints esperados (ver más abajo) y quedan listas para activarse con solo cambiar la variable de entorno — no requieren tocar páginas ni hooks de React Query. Todas están marcadas con `// TODO: conectar a endpoint real -> MÉTODO /ruta`.
+
+### Código solo-mock
+
+El código que solo existe para simular el backend queda marcado para poder borrarlo sin riesgo al conectar la API real. Hoy la convención se aplica en `clinical-history` y en las funciones nuevas de `treatments`; los demás módulos pueden adoptarla al tocarse.
+
+- **Archivos 100 % mock:** llevan el segmento `.mock-` en el nombre y la primera línea `// MOCK-ONLY: eliminar al conectar el backend (ver arquitectura-frontend.md § Código solo-mock).`. En `clinical-history`: `clinical-history.mock-storage.ts` (IndexedDB), `clinical-history.mock-migration.ts` (normalizador de visitas antiguas) y `clinical-history.mock-data.ts` (semillas).
+- **Funciones mock:** cada función `*Mock` de un `*.api.ts` lleva `// MOCK-ONLY` encima; su par `*Real` lleva el `// TODO: conectar a endpoint real -> MÉTODO /ruta`.
+- **UI solo-mock:** los avisos que solo tienen sentido en modo demostración van dentro de `{env.useMockApi && …}` con el comentario `{/* MOCK-ONLY */}`.
+- **Regla de imports:** un archivo `.mock-*` solo se importa desde un `*.api.ts` o desde otro `.mock-*`. Páginas, componentes, hooks y queries nunca lo importan. Para comprobarlo, este comando no debe listar nada:
+
+  ```bash
+  grep -rn 'from "[^"]*\.mock-' front/src --include=*.ts --include=*.tsx | grep -v '\.api\.ts:\|\.mock-[a-z-]*\.ts:'
+  ```
+
+**Checklist al conectar el backend de un módulo:**
+1. Borrar los archivos `.mock-*` del módulo.
+2. En su `*.api.ts`, borrar las funciones `*Mock` y dejar el objeto exportado apuntando solo a las `*Real`.
+3. Quitar los bloques `MOCK-ONLY` de la UI.
+4. Verificar con `grep -rn "MOCK-ONLY\|\.mock-" front/src/modules/<módulo>` y `npx tsc -b`.
+5. En `clinical-history`, los datos guardados en IndexedDB no migran solos: el export "Historia completa JSON" de cada paciente es el puente para cargarlos al backend.
 
 ### Tipado end-to-end con la API .NET
 
@@ -199,11 +250,16 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - `POST /schedule-blocks` (el backend debe validar que no se solape con una cita ya agendada)
 - `DELETE /schedule-blocks/:id`
 
-**Historial clínico** (requiere autorización por rol en el backend, no solo en el frontend)
-- `GET /clinical-history`
-- `GET /clinical-history/:id`
-- `POST /clinical-history`
-- `PUT /clinical-history/:id`
+**Historia clínica odontológica** (solo roles `admin` y `medico`, validado en el backend y no solo en el frontend; las respuestas siguen `modules/clinical-history/types/clinical-history.types.ts`)
+- `GET /clinical-history/visits` (query: `page`, `pageSize`, `search` — paciente, motivo o diagnóstico —, `patientId`, `professionalId`, `status`) — lista global paginada de `VisitListItem`
+- `GET /clinical-history/patients/:patientId` — `DentalRecord` con todas las visitas del paciente
+- `POST /clinical-history/patients/:patientId/visits` (body: `professionalId`, `appointmentId`, `date`) — devuelve el borrador existente o crea uno que copia el odontograma de la última visita cerrada y sus ítems "Propuesto" sin asignación
+- `PUT /clinical-history/visits/:visitId` — guarda el borrador; el body incluye `revision` y responde `409` si no coincide, si la visita está cerrada o si la cita ya está en otra visita
+- `POST /clinical-history/visits/:visitId/close` — valida como `visitFormSchema` (`400` con `fieldErrors` por ruta, ej. `consents.0.signer`) y exige `assignmentId` en los ítems aprobados o realizados
+- `DELETE /clinical-history/visits/:visitId` — solo borradores
+- `POST /clinical-history/attachments` (multipart: `file`, `kind`, `patientId`; JPG, PNG, WebP o PDF hasta 20 MB) — devuelve `DentalAttachment`
+- `GET /clinical-history/attachments/:attachmentId/file` — archivo original (blob)
+- Los endpoints clásicos `GET/POST/PUT /clinical-history` y `GET /clinical-history/:id` ya no se usan.
 
 **Tratamientos**
 - `GET /treatments`
@@ -214,6 +270,8 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - `DELETE /treatments/:id`
 - `GET /treatments/:id/assignments`
 - `POST /treatment-assignments/:id/advance-session` (el backend debe descontar stock de inventario por cada línea de `consumption` del tratamiento, igual que simula el mock)
+- `GET /treatment-assignments?patientId=` — asignaciones de un paciente, de la más reciente a la más antigua
+- `POST /treatment-assignments` (body: `treatmentId`, `patientId`, `totalSessions`, `startDate`, `sourceVisitId`, `sourcePlanItemId`) — idempotente por `sourcePlanItemId`: si ya existe, devuelve la asignación existente; `404` si el tratamiento no existe y `400` si está inactivo
 
 **Inventario**
 - `GET /inventory/items`
@@ -281,7 +339,8 @@ Todos los formularios comparten el mismo patrón:
 2. `useForm({ resolver: zodResolver(schema) })`.
 3. Inputs nativos (`Input`, `Textarea`) via `register(...)`; componentes controlados (`Select`, `Switch`) via `Controller`.
 4. Errores de campo mostrados con `<FieldError errors={errors.campo ? [errors.campo] : undefined} />` (`components/ui/field.tsx`).
-5. Errores de servidor (400 con `fieldErrors`) se muestran vía `toast.error(getErrorMessage(error))`; para mapear un error de servidor a un campo específico se puede usar `form.setError(field, { message })` en el `onError` de la mutación (no implementado aún porque no hay backend real que lo dispare).
+5. Errores de servidor (400 con `fieldErrors`) se muestran vía `toast.error(getErrorMessage(error))`; para mapear un error de servidor a un campo específico se usa `form.setError(field, { message })`. `clinical-history` ya lo hace al cerrar una visita (`visit-workspace.tsx`), incluidos campos anidados como `plan.0.treatmentId`.
+6. En los `Select` de Base UI se pasa `items` (mapa valor → etiqueta) para que el trigger muestre la etiqueta y no el id, y `onValueChange` puede entregar `null`, así que se normaliza (`value ?? ""`). Para "ninguno" se usa un valor centinela (ej. `NO_APPOINTMENT`) que se traduce a `null` en el modelo.
 
 ## Variables de entorno
 
@@ -298,5 +357,8 @@ Cambia `VITE_USE_MOCK_API=false` cuando el backend .NET esté disponible y acces
 
 - Reemplazar los `Select` simples de paciente/profesional/insumo (alimentados con hasta 100 registros) por un combobox con búsqueda asíncrona cuando el volumen real de datos lo justifique.
 - Implementar `GET /auth/me` + cookie httpOnly de refresh en el backend para restaurar sesión sin re-login en cada carga.
-- Definir política de subida real de archivos para historial clínico (hoy los adjuntos son solo nombres de archivo, sin almacenamiento).
+- Definir el almacenamiento real de los adjuntos clínicos (hoy se guardan en IndexedDB del navegador): servicio de archivos, límites, antivirus y retención.
+- Exponer `professionalId` en `GET /auth/me` para que el profesional por defecto de una visita no dependa de comparar nombres (`hooks/use-default-professional.ts`).
+- Mover el cierre de visita (asignaciones, sesión realizada, cierre y cita completada) a una única transacción de `POST /clinical-history/visits/:id/close`; hoy lo coordina el frontend.
+- Adoptar la convención [solo-mock](#código-solo-mock) en los módulos restantes al tocarlos.
 - Considerar mover la generación de tipos desde OpenAPI a un paso de CI una vez el backend tenga un contrato estable.

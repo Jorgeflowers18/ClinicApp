@@ -142,3 +142,7 @@ html, body, #root {
   outline: 2px solid rgba(124, 58, 237, 0.7) !important;
   outline-offset: 2px;
 }
+
+/* Captura de la imagen para el informe de la app: oculta el aviso de progreso de la librería. */
+html.clinic-capturing .odon-export-overlay { display: none !important; }
+html.clinic-capturing .tooth-label-cell { color: #334155 !important; }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import { createRoot } from "react-dom/client"
-import { OdontogramShell, getStatusChart, getOdontogramSummary, importStatus, onStateChange, setReadOnly } from "react-advanced-odontogram"
+import { OdontogramShell, exportImage, getStatusChart, getOdontogramSummary, importStatus, onStateChange, setReadOnly } from "react-advanced-odontogram"
 import type { OdontogramThemeConfig } from "react-advanced-odontogram"
-import type { ChartSnapshot } from "../types/dental-record.types"
+import type { ChartSnapshot } from "../types/clinical-history.types"
 import "react-advanced-odontogram/style.css"
 import "@fontsource-variable/geist"
 import "./odontogram-theme.css"
@@ -14,6 +14,44 @@ declare global {
 const channel = "clinicapp:odontogram"
 function send(type: string, payload?: unknown) {
   window.parent.postMessage({ channel, type, payload }, window.location.origin)
+}
+
+/**
+ * Obtiene el PNG del odontograma con el exportador de la propia librería (`exportImage`), que dibuja
+ * un SVG independiente del tema y lo entrega a un enlace de descarga `odontogram-*.png`. Solo durante
+ * esta llamada se intercepta ese clic para quedarse con la imagen en vez de descargarla; el menú
+ * "Exportar" del editor sigue descargando normalmente.
+ *
+ * Si la librería está terminando otra exportación, `exportImage` vuelve sin hacer nada: se reintenta
+ * unas veces antes de devolver `null`.
+ */
+async function captureOdontogramImage(attempts = 6): Promise<string | null> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const image = await captureOnce()
+    if (image) return image
+    await new Promise((resolve) => window.setTimeout(resolve, 400))
+  }
+  return null
+}
+
+async function captureOnce(): Promise<string | null> {
+  let captured: string | null = null
+  const originalClick = HTMLAnchorElement.prototype.click
+  HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+    if (this.download.startsWith("odontogram-") && this.href.startsWith("data:image/png")) {
+      captured = this.href
+      return
+    }
+    originalClick.call(this)
+  }
+  document.documentElement.classList.add("clinic-capturing")
+  try {
+    await exportImage("png")
+  } finally {
+    HTMLAnchorElement.prototype.click = originalClick
+    document.documentElement.classList.remove("clinic-capturing")
+  }
+  return captured
 }
 
 export function EmbeddedOdontogram() {
@@ -45,6 +83,13 @@ export function EmbeddedOdontogram() {
         for (const [key, value] of Object.entries(payload.colors)) {
           document.documentElement.style.setProperty(`--clinic-${key}`, String(value))
         }
+      }
+      if (type === "capture-image") {
+        const requestId = payload?.requestId
+        captureOdontogramImage().then(
+          (image) => send("image", { requestId, image }),
+          (error) => send("image", { requestId, image: null, error: error instanceof Error ? error.message : "No se pudo generar la imagen" })
+        )
       }
       if (type === "init" && !initialized) {
         try {

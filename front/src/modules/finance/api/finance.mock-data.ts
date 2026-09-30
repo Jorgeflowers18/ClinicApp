@@ -222,9 +222,20 @@ export function getPatientFinancialSummary(patientId: string): PatientFinancialS
   }
 }
 
-export const mockPortfolioRows: FinancialPortfolioRow[] = mockTreatments.flatMap((treatment) => {
-  const assignment = mockTreatmentAssignments.find((item) => item.treatmentId === treatment.id)
-  if (!assignment) return []
+// Se calcula en cada llamada (no al cargar el módulo) para incluir las asignaciones creadas en
+// tiempo de ejecución, por ejemplo al cerrar una visita clínica con plan de tratamiento.
+export function buildPortfolioRows(): FinancialPortfolioRow[] {
+  return mockTreatments.flatMap((treatment) =>
+    mockTreatmentAssignments
+      .filter((item) => item.treatmentId === treatment.id)
+      .flatMap((assignment) => buildPortfolioRow(treatment, assignment))
+  )
+}
+
+function buildPortfolioRow(
+  treatment: (typeof mockTreatments)[number],
+  assignment: (typeof mockTreatmentAssignments)[number]
+): FinancialPortfolioRow[] {
   const patient = mockPatients.find((item) => item.id === assignment.patientId)
   if (!patient) return []
   const summary = getTreatmentFinancialSummary(treatment.id, assignment.patientId)
@@ -244,4 +255,4 @@ export const mockPortfolioRows: FinancialPortfolioRow[] = mockTreatments.flatMap
     daysLate,
     status,
   }]
-})
+}

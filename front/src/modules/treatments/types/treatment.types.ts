@@ -40,4 +40,16 @@ export interface TreatmentAssignment {
   completedSessions: number
   status: AssignmentStatus
   startDate: string
+  /** Visita clínica y ítem de plan que originaron la asignación (vacío en asignaciones antiguas). */
+  sourceVisitId?: string
+  sourcePlanItemId?: string
+}
+
+export interface CreateAssignmentInput {
+  treatmentId: string
+  patientId: string
+  totalSessions: number
+  startDate: string
+  sourceVisitId: string
+  sourcePlanItemId: string
 }

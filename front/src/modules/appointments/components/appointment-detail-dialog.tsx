@@ -1,5 +1,6 @@
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { Pencil } from "lucide-react"
+import { Pencil, Stethoscope } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { formatDateTime, formatTime } from "@/shared/lib/date"
+import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { useAppointmentNotifications } from "@/modules/notifications/api/notifications.queries"
 
 import { useUpdateAppointmentStatus } from "../api/appointments.queries"
@@ -27,6 +29,9 @@ interface AppointmentDetailDialogProps {
   roomName?: string
   onEdit: () => void
 }
+
+/** Estados en los que la cita se puede abrir (o vincular) en la historia clínica del paciente. */
+const CLINICAL_HISTORY_STATUSES: AppointmentStatus[] = ["programada", "confirmada", "completada"]
 
 const STATUS_VARIANT: Record<AppointmentStatus, "default" | "outline" | "destructive" | "secondary"> = {
   programada: "outline",
@@ -46,6 +51,10 @@ export function AppointmentDetailDialog({
   roomName,
   onEdit,
 }: AppointmentDetailDialogProps) {
+  const navigate = useNavigate()
+  const canOpenClinicalHistory = useAuthStore(
+    (state) => state.user?.role === "admin" || state.user?.role === "medico"
+  )
   const updateStatus = useUpdateAppointmentStatus()
   const { data: notifications, isLoading: isLoadingNotifications } = useAppointmentNotifications(
     appointment?.id
@@ -165,10 +174,25 @@ export function AppointmentDetailDialog({
                 </>
               )}
           </div>
-          <Button size="sm" onClick={onEdit}>
-            <Pencil />
-            Editar / reprogramar
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {canOpenClinicalHistory && CLINICAL_HISTORY_STATUSES.includes(appointment.status) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false)
+                  navigate(`/historial-clinico/paciente/${appointment.patientId}?cita=${appointment.id}`)
+                }}
+              >
+                <Stethoscope />
+                Abrir historia clínica
+              </Button>
+            )}
+            <Button size="sm" onClick={onEdit}>
+              <Pencil />
+              Editar / reprogramar
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -12,6 +12,7 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 import { calculateAge, formatDateOnly } from "@/shared/lib/date"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { usePatientFinancialSummary } from "@/modules/finance/api/finance.queries"
+import { PatientClinicalSummary } from "@/modules/clinical-history/components/patient-clinical-summary"
 
 import { usePatient } from "../api/patients.queries"
 import { treatmentStatusLabels } from "../types/patient.types"
@@ -62,15 +63,10 @@ export function PatientDetailPage() {
           title={`${patient.firstName} ${patient.lastName}`}
           description={`Cédula ${patient.documentId}${age !== null ? ` · ${age} años` : ""}`}
           actions={
-            <div className="flex flex-wrap gap-2">
-            {canSeeClinicalHistory && <Button onClick={() => navigate(`/historial-clinico/paciente/${patient.id}/odontologia`)}>
-              <Stethoscope /> Historia odontológica
-            </Button>}
             <Button variant="outline" onClick={() => navigate(`/pacientes/${patient.id}/editar`)}>
               <Pencil />
               Editar
             </Button>
-            </div>
           }
         />
       </div>
@@ -249,22 +245,8 @@ export function PatientDetailPage() {
         </TabsContent>
 
         {canSeeClinicalHistory && (
-          <TabsContent value="historial" className="space-y-3">
-            <Badge variant="outline" className="text-xs">
-              Dato clínico sensible · acceso restringido por rol
-            </Badge>
-            <p className="text-sm text-muted-foreground">
-              Consulta el historial clínico completo del paciente.
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/historial-clinico?pacienteId=${patient.id}`)}
-            >
-              Ver historial clínico
-            </Button>
-            <Button onClick={() => navigate(`/historial-clinico/paciente/${patient.id}/odontologia`)}>
-              <Stethoscope /> Odontograma y tratamiento odontológico
-            </Button>
+          <TabsContent value="historial">
+            <PatientClinicalSummary patientId={patient.id} />
           </TabsContent>
         )}
       </Tabs>
