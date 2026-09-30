@@ -23,6 +23,7 @@ Dividido por módulo, usando los mismos nombres que `front/src/modules/`. Marca 
 - [ ] `POST /auth/logout`.
 - [ ] `GET /auth/me` — **no implementado aún ni siquiera en el frontend real** (pendiente de agregar en ambos lados). Necesario para restaurar sesión sin re-login en cada carga, respaldado por una cookie `httpOnly` de refresh. Mientras no exista, el token vive solo en memoria en el frontend y se pierde al recargar la página (fuera de modo mock).
 - [ ] Roles soportados: `admin`, `recepcion`, `medico` (usados para autorización por endpoint, no solo en el frontend).
+- [ ] Vincular usuario y profesional: incluir `professionalId` (opcional) en el `user` de `/auth/login` y `/auth/me`. La historia clínica lo usa como profesional por defecto de una visita nueva; hoy el frontend lo deduce comparando el nombre del usuario con `GET /professionals` (`clinical-history/hooks/use-default-professional.ts`).
 
 ## `patients`
 
@@ -45,15 +46,29 @@ Dividido por módulo, usando los mismos nombres que `front/src/modules/`. Marca 
 - [ ] `GET /schedule-blocks` — bloqueos de horario vigentes (`id, professionalId?, roomId?, start, end, reason, createdAt`; al menos uno de `professionalId`/`roomId` presente).
 - [ ] `POST /schedule-blocks` — debe validar que el rango no se solape con una cita ya agendada (no cancelada) para el mismo profesional o consultorio; los bloqueos sí pueden solaparse entre sí.
 - [ ] `DELETE /schedule-blocks/:id`.
+- [ ] Cerrar una visita clínica vinculada a una cita la pasa a `completada` (hoy el frontend llama a `PATCH /appointments/:id/status` tras el cierre; ver `clinical-history`). Solo desde `programada` o `confirmada`: una cita `cancelada` o `no_asistio` no cambia.
 - [ ] Bloqueos son puntuales únicamente (sin recurrencia) — si el negocio pide recurrencia (ej. "todos los lunes de 13:00 a 14:00"), es un cambio de modelo, no solo de endpoint.
 
 ## `clinical-history`
 
-- [ ] `GET /clinical-history` (requiere autorización por rol en el backend — hoy el frontend solo lo restringe con rutas protegidas del lado cliente, que no son una barrera real de seguridad).
-- [ ] `GET /clinical-history/:id`.
-- [ ] `POST /clinical-history`.
-- [ ] `PUT /clinical-history/:id`.
-- [ ] Definir política real de almacenamiento de adjuntos — hoy en el frontend son solo nombres de archivo sin subida real (ni backend que los reciba).
+Historia clínica odontológica única por paciente, organizada en visitas (`DentalVisit`, estado `borrador → cerrada`). Contrato en `front/src/modules/clinical-history/types/clinical-history.types.ts`; comportamiento esperado en `clinical-history.api.ts` (funciones `*Mock`) y en [`arquitectura-frontend.md` § Historia clínica odontológica](../documentacion/arquitectura-frontend.md#historia-clínica-odontológica). Los endpoints clásicos (`GET/POST/PUT /clinical-history`, `GET /clinical-history/:id`) ya no los usa el frontend.
+
+- [ ] **Autorización por rol en todos los endpoints del módulo:** solo `admin` y `medico`. Hoy el frontend lo restringe con rutas protegidas, que no son una barrera real de seguridad; `recepcion` debe recibir `403` también desde la API.
+- [ ] `GET /clinical-history/visits` (query: `page`, `pageSize`, `search` — nombre o cédula del paciente, motivo o diagnóstico —, `patientId`, `professionalId`, `status`) — lista paginada de `VisitListItem` ordenada por fecha descendente.
+- [ ] `GET /clinical-history/patients/:patientId` — `DentalRecord { patientId, visits }` con las visitas de la más antigua a la más reciente, incluido el borrador si existe.
+- [ ] `POST /clinical-history/patients/:patientId/visits` (body: `professionalId`, `appointmentId | null`, `date`) — si el paciente ya tiene un borrador, lo devuelve sin crear otro. Si no, crea uno que copia el `chart` de la última visita cerrada y sus ítems de plan en estado `pendiente` sin `assignmentId`.
+- [ ] `PUT /clinical-history/visits/:visitId` — guarda el borrador completo. Concurrencia optimista: el body trae `revision`; si no coincide con la guardada responde `409`, y si coincide la incrementa. También `409` si la visita está cerrada o si `appointmentId` ya está vinculado a otra visita.
+- [ ] `POST /clinical-history/visits/:visitId/close` — valida las mismas reglas que `visitFormSchema` y responde `400` con `errors` por ruta de campo (ej. `reason`, `nextVisit`, `consents.0.signer`, `plan.1.treatmentId`, `chart`):
+  - fecha y profesional obligatorios; motivo y diagnóstico de al menos 3 caracteres; próximo control igual o posterior a la fecha;
+  - odontograma (`chart`) obligatorio;
+  - consentimientos con procedimiento (≥ 3) e información (≥ 10); firmante y fecha si el estado no es `pendiente`;
+  - ítems de plan `en-curso` o `realizado` con `treatmentId` y `assignmentId`.
+- [ ] **Cierre transaccional (recomendado):** hoy el frontend coordina el cierre en varios pasos (crear asignaciones, avanzar sesión en los ítems `realizado`, guardar, cerrar y completar la cita). Lo ideal es que `close` haga todo en una transacción: crear las asignaciones de los ítems aprobados (idempotente por ítem), avanzar una sesión en los `realizado` (descontando inventario) y pasar la cita vinculada a `completada` si estaba `programada` o `confirmada`. Si se implementa, avisar al frontend para simplificar `closeVisitSequence` en `clinical-history.queries.ts`.
+- [ ] `DELETE /clinical-history/visits/:visitId` — solo borradores (`409` si está cerrada); eliminar también los adjuntos que ya no referencie ninguna visita.
+- [ ] `POST /clinical-history/attachments` (multipart: `file`, `kind` — `fotografia | radiografia | consentimiento | documento` —, `patientId`) — acepta JPG, PNG, WebP o PDF de hasta 20 MB (`400` si no), guarda el archivo y devuelve `DentalAttachment { id, name, kind, mime, size, createdAt }`. La visita lo referencia en su siguiente guardado.
+- [ ] `GET /clinical-history/attachments/:attachmentId/file` — descarga del archivo original, verificando que el usuario tenga acceso al paciente.
+- [ ] **Almacenamiento real de adjuntos:** definir servicio (disco, blob storage), límites, antivirus, retención y borrado de archivos huérfanos. Hoy el frontend los guarda en IndexedDB del navegador.
+- [ ] **Migración de datos locales:** las visitas registradas en modo mock viven en el navegador de cada equipo. Definir si se importan al backend a partir del export "Historia completa JSON" de cada paciente.
 
 ## `treatments`
 
@@ -65,6 +80,9 @@ Dividido por módulo, usando los mismos nombres que `front/src/modules/`. Marca 
 - [ ] `DELETE /treatments/:id`.
 - [ ] `GET /treatments/:id/assignments`.
 - [ ] `POST /treatment-assignments/:id/advance-session` — además de avanzar la sesión, debe descontar stock de inventario por cada línea de `Treatment.consumption` (ver `inventory.registerConsumption` más abajo). En el frontend esto ya está conectado: `advanceSession` llama a la API pública de inventario, no toca sus datos directamente.
+- [ ] `GET /treatment-assignments?patientId=` — asignaciones de un paciente, de la más reciente a la más antigua. Lo usa el plan de tratamiento de la historia clínica para mostrar el progreso real.
+- [ ] `POST /treatment-assignments` (body: `treatmentId`, `patientId`, `totalSessions`, `startDate`, `sourceVisitId`, `sourcePlanItemId`) — crea la asignación en `en_progreso` con 0 sesiones completadas. **Idempotente por `sourcePlanItemId`:** si ya existe una asignación para ese ítem de plan, devuelve la existente en vez de duplicarla (el cierre de visita puede reintentarse). `404` si el tratamiento no existe y `400` si está inactivo.
+- [ ] Persistir `sourceVisitId` y `sourcePlanItemId` (opcionales) en `TreatmentAssignment`, para trazar qué visita clínica originó cada tratamiento.
 
 ## `inventory`
 

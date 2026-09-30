@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, CalendarDays, FileText, Pencil, ShieldCheck, Stethoscope, UserRound } from "lucide-react"
+import { ArrowLeft, CalendarDays, CreditCard, FileText, Pencil, ShieldCheck, Stethoscope, UserRound } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,8 @@ import { PageHeader } from "@/shared/components/page-header"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { calculateAge, formatDateOnly } from "@/shared/lib/date"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
+import { usePatientFinancialSummary } from "@/modules/finance/api/finance.queries"
+import { PatientClinicalSummary } from "@/modules/clinical-history/components/patient-clinical-summary"
 
 import { usePatient } from "../api/patients.queries"
 import { treatmentStatusLabels } from "../types/patient.types"
@@ -28,6 +30,7 @@ export function PatientDetailPage() {
     (state) => state.user?.role === "admin" || state.user?.role === "medico"
   )
   const { data: patient, isLoading, isError, error } = usePatient(id)
+  const { data: financialSummary } = usePatientFinancialSummary(id)
 
   if (isLoading) {
     return (
@@ -189,6 +192,10 @@ export function PatientDetailPage() {
             <Stethoscope />
             Tratamientos
           </TabsTrigger>
+          <TabsTrigger value="finanzas">
+            <CreditCard />
+            Finanzas
+          </TabsTrigger>
           {canSeeClinicalHistory && (
             <TabsTrigger value="historial">
               <FileText />
@@ -215,20 +222,31 @@ export function PatientDetailPage() {
           </Button>
         </TabsContent>
 
+        <TabsContent value="finanzas" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader><CardTitle className="text-sm text-muted-foreground">Total tratamientos</CardTitle></CardHeader>
+              <CardContent className="text-2xl font-semibold">{financialSummary?.totalTreatments ?? 0}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm text-muted-foreground">Total pagado</CardTitle></CardHeader>
+              <CardContent className="text-2xl font-semibold">${(financialSummary?.totalPaid ?? 0).toFixed(2)}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm text-muted-foreground">Total pendiente</CardTitle></CardHeader>
+              <CardContent className="text-2xl font-semibold">${(financialSummary?.totalPending ?? 0).toFixed(2)}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm text-muted-foreground">Total vencido</CardTitle></CardHeader>
+              <CardContent className="text-2xl font-semibold">${(financialSummary?.totalOverdue ?? 0).toFixed(2)}</CardContent>
+            </Card>
+          </div>
+          <Button variant="outline" onClick={() => navigate("/finanzas")}>Ver cartera financiera</Button>
+        </TabsContent>
+
         {canSeeClinicalHistory && (
-          <TabsContent value="historial" className="space-y-3">
-            <Badge variant="outline" className="text-xs">
-              Dato clínico sensible · acceso restringido por rol
-            </Badge>
-            <p className="text-sm text-muted-foreground">
-              Consulta el historial clínico completo del paciente.
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/historial-clinico?pacienteId=${patient.id}`)}
-            >
-              Ver historial clínico
-            </Button>
+          <TabsContent value="historial">
+            <PatientClinicalSummary patientId={patient.id} />
           </TabsContent>
         )}
       </Tabs>

@@ -74,15 +74,38 @@ Sistema de agendamiento para citas odontológicas por especialista, tipo de proc
 
 ## 6. Historia clínica y tratamiento odontológico
 
-- **Estado:** Pendiente
+- **Estado:** Completado
 - **Prioridad:** Alta
-- **Responsable:** Josue Cevallos
+- **Responsable:** Jorge Flores (antes Josue Cevallos)
 
 Módulo clínico para registrar la evolución del paciente, diagnósticos, procedimientos realizados, planes de tratamiento, odontograma digital y seguimiento de cada caso.
 
 **Incluye:** odontograma, periodontograma, evolución por visita, diagnóstico, plan de tratamiento, consentimientos, fotos, radiografías, notas profesionales y exportación de documentos.
 
 **Detalle adicional:** periodontograma con registro de bolsas periodontales, recesiones, sangrado, movilidad, furcaciones, placa y cálculo, además de seguimiento de salud periodontal por visita.
+
+**Avance en frontend (mock):**
+- Odontograma y periodontograma (`react-advanced-odontogram` en iframe) reubicados en la estructura estándar del módulo `clinical-history` y siguiendo el tema claro/oscuro de la app.
+- Historia clínica única por paciente organizada en visitas `borrador → cerrada`, con autoguardado del borrador y visitas cerradas de solo lectura. El historial clínico clásico se retiró y sus 4 registros de ejemplo pasaron a ser visitas.
+- API con pares Mock/Real y React Query; el mock sigue en IndexedDB y todo el código solo-mock queda marcado (`.mock-` en el nombre y `// MOCK-ONLY`) para borrarlo al conectar el backend.
+- Formularios homologados (React Hook Form + Zod, `Select` estándar, errores en línea, `ConfirmDialog`): consulta con profesional del catálogo y cita vinculada, consentimientos, fotos y documentos.
+- Plan de tratamiento con el catálogo: al cerrar la visita, los ítems aprobados o realizados crean asignaciones en Tratamientos (llegan a Finanzas, Reportes e Inventario) y los propuestos pasan a la siguiente visita.
+- Vínculo opcional con citas: la cita pasa a "Completada" al cerrar la visita y el detalle de la cita tiene el botón "Abrir historia clínica".
+- Indicadores periodontales (bolsas, sangrado, placa O'Leary, movilidad, furcación, cálculo, caries) y gráfico de evolución por visita.
+- Lista global de visitas en `/historial-clinico`, resumen clínico en el detalle del paciente, redirecciones de las rutas antiguas y exportación (PDF y documento HTML con la imagen del odontograma incrustada, e historia completa en JSON; el menú «Exportar» del propio editor se mantiene).
+- Prueba e2e reescrita (`front/tests/dental-history.spec.ts`). Ver [`arquitectura-frontend.md`](./arquitectura-frontend.md#historia-clínica-odontológica).
+
+**Pendiente:** backend real (endpoints de `clinical-history` y de asignaciones de tratamiento en [`back/backlog.md`](../back/backlog.md)), almacenamiento real de adjuntos, `professionalId` en `/auth/me` y cierre de visita transaccional en el backend. Este ítem cubre buena parte del alcance del ítem 3 (odontograma, exportación a PDF), que conviene redefinir.
+
+**Mejoras identificadas para el PDF de la visita (en caso de necesitarse):**
+- Mediciones periodontales: hoy no aparecen sondaje, sangrado, recesiones, furcación ni placa (solo la frase resumen de la librería). Opciones: incrustar la imagen del periodontograma con el mismo mecanismo que la del odontograma (`exportPerioImage`) o agregar una tabla con los indicadores que ya calcula `lib/chart-indicators.ts`.
+- Diagnósticos CIE en inglés (ej. "Deposits [accretions] on teeth (K03.6)"): traducirlos por código, revisar si la librería tiene un paquete de codificación en español o reportarlo a su autor.
+- Encabezado institucional: nombre y logo de la clínica (depende del perfil de la institución), fecha de emisión, línea de firma del profesional y numeración de páginas.
+- Marca de borrador: un borrador se imprime igual que una visita cerrada; conviene una marca de agua de "Documento no definitivo".
+- Secciones del resumen del odontograma que no se exportan: tabla de dentición y piezas ausentes, implantes, notas por pieza y cambios planificados.
+- La frase periodontal empieza en minúscula ("hay inflamación en…").
+
+**Pendiente en frontend al conectar el backend:** borrar el código solo-mock siguiendo la checklist de [`arquitectura-frontend.md`](./arquitectura-frontend.md#código-solo-mock); tomar el profesional por defecto de `/auth/me` en vez de compararlo por nombre (`hooks/use-default-professional.ts`); simplificar `closeVisitSequence` si el backend cierra la visita en una sola transacción; y definir la migración de las historias guardadas en el navegador a partir del export "Historia completa JSON".
 
 
 ## 7. Inventario, compras y esterilización

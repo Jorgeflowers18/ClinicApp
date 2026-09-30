@@ -14,6 +14,16 @@ export const treatmentsKeys = {
   active: () => [...treatmentsKeys.all, "active"] as const,
   detail: (id: string) => [...treatmentsKeys.all, "detail", id] as const,
   assignments: (id: string) => [...treatmentsKeys.all, "assignments", id] as const,
+  allAssignments: () => [...treatmentsKeys.all, "assignments"] as const,
+  patientAssignments: (patientId: string) => [...treatmentsKeys.all, "assignments", "patient", patientId] as const,
+}
+
+export function usePatientAssignments(patientId: string | undefined) {
+  return useQuery({
+    queryKey: treatmentsKeys.patientAssignments(patientId ?? ""),
+    queryFn: () => treatmentsApi.listAssignmentsByPatient(patientId as string),
+    enabled: Boolean(patientId),
+  })
 }
 
 export function useTreatmentsList(query: PageQuery) {
@@ -84,6 +94,7 @@ export function useAdvanceSession(treatmentId: string) {
     mutationFn: (assignmentId: string) => treatmentsApi.advanceSession(assignmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: treatmentsKeys.assignments(treatmentId) })
+      queryClient.invalidateQueries({ queryKey: treatmentsKeys.allAssignments() })
       queryClient.invalidateQueries({ queryKey: inventoryKeys.all })
     },
   })
