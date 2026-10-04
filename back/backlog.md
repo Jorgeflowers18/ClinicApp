@@ -68,6 +68,11 @@ Historia clínica odontológica única por paciente, organizada en visitas (`Den
 - [ ] `POST /clinical-history/attachments` (multipart: `file`, `kind` — `fotografia | radiografia | consentimiento | documento` —, `patientId`) — acepta JPG, PNG, WebP o PDF de hasta 20 MB (`400` si no), guarda el archivo y devuelve `DentalAttachment { id, name, kind, mime, size, createdAt }`. La visita lo referencia en su siguiente guardado.
 - [ ] `GET /clinical-history/attachments/:attachmentId/file` — descarga del archivo original, verificando que el usuario tenga acceso al paciente.
 - [ ] **Almacenamiento real de adjuntos:** definir servicio (disco, blob storage), límites, antivirus, retención y borrado de archivos huérfanos. Hoy el frontend los guarda en IndexedDB del navegador.
+- [ ] **Identificadores generados en el servidor.** Hoy el frontend crea los ids con `createId()` (`front/src/shared/lib/id.ts`), un UUID v4 que también funciona sin HTTPS: `crypto.randomUUID` solo existe en HTTPS o `localhost`, y el despliegue actual se sirve por HTTP en la IP del Droplet. Con backend real, estos ids pasan al servidor:
+  - **Visita:** `POST /clinical-history/patients/:patientId/visits` genera el `id` del borrador, y también los ids nuevos de los ítems de plan `pendiente` que copia de la visita anterior.
+  - **Adjunto:** `POST /clinical-history/attachments` genera el `id` del `DentalAttachment`.
+  - **Ítems de plan y consentimientos de un borrador:** el frontend los crea con id propio y los envía en `PUT /clinical-history/visits/:visitId`. El backend debe validar que cada id sea un UUID único dentro de la visita, o reemplazar los ids que no lo sean y devolver la visita con los ids definitivos. El id del ítem de plan debe ser estable, porque `POST /treatment-assignments` usa `sourcePlanItemId` para no duplicar asignaciones.
+  - Al conectar el backend, el frontend deja de generar los ids de visita y de adjunto: esas funciones `*Mock` se borran. Los ids de ítems y consentimientos pueden seguir en el cliente si el backend los valida como se describe arriba.
 - [ ] **Migración de datos locales:** las visitas registradas en modo mock viven en el navegador de cada equipo. Definir si se importan al backend a partir del export "Historia completa JSON" de cada paciente.
 
 ## `treatments`

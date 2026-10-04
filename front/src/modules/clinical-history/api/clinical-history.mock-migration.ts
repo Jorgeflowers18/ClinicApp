@@ -4,6 +4,7 @@
 // primera versión del módulo (profesional en texto libre, contenedor `draft`, `savedAt`) y
 // registros que mezclan visitas antiguas y nuevas. Se aplica al leer: nada se reescribe hasta que
 // el usuario guarda, así que los datos originales nunca se pierden.
+import { createId } from "@/shared/lib/id"
 import { mockProfessionals } from "@/modules/appointments/api/appointments.mock-data"
 
 import { compareVisits, matchProfessionalByName } from "../lib/visit"
@@ -41,7 +42,7 @@ function normalizePlanItem(raw: unknown): PlanItem | null {
   if (!isObject(raw)) return null
   const sessions = Number(raw.sessions)
   return {
-    id: text(raw.id) || crypto.randomUUID(),
+    id: text(raw.id) || createId(),
     treatmentId: nullableText(raw.treatmentId),
     description: text(raw.description),
     tooth: text(raw.tooth),
@@ -54,7 +55,7 @@ function normalizePlanItem(raw: unknown): PlanItem | null {
 function normalizeConsent(raw: unknown): DentalConsent | null {
   if (!isObject(raw)) return null
   return {
-    id: text(raw.id) || crypto.randomUUID(),
+    id: text(raw.id) || createId(),
     procedure: text(raw.procedure),
     information: text(raw.information),
     status: oneOf(raw.status, consentStatuses, "pendiente"),

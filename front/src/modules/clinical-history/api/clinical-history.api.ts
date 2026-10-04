@@ -1,5 +1,6 @@
 import { http } from "@/shared/lib/http"
 import { env } from "@/shared/lib/env"
+import { createId } from "@/shared/lib/id"
 import { mockDelay, paginate } from "@/shared/lib/mock"
 import { ApiError, type Paginated } from "@/shared/types/common"
 import { mockPatients } from "@/modules/patients/api/patients.mock-data"
@@ -108,7 +109,7 @@ async function startVisitMock(patientId: string, input: StartVisitInput): Promis
     const previous = latestClosedVisit(record)
     const now = new Date().toISOString()
     started = {
-      id: crypto.randomUUID(),
+      id: createId(),
       patientId,
       status: "borrador",
       revision: 0,
@@ -125,7 +126,7 @@ async function startVisitMock(patientId: string, input: StartVisitInput): Promis
       // Solo se arrastran las propuestas: lo aprobado ya vive como asignación en Tratamientos.
       plan: (previous?.plan ?? [])
         .filter((item) => item.status === "pendiente" && !item.assignmentId)
-        .map((item) => ({ ...item, id: crypto.randomUUID() })),
+        .map((item) => ({ ...item, id: createId() })),
       consents: [],
       attachments: [],
       createdAt: now,
@@ -196,7 +197,7 @@ async function uploadAttachmentMock(input: UploadAttachmentInput): Promise<Denta
   await mockDelay(200)
   assertAttachment(input.file)
   const attachment: DentalAttachment = {
-    id: crypto.randomUUID(),
+    id: createId(),
     name: input.file.name,
     kind: input.kind,
     mime: input.file.type,

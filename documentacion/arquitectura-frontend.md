@@ -52,7 +52,7 @@ src/
   shared/                 # Código reutilizable entre módulos (no específico de un dominio)
     components/            # DataTable, PaginationBar, SearchInput, ConfirmDialog, PageHeader...
     hooks/                  # useDebounce, useTableQueryState
-    lib/                    # http.ts, query-client.ts, date.ts, number.ts, csv.ts, mock.ts, error-message.ts, env.ts
+    lib/                    # http.ts, query-client.ts, date.ts, number.ts, csv.ts, mock.ts, error-message.ts, env.ts, id.ts
     types/                  # Paginated<T>, ApiError, PageQuery
 
   components/ui/           # Componentes shadcn/ui (gestionados por el CLI, no editar a mano salvo necesidad)
@@ -157,7 +157,7 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 - **Detalle del paciente:** la pestaña "Historial clínico" muestra `components/patient-clinical-summary.tsx` (visitas cerradas, última visita, próximo control y borrador en curso) con un único botón "Abrir historia clínica". Se quitó el botón duplicado del encabezado.
 - **Integración con Tratamientos y Finanzas:** `TreatmentAssignment` tiene `sourceVisitId` y `sourcePlanItemId` opcionales. `treatmentsApi` suma `listAssignmentsByPatient` y `createAssignment`, y `useAdvanceSession` también invalida las asignaciones por paciente. En `finance.mock-data.ts`, la cartera pasó de una constante calculada al cargar el módulo a `buildPortfolioRows()`, calculada en cada llamada, para que las asignaciones nuevas aparezcan en Finanzas.
 - **Persistencia mock:** IndexedDB `clinicapp-dental-v1` (versión 1, almacenes `records` y `files`) en `api/clinical-history.mock-storage.ts`. Las visitas guardadas con la forma anterior se normalizan al leer (`api/clinical-history.mock-migration.ts`), sin reescribirse hasta el siguiente guardado: el profesional en texto libre se convierte en `professionalId` por nombre y se conserva en `legacyProfessionalName`. Los 4 registros de ejemplo del historial clásico se insertan una sola vez como visitas cerradas (`api/clinical-history.mock-data.ts`, bandera `clinicapp-clinical-history-seeded-v1` en `localStorage`). **Deriva conocida:** citas y asignaciones viven en memoria y se reinician al recargar, mientras las visitas persisten en IndexedDB; por eso una visita puede referenciar una asignación que ya no existe.
-- **Pruebas:** `front/tests/dental-history.spec.ts` (Playwright) cubre la visita completa (odontograma real, tema oscuro, validación al cerrar, plan con catálogo, recarga del borrador, cierre con asignación, exportaciones con la imagen del odontograma incrustada y no en blanco, el menú «Exportar» del editor y adjuntos), la visita iniciada desde una cita, las redirecciones y el `403` para recepción.
+- **Pruebas:** `front/tests/dental-history.spec.ts` (Playwright) cubre la visita completa (odontograma real, tema oscuro, validación al cerrar, plan con catálogo, recarga del borrador, cierre con asignación, exportaciones con la imagen del odontograma incrustada y no en blanco, el menú «Exportar» del editor y adjuntos), la visita iniciada desde una cita, el funcionamiento sin HTTPS (simulando un navegador sin `crypto.randomUUID`), las redirecciones y el `403` para recepción.
 
 ## Autenticación y autorización
 
@@ -341,6 +341,20 @@ Todos los formularios comparten el mismo patrón:
 4. Errores de campo mostrados con `<FieldError errors={errors.campo ? [errors.campo] : undefined} />` (`components/ui/field.tsx`).
 5. Errores de servidor (400 con `fieldErrors`) se muestran vía `toast.error(getErrorMessage(error))`; para mapear un error de servidor a un campo específico se usa `form.setError(field, { message })`. `clinical-history` ya lo hace al cerrar una visita (`visit-workspace.tsx`), incluidos campos anidados como `plan.0.treatmentId`.
 6. En los `Select` de Base UI se pasa `items` (mapa valor → etiqueta) para que el trigger muestre la etiqueta y no el id, y `onValueChange` puede entregar `null`, así que se normaliza (`value ?? ""`). Para "ninguno" se usa un valor centinela (ej. `NO_APPOINTMENT`) que se traduce a `null` en el modelo.
+
+## Despliegue sin HTTPS e identificadores
+
+El frontend debe funcionar también servido por HTTP (hoy producción corre en la IP de un Droplet, sin dominio ni certificado). Por eso:
+
+- **Nunca llamar `crypto.randomUUID()` directo.** Solo existe en contextos seguros (HTTPS o `localhost`); por HTTP es `undefined` y rompe la pantalla. Usar `createId()` de `shared/lib/id.ts`, que la usa cuando existe y, si no, arma un UUID v4 con `crypto.getRandomValues` (disponible sin HTTPS). Para comprobarlo, este comando solo debe listar `shared/lib/id.ts`:
+
+  ```bash
+  grep -rln "randomUUID" front/src
+  ```
+
+- **Usos actuales de `createId()`** (todos en `clinical-history`): id de la visita y de los ítems arrastrados al iniciarla, id del adjunto al subirlo y normalización de visitas antiguas (los tres solo en el mock), id de los ítems de plan y de los consentimientos nuevos, e id de la petición de imagen al iframe del odontograma. Con backend real, los ids de visita y adjunto los genera el servidor (ver `back/backlog.md`, módulo `clinical-history`).
+- **Revisión hecha sin HTTPS:** el bundle de producción no usa otras APIs que exijan contexto seguro (`crypto.subtle`, portapapeles, service workers, geolocalización, notificaciones del navegador, etc.). `localStorage`, `sessionStorage` e IndexedDB funcionan por HTTP. Si se agrega alguna de esas APIs, prever un respaldo o servir la app por HTTPS.
+- **Verificación:** además de la prueba e2e que simula la falta de `crypto.randomUUID`, se puede correr la suite contra el build servido por IP: `npx vite preview --host 0.0.0.0` y `CLINIC_TEST_URL=http://<ip>:4173 npx playwright test`.
 
 ## Variables de entorno
 

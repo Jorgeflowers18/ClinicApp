@@ -7,6 +7,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { createId } from "@/shared/lib/id"
 
 import { consentStatuses, consentStatusLabels, type VisitFormValues } from "../types/clinical-history.types"
 
@@ -132,7 +133,7 @@ export function ConsentsTab({ readOnly }: { readOnly: boolean }) {
           <Button
             variant="outline"
             onClick={() =>
-              append({ id: crypto.randomUUID(), procedure: "", information: "", status: "pendiente", signer: "", date: "" })
+              append({ id: createId(), procedure: "", information: "", status: "pendiente", signer: "", date: "" })
             }
           >
             <Plus />

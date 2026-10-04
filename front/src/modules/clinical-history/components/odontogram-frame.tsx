@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { useTheme } from "next-themes"
+import { createId } from "@/shared/lib/id"
 import type { ChartSnapshot, DentalVisit } from "../types/clinical-history.types"
 
 export interface ChartHandle {
@@ -59,7 +60,7 @@ export function OdontogramFrame({ visit, patientName, birthDate, readOnly, onCha
   useImperativeHandle(handle, () => ({
     snapshot: () => frame.current?.contentWindow?.clinicChart?.snapshot() ?? null,
     captureImage: () => new Promise<string | null>((resolve) => {
-      const requestId = crypto.randomUUID()
+      const requestId = createId()
       const timer = window.setTimeout(() => finish(null), CAPTURE_TIMEOUT_MS)
       function finish(image: string | null) {
         clearTimeout(timer)

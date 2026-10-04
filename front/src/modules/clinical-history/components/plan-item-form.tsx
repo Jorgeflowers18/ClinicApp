@@ -7,6 +7,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency } from "@/shared/lib/number"
+import { createId } from "@/shared/lib/id"
 import type { Treatment } from "@/modules/treatments/types/treatment.types"
 
 import {
@@ -45,7 +46,7 @@ export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
     const treatment = treatments.find((item) => item.id === values.treatmentId)
     if (!treatment) return
     onAdd({
-      id: crypto.randomUUID(),
+      id: createId(),
       treatmentId: treatment.id,
       description: treatment.name,
       tooth: values.tooth.trim(),

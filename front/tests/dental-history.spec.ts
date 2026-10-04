@@ -281,6 +281,61 @@ test("la cita abre la visita vinculada y queda completada al cerrarla", async ({
   expect(errors).toEqual([])
 })
 
+test("funciona sin HTTPS: sin crypto.randomUUID se generan los ids igual", async ({ page }) => {
+  // Por HTTP (por ejemplo, la IP del servidor) el navegador no expone `crypto.randomUUID`.
+  // Se simula en la página y en el iframe del odontograma, aunque la prueba corra en localhost.
+  await page.addInitScript(() => {
+    Object.defineProperty(Crypto.prototype, "randomUUID", { value: undefined, configurable: true })
+  })
+  const errors: string[] = []
+  page.on("pageerror", (error) => errors.push(error.message))
+  await login(page)
+  expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe("undefined")
+
+  // Iniciar visita (id de la visita).
+  await page.goto("/historial-clinico/paciente/pat_5")
+  await page.getByRole("button", { name: "Nueva visita", exact: true }).click()
+  await chooseOption(page, "Profesional", /Dra\. Carla Ríos/)
+  await page.getByRole("dialog").getByRole("button", { name: "Iniciar visita" }).click()
+  await expect(page.getByText("Borrador en edición")).toBeVisible()
+  await waitForChart(page)
+
+  // Ítem de plan, consentimiento y adjunto (ids generados en el navegador).
+  await page.getByRole("tab", { name: "Plan de tratamiento", exact: true }).click()
+  await chooseOption(page, "Tratamiento del catálogo", /^Limpieza dental/)
+  await page.getByRole("button", { name: "Agregar al plan" }).click()
+  await expect(page.getByText("Pasa a la próxima visita")).toBeVisible()
+  await page.getByRole("tab", { name: "Consentimientos", exact: true }).click()
+  await page.getByRole("button", { name: "Agregar consentimiento" }).click()
+  await expect(page.getByLabel("Procedimiento autorizado")).toBeVisible()
+  await page.getByRole("tab", { name: "Fotos y documentos", exact: true }).click()
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf1sAAAAASUVORK5CYII=",
+    "base64"
+  )
+  await page.getByLabel("Seleccionar archivos clínicos").setInputFiles({ name: "rx.png", mimeType: "image/png", buffer: png })
+  await expect(page.getByText("rx.png", { exact: true })).toBeVisible()
+  await waitForAutosave(page)
+
+  // Imagen del odontograma para el documento (id de la petición al iframe).
+  const documentPromise = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Documento de la visita", exact: true }).click()
+  const html = (await readDownload(await documentPromise)).toString()
+  expect(html).toMatch(/<img src="data:image\/png;base64,/)
+
+  // Los ids generados son UUID v4 válidos.
+  const jsonPromise = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Historia completa JSON" }).click()
+  const record = JSON.parse((await readDownload(await jsonPromise)).toString())
+  const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+  const [visit] = record.visits
+  expect(visit.id).toMatch(uuidV4)
+  expect(visit.plan[0].id).toMatch(uuidV4)
+  expect(visit.consents[0].id).toMatch(uuidV4)
+  expect(visit.attachments[0].id).toMatch(uuidV4)
+  expect(errors).toEqual([])
+})
+
 test("rutas antiguas redirigen a la historia del paciente", async ({ page }) => {
   await login(page)
   await page.goto("/historial-clinico/paciente/pat_1/odontologia")
