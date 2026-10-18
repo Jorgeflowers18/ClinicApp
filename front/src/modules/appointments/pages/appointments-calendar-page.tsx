@@ -318,9 +318,14 @@ export function AppointmentsCalendarPage() {
                   render={
                     <Button variant="outline" className="min-w-0 flex-1 justify-center gap-2">
                       <CalendarDays />
-                      <span className="truncate capitalize">
+                      <span className="hidden truncate capitalize @[22rem]:inline">
                         {mobileAgendaView === "day"
                           ? format(date, "EEEE d 'de' MMMM", { locale: es })
+                          : `${format(weekDays[0], "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM", { locale: es })}`}
+                      </span>
+                      <span className="truncate capitalize @[22rem]:hidden">
+                        {mobileAgendaView === "day"
+                          ? format(date, "d MMM yyyy", { locale: es })
                           : `${format(weekDays[0], "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM", { locale: es })}`}
                       </span>
                     </Button>
@@ -347,7 +352,10 @@ export function AppointmentsCalendarPage() {
                 <ChevronRight />
               </Button>
             </div>
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" size="sm" onClick={() => setDate(new Date())}>
+                Hoy
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

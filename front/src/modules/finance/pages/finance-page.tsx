@@ -90,45 +90,62 @@ export function FinancePage() {
         <CardHeader>
           <CardTitle>Cartera activa</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Tratamiento</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Pagado</TableHead>
-                <TableHead>Pendiente</TableHead>
-                <TableHead>Vencido</TableHead>
-                <TableHead>Próximo venc.</TableHead>
-                <TableHead>Días mora</TableHead>
-                <TableHead>Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={`${row.patientId}-${row.treatmentId}`}>
-                  <TableCell>{row.patientName}</TableCell>
-                  <TableCell>{row.treatmentName}</TableCell>
-                  <TableCell>{formatCurrency(row.total)}</TableCell>
-                  <TableCell>{formatCurrency(row.paid)}</TableCell>
-                  <TableCell>{formatCurrency(row.pending)}</TableCell>
-                  <TableCell>{formatCurrency(row.overdue)}</TableCell>
-                  <TableCell>
-                    {row.nextDueDate
-                      ? formatDateOnly(row.nextDueDate, { year: "numeric", month: "short", day: "numeric" })
-                      : "—"}
-                  </TableCell>
-                  <TableCell>{row.daysLate}</TableCell>
-                  <TableCell>
-                    <Badge variant={row.status === "vencida" ? "destructive" : row.status === "parcial" ? "secondary" : "outline"}>
-                      {row.status === "al_dia" ? "Al día" : row.status === "parcial" ? "Parcial" : "Vencida"}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent className="min-w-0 px-0 pb-4">
+          <div
+            role="region"
+            aria-label="Cartera activa, tabla desplazable horizontalmente"
+            tabIndex={0}
+            className="min-w-0 overflow-x-auto px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          >
+            <div className="min-w-[56rem]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead>Tratamiento</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Pagado</TableHead>
+                    <TableHead>Pendiente</TableHead>
+                    <TableHead>Vencido</TableHead>
+                    <TableHead>Próximo venc.</TableHead>
+                    <TableHead>Días mora</TableHead>
+                    <TableHead>Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow key={`${row.patientId}-${row.treatmentId}`}>
+                      <TableCell>{row.patientName}</TableCell>
+                      <TableCell>{row.treatmentName}</TableCell>
+                      <TableCell>{formatCurrency(row.total)}</TableCell>
+                      <TableCell>{formatCurrency(row.paid)}</TableCell>
+                      <TableCell>{formatCurrency(row.pending)}</TableCell>
+                      <TableCell>{formatCurrency(row.overdue)}</TableCell>
+                      <TableCell>
+                        {row.nextDueDate
+                          ? formatDateOnly(row.nextDueDate, { year: "numeric", month: "short", day: "numeric" })
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{row.daysLate}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            row.status === "vencida"
+                              ? "destructive"
+                              : row.status === "parcial"
+                                ? "secondary"
+                                : "outline"
+                          }
+                        >
+                          {row.status === "al_dia" ? "Al día" : row.status === "parcial" ? "Parcial" : "Vencida"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
