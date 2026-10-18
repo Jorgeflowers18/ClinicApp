@@ -1,11 +1,28 @@
+import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
 
 import { useInventoryList } from "../api/inventory.queries"
 
 export function CriticalStockTab() {
   const { data, isLoading } = useInventoryList({ page: 1, pageSize: 100 })
   const criticalItems = (data?.items ?? []).filter((item) => item.stock <= item.minStock)
+
+  const columns: DataTableColumn<(typeof criticalItems)[number]>[] = [
+    { key: "name", header: "Insumo", cell: (item) => item.name },
+    { key: "category", header: "Categoría", cell: (item) => item.category },
+    { key: "stock", header: "Stock", cell: (item) => `${item.stock} ${item.unit}` },
+    { key: "minimum", header: "Mínimo", cell: (item) => `${item.minStock} ${item.unit}` },
+    {
+      key: "status",
+      header: "Estado",
+      cell: (item) => (
+        <Badge variant={item.stock === 0 ? "destructive" : "outline"}>
+          {item.stock === 0 ? "Agotado" : "Bajo mínimo"}
+        </Badge>
+      ),
+    },
+  ]
 
   if (isLoading) {
     return <Skeleton className="h-48 w-full" />
@@ -20,31 +37,13 @@ export function CriticalStockTab() {
   }
 
   return (
-    <div className="rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Insumo</TableHead>
-            <TableHead>Categoría</TableHead>
-            <TableHead>Stock</TableHead>
-            <TableHead>Mínimo</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {criticalItems.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium">{item.name}</TableCell>
-              <TableCell className="text-muted-foreground">{item.category}</TableCell>
-              <TableCell>
-                {item.stock} {item.unit}
-              </TableCell>
-              <TableCell>
-                {item.minStock} {item.unit}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable
+      columns={columns}
+      data={criticalItems}
+      getRowId={(item) => item.id}
+      mobileTitleKey="name"
+      emptyTitle="Sin stock crítico"
+      emptyDescription="Ningún insumo está por debajo de su stock mínimo."
+    />
   )
 }

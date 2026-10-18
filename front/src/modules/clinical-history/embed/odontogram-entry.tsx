@@ -4,7 +4,7 @@ import { OdontogramShell, exportImage, getStatusChart, getOdontogramSummary, imp
 import type { OdontogramThemeConfig } from "react-advanced-odontogram"
 import type { ChartSnapshot } from "../types/clinical-history.types"
 import "react-advanced-odontogram/style.css"
-import "@fontsource-variable/geist"
+import "@fontsource-variable/inter"
 import "./odontogram-theme.css"
 
 declare global {
@@ -63,6 +63,22 @@ export function EmbeddedOdontogram() {
   useEffect(() => {
     let initialized = false
     let lastPayload = ""
+    const hideUnneededControls = () => {
+      const controls = document.querySelectorAll<HTMLElement>(
+        '#btnCreditsMenu, #btnGithubLink, button[aria-label="Idioma"], button[title="Idioma"], ' +
+        'button[aria-label="Modo claro"], button[title="Modo claro"], ' +
+        'button[aria-label="Modo oscuro"], button[title="Modo oscuro"]'
+      )
+      controls.forEach((control) => {
+        control.hidden = true
+        control.setAttribute("aria-hidden", "true")
+        control.setAttribute("tabindex", "-1")
+        if (control instanceof HTMLButtonElement) control.disabled = true
+      })
+    }
+    const controlsObserver = new MutationObserver(hideUnneededControls)
+    controlsObserver.observe(document.getElementById("root")!, { childList: true, subtree: true })
+    hideUnneededControls()
     const snapshot = (): ChartSnapshot => ({ payload: getStatusChart(), summary: getOdontogramSummary() })
     const emit = () => {
       if (!initialized) return
@@ -116,6 +132,7 @@ export function EmbeddedOdontogram() {
     }, 50)
     return () => {
       clearInterval(readyTimer)
+      controlsObserver.disconnect()
       unsubscribe()
       window.removeEventListener("message", onMessage)
       delete window.clinicChart

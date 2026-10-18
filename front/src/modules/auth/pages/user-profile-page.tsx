@@ -75,7 +75,7 @@ export function UserProfilePage() {
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
           Configuración inicial
         </p>
-        <h1 className="text-3xl font-semibold">Completa tu perfil</h1>
+        <h1 className="text-3xl font-bold">Completa tu perfil</h1>
         <p className="text-sm text-muted-foreground">
           Personaliza la información que verán el resto del equipo dentro de la clínica.
         </p>

@@ -52,7 +52,7 @@ export function LoginPage() {
               {institutionProfile.logoText || "CA"}
             </div>
           )}
-          <h1 className="text-xl font-semibold">{institutionProfile.name}</h1>
+          <h1 className="text-xl font-bold">{institutionProfile.name}</h1>
           <p className="text-sm text-muted-foreground">Inicia sesión para continuar</p>
         </div>
 

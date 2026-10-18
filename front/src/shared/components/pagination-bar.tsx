@@ -23,12 +23,12 @@ export function PaginationBar({
   const end = Math.min(page * pageSize, totalItems)
 
   return (
-    <div className="flex items-center justify-between gap-4 py-3">
+    <div className="flex flex-col items-start justify-between gap-3 py-3 sm:flex-row sm:items-center sm:gap-4">
       <p className="text-sm text-muted-foreground">
         Mostrando <span className="font-medium text-foreground">{start}-{end}</span> de{" "}
         <span className="font-medium text-foreground">{totalItems}</span>
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           variant="outline"
           size="sm"

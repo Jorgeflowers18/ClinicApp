@@ -8,7 +8,8 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { FieldError } from "@/components/ui/field"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AdaptiveTabs } from "@/components/ui/adaptive-tabs"
+import { TabsContent } from "@/components/ui/tabs"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { formatDateOnly, formatDateTime } from "@/shared/lib/date"
 import { env } from "@/shared/lib/env"
@@ -279,20 +280,25 @@ export function VisitWorkspace({ patient, record, visit, onOpenVisit, onClosed, 
           />
         </div>
 
-        <Tabs value={tab} onValueChange={(value) => setTab(value as VisitTab)} className="relative">
-          <div className="overflow-x-auto pb-2">
-            <TabsList variant="line" className="gap-3">
-              {tabs.map((item) => (
-                <TabsTrigger key={item.value} value={item.value}>
-                  {item.label}
-                  {errorTabs.has(item.value) && (
-                    <span className="size-1.5 rounded-full bg-destructive" aria-label="Con errores" />
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-
+        <AdaptiveTabs
+          value={tab}
+          onValueChange={(value) => setTab(value as VisitTab)}
+          className="relative"
+          variant="line"
+          listClassName="gap-3"
+          items={tabs.map((item) => ({
+            value: item.value,
+            accessibleLabel: item.label,
+            label: (
+              <>
+                {item.label}
+                {errorTabs.has(item.value) && (
+                  <span className="size-1.5 rounded-full bg-destructive" aria-label="Con errores" />
+                )}
+              </>
+            ),
+          }))}
+        >
           <TabsContent value="odontograma" className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Selecciona una pieza para registrar hallazgos. Cambia a «Estado periodontal» dentro del editor para las
@@ -314,6 +320,7 @@ export function VisitWorkspace({ patient, record, visit, onOpenVisit, onClosed, 
               visit={visit}
               patientName={patientName}
               birthDate={patient.birthDate}
+              professionalName={professionalName}
               readOnly={readOnly}
               handle={chartHandle}
               onReady={setChartReady}
@@ -337,7 +344,7 @@ export function VisitWorkspace({ patient, record, visit, onOpenVisit, onClosed, 
           <TabsContent value="seguimiento">
             <FollowUpTab record={record} visit={visit} onOpenVisit={onOpenVisit} />
           </TabsContent>
-        </Tabs>
+        </AdaptiveTabs>
 
         <ExportCard
           record={record}

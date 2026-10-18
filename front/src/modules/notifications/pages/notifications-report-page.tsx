@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
 import { PageHeader } from "@/shared/components/page-header"
 import { PaginationBar } from "@/shared/components/pagination-bar"
+import { ResponsiveFilterBar } from "@/shared/components/responsive-filter-bar"
 import { SearchInput } from "@/shared/components/search-input"
 import { useTableQueryState } from "@/shared/hooks/use-table-query-state"
 import { formatDateTime } from "@/shared/lib/date"
@@ -39,6 +40,43 @@ export function NotificationsReportPage() {
   function patientOf(patientId: string) {
     return patientsPage?.items.find((item) => item.id === patientId)
   }
+
+  function clearFilters() {
+    setDateFrom("")
+    setDateTo("")
+    setPage(1)
+  }
+
+  const dateFilters = (prefix: string) => (
+    <>
+      <div className="space-y-1">
+        <Label htmlFor={`${prefix}DateFrom`}>Desde</Label>
+        <Input
+          id={`${prefix}DateFrom`}
+          type="date"
+          value={dateFrom}
+          onChange={(event) => {
+            setDateFrom(event.target.value)
+            setPage(1)
+          }}
+          className="w-full sm:w-auto"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor={`${prefix}DateTo`}>Hasta</Label>
+        <Input
+          id={`${prefix}DateTo`}
+          type="date"
+          value={dateTo}
+          onChange={(event) => {
+            setDateTo(event.target.value)
+            setPage(1)
+          }}
+          className="w-full sm:w-auto"
+        />
+      </div>
+    </>
+  )
 
   const columns: DataTableColumn<NotificationLog>[] = [
     {
@@ -99,42 +137,21 @@ export function NotificationsReportPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Buscar por nombre o identificación..."
-        />
-
-        <div className="flex items-end gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="dateFrom">Desde</Label>
-            <Input
-              id="dateFrom"
-              type="date"
-              value={dateFrom}
-              onChange={(event) => {
-                setDateFrom(event.target.value)
-                setPage(1)
-              }}
-              className="w-auto"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="dateTo">Hasta</Label>
-            <Input
-              id="dateTo"
-              type="date"
-              value={dateTo}
-              onChange={(event) => {
-                setDateTo(event.target.value)
-                setPage(1)
-              }}
-              className="w-auto"
-            />
-          </div>
-        </div>
-      </div>
+      <ResponsiveFilterBar
+        search={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Buscar por nombre o identificación..."
+          />
+        }
+        desktopFilters={<div className="flex flex-wrap items-end gap-3">{dateFilters("desktop")}</div>}
+        panelTitle="Filtros de notificaciones"
+        activeFilterCount={Number(Boolean(dateFrom)) + Number(Boolean(dateTo))}
+        onClear={clearFilters}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">{dateFilters("mobile")}</div>
+      </ResponsiveFilterBar>
 
       <DataTable
         columns={columns}

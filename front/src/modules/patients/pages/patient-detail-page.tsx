@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AdaptiveTabs } from "@/components/ui/adaptive-tabs"
+import { TabsContent } from "@/components/ui/tabs"
 import { PageHeader } from "@/shared/components/page-header"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { calculateAge, formatDateOnly } from "@/shared/lib/date"
@@ -182,28 +183,17 @@ export function PatientDetailPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="citas">
-        <TabsList>
-          <TabsTrigger value="citas">
-            <CalendarDays />
-            Citas
-          </TabsTrigger>
-          <TabsTrigger value="tratamientos">
-            <Stethoscope />
-            Tratamientos
-          </TabsTrigger>
-          <TabsTrigger value="finanzas">
-            <CreditCard />
-            Finanzas
-          </TabsTrigger>
-          {canSeeClinicalHistory && (
-            <TabsTrigger value="historial">
-              <FileText />
-              Historial clínico
-            </TabsTrigger>
-          )}
-        </TabsList>
-
+      <AdaptiveTabs
+        defaultValue="citas"
+        items={[
+          { value: "citas", label: <><CalendarDays />Citas</>, accessibleLabel: "Citas" },
+          { value: "tratamientos", label: <><Stethoscope />Tratamientos</>, accessibleLabel: "Tratamientos" },
+          { value: "finanzas", label: <><CreditCard />Finanzas</>, accessibleLabel: "Finanzas" },
+          ...(canSeeClinicalHistory
+            ? [{ value: "historial", label: <><FileText />Historial clínico</>, accessibleLabel: "Historial clínico" }]
+            : []),
+        ]}
+      >
         <TabsContent value="citas" className="space-y-3">
           <p className="text-sm text-muted-foreground">
             Citas agendadas para este paciente.
@@ -249,7 +239,7 @@ export function PatientDetailPage() {
             <PatientClinicalSummary patientId={patient.id} />
           </TabsContent>
         )}
-      </Tabs>
+      </AdaptiveTabs>
     </div>
   )
 }

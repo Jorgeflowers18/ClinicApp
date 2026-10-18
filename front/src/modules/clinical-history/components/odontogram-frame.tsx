@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { useTheme } from "next-themes"
+import { CalendarDays, LockKeyhole, UserRound } from "lucide-react"
 import { createId } from "@/shared/lib/id"
 import type { ChartSnapshot, DentalVisit } from "../types/clinical-history.types"
 
@@ -30,8 +31,9 @@ function readThemePalette() {
   )
 }
 
-export function OdontogramFrame({ visit, patientName, birthDate, readOnly, onChange, onReady, handle }: {
-  visit: Pick<DentalVisit, "chart" | "date">; patientName: string; birthDate: string; readOnly: boolean
+export function OdontogramFrame({ visit, patientName, birthDate, professionalName, readOnly, onChange, onReady, handle }: {
+  visit: Pick<DentalVisit, "chart" | "date" | "status">; patientName: string; birthDate: string
+  professionalName: string; readOnly: boolean
   onChange: (chart: ChartSnapshot) => void; onReady: (ready: boolean) => void
   handle: React.RefObject<ChartHandle | null>
 }) {
@@ -96,9 +98,38 @@ export function OdontogramFrame({ visit, patientName, birthDate, readOnly, onCha
     return () => { window.removeEventListener("message", listener); clearTimeout(timer) }
   }, [send])
 
-  return <div className="overflow-hidden rounded-xl border bg-card">
-    {!ready && <p role="status" className="p-4 text-sm text-muted-foreground">{error || "Cargando odontograma y periodontograma…"}</p>}
-    <iframe ref={frame} src="/odontogram.html" title="Odontograma y periodontograma del paciente"
-      className="h-[850px] w-full border-0 bg-background" />
-  </div>
+  return (
+    <section aria-labelledby="odontogram-heading" className="overflow-hidden rounded-xl border bg-card">
+      <header className="flex flex-col gap-4 border-b p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="min-w-0">
+          <h2 id="odontogram-heading" className="text-lg font-semibold tracking-tight sm:text-xl">
+            Odontograma clínico
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Registro de hallazgos y condiciones dentales.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-muted-foreground">
+            <UserRound aria-hidden="true" className="size-4 shrink-0" />
+            <span className="shrink-0">Profesional:</span>
+            <span className="max-w-[16rem] truncate">{professionalName}</span>
+          </span>
+          <span className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2">
+            <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
+            {visit.status === "cerrada" ? "Cerrada" : "Abierta"}
+          </span>
+          {readOnly && (
+            <span className="inline-flex min-h-11 items-center gap-2 rounded-md bg-muted px-3 py-2 text-muted-foreground">
+              <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
+              Solo lectura
+            </span>
+          )}
+        </div>
+      </header>
+      {!ready && <p role="status" className="p-4 text-sm text-muted-foreground">{error || "Cargando odontograma y periodontograma…"}</p>}
+      <iframe ref={frame} src="/odontogram.html" title="Odontograma y periodontograma del paciente"
+        className="h-[850px] w-full border-0 bg-background" />
+    </section>
+  )
 }

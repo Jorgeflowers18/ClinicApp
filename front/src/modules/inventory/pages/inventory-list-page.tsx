@@ -1,4 +1,5 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AdaptiveTabs } from "@/components/ui/adaptive-tabs"
+import { TabsContent } from "@/components/ui/tabs"
 import { PageHeader } from "@/shared/components/page-header"
 
 import { CriticalStockTab } from "../components/critical-stock-tab"
@@ -15,15 +16,16 @@ export function InventoryListPage() {
         description="Controla el stock, las compras y la esterilización de insumos de la clínica."
       />
 
-      <Tabs defaultValue="insumos">
-        <TabsList>
-          <TabsTrigger value="insumos">Insumos</TabsTrigger>
-          <TabsTrigger value="compras">Compras</TabsTrigger>
-          <TabsTrigger value="proveedores">Proveedores</TabsTrigger>
-          <TabsTrigger value="esterilizacion">Esterilización</TabsTrigger>
-          <TabsTrigger value="stock-critico">Stock crítico</TabsTrigger>
-        </TabsList>
-
+      <AdaptiveTabs
+        defaultValue="insumos"
+        items={[
+          { value: "insumos", label: "Insumos", accessibleLabel: "Insumos" },
+          { value: "compras", label: "Compras", accessibleLabel: "Compras" },
+          { value: "proveedores", label: "Proveedores", accessibleLabel: "Proveedores" },
+          { value: "esterilizacion", label: "Esterilización", accessibleLabel: "Esterilización" },
+          { value: "stock-critico", label: "Stock crítico", accessibleLabel: "Stock crítico" },
+        ]}
+      >
         <TabsContent value="insumos" className="pt-4">
           <InventoryItemsTab />
         </TabsContent>
@@ -39,7 +41,7 @@ export function InventoryListPage() {
         <TabsContent value="stock-critico" className="pt-4">
           <CriticalStockTab />
         </TabsContent>
-      </Tabs>
+      </AdaptiveTabs>
     </div>
   )
 }
