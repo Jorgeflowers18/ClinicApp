@@ -6,14 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageHeader } from "@/shared/components/page-header"
+import { formatDateOnly } from "@/shared/lib/date"
+import { formatCurrency } from "@/shared/lib/number"
 
 import { useFinancialPortfolio } from "../api/finance.queries"
-
-const currency = new Intl.NumberFormat("es-EC", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-})
 
 export function FinancePage() {
   const navigate = useNavigate()
@@ -49,7 +45,7 @@ export function FinancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{currency.format(totalPaid)}</p>
+            <p className="text-2xl font-semibold">{formatCurrency(totalPaid)}</p>
           </CardContent>
         </Card>
 
@@ -61,7 +57,7 @@ export function FinancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{currency.format(totalPending)}</p>
+            <p className="text-2xl font-semibold">{formatCurrency(totalPending)}</p>
           </CardContent>
         </Card>
 
@@ -73,7 +69,7 @@ export function FinancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{currency.format(totalOverdue)}</p>
+            <p className="text-2xl font-semibold">{formatCurrency(totalOverdue)}</p>
           </CardContent>
         </Card>
 
@@ -114,11 +110,15 @@ export function FinancePage() {
                 <TableRow key={`${row.patientId}-${row.treatmentId}`}>
                   <TableCell>{row.patientName}</TableCell>
                   <TableCell>{row.treatmentName}</TableCell>
-                  <TableCell>{currency.format(row.total)}</TableCell>
-                  <TableCell>{currency.format(row.paid)}</TableCell>
-                  <TableCell>{currency.format(row.pending)}</TableCell>
-                  <TableCell>{currency.format(row.overdue)}</TableCell>
-                  <TableCell>{row.nextDueDate ?? "—"}</TableCell>
+                  <TableCell>{formatCurrency(row.total)}</TableCell>
+                  <TableCell>{formatCurrency(row.paid)}</TableCell>
+                  <TableCell>{formatCurrency(row.pending)}</TableCell>
+                  <TableCell>{formatCurrency(row.overdue)}</TableCell>
+                  <TableCell>
+                    {row.nextDueDate
+                      ? formatDateOnly(row.nextDueDate, { year: "numeric", month: "short", day: "numeric" })
+                      : "—"}
+                  </TableCell>
                   <TableCell>{row.daysLate}</TableCell>
                   <TableCell>
                     <Badge variant={row.status === "vencida" ? "destructive" : row.status === "parcial" ? "secondary" : "outline"}>

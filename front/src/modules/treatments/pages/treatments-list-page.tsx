@@ -18,6 +18,7 @@ import { PaginationBar } from "@/shared/components/pagination-bar"
 import { SearchInput } from "@/shared/components/search-input"
 import { useTableQueryState } from "@/shared/hooks/use-table-query-state"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { formatCurrency } from "@/shared/lib/number"
 
 import { useDeleteTreatment, useTreatmentsList } from "../api/treatments.queries"
 import type { Treatment } from "../types/treatment.types"
@@ -45,7 +46,7 @@ export function TreatmentsListPage() {
       ),
     },
     { key: "duration", header: "Duración", cell: (row) => `${row.durationMinutes} min` },
-    { key: "price", header: "Precio", cell: (row) => `$${row.price.toFixed(2)}` },
+    { key: "price", header: "Precio", cell: (row) => formatCurrency(row.price) },
     {
       key: "status",
       header: "Estado",

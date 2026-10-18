@@ -17,6 +17,7 @@ import { PaginationBar } from "@/shared/components/pagination-bar"
 import { SearchInput } from "@/shared/components/search-input"
 import { useTableQueryState } from "@/shared/hooks/use-table-query-state"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { formatCurrency } from "@/shared/lib/number"
 
 import { useDeleteInventoryItem, useInventoryList } from "../api/inventory.queries"
 import type { InventoryItem } from "../types/inventory.types"
@@ -66,7 +67,7 @@ export function InventoryItemsTab() {
       ),
     },
     { key: "minStock", header: "Mínimo", cell: (row) => `${row.minStock} ${row.unit}` },
-    { key: "unitCost", header: "Costo unitario", cell: (row) => `$${row.unitCost.toFixed(2)}` },
+    { key: "unitCost", header: "Costo unitario", cell: (row) => formatCurrency(row.unitCost) },
     { key: "supplier", header: "Proveedor", cell: (row) => row.supplier || "—" },
     {
       key: "actions",

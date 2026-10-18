@@ -11,6 +11,7 @@ import { TabsContent } from "@/components/ui/tabs"
 import { PageHeader } from "@/shared/components/page-header"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { calculateAge, formatDateOnly } from "@/shared/lib/date"
+import { formatCurrency } from "@/shared/lib/number"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { usePatientFinancialSummary } from "@/modules/finance/api/finance.queries"
 import { PatientClinicalSummary } from "@/modules/clinical-history/components/patient-clinical-summary"
@@ -220,15 +221,15 @@ export function PatientDetailPage() {
             </Card>
             <Card>
               <CardHeader><CardTitle className="text-sm text-muted-foreground">Total pagado</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">${(financialSummary?.totalPaid ?? 0).toFixed(2)}</CardContent>
+              <CardContent className="text-2xl font-semibold">{formatCurrency(financialSummary?.totalPaid ?? 0)}</CardContent>
             </Card>
             <Card>
               <CardHeader><CardTitle className="text-sm text-muted-foreground">Total pendiente</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">${(financialSummary?.totalPending ?? 0).toFixed(2)}</CardContent>
+              <CardContent className="text-2xl font-semibold">{formatCurrency(financialSummary?.totalPending ?? 0)}</CardContent>
             </Card>
             <Card>
               <CardHeader><CardTitle className="text-sm text-muted-foreground">Total vencido</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">${(financialSummary?.totalOverdue ?? 0).toFixed(2)}</CardContent>
+              <CardContent className="text-2xl font-semibold">{formatCurrency(financialSummary?.totalOverdue ?? 0)}</CardContent>
             </Card>
           </div>
           <Button variant="outline" onClick={() => navigate("/finanzas")}>Ver cartera financiera</Button>

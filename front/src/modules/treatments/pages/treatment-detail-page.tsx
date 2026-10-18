@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageHeader } from "@/shared/components/page-header"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { formatCurrency } from "@/shared/lib/number"
 import { useInventoryList } from "@/modules/inventory/api/inventory.queries"
 import { usePatientsList } from "@/modules/patients/api/patients.queries"
 
@@ -94,7 +95,7 @@ export function TreatmentDetailPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Precio</p>
-            <p className="text-2xl font-semibold">${treatment.price.toFixed(2)}</p>
+            <p className="text-2xl font-semibold">{formatCurrency(treatment.price)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -127,23 +128,23 @@ export function TreatmentDetailPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
               <div>
                 <p className="text-sm text-muted-foreground">Valor tratamiento</p>
-                <p className="text-xl font-semibold">${financialSummary.totalValue.toFixed(2)}</p>
+                <p className="text-xl font-semibold">{formatCurrency(financialSummary.totalValue)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Seguro</p>
-                <p className="text-xl font-semibold">${financialSummary.insuranceCovered.toFixed(2)}</p>
+                <p className="text-xl font-semibold">{formatCurrency(financialSummary.insuranceCovered)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Responsabilidad paciente</p>
-                <p className="text-xl font-semibold">${financialSummary.patientResponsibility.toFixed(2)}</p>
+                <p className="text-xl font-semibold">{formatCurrency(financialSummary.patientResponsibility)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Pagado</p>
-                <p className="text-xl font-semibold">${financialSummary.totalPaid.toFixed(2)}</p>
+                <p className="text-xl font-semibold">{formatCurrency(financialSummary.totalPaid)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Pendiente</p>
-                <p className="text-xl font-semibold">${financialSummary.pendingBalance.toFixed(2)}</p>
+                <p className="text-xl font-semibold">{formatCurrency(financialSummary.pendingBalance)}</p>
               </div>
             </div>
           ) : (
