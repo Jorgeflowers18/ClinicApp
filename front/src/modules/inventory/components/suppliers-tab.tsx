@@ -66,7 +66,8 @@ export function SuppliersTab() {
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-muted"
+            className="inline-flex size-11 items-center justify-center rounded-md hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:size-8"
+            aria-label={`Acciones del proveedor ${row.name}`}
             onClick={(event) => event.stopPropagation()}
           >
             <MoreHorizontal className="size-4" />
@@ -99,6 +100,7 @@ export function SuppliersTab() {
         isError={isError}
         errorMessage={getErrorMessage(error)}
         onRowClick={openEdit}
+        getRowLabel={(row) => `Editar proveedor: ${row.name}`}
         emptyTitle="Sin proveedores"
         emptyDescription="Registra proveedores para poder elegirlos al crear una orden de compra."
       />

@@ -75,7 +75,8 @@ export function InventoryItemsTab() {
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-muted"
+            className="inline-flex size-11 items-center justify-center rounded-md hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:size-8"
+            aria-label={`Acciones del insumo ${row.name}`}
             onClick={(event) => event.stopPropagation()}
           >
             <MoreHorizontal className="size-4" />
@@ -110,7 +111,12 @@ export function InventoryItemsTab() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nombre, categoría o proveedor..." />
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          ariaLabel="Buscar insumos"
+          placeholder="Buscar por nombre, categoría o proveedor..."
+        />
         <Button onClick={() => navigate("/inventario/nuevo")}>
           <Plus />
           Nuevo insumo
@@ -132,6 +138,7 @@ export function InventoryItemsTab() {
         isError={isError}
         errorMessage={getErrorMessage(error)}
         onRowClick={(row) => navigate(`/inventario/${row.id}`)}
+        getRowLabel={(row) => `Ver detalle del insumo ${row.name}`}
         emptyTitle="Sin insumos"
         emptyDescription="Aún no hay insumos registrados con estos criterios."
       />

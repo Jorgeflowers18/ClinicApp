@@ -162,6 +162,7 @@ export function ClinicalHistoryListPage() {
           <SearchInput
             value={search}
             onChange={setSearch}
+            ariaLabel="Buscar visitas clínicas"
             placeholder="Buscar por paciente, motivo o diagnóstico..."
           />
         }
@@ -230,6 +231,7 @@ export function ClinicalHistoryListPage() {
         isError={isError}
         errorMessage={getErrorMessage(error)}
         onRowClick={openVisit}
+        getRowLabel={(row) => `Abrir visita de ${patientItems[row.patientId] ?? "paciente"}`}
         emptyTitle="Sin visitas"
         emptyDescription={
           patientId

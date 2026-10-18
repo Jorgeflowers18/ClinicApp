@@ -29,6 +29,7 @@ interface DataTableProps<T> {
   emptyTitle?: string
   emptyDescription?: string
   onRowClick?: (row: T) => void
+  getRowLabel?: (row: T) => string
   mobileTitleKey?: string
 }
 
@@ -42,6 +43,7 @@ export function DataTable<T>({
   emptyTitle = "Sin resultados",
   emptyDescription = "No se encontraron registros con los criterios actuales.",
   onRowClick,
+  getRowLabel,
   mobileTitleKey,
 }: DataTableProps<T>) {
   const titleColumn = columns.find((column) => column.key === mobileTitleKey) ?? columns[0]
@@ -101,7 +103,24 @@ export function DataTable<T>({
                 <TableRow
                   key={getRowId(row)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
-                  className={onRowClick ? "cursor-pointer" : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.target !== event.currentTarget) return
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault()
+                            onRowClick(row)
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={onRowClick ? 0 : undefined}
+                  aria-label={onRowClick ? getRowLabel?.(row) : undefined}
+                  className={
+                    onRowClick
+                      ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                      : undefined
+                  }
                 >
                   {columns.map((column) => (
                     <TableCell key={column.key} className={column.className}>
@@ -172,6 +191,7 @@ export function DataTable<T>({
                   <div
                     role="button"
                     tabIndex={0}
+                    aria-label={getRowLabel?.(row)}
                     onClick={() => onRowClick(row)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {

@@ -86,7 +86,7 @@ export function ResponsiveFilterBar({
               Limpiar
             </Button>
             <Button type="button" className="flex-1" onClick={() => setIsOpen(false)}>
-              Aplicar
+              Listo
             </Button>
           </SheetFooter>
         </SheetContent>

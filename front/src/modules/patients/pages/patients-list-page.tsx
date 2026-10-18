@@ -70,7 +70,8 @@ export function PatientsListPage() {
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-muted"
+            className="inline-flex size-11 items-center justify-center rounded-md hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:size-8"
+            aria-label={`Acciones del paciente ${row.firstName} ${row.lastName}`}
             onClick={(event) => event.stopPropagation()}
           >
             <MoreHorizontal className="size-4" />
@@ -115,7 +116,12 @@ export function PatientsListPage() {
         }
       />
 
-      <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nombre, cédula o teléfono..." />
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        ariaLabel="Buscar pacientes"
+        placeholder="Buscar por nombre, cédula o teléfono..."
+      />
 
       <DataTable
         columns={columns}
@@ -125,6 +131,7 @@ export function PatientsListPage() {
         isError={isError}
         errorMessage={getErrorMessage(error)}
         onRowClick={(row) => navigate(`/pacientes/${row.id}`)}
+        getRowLabel={(row) => `Abrir detalles del paciente ${row.firstName} ${row.lastName}`}
         emptyTitle="Sin pacientes"
         emptyDescription="Aún no hay pacientes registrados con estos criterios."
       />

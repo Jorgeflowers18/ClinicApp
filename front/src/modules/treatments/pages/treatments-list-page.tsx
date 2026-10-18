@@ -60,7 +60,8 @@ export function TreatmentsListPage() {
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-muted"
+            className="inline-flex size-11 items-center justify-center rounded-md hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:size-8"
+            aria-label={`Acciones del tratamiento ${row.name}`}
             onClick={(event) => event.stopPropagation()}
           >
             <MoreHorizontal className="size-4" />
@@ -105,7 +106,12 @@ export function TreatmentsListPage() {
         }
       />
 
-      <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nombre o categoría..." />
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        ariaLabel="Buscar tratamientos"
+        placeholder="Buscar por nombre o categoría..."
+      />
 
       <DataTable
         columns={columns}
@@ -115,6 +121,7 @@ export function TreatmentsListPage() {
         isError={isError}
         errorMessage={getErrorMessage(error)}
         onRowClick={(row) => navigate(`/tratamientos/${row.id}`)}
+        getRowLabel={(row) => `Ver tratamiento: ${row.name}`}
         emptyTitle="Sin tratamientos"
         emptyDescription="Aún no hay tratamientos registrados con estos criterios."
       />

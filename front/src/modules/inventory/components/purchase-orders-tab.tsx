@@ -123,6 +123,7 @@ export function PurchaseOrdersTab() {
         emptyTitle="Sin órdenes de compra"
         emptyDescription="Todavía no hay órdenes de compra registradas."
         onRowClick={openDetail}
+        getRowLabel={(order) => `Ver orden de compra de ${supplierName(order.supplierId)}`}
       />
 
       <PurchaseOrderFormDialog open={dialogOpen} onOpenChange={setDialogOpen} order={selectedOrder} />
