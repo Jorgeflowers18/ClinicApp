@@ -63,6 +63,7 @@ export function EmbeddedOdontogram() {
   useEffect(() => {
     let initialized = false
     let lastPayload = ""
+    const root = document.getElementById("root")!
     const hideUnneededControls = () => {
       const controls = document.querySelectorAll<HTMLElement>(
         '#btnCreditsMenu, #btnGithubLink, button[aria-label="Idioma"], button[title="Idioma"], ' +
@@ -77,7 +78,7 @@ export function EmbeddedOdontogram() {
       })
     }
     const controlsObserver = new MutationObserver(hideUnneededControls)
-    controlsObserver.observe(document.getElementById("root")!, { childList: true, subtree: true })
+    controlsObserver.observe(root, { childList: true, subtree: true })
     hideUnneededControls()
     const snapshot = (): ChartSnapshot => ({ payload: getStatusChart(), summary: getOdontogramSummary() })
     const emit = () => {
