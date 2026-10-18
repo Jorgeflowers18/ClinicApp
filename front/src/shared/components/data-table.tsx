@@ -11,6 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Inbox } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export interface DataTableColumn<T> {
   key: string
@@ -31,6 +32,7 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void
   getRowLabel?: (row: T) => string
   mobileTitleKey?: string
+  className?: string
 }
 
 export function DataTable<T>({
@@ -45,13 +47,14 @@ export function DataTable<T>({
   onRowClick,
   getRowLabel,
   mobileTitleKey,
+  className,
 }: DataTableProps<T>) {
   const titleColumn = columns.find((column) => column.key === mobileTitleKey) ?? columns[0]
   const detailColumns = columns.filter((column) => column !== titleColumn && column.header)
   const actionColumns = columns.filter((column) => !column.header)
 
   return (
-    <div className="@container min-w-0">
+    <div className={cn("@container min-w-0", className)}>
       <div className="hidden rounded-lg border @md:block">
         <Table>
           <TableHeader>

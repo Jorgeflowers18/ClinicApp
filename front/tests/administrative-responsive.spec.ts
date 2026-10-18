@@ -25,7 +25,7 @@ test("administrative modules do not overflow the page at mobile and tablet width
     "/perfil-institucion",
   ]
 
-  for (const width of [320, 768]) {
+  for (const width of [320, 375, 390, 430, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 })
     for (const route of routes) {
       await page.goto(route)
@@ -53,6 +53,13 @@ test("financial portfolio keeps every column in a keyboard-scrollable region on 
   const portfolio = page.getByRole("region", { name: "Cartera activa, tabla desplazable horizontalmente" })
   await expect(portfolio).toBeVisible()
   await expect(portfolio.getByRole("columnheader")).toHaveCount(9)
+  for (const width of [320, 375, 390, 430, 768, 1024, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(portfolio).toBeVisible()
+    const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+    expect(pageWidth, `financial page overflow at ${width}px`).toBeLessThanOrEqual(width)
+  }
+  await page.setViewportSize({ width: 320, height: 900 })
   await expect.poll(() => portfolio.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true)
   await portfolio.focus()
   await expect(portfolio).toBeFocused()

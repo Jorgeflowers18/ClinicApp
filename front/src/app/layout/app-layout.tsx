@@ -74,6 +74,9 @@ export function AppLayout() {
   const visibleItems = navItems.filter(
     (item) => !item.roles || (user && item.roles.includes(user.role))
   )
+  const isClinicalRoute = pathname.startsWith("/historial-clinico")
+  const isPilotRoute = pathname === "/" || pathname === "/pacientes" || pathname.startsWith("/pacientes/")
+  const isAdminVisualRoute = !isClinicalRoute
   const currentSection = pathname === "/"
     ? navItems[0]
     : navItems.find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))
@@ -88,10 +91,13 @@ export function AppLayout() {
     <div
       className={cn(
         "grid h-dvh min-h-0 min-w-0 grid-cols-[56px_minmax(0,1fr)] overflow-hidden transition-[grid-template-columns] duration-200 lg:grid-cols-[72px_minmax(0,1fr)]",
+        isAdminVisualRoute && "clinic-admin-shell",
+        isClinicalRoute && "clinic-clinical-shell",
+        isPilotRoute && "clinic-pilot-shell",
         isSidebarExpanded && !isMobileViewport && "lg:grid-cols-[256px_minmax(0,1fr)]"
       )}
     >
-      <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r bg-muted/20">
+      <aside className={cn("flex min-h-0 min-w-0 flex-col overflow-hidden border-r bg-muted/20", isAdminVisualRoute && "clinic-admin-sidebar")}>
         <SidebarContent
           visibleItems={visibleItems}
           isAdmin={user?.role === "admin"}
@@ -116,7 +122,7 @@ export function AppLayout() {
         <SheetContent
           side="left"
           showCloseButton={false}
-          className="w-[min(16rem,85vw)] max-w-none gap-0 overflow-hidden p-0 data-[side=left]:w-[min(16rem,85vw)]"
+          className={cn("w-[min(16rem,85vw)] max-w-none gap-0 overflow-hidden p-0 data-[side=left]:w-[min(16rem,85vw)]", isAdminVisualRoute && "clinic-admin-sidebar-panel")}
         >
           <SheetTitle className="sr-only">Navegación principal</SheetTitle>
           <SidebarContent
@@ -139,7 +145,7 @@ export function AppLayout() {
       </Sheet>
 
       <div className="flex min-h-0 min-w-0 flex-col">
-        <header className="flex h-16 min-w-0 shrink-0 items-center justify-between gap-2 border-b px-3 sm:gap-3 sm:px-4 md:px-6">
+        <header className={cn("flex h-16 min-w-0 shrink-0 items-center justify-between gap-2 border-b px-3 sm:gap-3 sm:px-4 md:px-6", isAdminVisualRoute && "clinic-admin-header")}>
           <nav aria-label="Migas de pan" className="min-w-0 flex-1 overflow-hidden">
             <ol className="flex min-w-0 items-center gap-2 text-sm">
               <li className="shrink-0">
@@ -175,7 +181,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
+        <main className={cn("min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6", isAdminVisualRoute && "clinic-admin-canvas", isClinicalRoute && "clinic-clinical-canvas", isPilotRoute && "clinic-pilot-canvas")}>
           <Outlet />
         </main>
       </div>
@@ -240,6 +246,7 @@ function SidebarContent({
   const linkClass = (active: boolean) =>
     cn(
       "flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+      "clinic-sidebar-link",
       isCollapsed && "justify-center px-0",
       active && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
     )
@@ -268,7 +275,7 @@ function SidebarContent({
           : "min-h-16 items-center justify-between gap-2 px-2 py-2"
       )}>
         <div className={cn("flex min-w-0 items-center", isCollapsed ? "justify-center" : "gap-2")}>
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
+          <div className="clinic-brand-mark flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
             CA
           </div>
           {!isCollapsed && (

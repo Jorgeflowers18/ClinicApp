@@ -66,7 +66,7 @@ test("visita completa: odontograma, validación, plan con catálogo, cierre y ex
   const [mobilityValue] = await editor.locator("#mobilitySelect").selectOption({ index: 1 })
   await editor.locator("#calculusRow label").click()
   await expect(editor.locator("#calculusToggle")).toBeChecked()
-  await page.getByRole("button", { name: "Cambiar tema" }).click()
+  await page.getByRole("button", { name: "Modo claro", exact: true }).click()
   await expect(page.locator("html")).toHaveClass(/dark/)
   await expect(editor.locator("html")).toHaveClass(/dark/)
   const outerColor = await page.evaluate(() =>
@@ -78,7 +78,7 @@ test("visita completa: odontograma, validación, plan con catálogo, cierre y ex
     )
     .toBe(outerColor)
   await page.screenshot({ path: "test-results/dental-dark.png", fullPage: true })
-  await page.getByRole("button", { name: "Cambiar tema" }).click()
+  await page.getByRole("button", { name: "Modo oscuro", exact: true }).click()
   await expect(page.locator("html")).not.toHaveClass(/dark/)
 
   await editor.locator("#appViewDentalChart").click()

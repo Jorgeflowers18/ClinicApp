@@ -39,6 +39,16 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
+    --color-clinic-bg: var(--clinic-bg);
+    --color-clinic-surface: var(--clinic-surface);
+    --color-clinic-surface-elevated: var(--clinic-surface-elevated);
+    --color-clinic-border: var(--clinic-border);
+    --color-clinic-text: var(--clinic-text);
+    --color-clinic-text-muted: var(--clinic-text-muted);
+    --color-clinic-primary: var(--clinic-primary);
+    --color-clinic-primary-hover: var(--clinic-primary-hover);
+    --color-clinic-focus: var(--clinic-focus);
+    --color-clinic-data: var(--clinic-data);
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -81,6 +91,18 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+    --clinic-bg: #f7f7f8;
+    --clinic-surface: #ffffff;
+    --clinic-surface-elevated: #f1f2f3;
+    --clinic-border: #e1e3e6;
+    --clinic-text: #17191c;
+    --clinic-text-muted: #62666d;
+    --clinic-primary: #5350cc;
+    --clinic-primary-hover: #403cd5;
+    --clinic-primary-text: #5350cc;
+    --clinic-on-primary: #ffffff;
+    --clinic-focus: #007fbd;
+    --clinic-data: #02889a;
 }
 
 .dark {
@@ -115,6 +137,18 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+    --clinic-bg: #111213;
+    --clinic-surface: #191a1c;
+    --clinic-surface-elevated: #222427;
+    --clinic-border: #303338;
+    --clinic-text: #f3f4f5;
+    --clinic-text-muted: #a6abb2;
+    --clinic-primary: #e4f222;
+    --clinic-primary-hover: #d5e31d;
+    --clinic-primary-text: #e4f222;
+    --clinic-on-primary: #17191c;
+    --clinic-focus: #e4f222;
+    --clinic-data: #02b8cc;
 }
 
 @layer base {
@@ -159,5 +193,415 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+.clinic-pilot-canvas {
+  background-color: var(--clinic-bg);
+}
+
+.clinic-admin-header,
+.clinic-admin-sidebar,
+.clinic-admin-sidebar-panel {
+  background-color: var(--clinic-surface);
+  border-color: var(--clinic-border);
+}
+
+.clinic-admin-header {
+  color: var(--clinic-text);
+}
+
+.clinic-admin-header [role="group"] {
+  border: 1px solid var(--clinic-border);
+  background-color: var(--clinic-surface);
+}
+
+.clinic-admin-sidebar .clinic-brand-mark,
+.clinic-admin-sidebar-panel .clinic-brand-mark {
+  background-color: var(--clinic-primary);
+  color: var(--clinic-on-primary);
+}
+
+.clinic-admin-sidebar .clinic-sidebar-link,
+.clinic-admin-sidebar-panel .clinic-sidebar-link {
+  border: 1px solid transparent;
+}
+
+.clinic-admin-sidebar .clinic-sidebar-link:hover,
+.clinic-admin-sidebar-panel .clinic-sidebar-link:hover {
+  background-color: var(--clinic-surface-elevated);
+  color: var(--clinic-text);
+}
+
+.clinic-admin-sidebar .clinic-sidebar-link[aria-current="page"],
+.clinic-admin-sidebar-panel .clinic-sidebar-link[aria-current="page"] {
+  background-color: color-mix(in srgb, var(--clinic-primary) 12%, var(--clinic-surface));
+  color: var(--clinic-primary-text);
+}
+
+.clinic-pilot :focus-visible {
+  outline-color: var(--clinic-focus);
+}
+
+.clinic-pilot-page {
+  color: var(--clinic-text);
+}
+
+.clinic-pilot-header {
+  border-color: var(--clinic-border);
+  padding-bottom: 1.25rem;
+}
+
+.clinic-pilot-header h1 {
+  color: var(--clinic-text);
+  font-size: clamp(1.375rem, 1.2vw + 1rem, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+.clinic-pilot-header p {
+  color: var(--clinic-text-muted);
+}
+
+.clinic-pilot-card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--clinic-border);
+  background-color: var(--clinic-surface);
+  box-shadow: none;
+}
+
+.clinic-kpi-icon {
+  background-color: color-mix(in srgb, var(--clinic-data) 12%, var(--clinic-surface));
+  color: var(--clinic-data);
+}
+
+.clinic-pilot-primary-button:not(:disabled) {
+  border-radius: 0.375rem;
+  background-color: var(--clinic-primary);
+  color: var(--clinic-on-primary);
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.clinic-pilot-primary-button:not(:disabled):hover {
+  background-color: var(--clinic-primary-hover);
+}
+
+.clinic-pilot-primary-button:focus-visible {
+  outline: 2px solid var(--clinic-focus);
+  outline-offset: 2px;
+}
+
+.clinic-pilot-secondary-button {
+  border-color: var(--clinic-border);
+  border-radius: 0.375rem;
+  background-color: var(--clinic-surface);
+  color: var(--clinic-text);
+}
+
+.clinic-pilot-secondary-button:hover {
+  background-color: var(--clinic-surface-elevated);
+  color: var(--clinic-text);
+}
+
+.clinic-patients-search {
+  max-width: 28rem;
+}
+
+.clinic-patients-search input {
+  height: 2.75rem;
+  border-color: var(--clinic-border);
+  border-radius: 0.375rem;
+  background-color: var(--clinic-surface);
+  color: var(--clinic-text);
+}
+
+.clinic-patients-search input:focus-visible {
+  border-color: var(--clinic-focus);
+  outline: 2px solid color-mix(in srgb, var(--clinic-focus) 25%, transparent);
+  outline-offset: 1px;
+}
+
+.clinic-patients-table [data-slot="table-container"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--clinic-border);
+  border-radius: 0.75rem;
+  background-color: var(--clinic-surface);
+}
+
+.clinic-patients-table [data-slot="table-head"] {
+  height: 2.75rem;
+  background-color: var(--clinic-surface-elevated);
+  color: var(--clinic-text-muted);
+}
+
+.clinic-patients-table [data-slot="table-row"] {
+  border-color: var(--clinic-border);
+}
+
+.clinic-patients-table [data-slot="table-body"] [data-slot="table-row"]:hover {
+  background-color: var(--clinic-surface-elevated);
+}
+
+.clinic-patients-table article {
+  border-color: var(--clinic-border);
+  border-radius: 0.75rem;
+  background-color: var(--clinic-surface);
+  box-shadow: none;
+}
+
+.clinic-admin-shell {
+  color: var(--clinic-text);
+}
+
+.clinic-admin-canvas {
+  background-color: var(--clinic-bg);
+  color: var(--clinic-text);
+}
+
+body:has(.clinic-standalone-profile) {
+  background-color: var(--clinic-bg);
+  color: var(--clinic-text);
+}
+
+.clinic-standalone-profile {
+  max-width: min(42rem, 100%) !important;
+  min-height: 100dvh;
+  padding: clamp(1rem, 4vw, 2rem);
+}
+
+.clinic-standalone-profile [data-slot="button"].bg-primary:not(:disabled) {
+  background-color: var(--clinic-primary);
+  color: var(--clinic-on-primary);
+}
+
+.clinic-standalone-profile [data-slot="button"].bg-primary:not(:disabled):hover {
+  background-color: var(--clinic-primary-hover);
+}
+
+.clinic-admin-canvas [data-slot="card"] {
+  border: 1px solid var(--clinic-border);
+  border-radius: 0.75rem;
+  background-color: var(--clinic-surface);
+  box-shadow: none;
+}
+
+.clinic-admin-canvas [data-slot="card-title"] {
+  color: var(--clinic-text);
+}
+
+.clinic-admin-canvas [data-slot="button"]:not(:disabled) {
+  border-radius: 0.375rem;
+}
+
+.clinic-admin-canvas [data-slot="button"].bg-primary:not(:disabled) {
+  background-color: var(--clinic-primary);
+  color: var(--clinic-on-primary);
+}
+
+.clinic-admin-canvas [data-slot="button"].bg-primary:not(:disabled):hover {
+  background-color: var(--clinic-primary-hover);
+}
+
+.clinic-admin-canvas [data-slot="button"].bg-primary:focus-visible {
+  outline: 2px solid var(--clinic-focus);
+  outline-offset: 2px;
+}
+
+.clinic-admin-canvas [data-slot="input"],
+.clinic-admin-canvas [data-slot="textarea"],
+.clinic-admin-canvas [data-slot="select-trigger"] {
+  border-color: var(--clinic-border);
+  border-radius: 0.375rem;
+  background-color: var(--clinic-surface);
+  color: var(--clinic-text);
+}
+
+.clinic-admin-canvas [data-slot="input"]:focus-visible,
+.clinic-admin-canvas [data-slot="textarea"]:focus-visible,
+.clinic-admin-canvas [data-slot="select-trigger"]:focus-visible {
+  border-color: var(--clinic-focus);
+  outline: 2px solid color-mix(in srgb, var(--clinic-focus) 25%, transparent);
+  outline-offset: 1px;
+}
+
+.clinic-admin-canvas [data-slot="table-container"] {
+  border: 1px solid var(--clinic-border);
+  border-radius: 0.75rem;
+  background-color: var(--clinic-surface);
+}
+
+.clinic-admin-canvas [data-slot="table-head"] {
+  background-color: var(--clinic-surface-elevated);
+  color: var(--clinic-text-muted);
+}
+
+.clinic-admin-canvas [data-slot="table-row"] {
+  border-color: var(--clinic-border);
+}
+
+.clinic-admin-canvas [data-slot="table-body"] [data-slot="table-row"]:hover {
+  background-color: var(--clinic-surface-elevated);
+}
+
+.clinic-admin-canvas [data-slot="tabs-list"]:not([data-variant="line"]) {
+  border: 1px solid var(--clinic-border);
+  border-radius: 0.5rem;
+  background-color: var(--clinic-surface-elevated);
+}
+
+.clinic-admin-canvas [data-slot="tabs-trigger"][data-active] {
+  border-radius: 0.375rem;
+  background-color: var(--clinic-surface);
+  color: var(--clinic-text);
+}
+
+.clinic-admin-canvas [data-slot="tabs-trigger"]:focus-visible {
+  outline-color: var(--clinic-focus);
+}
+
+.clinic-admin-canvas [data-slot="badge"] {
+  border-radius: 0.25rem;
+}
+
+.clinic-admin-canvas [data-slot="page-header"] {
+  border-color: var(--clinic-border);
+}
+
+.clinic-admin-canvas > div > [class*="border-b"] {
+  border-color: var(--clinic-border);
+}
+
+.clinic-admin-canvas [data-slot="button"]:focus-visible,
+.clinic-admin-canvas [role="button"]:focus-visible,
+.clinic-admin-canvas [role="region"]:focus-visible {
+  outline-color: var(--clinic-focus);
+}
+
+.clinic-admin-canvas [data-slot="table-container"]:focus-within {
+  border-color: var(--clinic-focus);
+}
+
+html:has(.clinic-admin-shell) [data-slot="dialog-overlay"],
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-overlay"] {
+  background-color: rgb(8 9 10 / 55%);
+}
+
+html:has(.clinic-admin-shell) [data-slot="dialog-content"],
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-content"],
+html:has(.clinic-admin-shell) [data-slot="select-content"],
+html:has(.clinic-admin-shell) [data-slot="popover-content"],
+html:has(.clinic-admin-shell) [data-slot="dropdown-menu-content"],
+html:has(.clinic-admin-shell) [data-slot="dropdown-menu-sub-content"] {
+  border: 1px solid var(--clinic-border);
+  border-radius: 0.75rem;
+  background-color: var(--clinic-surface);
+  color: var(--clinic-text);
+  box-shadow: 0 8px 24px rgb(8 9 10 / 18%);
+}
+
+html:has(.clinic-admin-shell) [data-slot="dialog-content"] {
+  max-width: min(42rem, calc(100% - 2rem));
+  padding: 1.25rem;
+}
+
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-content"] {
+  max-width: min(24rem, calc(100% - 2rem));
+}
+
+html:has(.clinic-admin-shell) [data-slot="dialog-title"],
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-title"] {
+  color: var(--clinic-text);
+  letter-spacing: -0.02em;
+}
+
+html:has(.clinic-admin-shell) [data-slot="dialog-footer"],
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-footer"] {
+  border-color: var(--clinic-border);
+  background-color: var(--clinic-surface-elevated);
+}
+
+html:has(.clinic-admin-shell) [data-slot="select-item"]:focus,
+html:has(.clinic-admin-shell) [data-slot="dropdown-menu-item"]:focus {
+  background-color: var(--clinic-surface-elevated);
+  color: var(--clinic-text);
+}
+
+html:has(.clinic-admin-shell) [data-slot="select-item"][data-highlighted],
+html:has(.clinic-admin-shell) [data-slot="dropdown-menu-item"][data-highlighted] {
+  background-color: var(--clinic-surface-elevated);
+  color: var(--clinic-text);
+}
+
+html:has(.clinic-admin-shell) [data-slot="dialog-content"] [data-slot="input"],
+html:has(.clinic-admin-shell) [data-slot="dialog-content"] [data-slot="textarea"],
+html:has(.clinic-admin-shell) [data-slot="dialog-content"] [data-slot="select-trigger"],
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-content"] [data-slot="input"],
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-content"] [data-slot="textarea"],
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-content"] [data-slot="select-trigger"] {
+  border-color: var(--clinic-border);
+  border-radius: 0.375rem;
+  background-color: var(--clinic-surface);
+  color: var(--clinic-text);
+}
+
+html:has(.clinic-admin-shell) [data-slot="dialog-content"] [data-slot="button"].bg-primary:not(:disabled),
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-content"] [data-slot="button"].bg-primary:not(:disabled) {
+  background-color: var(--clinic-primary);
+  color: var(--clinic-on-primary);
+}
+
+html:has(.clinic-admin-shell) [data-slot="dialog-content"] [data-slot="button"].bg-primary:not(:disabled):hover,
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-content"] [data-slot="button"].bg-primary:not(:disabled):hover {
+  background-color: var(--clinic-primary-hover);
+}
+
+html:has(.clinic-admin-shell) [data-slot="alert"],
+html:has(.clinic-admin-shell) [data-slot="calendar"] {
+  border-radius: 0.75rem;
+}
+
+html:has(.clinic-admin-shell) [data-slot="dialog-content"] :focus-visible,
+html:has(.clinic-admin-shell) [data-slot="alert-dialog-content"] :focus-visible,
+html:has(.clinic-admin-shell) [data-slot="select-content"] :focus-visible,
+html:has(.clinic-admin-shell) [data-slot="popover-content"] :focus-visible,
+html:has(.clinic-admin-shell) [data-slot="dropdown-menu-content"] :focus-visible {
+  outline-color: var(--clinic-focus);
+}
+
+.clinic-clinical-canvas > * > [class*="border-b"] {
+  border-color: var(--border);
+}
+
+.clinic-clinical-canvas [data-slot="card"],
+.clinic-clinical-canvas > div > section[aria-labelledby="odontogram-heading"] {
+  border-radius: 0.75rem;
+}
+
+.clinic-clinical-canvas [data-slot="button"],
+.clinic-clinical-canvas [data-slot="select-trigger"] {
+  border-radius: 0.375rem;
+}
+
+.clinic-clinical-canvas [data-slot="card"] {
+  box-shadow: none;
+}
+
+.clinic-clinical-canvas iframe {
+  max-width: 100%;
+}
+
+html:has(.clinic-clinical-shell) [data-slot="dialog-content"],
+html:has(.clinic-clinical-shell) [data-slot="alert-dialog-content"],
+html:has(.clinic-clinical-shell) [data-slot="select-content"],
+html:has(.clinic-clinical-shell) [data-slot="popover-content"] {
+  border-radius: 0.75rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .clinic-admin-canvas [data-slot="card"],
+  .clinic-admin-canvas [data-slot="table-row"],
+  .clinic-admin-canvas [data-slot="button"] {
+    transition-duration: 150ms;
   }
 }

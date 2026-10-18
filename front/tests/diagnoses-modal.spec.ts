@@ -11,6 +11,7 @@ async function login(page: Page) {
 }
 
 test("diagnósticos del caso responden al viewport y conservan el estado de la visita", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   await login(page)
   await page.goto("/historial-clinico/paciente/pat_5")
   await page.getByRole("button", { name: "Nueva visita", exact: true }).click()
@@ -24,6 +25,23 @@ test("diagnósticos del caso responden al viewport y conservan el estado de la v
   const modal = editor.locator("#caseDiagnosesModal")
   const emptyState = editor.locator("#caseDiagnosesSection")
   await expect(modal).toBeVisible()
+  await expect.poll(() =>
+    modal.evaluate((node) => {
+      const frame = window.frameElement!
+      const frameRect = frame.getBoundingClientRect()
+      const dialogRect = node.getBoundingClientRect()
+      const top = frameRect.top + dialogRect.top
+      const bottom = frameRect.top + dialogRect.bottom
+      return top >= 0 && bottom <= window.parent.innerHeight
+    })
+  ).toBe(true)
+  const dialogPosition = await modal.evaluate((node) => {
+    const frameRect = window.frameElement!.getBoundingClientRect()
+    const dialogRect = node.getBoundingClientRect()
+    return { top: frameRect.top + dialogRect.top, bottom: frameRect.top + dialogRect.bottom }
+  })
+  expect(dialogPosition.top).toBeGreaterThanOrEqual(0)
+  expect(dialogPosition.bottom).toBeLessThanOrEqual(844)
   await expect.poll(() => emptyState.evaluate((node) => getComputedStyle(node, "::before").content))
     .toContain("Aún no hay diagnósticos registrados")
 

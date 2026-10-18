@@ -104,12 +104,13 @@ export function PatientsListPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="clinic-pilot clinic-pilot-page clinic-patients-page space-y-4">
       <PageHeader
+        className="clinic-pilot-header"
         title="Pacientes"
         description="Gestiona el registro de pacientes de la clínica."
         actions={
-          <Button onClick={() => navigate("/pacientes/nuevo")}>
+          <Button className="clinic-pilot-primary-button" onClick={() => navigate("/pacientes/nuevo")}>
             <Plus />
             Nuevo paciente
           </Button>
@@ -120,7 +121,8 @@ export function PatientsListPage() {
         value={search}
         onChange={setSearch}
         ariaLabel="Buscar pacientes"
-        placeholder="Buscar por nombre, cédula o teléfono..."
+        placeholder="Buscar pacientes..."
+        className="clinic-patients-search"
       />
 
       <DataTable
@@ -134,6 +136,7 @@ export function PatientsListPage() {
         getRowLabel={(row) => `Abrir detalles del paciente ${row.firstName} ${row.lastName}`}
         emptyTitle="Sin pacientes"
         emptyDescription="Aún no hay pacientes registrados con estos criterios."
+        className="clinic-patients-table"
       />
 
       {data && (

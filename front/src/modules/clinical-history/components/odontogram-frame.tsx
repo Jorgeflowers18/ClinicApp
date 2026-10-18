@@ -79,6 +79,9 @@ export function OdontogramFrame({ visit, patientName, birthDate, professionalNam
     const listener = (event: MessageEvent) => {
       if (event.origin !== location.origin || event.source !== frame.current?.contentWindow || event.data?.channel !== "clinicapp:odontogram") return
       const { type, payload } = event.data
+      if (type === "diagnoses-open") {
+        frame.current?.scrollIntoView({ block: "end", behavior: "smooth" })
+      }
       if (type === "ready") {
         const data = initial.current
         themeRef.current()
@@ -129,7 +132,7 @@ export function OdontogramFrame({ visit, patientName, birthDate, professionalNam
       </header>
       {!ready && <p role="status" className="p-4 text-sm text-muted-foreground">{error || "Cargando odontograma y periodontograma…"}</p>}
       <iframe ref={frame} src="/odontogram.html" title="Odontograma y periodontograma del paciente"
-        className="h-[850px] w-full border-0 bg-background" />
+        className="h-[min(850px,calc(100dvh-4rem))] w-full border-0 bg-background" />
     </section>
   )
 }

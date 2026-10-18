@@ -77,9 +77,20 @@ export function EmbeddedOdontogram() {
         if (control instanceof HTMLButtonElement) control.disabled = true
       })
     }
-    const controlsObserver = new MutationObserver(hideUnneededControls)
+    let diagnosisDialogOpen = false
+    const syncDiagnosisDialog = () => {
+      const isOpen = Boolean(root.querySelector(".odon-confirm-backdrop #caseDiagnosesModal"))
+      if (isOpen === diagnosisDialogOpen) return
+      diagnosisDialogOpen = isOpen
+      if (isOpen) send("diagnoses-open")
+    }
+    const controlsObserver = new MutationObserver(() => {
+      hideUnneededControls()
+      syncDiagnosisDialog()
+    })
     controlsObserver.observe(root, { childList: true, subtree: true })
     hideUnneededControls()
+    syncDiagnosisDialog()
     const snapshot = (): ChartSnapshot => ({ payload: getStatusChart(), summary: getOdontogramSummary() })
     const emit = () => {
       if (!initialized) return

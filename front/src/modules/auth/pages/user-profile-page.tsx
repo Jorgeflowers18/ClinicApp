@@ -70,7 +70,7 @@ export function UserProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 py-6">
+    <div className="clinic-admin-canvas clinic-standalone-profile mx-auto max-w-2xl space-y-6 py-6">
       <div className="space-y-2">
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
           Configuración inicial
