@@ -1,0 +1,11 @@
+/* Shared Recharts overrides for the existing chart consumers. */
+.recharts-responsive-container { min-width: 0; }
+.recharts-cartesian-axis-tick-value { fill: var(--muted-foreground); }
+.recharts-default-tooltip { color: var(--popover-foreground); max-width: min(22rem, calc(100vw - 3rem)); }
+.recharts-default-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+}
+.recharts-default-legend .recharts-legend-item { max-width: 100%; }

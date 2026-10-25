@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
-import { ArrowRight, CheckCircle2, UserRound } from "lucide-react"
+import { ArrowRight, CheckCircle2, MoonStar, Save, SunMedium, UserRound } from "lucide-react"
+import { useTheme } from "next-themes"
 import { useLocation, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -9,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import type { UserProfile } from "@/modules/auth/types/auth.types"
+import { BrandLogo } from "@/shared/components/brand-logo"
+import { PageHeader } from "@/shared/components/page-header"
 
 const defaultProfile = (name: string): UserProfile => ({
   fullName: name,
@@ -24,6 +27,8 @@ export function UserProfilePage() {
   const updateUserProfile = useAuthStore((state) => state.updateUserProfile)
   const navigate = useNavigate()
   const location = useLocation()
+  const { resolvedTheme, setTheme } = useTheme()
+  const isInitialSetup = !user?.profile || !user.profile.fullName?.trim()
 
   const initialProfile = useMemo(
     () => user?.profile ?? defaultProfile(user?.name ?? "Usuario"),
@@ -70,16 +75,34 @@ export function UserProfilePage() {
   }
 
   return (
-    <div className="clinic-admin-canvas clinic-standalone-profile mx-auto max-w-2xl space-y-6 py-6">
-      <div className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          Configuración inicial
-        </p>
-        <h1 className="text-3xl font-bold">Completa tu perfil</h1>
-        <p className="text-sm text-muted-foreground">
-          Personaliza la información que verán el resto del equipo dentro de la clínica.
-        </p>
-      </div>
+    <div className={cn("mx-auto min-w-0 space-y-6", isInitialSetup ? "clinic-app-canvas clinic-standalone-profile" : "w-full max-w-3xl")}>
+      {isInitialSetup ? (
+        <>
+          <div className="flex items-center gap-3">
+            <BrandLogo className="size-11" />
+            <span className="min-w-0 flex-1 text-sm font-medium">ClinicApp Odontología</span>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={resolvedTheme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            >
+              {resolvedTheme === "dark" ? <SunMedium aria-hidden="true" /> : <MoonStar aria-hidden="true" />}
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              Configuración inicial
+            </p>
+            <h1 className="text-2xl font-[590] tracking-tight">Completa tu perfil</h1>
+            <p className="text-sm text-muted-foreground">
+              Personaliza la información que verán el resto del equipo dentro de la clínica.
+            </p>
+          </div>
+        </>
+      ) : (
+        <PageHeader title="Mi perfil" description="Administra tu información personal y profesional" />
+      )}
 
       <Card>
         <CardHeader>
@@ -89,7 +112,7 @@ export function UserProfilePage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="flex items-center gap-4 rounded-lg border bg-muted/30 p-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border bg-muted/30 p-4">
             <div className="relative">
               {profile.avatarImage ? (
                 <img
@@ -111,21 +134,22 @@ export function UserProfilePage() {
                 </div>
               )}
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1 break-words">
               <p className="font-medium">{profile.fullName || user.name}</p>
               <p className="text-sm text-muted-foreground">
                 {profile.title || "Sin cargo asignado"}
               </p>
             </div>
-            <label className="inline-flex cursor-pointer items-center rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-muted">
+            <label className="clinic-file-upload inline-flex min-h-11 cursor-pointer items-center rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-muted">
               Subir foto
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+              <input type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} />
             </label>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Nombre completo</label>
+            <label htmlFor="user-profile-fullName" className="text-sm font-medium">Nombre completo</label>
             <Input
+              id="user-profile-fullName"
               value={profile.fullName}
               onChange={(event) => handleChange("fullName", event.target.value)}
               placeholder="Ej. Ana Morales"
@@ -134,8 +158,9 @@ export function UserProfilePage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Cargo</label>
+              <label htmlFor="user-profile-title" className="text-sm font-medium">Cargo</label>
               <Input
+                id="user-profile-title"
                 value={profile.title}
                 onChange={(event) => handleChange("title", event.target.value)}
                 placeholder="Ej. Administradora general"
@@ -143,8 +168,9 @@ export function UserProfilePage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Especialidad</label>
+              <label htmlFor="user-profile-specialty" className="text-sm font-medium">Especialidad</label>
               <Input
+                id="user-profile-specialty"
                 value={profile.specialty}
                 onChange={(event) => handleChange("specialty", event.target.value)}
                 placeholder="Ej. Odontología, recepción, administración"
@@ -153,8 +179,9 @@ export function UserProfilePage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Biografía breve</label>
+            <label htmlFor="user-profile-bio" className="text-sm font-medium">Biografía breve</label>
             <Textarea
+              id="user-profile-bio"
               rows={4}
               value={profile.bio}
               onChange={(event) => handleChange("bio", event.target.value)}
@@ -163,15 +190,15 @@ export function UserProfilePage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Color de perfil</label>
-            <div className="flex flex-wrap gap-2">
+            <p id="user-profile-colors" className="text-sm font-medium">Color de perfil</p>
+            <div role="group" aria-labelledby="user-profile-colors" className="flex flex-wrap gap-2">
               {avatarColors.map((color) => (
                 <button
                   key={color}
                   type="button"
                   onClick={() => handleChange("avatarColor", color)}
                   className={cn(
-                    "size-8 rounded-full border-2 transition-all",
+                    "size-11 rounded-full border-2 transition-all focus-visible:outline-2 focus-visible:outline-ring lg:size-8",
                     profile.avatarColor === color ? "scale-110 border-foreground" : "border-transparent"
                   )}
                   style={{ backgroundColor: color }}
@@ -183,14 +210,14 @@ export function UserProfilePage() {
 
           <div className="flex justify-end">
             <Button onClick={handleSubmit} className="gap-2">
-              Continuar
-              <ArrowRight className="size-4" />
+              {isInitialSetup ? "Continuar" : "Guardar cambios"}
+              {isInitialSetup ? <ArrowRight className="size-4" /> : <Save className="size-4" />}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+      <div className="flex items-center gap-2 rounded-lg border clinic-profile-notice px-3 py-2 text-sm">
         <CheckCircle2 className="size-4" />
         Tu perfil quedará asociado a tu cuenta y se mostrará en la interfaz.
       </div>

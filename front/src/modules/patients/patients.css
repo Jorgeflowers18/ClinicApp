@@ -1,0 +1,11 @@
+/* Patient-list presentation, scoped by the existing feature hooks. */
+.clinic-patients-search { max-width: 28rem; }
+.clinic-patients-search input { min-height: 44px; }
+.clinic-patients-table [data-slot="table-container"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.clinic-patients-table article {
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}

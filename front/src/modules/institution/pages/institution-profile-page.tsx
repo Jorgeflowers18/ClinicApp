@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { PageHeader } from "@/shared/components/page-header"
+import { InstitutionLogo } from "@/shared/components/brand-logo"
 
 import { readInstitutionProfile, type InstitutionProfile, writeInstitutionProfile } from "../types/institution.types"
 
@@ -74,8 +75,8 @@ export function InstitutionProfilePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        title="Perfil de la institución"
-        description="Configura los datos generales, la información de contacto y los horarios de atención de la clínica."
+        title="Perfil institucional"
+        description="Administra la información de tu clínica o institución"
         actions={
           <Button onClick={handleSave}>
             <Save className="size-4" />
@@ -96,29 +97,33 @@ export function InstitutionProfilePage() {
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Nombre de la clínica</label>
+                  <label htmlFor="institution-profile-name" className="text-sm font-medium">Nombre de la clínica</label>
                   <Input
+                    id="institution-profile-name"
                     value={profile.name}
                     onChange={(event) => handleFieldChange("name", event.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Razón social</label>
+                  <label htmlFor="institution-profile-legalName" className="text-sm font-medium">Razón social</label>
                   <Input
+                    id="institution-profile-legalName"
                     value={profile.legalName}
                     onChange={(event) => handleFieldChange("legalName", event.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">RUC</label>
+                  <label htmlFor="institution-profile-ruc" className="text-sm font-medium">RUC</label>
                   <Input
+                    id="institution-profile-ruc"
                     value={profile.ruc}
                     onChange={(event) => handleFieldChange("ruc", event.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Sitio web</label>
+                  <label htmlFor="institution-profile-website" className="text-sm font-medium">Sitio web</label>
                   <Input
+                    id="institution-profile-website"
                     value={profile.website}
                     onChange={(event) => handleFieldChange("website", event.target.value)}
                   />
@@ -126,8 +131,9 @@ export function InstitutionProfilePage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Descripción</label>
+                <label htmlFor="institution-profile-notes" className="text-sm font-medium">Descripción</label>
                 <Textarea
+                  id="institution-profile-notes"
                   rows={3}
                   value={profile.notes}
                   onChange={(event) => handleFieldChange("notes", event.target.value)}
@@ -146,15 +152,17 @@ export function InstitutionProfilePage() {
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Teléfono</label>
+                  <label htmlFor="institution-profile-phone" className="text-sm font-medium">Teléfono</label>
                   <Input
+                    id="institution-profile-phone"
                     value={profile.phone}
                     onChange={(event) => handleFieldChange("phone", event.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Correo electrónico</label>
+                  <label htmlFor="institution-profile-email" className="text-sm font-medium">Correo electrónico</label>
                   <Input
+                    id="institution-profile-email"
                     type="email"
                     value={profile.email}
                     onChange={(event) => handleFieldChange("email", event.target.value)}
@@ -163,8 +171,9 @@ export function InstitutionProfilePage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Dirección principal</label>
+                <label htmlFor="institution-profile-address" className="text-sm font-medium">Dirección principal</label>
                 <Input
+                  id="institution-profile-address"
                   value={profile.address}
                   onChange={(event) => handleFieldChange("address", event.target.value)}
                 />
@@ -174,7 +183,7 @@ export function InstitutionProfilePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle id="institution-hours-label" className="flex items-center gap-2">
                 <Clock3 className="size-4" />
                 Horarios de atención
               </CardTitle>
@@ -182,6 +191,7 @@ export function InstitutionProfilePage() {
             <CardContent>
               <Textarea
                 rows={4}
+                aria-labelledby="institution-hours-label"
                 value={profile.hours}
                 onChange={(event) => handleFieldChange("hours", event.target.value)}
               />
@@ -198,27 +208,22 @@ export function InstitutionProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 rounded-lg border bg-muted/30 p-3">
-                {profile.logoImage ? (
-                  <img src={profile.logoImage} alt="Logo de la clínica" className="size-12 rounded-lg object-cover" />
-                ) : (
-                  <div className="flex size-12 items-center justify-center rounded-lg bg-primary text-lg font-semibold text-primary-foreground">
-                    {profile.logoText || "CA"}
-                  </div>
-                )}
-                <div className="flex-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border bg-muted/30 p-3">
+                <InstitutionLogo image={profile.logoImage} text={profile.logoText} className="size-12 text-lg" imageClassName="size-12 rounded-lg object-cover" />
+                <div className="min-w-0 flex-1 break-words">
                   <p className="font-medium">Logo de la clínica</p>
                   <p className="text-xs text-muted-foreground">Se usa en la interfaz y documentos.</p>
                 </div>
-                <label className="inline-flex cursor-pointer items-center rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-muted">
+                <label className="clinic-file-upload inline-flex min-h-11 cursor-pointer items-center rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-muted">
                   Subir imagen
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                  <input type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} />
                 </label>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Texto del logo</label>
+                <label htmlFor="institution-profile-logoText" className="text-sm font-medium">Texto del logo</label>
                 <Input
+                  id="institution-profile-logoText"
                   value={profile.logoText}
                   onChange={(event) => handleFieldChange("logoText", event.target.value)}
                 />
@@ -256,19 +261,27 @@ export function InstitutionProfilePage() {
                     </div>
 
                     <div className="space-y-3">
+                      <label htmlFor={`branch-name-${branch.id}`} className="text-sm font-medium">Nombre de la sede</label>
                       <Input
+                        id={`branch-name-${branch.id}`}
                         value={branch.name}
                         onChange={(event) => handleBranchChange(branch.id, "name", event.target.value)}
                       />
+                      <label htmlFor={`branch-address-${branch.id}`} className="text-sm font-medium">Dirección</label>
                       <Input
+                        id={`branch-address-${branch.id}`}
                         value={branch.address}
                         onChange={(event) => handleBranchChange(branch.id, "address", event.target.value)}
                       />
+                      <label htmlFor={`branch-phone-${branch.id}`} className="text-sm font-medium">Teléfono</label>
                       <Input
+                        id={`branch-phone-${branch.id}`}
                         value={branch.phone}
                         onChange={(event) => handleBranchChange(branch.id, "phone", event.target.value)}
                       />
+                      <label htmlFor={`branch-hours-${branch.id}`} className="text-sm font-medium">Horarios</label>
                       <Input
+                        id={`branch-hours-${branch.id}`}
                         value={branch.hours}
                         onChange={(event) => handleBranchChange(branch.id, "hours", event.target.value)}
                       />

@@ -1,17 +1,17 @@
 import { useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import { Navigate, useLocation } from "react-router-dom"
-import { Eye, EyeOff } from "lucide-react"
-
-import { readInstitutionProfile } from "@/modules/institution/types/institution.types"
+import { Link, Navigate, useLocation } from "react-router-dom"
+import { Eye, EyeOff, LoaderCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { getErrorMessage } from "@/shared/lib/error-message"
 
 import { useLogin } from "../api/auth.queries"
+import { AuthLayout } from "../components/auth-layout"
 import { useAuthStore } from "../store/auth-store"
 import { loginSchema, type LoginFormValues } from "../types/auth.types"
 
@@ -20,7 +20,6 @@ export function LoginPage() {
   const location = useLocation()
   const login = useLogin()
   const [showPassword, setShowPassword] = useState(false)
-  const institutionProfile = readInstitutionProfile()
 
   const {
     register,
@@ -42,76 +41,75 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="flex flex-col items-center gap-2 text-center">
-          {institutionProfile.logoImage ? (
-            <img src={institutionProfile.logoImage} alt="Logo de la clínica" className="size-11 rounded-xl object-cover" />
-          ) : (
-            <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground">
-              {institutionProfile.logoText || "CA"}
-            </div>
-          )}
-          <h1 className="text-xl font-bold">{institutionProfile.name}</h1>
-          <p className="text-sm text-muted-foreground">Inicia sesión para continuar</p>
-        </div>
+    <AuthLayout title="Iniciar sesión" description="Accede a tu espacio de gestión clínica.">
+      <form className="auth-form" noValidate onSubmit={handleSubmit(onSubmit)} aria-describedby="auth-description" aria-busy={login.isPending}>
+        <FieldGroup>
+          <Field data-invalid={!!errors.email}>
+            <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="tu@clinica.com"
+              required
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? "email-error" : undefined}
+              {...register("email")}
+            />
+            <FieldError id="email-error" errors={errors.email ? [errors.email] : undefined} />
+          </Field>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-xl border bg-background p-6 shadow-sm">
-          <FieldGroup>
-            <Field data-invalid={!!errors.email}>
-              <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
+          <Field data-invalid={!!errors.password}>
+            <FieldLabel htmlFor="password">Contraseña</FieldLabel>
+            <div className="auth-password">
               <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="tu@clinica.com"
-                aria-invalid={!!errors.email}
-                {...register("email")}
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                required
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? "password-error" : undefined}
+                {...register("password")}
               />
-              <FieldError errors={errors.email ? [errors.email] : undefined} />
-            </Field>
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="auth-password-toggle"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={showPassword}
+                aria-controls="password"
+              >
+                {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+              </button>
+            </div>
+            <FieldError id="password-error" errors={errors.password ? [errors.password] : undefined} />
+          </Field>
+        </FieldGroup>
 
-            <Field data-invalid={!!errors.password}>
-              <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  aria-invalid={!!errors.password}
-                  className="pr-9"
-                  {...register("password")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-              <FieldError errors={errors.password ? [errors.password] : undefined} />
-            </Field>
-          </FieldGroup>
-
-          {login.isError && (
-            <p className="text-sm text-destructive">{getErrorMessage(login.error)}</p>
-          )}
-
-          <Button type="submit" className="w-full" disabled={login.isPending}>
-            {login.isPending ? "Ingresando..." : "Ingresar"}
-          </Button>
-
-          <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">Cuentas de prueba (mock):</p>
-            <p>admin@clinica.com / admin123</p>
-            <p>recepcion@clinica.com / recepcion123</p>
-            <p>medico@clinica.com / medico123</p>
+        <div className="auth-options">
+          <div className="auth-remember">
+            <Checkbox id="remember" disabled checked={false} aria-describedby="remember-status" />
+            <FieldLabel htmlFor="remember">Recordarme</FieldLabel>
           </div>
-        </form>
-      </div>
-    </div>
+          <Link className="auth-link" to="/recuperar-contrasena" state={location.state}>¿Olvidaste tu contraseña?</Link>
+        </div>
+        <p id="remember-status" className="auth-remember-help">Recordarme aún no está disponible.</p>
+
+        {login.isError && (
+          <p role="alert" className="text-sm text-destructive">{getErrorMessage(login.error)}</p>
+        )}
+
+        <Button type="submit" className="auth-submit" disabled={login.isPending}>
+          {login.isPending && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
+          {login.isPending ? "Ingresando..." : "Ingresar"}
+        </Button>
+
+        <p className="auth-navigation">
+          ¿No tienes acceso?{" "}
+          <Link className="auth-link" to="/solicitar-acceso" state={location.state}>Solicitar acceso</Link>
+        </p>
+      </form>
+    </AuthLayout>
   )
 }

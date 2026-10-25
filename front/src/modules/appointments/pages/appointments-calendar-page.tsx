@@ -51,7 +51,6 @@ const ALL_PROFESSIONALS = "all"
 type CalendarEvent =
   | { kind: "appointment"; id: string; title: string; start: Date; end: Date; resource: Appointment }
   | { kind: "block"; id: string; title: string; start: Date; end: Date; resource: ScheduleBlock }
-type MobileAgendaView = "day" | "week"
 
 export function AppointmentsCalendarPage() {
   const [searchParams] = useSearchParams()
@@ -67,7 +66,9 @@ export function AppointmentsCalendarPage() {
   const deleteScheduleBlock = useDeleteScheduleBlock()
 
   const [view, setView] = useState<View>("week")
-  const [mobileAgendaView, setMobileAgendaView] = useState<MobileAgendaView>("day")
+  // Compact layouts render the selected calendar view, so resizing keeps the
+  // user's choice. Event, date, selection and form handlers remain shared.
+  const mobileAgendaView = view === "day" ? "day" : "week"
   const [date, setDate] = useState(new Date())
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
@@ -303,7 +304,20 @@ export function AppointmentsCalendarPage() {
         <Skeleton className="h-[600px] w-full" />
       ) : (
         <div className="@container min-h-0 min-w-0 flex-1">
-          <section className="space-y-4 @xl:hidden" aria-label="Agenda diaria">
+          <div className="mb-4 flex min-w-0 items-center gap-3 @xl:hidden">
+            <Label htmlFor="compact-calendar-view">Vista</Label>
+            <Select items={{ month: "Mes", week: "Semana", day: "Día" }} value={view} onValueChange={(nextView) => {
+              if (nextView === "month" || nextView === "week" || nextView === "day") setView(nextView)
+            }}>
+              <SelectTrigger id="compact-calendar-view" className="min-w-0 flex-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Mes</SelectItem>
+                <SelectItem value="week">Semana</SelectItem>
+                <SelectItem value="day">Día</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {view !== "month" && <section className="space-y-4 @xl:hidden" aria-label={mobileAgendaView === "day" ? "Agenda diaria" : "Agenda semanal"}>
             <div className="flex min-w-0 items-center justify-between gap-2">
               <Button
                 variant="outline"
@@ -321,12 +335,12 @@ export function AppointmentsCalendarPage() {
                       <span className="hidden truncate capitalize @[22rem]:inline">
                         {mobileAgendaView === "day"
                           ? format(date, "EEEE d 'de' MMMM", { locale: es })
-                          : `${format(weekDays[0], "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM", { locale: es })}`}
+                          : `${format(weekDays[0], "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM yyyy", { locale: es })}`}
                       </span>
                       <span className="truncate capitalize @[22rem]:hidden">
                         {mobileAgendaView === "day"
                           ? format(date, "d MMM yyyy", { locale: es })
-                          : `${format(weekDays[0], "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM", { locale: es })}`}
+                          : `${format(weekDays[0], "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM yyyy", { locale: es })}`}
                       </span>
                     </Button>
                   }
@@ -359,7 +373,7 @@ export function AppointmentsCalendarPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setMobileAgendaView((current) => current === "day" ? "week" : "day")}
+                onClick={() => setView(mobileAgendaView === "day" ? "week" : "day")}
               >
                 Ver {mobileAgendaView === "day" ? "semana" : "día"}
               </Button>
@@ -395,9 +409,14 @@ export function AppointmentsCalendarPage() {
                 })}
               </div>
             )}
-          </section>
+          </section>}
 
-          <div className="hidden min-h-[600px] overflow-x-auto rounded-xl border bg-background p-3 @xl:block">
+          <div
+            className={`${view === "month" ? "block" : "hidden"} min-h-[600px] max-w-full overflow-x-auto rounded-xl border bg-card p-3 @xl:block`}
+            role="region"
+            aria-label="Calendario de citas, desplazable horizontalmente"
+            tabIndex={0}
+          >
             <div className="min-w-[560px] xl:min-w-0">
               <Calendar
             localizer={localizer}

@@ -67,12 +67,13 @@ export function AgendaReportTab({ period }: AgendaReportTabProps) {
                   contentStyle={{
                     backgroundColor: "var(--popover)",
                     borderColor: "var(--border)",
-                    borderRadius: 8,
+                    borderRadius: 12,
                     fontSize: 12,
+                    color: "var(--popover-foreground)",
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="completadas" name="Completadas" stackId="citas" fill="var(--primary)" />
+                <Bar dataKey="completadas" name="Completadas" stackId="citas" fill="var(--chart-1)" />
                 <Bar dataKey="noShow" name="No asistió" stackId="citas" fill="var(--destructive)" />
                 <Bar dataKey="otras" name="Otras" stackId="citas" fill="var(--muted-foreground)" radius={[4, 4, 0, 0]} />
               </BarChart>

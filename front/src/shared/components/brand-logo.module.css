@@ -1,0 +1,17 @@
+.mark, .institutionMark {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-card);
+  font-weight: 590;
+  letter-spacing: -0.04em;
+}
+.mark {
+  background: var(--brand-logo-background);
+  color: var(--brand-logo-foreground);
+}
+.institutionMark {
+  background: var(--institution-mark-background);
+  color: var(--institution-mark-foreground);
+}

@@ -11,7 +11,7 @@ import { queryClient } from "@/shared/lib/query-client"
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
         <BrowserRouter>
           <TooltipProvider>
             {children}

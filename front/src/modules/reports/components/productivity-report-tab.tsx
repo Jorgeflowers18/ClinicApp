@@ -40,11 +40,12 @@ export function ProductivityReportTab({ period }: ProductivityReportTabProps) {
                   contentStyle={{
                     backgroundColor: "var(--popover)",
                     borderColor: "var(--border)",
-                    borderRadius: 8,
+                    borderRadius: 12,
                     fontSize: 12,
+                    color: "var(--popover-foreground)",
                   }}
                 />
-                <Bar dataKey="completed" name="Completadas" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="completed" name="Completadas" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

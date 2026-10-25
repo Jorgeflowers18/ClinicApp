@@ -20,16 +20,21 @@ async function setTheme(page: Page, theme: "dark" | "light") {
   ).toBe(theme === "dark")
 }
 
-test("administrative design tokens follow both themes and remain isolated from clinical pages", async ({ page }) => {
+test("shared Linear tokens follow both themes without altering clinical components", async ({ page }) => {
+  await page.goto("/login")
+  await expect.poll(() =>
+    page.locator("html").evaluate((element) => element.classList.contains("dark"))
+  ).toBe(false)
+
   await login(page)
 
   await setTheme(page, "dark")
   await expect.poll(() =>
     page.locator("main").evaluate((element) => getComputedStyle(element).backgroundColor)
-  ).toBe("rgb(17, 18, 19)")
+  ).toBe("rgb(8, 9, 10)")
   await expect.poll(() =>
     page.locator("[data-slot='card']").first().evaluate((element) => getComputedStyle(element).backgroundColor)
-  ).toBe("rgb(25, 26, 28)")
+  ).toBe("rgb(15, 16, 17)")
   await expect.poll(() =>
     page.locator(".clinic-pilot-primary-button").evaluate((element) => getComputedStyle(element).backgroundColor)
   ).toBe("rgb(228, 242, 34)")
@@ -39,7 +44,7 @@ test("administrative design tokens follow both themes and remain isolated from c
   await expect.poll(() =>
     page.locator(".clinic-patients-table [data-slot='table-container']")
       .evaluate((element) => getComputedStyle(element).backgroundColor)
-  ).toBe("rgb(25, 26, 28)")
+  ).toBe("rgb(15, 16, 17)")
 
   await setTheme(page, "light")
   await expect.poll(() =>
@@ -54,5 +59,5 @@ test("administrative design tokens follow both themes and remain isolated from c
   await expect(page.locator(".clinic-admin-shell")).toHaveCount(0)
   await expect.poll(() =>
     page.locator("main").evaluate((element) => getComputedStyle(element).backgroundColor)
-  ).toBe("rgba(0, 0, 0, 0)")
+  ).toBe("rgb(247, 247, 248)")
 })

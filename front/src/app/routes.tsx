@@ -3,6 +3,8 @@ import { lazy, Suspense } from "react"
 
 import { ProtectedRoute } from "@/modules/auth/components/protected-route"
 import { LoginPage } from "@/modules/auth/pages/login-page"
+import { RecoverPasswordPage } from "@/modules/auth/pages/recover-password-page"
+import { RequestAccessPage } from "@/modules/auth/pages/request-access-page"
 import { UserProfilePage } from "@/modules/auth/pages/user-profile-page"
 import { PatientDetailPage } from "@/modules/patients/pages/patient-detail-page"
 import { PatientFormPage } from "@/modules/patients/pages/patient-form-page"
@@ -40,11 +42,13 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/recuperar-contrasena" element={<RecoverPasswordPage />} />
+      <Route path="/solicitar-acceso" element={<RequestAccessPage />} />
       <Route path="/403" element={<ForbiddenPage />} />
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/perfil-usuario" element={<UserProfilePage />} />
         <Route element={<AppLayout />}>
+          <Route path="/perfil-usuario" element={<UserProfilePage />} />
           <Route path="/" element={<DashboardPage />} />
 
           <Route path="/pacientes" element={<PatientsListPage />} />

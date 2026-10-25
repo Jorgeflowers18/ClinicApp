@@ -1,0 +1,5 @@
+/* Composition only: shared application styles, with feature and integration boundaries. */
+@import "../app/layout/app-layout.css";
+@import "./components.css";
+@import "../modules/patients/patients.css";
+@import "./integrations/recharts.css";

@@ -1,0 +1,63 @@
+/* Shared controls and application widgets; retain current selectors and specificity. */
+.clinic-standalone-profile {
+  max-width: min(42rem, 100%) !important;
+  min-height: 100dvh;
+  padding: clamp(1rem, 4vw, 2rem);
+}
+.clinic-profile-notice {
+  border-color: var(--success);
+  background: var(--success-surface);
+  color: var(--success);
+}
+.clinic-file-upload:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.clinic-kpi-icon {
+  background: var(--info-surface);
+  color: var(--info);
+}
+[data-slot="table-container"] {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  overscroll-behavior-x: contain;
+}
+[data-slot="table-head"] {
+  height: 44px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+[data-slot="table-container"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+[data-slot="tabs-list"]:not([data-variant="line"]) {
+  border: 1px solid var(--border);
+  background: var(--muted);
+}
+[data-slot="tabs-list"]:not([data-variant="line"]) [data-slot="tabs-trigger"][data-active] {
+  background: var(--card);
+  color: var(--accent-foreground);
+  border-color: var(--input);
+}
+:is([data-slot="dialog-content"], [data-slot="alert-dialog-content"],
+    [data-slot="popover-content"], [data-slot="select-content"],
+    [data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"]) {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-popover);
+  /* Resizing and a reduced keyboard viewport must update geometry immediately. */
+  transition-property: opacity, transform;
+}
+:is([data-slot="dialog-footer"], [data-slot="alert-dialog-footer"]) {
+  background: var(--muted);
+  border-color: var(--border);
+}
+[data-slot="sheet-footer"] {
+  padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+}
+[data-slot="popover-content"] { max-width: calc(100vw - 2rem); }
