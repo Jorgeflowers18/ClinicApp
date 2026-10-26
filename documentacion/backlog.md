@@ -1,28 +1,12 @@
 # Backlog — ClinicApp
 
-Lista de mejoras y funcionalidades pendientes para el sistema de gestión del grupo odontológico. Cada ítem se agrega aquí antes de implementarse; al completarse se marca el estado y se referencia el módulo/commit correspondiente.
+Lista de mejoras y funcionalidades pendientes para el sistema de gestión del grupo odontológico. Cada ítem se agrega aquí antes de implementarse. Al completarse se elimina del backlog: su detalle queda en [`arquitectura-frontend.md`](./arquitectura-frontend.md), los pendientes de backend en [`back/backlog.md`](../back/backlog.md) y la versión anterior de este archivo en el historial de git.
 
-Prioridades: **Alta** / **Media** / **Baja**. Estados: **Pendiente** / **En progreso** / **Hecho**.
+Prioridades: **Alta** / **Media** / **Baja**. Estados: **Pendiente** / **En progreso**.
+
+Los números de ítem se conservan aunque se eliminen los completados, para no romper las referencias en otros documentos.
 
 ---
-
-## 1. Módulo de Notificaciones
-
-- **Estado:** Completo
-- **Prioridad:** Alta
-- **Responsable:** Jorge Flores
-
-Notificaciones para pacientes y/o personal de la clínica (recordatorios de citas, cambios de estado, alertas de stock mínimo de inventario, etc.).
-
-**Avance en frontend (mock):**
-- Módulo `modules/notifications` creado (tipos, mock data, API con patrón mock/real, hooks de React Query).
-- Toggle "Notificaciones habilitadas" en el alta/edición de paciente (`patients`), por defecto activado.
-- Indicador de "Cliente notificado" (sí/no + fecha) en el modal de detalle de cita (`appointments`).
-- Página de reporte `/notificaciones` con tabla filtrable por nombre, identificación y rango de fechas. Restringida a roles `admin` y `recepcion`.
-- Editor de la plantilla predeterminada de notificación (mensaje único con variables insertables tipo `[nombre del cliente]`, `[fecha de la cita]`, etc., con vista previa), en la misma página `/notificaciones`.
-- Detalle en [`arquitectura-frontend.md`](./arquitectura-frontend.md#notificaciones-a-pacientes).
-
-**Pendiente:** backend real (`GET/PUT /notifications/template`, `GET /notifications`, persistencia de `notificationsEnabled` en `Patient`), definir disparadores automáticos de envío, canal real (hoy el modelo soporta email/SMS pero no hay integración), si la plantilla debe variar por tipo de notificación (recordatorio/confirmación/cancelación) en vez de ser una sola, y si aplica a nivel de grupo (múltiples sedes).
 
 ## 2. Página de modificación de Perfil de la institución
 
@@ -31,14 +15,6 @@ Notificaciones para pacientes y/o personal de la clínica (recordatorios de cita
 - **Responsable:** Josue Cevallos
 
 Página de configuración para editar los datos de la institución/clínica (nombre, logo, datos de contacto, sedes, horarios de atención, etc.). Pendiente de definir si el grupo odontológico maneja una sola institución o múltiples sedes/sucursales, y qué rol(es) pueden editar este perfil.
-
-## 3. Mejora al historial clínico del paciente
-
-- **Estado:** Pendiente
-- **Prioridad:** Alta
-- **Responsable:** Jorge Flores
-
-Mejoras sobre el módulo `clinical-history` existente (hoy: registro cronológico por paciente con adjuntos mock, restringido a roles `admin` y `medico`). Pendiente de definir alcance concreto de la mejora (odontograma, plantillas de diagnóstico, subida real de archivos, firma del profesional, exportar a PDF, etc.).
 
 ## 4. Gestión integral de pacientes
 
@@ -50,88 +26,6 @@ Módulo central para registrar y administrar a los pacientes de la clínica odon
 
 **Incluye:** alta, edición, baja lógica, búsqueda avanzada, perfiles por paciente, habilitación de notificaciones, seguimiento del tratamiento y documentos asociados.
 
-## 5. Agenda clínica y calendario de citas
-
-- **Estado:** Completado
-- **Prioridad:** Alta
-- **Responsable:** Jorge Flores
-
-Sistema de agendamiento para citas odontológicas por especialista, tipo de procedimiento, consultorio y duración estimada. Debe permitir bloqueo de horarios, reasignaciones, recordatorios automáticos y control de ausencias.
-
-**Incluye:** calendario semanal/mensual, agenda por profesional, disponibilidad por consultorio, tiempos de tratamiento, citas confirmadas y no-show.
-
-**Avance en frontend (mock):**
-- Consultorios como catálogo simple (`Room`, mismo patrón que `Professional`), asignable en el formulario de cita.
-- Hora de fin autocompletada según la duración del tratamiento elegido (sigue siendo editable).
-- Bloqueos de horario puntuales (profesional y/o consultorio, con motivo), creables/eliminables desde el calendario, con estilo visual propio.
-- Validación de disponibilidad extendida: choque de horario por profesional, por consultorio y contra bloqueos activos.
-- Nuevo estado "No asistió" (no-show) con su propio botón y color en el calendario.
-- Filtro por profesional sobre el calendario de citas.
-- Integración simulada con notificaciones: crear una cita genera un aviso de confirmación, cancelarla genera un aviso de cancelación (respeta `notificationsEnabled` del paciente); ver [`arquitectura-frontend.md`](./arquitectura-frontend.md#agenda-de-citas-consultorios-bloqueos-y-no-show).
-- Reasignaciones (cambiar profesional/consultorio/fecha/hora) ya cubiertas por el formulario de edición existente, sin pantalla adicional.
-
-**Pendiente:** backend real (nuevos endpoints `GET /rooms`, `GET/POST /schedule-blocks`, `DELETE /schedule-blocks/:id`, y que el backend dispare las notificaciones automáticas); vista de calendario con columnas por profesional (se optó por un filtro simple en esta iteración); recurrencia en bloqueos de horario (hoy solo puntuales); CRUD completo de consultorios (coordinar con el ítem 10 si el negocio lo necesita antes).
-
-## 6. Historia clínica y tratamiento odontológico
-
-- **Estado:** Completado
-- **Prioridad:** Alta
-- **Responsable:** Jorge Flores (antes Josue Cevallos)
-
-Módulo clínico para registrar la evolución del paciente, diagnósticos, procedimientos realizados, planes de tratamiento, odontograma digital y seguimiento de cada caso.
-
-**Incluye:** odontograma, periodontograma, evolución por visita, diagnóstico, plan de tratamiento, consentimientos, fotos, radiografías, notas profesionales y exportación de documentos.
-
-**Detalle adicional:** periodontograma con registro de bolsas periodontales, recesiones, sangrado, movilidad, furcaciones, placa y cálculo, además de seguimiento de salud periodontal por visita.
-
-**Avance en frontend (mock):**
-- Odontograma y periodontograma (`react-advanced-odontogram` en iframe) reubicados en la estructura estándar del módulo `clinical-history` y siguiendo el tema claro/oscuro de la app.
-- Historia clínica única por paciente organizada en visitas `borrador → cerrada`, con autoguardado del borrador y visitas cerradas de solo lectura. El historial clínico clásico se retiró y sus 4 registros de ejemplo pasaron a ser visitas.
-- API con pares Mock/Real y React Query; el mock sigue en IndexedDB y todo el código solo-mock queda marcado (`.mock-` en el nombre y `// MOCK-ONLY`) para borrarlo al conectar el backend.
-- Formularios homologados (React Hook Form + Zod, `Select` estándar, errores en línea, `ConfirmDialog`): consulta con profesional del catálogo y cita vinculada, consentimientos, fotos y documentos.
-- Plan de tratamiento con el catálogo: al cerrar la visita, los ítems aprobados o realizados crean asignaciones en Tratamientos (llegan a Finanzas, Reportes e Inventario) y los propuestos pasan a la siguiente visita.
-- Vínculo opcional con citas: la cita pasa a "Completada" al cerrar la visita y el detalle de la cita tiene el botón "Abrir historia clínica".
-- Indicadores periodontales (bolsas, sangrado, placa O'Leary, movilidad, furcación, cálculo, caries) y gráfico de evolución por visita.
-- Lista global de visitas en `/historial-clinico`, resumen clínico en el detalle del paciente, redirecciones de las rutas antiguas y exportación (PDF y documento HTML con la imagen del odontograma incrustada, e historia completa en JSON; el menú «Exportar» del propio editor se mantiene).
-- Prueba e2e reescrita (`front/tests/dental-history.spec.ts`). Ver [`arquitectura-frontend.md`](./arquitectura-frontend.md#historia-clínica-odontológica).
-
-**Pendiente:** backend real (endpoints de `clinical-history` y de asignaciones de tratamiento en [`back/backlog.md`](../back/backlog.md)), almacenamiento real de adjuntos, `professionalId` en `/auth/me` y cierre de visita transaccional en el backend. Este ítem cubre buena parte del alcance del ítem 3 (odontograma, exportación a PDF), que conviene redefinir.
-
-**Mejoras identificadas para el PDF de la visita (en caso de necesitarse):**
-- Mediciones periodontales: hoy no aparecen sondaje, sangrado, recesiones, furcación ni placa (solo la frase resumen de la librería). Opciones: incrustar la imagen del periodontograma con el mismo mecanismo que la del odontograma (`exportPerioImage`) o agregar una tabla con los indicadores que ya calcula `lib/chart-indicators.ts`.
-- Diagnósticos CIE en inglés (ej. "Deposits [accretions] on teeth (K03.6)"): traducirlos por código, revisar si la librería tiene un paquete de codificación en español o reportarlo a su autor.
-- Encabezado institucional: nombre y logo de la clínica (depende del perfil de la institución), fecha de emisión, línea de firma del profesional y numeración de páginas.
-- Marca de borrador: un borrador se imprime igual que una visita cerrada; conviene una marca de agua de "Documento no definitivo".
-- Secciones del resumen del odontograma que no se exportan: tabla de dentición y piezas ausentes, implantes, notas por pieza y cambios planificados.
-- La frase periodontal empieza en minúscula ("hay inflamación en…").
-
-**Pendiente en frontend al conectar el backend:** borrar el código solo-mock siguiendo la checklist de [`arquitectura-frontend.md`](./arquitectura-frontend.md#código-solo-mock); tomar el profesional por defecto de `/auth/me` en vez de compararlo por nombre (`hooks/use-default-professional.ts`); simplificar `closeVisitSequence` si el backend cierra la visita en una sola transacción; y definir la migración de las historias guardadas en el navegador a partir del export "Historia completa JSON".
-
-
-## 7. Inventario, compras y esterilización
-
-- **Estado:** Completado
-- **Prioridad:** Media
-- **Responsable:** Jorge Flores
-
-Gestión del stock de insumos, materiales de consumo, equipos y productos específicos de odontología, incluyendo control de vencimientos, compras, niveles mínimos y procesos de esterilización.
-
-**Incluye:** compras/órdenes de compra, control de vencimientos por lote, trazabilidad de consumo clínico (vínculo real con `treatments`), stock crítico, control básico de esterilización (instrumental esterilizable + ciclos) y alertas por faltantes.
-
-**Fuera de este ítem:** gestión de proveedores como entidad propia — se separó como ítem propio, ver [ítem 11](#11-módulo-de-proveedores), ya construido: las órdenes de compra eligen el proveedor desde ese catálogo.
-
-**Avance en frontend (mock):**
-- Insumos ganan `kind` (consumible / instrumental esterilizable), con badge en el listado.
-- Control de vencimientos **por lote** (`StockLot`): cada entrada crea su propio lote con vencimiento opcional; las salidas se consumen por FEFO (primero en vencer, primero en salir). Tarjeta "Lotes" en el detalle del insumo.
-- Órdenes de compra básicas (`PurchaseOrder`: pendiente/recibida/cancelada), con líneas de insumo/cantidad/costo/vencimiento; al recibirlas se generan automáticamente los lotes y movimientos de entrada.
-- Ciclos de esterilización básicos (instrumentos incluidos, resultado, profesional responsable).
-- **Trazabilidad clínica real:** completar una sesión de un tratamiento ahora descuenta stock de verdad según `Treatment.consumption` (antes era solo un dato descriptivo sin ningún efecto).
-- Pestaña de "Stock crítico" (insumos en o bajo el mínimo).
-- `/inventario` se reorganizó en pestañas (Insumos / Compras / Esterilización / Stock crítico), sin rutas nuevas.
-- Detalle en [`arquitectura-frontend.md`](./arquitectura-frontend.md#inventario-lotes-compras-y-esterilización).
-
-**Pendiente:** backend real (nuevos endpoints de lotes/compras/esterilización, ver `back/backlog.md`). El stock crítico ya se expone como KPI en el dashboard y en `/reportes` (ítem 9).
-
 ## 8. Cobranza, pagos y facturación
 
 - **Estado:** Pendiente
@@ -142,60 +36,13 @@ Módulo financiero para manejo de pagos por tratamiento, cuotas, seguros, factur
 
 **Incluye:** presupuestos, pagos parciales, cuotas, convenios, seguros, facturación, seguimiento de mora y reportes de ingresos por profesional y procedimiento.
 
-## 9. Reportes, dashboard y administración
+## 12. Mejoras de la historia clínica según el formulario del consultorio
 
-- **Estado:** Completado
-- **Prioridad:** Media
+- **Estado:** Pendiente
+- **Prioridad:** Alta
 - **Responsable:** Jorge Flores
 
-Panel de gestión para supervisar indicadores de operación, productividad médica, volumen de pacientes, tratamiento activos, cumplimiento de agenda y salud financiera de la clínica.
-
-**Incluye:** dashboard ejecutivo, KPIs por especialista, productividad, ocupación, no-show, tratamientos activos, pagos pendientes, stock crítico y rendimiento por sede.
-
-**Avance en frontend (mock):**
-- Nuevo módulo `modules/reports` (sin datos propios: deriva todo de los demás módulos) con página `/reportes`, solo para `admin`.
-- Selector de periodo global (esta semana, este mes, últimos 30 días, este año, personalizado) aplicado a todas las pestañas.
-- Pestañas: **Agenda** (citas, completadas, no-show y tasa; gráfico por día; citas por estado; ocupación por consultorio), **Productividad** (por profesional: programadas/completadas/no asistió/canceladas/% cumplimiento + gráfico), **Tratamientos** (citas, asignaciones activas/completadas, sesiones, ingreso estimado), **Inventario** (stock crítico, compras del periodo con total, consumo del periodo).
-- Exportación CSV por tabla, generada en el navegador (`shared/lib/csv.ts`).
-- El dashboard `/` dejó de ser estático: consume los mismos hooks (pacientes, citas del mes, tratamientos en curso, insumos bajo mínimo, gráfico de citas del mes) y enlaza a `/reportes` para admin.
-- Detalle en [`arquitectura-frontend.md`](./arquitectura-frontend.md#reportes-y-dashboard).
-
-**Pendiente / fuera de este avance:** backend real (`GET /reports/*` con agregación SQL, ver `back/backlog.md`); **pagos pendientes e ingresos reales** dependen del ítem 8 (Josue Cevallos) — hoy el ingreso de tratamientos es solo estimado; **rendimiento por sede** depende del ítem 10 (no existe el concepto de sede); productividad por sesiones de tratamiento requiere agregar `professionalId` a `TreatmentAssignment` (gap de modelo, coordinar con el ítem 6); ocupación real contra horario de atención requiere los horarios institucionales del ítem 10.
-
-## 10. Módulo de seguros, convenios y administración institucional
-
-- **Estado:** Completado
-- **Prioridad:** Media
-- **Responsable:** Josue Cevallos
-
-Administración de la parte institucional de la clínica, incluyendo convenios, seguros, sedes, perfiles de usuarios, permisos por rol, configuración de horarios y parámetros operativos.
-
-**Incluye:** perfil de la institución, sedes, horarios de atención, permisos de roles, configuración de servicios, acuerdos con proveedores y logística interna.
-
-**Avance realizado hoy:**
-- perfil institucional con edición y guardado persistente
-- identidad visual con carga de logo
-- creación manual de sedes desde la interfaz
-- primera vez: bloqueo de acceso hasta completar perfil del usuario
-- perfil de usuario editable más adelante desde el menú del usuario
-- soporte de modo claro y oscuro
-
-
-## 11. Módulo de Proveedores
-
-- **Estado:** Completado
-- **Prioridad:** Media
-- **Responsable:** Jorge Flores
-
-Módulo propio para administrar proveedores de insumos/materiales como entidad (no como texto libre): datos de contacto, condiciones comerciales, y relación con los insumos/órdenes de compra que abastecen. Se separó del ítem 7 (Inventario, compras y esterilización) porque merece su propio CRUD en vez de ser un campo suelto.
-
-**Avance en frontend (mock):**
-- Entidad `Supplier` (nombre, persona de contacto, teléfono, correo, dirección, notas/condiciones) dentro del módulo `inventory`.
-- Nueva pestaña "Proveedores" en `/inventario` con listado, alta, edición y eliminación (bloqueada si el proveedor tiene órdenes de compra asociadas).
-- El modal "Nueva orden" de Compras ahora elige el proveedor desde este catálogo (`supplierId`) en vez de texto libre; el detalle de orden muestra el nombre resuelto.
-- Detalle en [`arquitectura-frontend.md`](./arquitectura-frontend.md#inventario-lotes-compras-y-esterilización).
-
-**Pendiente:** backend real (`GET/POST /inventory/suppliers`, `PUT/DELETE /inventory/suppliers/:id`); migrar `InventoryItem.supplier` (proveedor habitual del insumo, hoy texto libre) a `supplierId`; coordinar con el ítem 10 (administración institucional, Josue Cevallos) para no duplicar "acuerdos con proveedores" si ese ítem termina cubriendo convenios a nivel institucional.
+Realización completa de [`backlog_HC.md`](./backlog_HC.md): implementar en la página de historia clínica los elementos del formulario en papel "Historia Clínica Odontológica Integral" que usa el consultorio, clasificados entre Historial Clínico y Consulta, y quitar las partes del funcionamiento actual que dejen de aplicar.
 
 ---
 
