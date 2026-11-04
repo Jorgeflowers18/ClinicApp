@@ -1,6 +1,6 @@
 import { formatDateOnly } from "@/shared/lib/date"
 
-import type { ChartSnapshot, DentalVisit } from "../types/clinical-history.types"
+import type { ChartSnapshot } from "../types/clinical-history.types"
 
 /**
  * Indicadores derivados del estado del odontograma (`getStatusChart()` de react-advanced-odontogram).
@@ -108,7 +108,8 @@ export function computeChartIndicators(chart: ChartSnapshot | null | undefined):
 }
 
 export interface EvolutionPoint {
-  visitId: string
+  /** Atención de origen; `null` en el punto del estado actual de la historia. */
+  encounterId: string | null
   label: string
   bleedingPercent: number | null
   plaquePercent: number | null
@@ -117,15 +118,21 @@ export interface EvolutionPoint {
   teethWithCaries: number
 }
 
-/** Serie cronológica de indicadores para las visitas cerradas que tienen odontograma. */
-export function buildEvolutionSeries(visits: DentalVisit[]): EvolutionPoint[] {
-  return visits.flatMap((visit) => {
-    const indicators = computeChartIndicators(visit.chart)
+export interface EvolutionSource {
+  encounterId: string | null
+  date: string
+  chart: ChartSnapshot | null
+}
+
+/** Serie cronológica de indicadores para los puntos (atenciones y estado actual) que tienen odontograma. */
+export function buildEvolutionSeries(sources: EvolutionSource[]): EvolutionPoint[] {
+  return sources.flatMap((source) => {
+    const indicators = computeChartIndicators(source.chart)
     if (!indicators) return []
     return [
       {
-        visitId: visit.id,
-        label: formatDateOnly(visit.date, { day: "2-digit", month: "short", year: "2-digit" }),
+        encounterId: source.encounterId,
+        label: source.encounterId === null ? "Actual" : formatDateOnly(source.date, { day: "2-digit", month: "short", year: "2-digit" }),
         bleedingPercent: indicators.bleedingPercent,
         plaquePercent: indicators.plaquePercent,
         sitesWithPocket: indicators.sitesWithPocket,

@@ -1,10 +1,10 @@
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 
-import { matchProfessionalByName } from "../lib/visit"
+import { matchProfessionalByName } from "../lib/record"
 
 /**
- * Profesional sugerido para una visita nueva: el que coincide por nombre con el usuario logueado.
+ * Profesional sugerido para una atención nueva: el que coincide por nombre con el usuario logueado.
  * TODO: usar `user.professionalId` cuando `GET /auth/me` lo exponga; hoy el usuario y el
  * profesional no están vinculados en el modelo.
  */

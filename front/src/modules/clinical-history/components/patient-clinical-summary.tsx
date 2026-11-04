@@ -9,19 +9,19 @@ import { formatDateOnly } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 
-import { useDentalRecord } from "../api/clinical-history.queries"
-import { closedVisits, findDraft, resolveProfessionalName } from "../lib/visit"
+import { useClinicalHistory } from "../api/clinical-history.queries"
+import { countPerformedTreatments, latestEncounter, resolveProfessionalName } from "../lib/record"
 
 const longDate = (value: string) => formatDateOnly(value, { day: "2-digit", month: "long", year: "numeric" })
 
 /** Resumen de la historia clínica para la ficha del paciente. */
 export function PatientClinicalSummary({ patientId }: { patientId: string }) {
   const navigate = useNavigate()
-  const { data: record, isLoading, isError, error } = useDentalRecord(patientId)
+  const { data: history, isLoading, isError, error } = useClinicalHistory(patientId)
   const { data: professionals } = useProfessionals()
 
   if (isLoading) return <Skeleton className="h-32 w-full" />
-  if (isError || !record) {
+  if (isError || !history) {
     return (
       <Alert variant="destructive">
         <AlertCircle />
@@ -31,19 +31,17 @@ export function PatientClinicalSummary({ patientId }: { patientId: string }) {
     )
   }
 
-  const closed = closedVisits(record)
-  const last = closed.at(-1)
-  const draft = findDraft(record)
+  const last = latestEncounter(history.encounters)
 
   const items = [
-    { label: "Visitas cerradas", value: String(closed.length) },
+    { label: "Atenciones registradas", value: String(history.encounters.length) },
     {
-      label: "Última visita",
-      value: last ? longDate(last.date) : "Sin visitas",
+      label: "Última atención",
+      value: last ? longDate(last.date) : "Sin atenciones",
       hint: last ? `${resolveProfessionalName(last, professionals)} · ${last.diagnosis}` : undefined,
     },
     { label: "Próximo control", value: last?.nextVisit ? longDate(last.nextVisit) : "Por definir" },
-    { label: "Visita en borrador", value: draft ? `Sí, del ${longDate(draft.date)}` : "No" },
+    { label: "Tratamientos realizados", value: String(countPerformedTreatments(history.encounters)) },
   ]
 
   return (

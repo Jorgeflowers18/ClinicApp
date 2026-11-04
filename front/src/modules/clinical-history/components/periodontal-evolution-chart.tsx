@@ -10,7 +10,7 @@ const tooltipStyle = {
 }
 
 /**
- * Evolución de indicadores entre visitas. Porcentajes y conteos van en gráficos separados para no
+ * Evolución de indicadores entre atenciones. Porcentajes y conteos van en gráficos separados para no
  * mezclar unidades en un mismo eje.
  */
 export function PeriodontalEvolutionChart({ data }: { data: EvolutionPoint[] }) {

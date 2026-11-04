@@ -1,12 +1,13 @@
 // MOCK-ONLY: eliminar al conectar el backend (ver arquitectura-frontend.md § Código solo-mock).
 //
-// Almacenamiento local de demostración. IndexedDB guarda las historias (una por paciente) y los
-// archivos binarios fuera de localStorage. El nombre y la versión de la base no cambian para
-// conservar lo que ya se guardó con la primera versión del módulo.
+// Almacenamiento local de demostración. IndexedDB guarda las historias (una por paciente, con su
+// estado actual y sus atenciones) y los archivos binarios fuera de localStorage. El nombre y la
+// versión de la base no cambian para conservar lo que ya se guardó con versiones anteriores del
+// módulo: la conversión se hace al leer (ver `clinical-history.mock-migration.ts`).
 import { ApiError } from "@/shared/types/common"
 
-import type { DentalRecord, DentalVisit } from "../types/clinical-history.types"
-import { normalizeStoredRecord, referencedFileIds, toStoredRecord } from "./clinical-history.mock-migration"
+import type { PatientClinicalHistory } from "../types/clinical-history.types"
+import { normalizeStoredHistory, referencedFileIds, toStoredHistory } from "./clinical-history.mock-migration"
 
 const DB_NAME = "clinicapp-dental-v1"
 const DB_VERSION = 1
@@ -34,21 +35,21 @@ function openDatabase() {
   }))
 }
 
-export async function readRecord(patientId: string): Promise<DentalRecord> {
+export async function readHistory(patientId: string): Promise<PatientClinicalHistory> {
   const db = await openDatabase()
   return new Promise((resolve, reject) => {
     const request = db.transaction("records").objectStore("records").get(patientId)
-    request.onsuccess = () => resolve(normalizeStoredRecord(request.result, patientId))
+    request.onsuccess = () => resolve(normalizeStoredHistory(request.result, patientId))
     request.onerror = () => reject(request.error)
   })
 }
 
-export async function readAllRecords(): Promise<DentalRecord[]> {
+export async function readAllHistories(): Promise<PatientClinicalHistory[]> {
   const db = await openDatabase()
   return new Promise((resolve, reject) => {
     const request = db.transaction("records").objectStore("records").getAll()
     request.onsuccess = () =>
-      resolve((request.result as { patientId: string }[]).map((raw) => normalizeStoredRecord(raw, raw.patientId)))
+      resolve((request.result as { patientId: string }[]).map((raw) => normalizeStoredHistory(raw, raw.patientId)))
     request.onerror = () => reject(request.error)
   })
 }
@@ -57,19 +58,22 @@ export async function readAllRecords(): Promise<DentalRecord[]> {
  * Lee, modifica y guarda la historia de un paciente en UNA sola transacción. `mutate` debe ser
  * síncrona (IndexedDB confirma la transacción en cuanto no quedan operaciones pendientes) y puede
  * lanzar un `ApiError` para abortar sin escribir nada. Los archivos que dejan de estar referenciados
- * se eliminan en la misma transacción, así un fallo nunca deja una visita apuntando a un archivo borrado.
+ * se eliminan en la misma transacción, así un fallo nunca deja la historia apuntando a un archivo borrado.
  */
-export async function writeRecord(patientId: string, mutate: (record: DentalRecord) => DentalRecord): Promise<DentalRecord> {
+export async function writeHistory(
+  patientId: string,
+  mutate: (history: PatientClinicalHistory) => PatientClinicalHistory
+): Promise<PatientClinicalHistory> {
   const db = await openDatabase()
   return new Promise((resolve, reject) => {
     const tx = db.transaction(["records", "files"], "readwrite")
     const store = tx.objectStore("records")
     const request = store.get(patientId)
     let failure: unknown
-    let result: DentalRecord | undefined
+    let result: PatientClinicalHistory | undefined
 
     request.onsuccess = () => {
-      const current = normalizeStoredRecord(request.result, patientId)
+      const current = normalizeStoredHistory(request.result, patientId)
       try {
         result = mutate(current)
       } catch (error) {
@@ -81,9 +85,9 @@ export async function writeRecord(patientId: string, mutate: (record: DentalReco
       for (const id of referencedFileIds(current)) {
         if (!retained.has(id)) tx.objectStore("files").delete(id)
       }
-      store.put(toStoredRecord(result))
+      store.put(toStoredHistory(result))
     }
-    tx.oncomplete = () => resolve(result as DentalRecord)
+    tx.oncomplete = () => resolve(result as PatientClinicalHistory)
     tx.onabort = () =>
       reject(failure ?? new ApiError("No se pudo guardar la historia. Revisa el espacio disponible del navegador.", 500))
     tx.onerror = () => reject(failure ?? tx.error)
@@ -125,26 +129,27 @@ function isSeeded() {
 }
 
 /**
- * Inserta una sola vez las visitas de ejemplo. Si el paciente ya tiene historia (por ejemplo,
- * visitas de prueba guardadas antes), las semillas se agregan sin tocar lo existente.
+ * Inserta una sola vez las historias de ejemplo. Si el paciente ya tiene historia (por ejemplo,
+ * datos de prueba guardados antes), solo se agregan las atenciones semilla que falten.
  */
-export function seedOnce(seeds: Record<string, DentalVisit[]>) {
+export function seedOnce(seeds: Record<string, PatientClinicalHistory>) {
   if (isSeeded()) return Promise.resolve()
   return (seeding ??= openDatabase().then(
     (db) =>
       new Promise<void>((resolve, reject) => {
         const tx = db.transaction("records", "readwrite")
         const store = tx.objectStore("records")
-        for (const [patientId, visits] of Object.entries(seeds)) {
+        for (const [patientId, seed] of Object.entries(seeds)) {
           const request = store.get(patientId)
           request.onsuccess = () => {
-            const raw = request.result as { visits?: { id?: string }[] } | undefined
-            if (!raw) {
-              store.put({ version: 2, patientId, visits })
+            if (!request.result) {
+              store.put(toStoredHistory(seed))
               return
             }
-            const existing = new Set((raw.visits ?? []).map((visit) => visit.id))
-            store.put({ ...raw, visits: [...(raw.visits ?? []), ...visits.filter((visit) => !existing.has(visit.id))] })
+            const current = normalizeStoredHistory(request.result, patientId)
+            const existing = new Set(current.encounters.map((encounter) => encounter.id))
+            const encounters = [...current.encounters, ...seed.encounters.filter((encounter) => !existing.has(encounter.id))]
+            store.put(toStoredHistory({ ...current, encounters }))
           }
         }
         tx.oncomplete = () => {

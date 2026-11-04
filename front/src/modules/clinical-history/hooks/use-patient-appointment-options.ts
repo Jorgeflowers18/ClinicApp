@@ -5,39 +5,31 @@ import { useAppointmentsList, useProfessionals } from "@/modules/appointments/ap
 import type { Appointment, AppointmentStatus } from "@/modules/appointments/types/appointment.types"
 import { formatDateTime, formatTime } from "@/shared/lib/date"
 
-import type { DentalRecord } from "../types/clinical-history.types"
+import type { ClinicalEncounter } from "../types/clinical-history.types"
 
 /** Valor del `Select` de citas que representa "sin cita vinculada" (el modelo guarda `null`). */
 export const NO_APPOINTMENT = "sin-cita"
 
-/** Estados de cita que se pueden vincular a una visita clínica. */
+/** Estados de cita que se pueden vincular a una atención. */
 export const linkableAppointmentStatuses: readonly AppointmentStatus[] = ["programada", "confirmada", "completada"]
 
 export interface AppointmentOption {
   appointment: Appointment
-  /** Fecha local YYYY-MM-DD de la cita, para precargar la fecha de la visita. */
+  /** Fecha local YYYY-MM-DD de la cita, para precargar la fecha de la atención. */
   date: string
   label: string
 }
 
 /**
- * Citas del paciente que se pueden vincular a una visita: las vigentes o completadas que no están
- * ya vinculadas a otra visita (`currentVisitId` conserva la cita de la visita que se está editando).
+ * Citas del paciente que se pueden vincular a una atención nueva: las vigentes o completadas que
+ * no están ya vinculadas a otra atención (una cita por atención).
  */
-export function usePatientAppointmentOptions(
-  patientId: string,
-  record: DentalRecord | undefined,
-  currentVisitId?: string
-) {
+export function usePatientAppointmentOptions(patientId: string, encounters: readonly ClinicalEncounter[] | undefined) {
   const { data: appointments, isLoading } = useAppointmentsList()
   const { data: professionals } = useProfessionals()
 
   const options = useMemo<AppointmentOption[]>(() => {
-    const linked = new Set(
-      (record?.visits ?? [])
-        .filter((visit) => visit.id !== currentVisitId && visit.appointmentId)
-        .map((visit) => visit.appointmentId)
-    )
+    const linked = new Set((encounters ?? []).map((encounter) => encounter.appointmentId).filter(Boolean))
     return (appointments ?? [])
       .filter((appointment) => appointment.patientId === patientId)
       .filter((appointment) => linkableAppointmentStatuses.includes(appointment.status) && !linked.has(appointment.id))
@@ -51,7 +43,7 @@ export function usePatientAppointmentOptions(
           label: `${day} · ${formatTime(appointment.start)}${professional ? ` · ${professional.name}` : ""}`,
         }
       })
-  }, [appointments, professionals, record, patientId, currentVisitId])
+  }, [appointments, professionals, encounters, patientId])
 
   return { options, isLoading }
 }

@@ -11,23 +11,19 @@ import { createId } from "@/shared/lib/id"
 import type { Treatment } from "@/modules/treatments/types/treatment.types"
 
 import {
-  planItemFormSchema,
-  planItemStatusLabels,
-  type PlanItem,
-  type PlanItemFormValues,
+  proposedTreatmentFormSchema,
+  type ProposedTreatment,
+  type ProposedTreatmentFormValues,
 } from "../types/clinical-history.types"
 
-const formStatuses = ["pendiente", "en-curso", "realizado"] as const
-const statusItems = Object.fromEntries(formStatuses.map((status) => [status, planItemStatusLabels[status]]))
-
-const emptyValues: PlanItemFormValues = { treatmentId: "", tooth: "", sessions: 1, status: "pendiente" }
+const emptyValues: ProposedTreatmentFormValues = { treatmentId: "", tooth: "" }
 
 interface PlanItemFormProps {
   treatments: Treatment[]
-  onAdd: (item: PlanItem) => void
+  onAdd: (item: ProposedTreatment) => void
 }
 
-/** Alta de un ítem del plan: siempre a partir del catálogo de tratamientos activos. */
+/** Alta de un tratamiento propuesto: siempre a partir del catálogo de tratamientos activos. */
 export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
   const {
     control,
@@ -35,33 +31,25 @@ export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<PlanItemFormValues>({
-    resolver: zodResolver(planItemFormSchema),
+  } = useForm<ProposedTreatmentFormValues>({
+    resolver: zodResolver(proposedTreatmentFormSchema),
     defaultValues: emptyValues,
   })
 
   const treatmentItems = Object.fromEntries(treatments.map((treatment) => [treatment.id, treatment.name]))
 
-  function onSubmit(values: PlanItemFormValues) {
+  function onSubmit(values: ProposedTreatmentFormValues) {
     const treatment = treatments.find((item) => item.id === values.treatmentId)
     if (!treatment) return
-    onAdd({
-      id: createId(),
-      treatmentId: treatment.id,
-      description: treatment.name,
-      tooth: values.tooth.trim(),
-      sessions: values.sessions,
-      status: values.status,
-      assignmentId: null,
-    })
+    onAdd({ id: createId(), treatmentId: treatment.id, description: treatment.name, tooth: values.tooth.trim() })
     reset(emptyValues)
   }
 
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="grid gap-3 rounded-lg border bg-muted/30 p-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_7rem_minmax(0,1.3fr)_auto] md:items-start"
-      aria-label="Agregar tratamiento al plan"
+      className="grid gap-3 rounded-lg border bg-muted/30 p-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] md:items-start"
+      aria-label="Agregar tratamiento propuesto"
     >
       <Field data-invalid={!!errors.treatmentId}>
         <FieldLabel htmlFor="plan-treatment">Tratamiento del catálogo</FieldLabel>
@@ -92,38 +80,9 @@ export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
         <FieldError errors={errors.tooth ? [errors.tooth] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.sessions}>
-        <FieldLabel htmlFor="plan-sessions">Sesiones</FieldLabel>
-        <Input id="plan-sessions" type="number" min={1} max={60} aria-invalid={!!errors.sessions} {...register("sessions")} />
-        <FieldError errors={errors.sessions ? [errors.sessions] : undefined} />
-      </Field>
-
-      <Field data-invalid={!!errors.status}>
-        <FieldLabel htmlFor="plan-status">Estado</FieldLabel>
-        <Controller
-          control={control}
-          name="status"
-          render={({ field }) => (
-            <Select items={statusItems} value={field.value} onValueChange={(value) => value && field.onChange(value)}>
-              <SelectTrigger id="plan-status" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {formStatuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {planItemStatusLabels[status]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        <FieldError errors={errors.status ? [errors.status] : undefined} />
-      </Field>
-
       <Button type="submit" className="md:mt-6">
         <Plus />
-        Agregar al plan
+        Agregar
       </Button>
     </form>
   )

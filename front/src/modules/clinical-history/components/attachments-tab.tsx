@@ -20,7 +20,7 @@ import {
   attachmentKinds,
   type AttachmentKind,
   type DentalAttachment,
-  type VisitFormValues,
+  type RecordFormValues,
 } from "../types/clinical-history.types"
 
 const kindItems = Object.fromEntries(attachmentKinds.map((kind) => [kind, attachmentKindLabels[kind]]))
@@ -97,8 +97,8 @@ function AttachmentCard({
   )
 }
 
-export function AttachmentsTab({ patientId, readOnly }: { patientId: string; readOnly: boolean }) {
-  const { control, getValues, setValue } = useFormContext<VisitFormValues>()
+export function AttachmentsTab({ patientId }: { patientId: string }) {
+  const { control, getValues, setValue } = useFormContext<RecordFormValues>()
   const attachments = useWatch({ control, name: "attachments" })
   const upload = useUploadAttachment()
   const [kind, setKind] = useState<AttachmentKind>("fotografia")
@@ -125,6 +125,10 @@ export function AttachmentsTab({ patientId, readOnly }: { patientId: string; rea
       getValues("attachments").filter((item) => item.id !== toRemove.id),
       { shouldDirty: true }
     )
+    // Si era el documento firmado del consentimiento de datos, el consentimiento deja de apuntarlo.
+    if (getValues("dataConsent.attachmentId") === toRemove.id) {
+      setValue("dataConsent.attachmentId", null, { shouldDirty: true })
+    }
     setToRemove(null)
   }
 
@@ -139,42 +143,40 @@ export function AttachmentsTab({ patientId, readOnly }: { patientId: string; rea
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!readOnly && (
-          <div className="flex flex-wrap items-end gap-3">
-            <Field className="w-52">
-              <FieldLabel htmlFor="attachment-kind">Tipo de archivo clínico</FieldLabel>
-              <Select items={kindItems} value={kind} onValueChange={(value) => value && setKind(value)}>
-                <SelectTrigger id="attachment-kind" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {attachmentKinds.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {attachmentKindLabels[item]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Button variant="outline" disabled={upload.isPending} onClick={() => input.current?.click()}>
-              <Upload />
-              {upload.isPending ? "Subiendo archivos..." : "Adjuntar archivos"}
-            </Button>
-            <input
-              ref={input}
-              aria-label="Seleccionar archivos clínicos"
-              type="file"
-              className="sr-only"
-              multiple
-              accept={allowedAttachmentTypes.join(",")}
-              onChange={(event) => void attach(event.target.files)}
-            />
-          </div>
-        )}
+        <div className="flex flex-wrap items-end gap-3">
+          <Field className="w-52">
+            <FieldLabel htmlFor="attachment-kind">Tipo de archivo clínico</FieldLabel>
+            <Select items={kindItems} value={kind} onValueChange={(value) => value && setKind(value)}>
+              <SelectTrigger id="attachment-kind" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {attachmentKinds.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {attachmentKindLabels[item]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Button variant="outline" disabled={upload.isPending} onClick={() => input.current?.click()}>
+            <Upload />
+            {upload.isPending ? "Subiendo archivos..." : "Adjuntar archivos"}
+          </Button>
+          <input
+            ref={input}
+            aria-label="Seleccionar archivos clínicos"
+            type="file"
+            className="sr-only"
+            multiple
+            accept={allowedAttachmentTypes.join(",")}
+            onChange={(event) => void attach(event.target.files)}
+          />
+        </div>
 
         {attachments.length === 0 ? (
           <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-            Todavía no hay archivos asociados a esta visita.
+            Todavía no hay archivos en la historia del paciente.
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -183,7 +185,7 @@ export function AttachmentsTab({ patientId, readOnly }: { patientId: string; rea
                 key={file.id}
                 patientId={patientId}
                 file={file}
-                canRemove={!readOnly && !upload.isPending}
+                canRemove={!upload.isPending}
                 onRemove={() => setToRemove(file)}
               />
             ))}
@@ -195,7 +197,7 @@ export function AttachmentsTab({ patientId, readOnly }: { patientId: string; rea
         open={Boolean(toRemove)}
         onOpenChange={(open) => !open && setToRemove(null)}
         title="Quitar archivo"
-        description={`¿Quitar «${toRemove?.name ?? ""}» de esta visita? El archivo se elimina al guardar el borrador.`}
+        description={`¿Quitar «${toRemove?.name ?? ""}» de la historia? El archivo se elimina al guardar los cambios.`}
         confirmLabel="Quitar"
         destructive
         onConfirm={confirmRemove}

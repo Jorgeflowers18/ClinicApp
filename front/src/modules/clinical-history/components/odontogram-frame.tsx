@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { createId } from "@/shared/lib/id"
-import type { ChartSnapshot, DentalVisit } from "../types/clinical-history.types"
+import type { ChartSnapshot } from "../types/clinical-history.types"
 
 export interface ChartHandle {
   snapshot: () => ChartSnapshot | null
@@ -30,13 +30,14 @@ function readThemePalette() {
   )
 }
 
-export function OdontogramFrame({ visit, patientName, birthDate, readOnly, onChange, onReady, handle }: {
-  visit: Pick<DentalVisit, "chart" | "date">; patientName: string; birthDate: string; readOnly: boolean
+export function OdontogramFrame({ source, patientName, birthDate, readOnly, onChange, onReady, handle }: {
+  /** Odontograma inicial y fecha del examen (la historia actual o la copia de una atención). */
+  source: { chart: ChartSnapshot | null; date: string }; patientName: string; birthDate: string; readOnly: boolean
   onChange: (chart: ChartSnapshot) => void; onReady: (ready: boolean) => void
   handle: React.RefObject<ChartHandle | null>
 }) {
   const frame = useRef<HTMLIFrameElement>(null)
-  const initial = useRef({ visit, patientName, birthDate, readOnly })
+  const initial = useRef({ source, patientName, birthDate, readOnly })
   const callbacks = useRef({ onChange, onReady })
   const { setTheme } = useTheme()
   const setThemeRef = useRef(setTheme)
@@ -80,7 +81,7 @@ export function OdontogramFrame({ visit, patientName, birthDate, readOnly, onCha
       if (type === "ready") {
         const data = initial.current
         themeRef.current()
-        send("init", { chart: data.visit.chart, readOnly: data.readOnly, patientName: data.patientName, birthDate: data.birthDate, date: data.visit.date })
+        send("init", { chart: data.source.chart, readOnly: data.readOnly, patientName: data.patientName, birthDate: data.birthDate, date: data.source.date })
       }
       if (type === "initialized") { setReady(true); callbacks.current.onReady(true) }
       if (type === "change" && !initial.current.readOnly) callbacks.current.onChange(payload)

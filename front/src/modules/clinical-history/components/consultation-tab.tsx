@@ -1,50 +1,45 @@
 import { Controller, useFormContext } from "react-hook-form"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 
 import { NO_APPOINTMENT, usePatientAppointmentOptions } from "../hooks/use-patient-appointment-options"
-import type { DentalRecord, DentalVisit, VisitFormValues } from "../types/clinical-history.types"
+import type { ClinicalEncounter, EncounterFormValues } from "../types/clinical-history.types"
 
 interface ConsultationTabProps {
-  visit: DentalVisit
-  record: DentalRecord
-  readOnly: boolean
+  patientId: string
+  /** Atenciones ya registradas: sus citas no se ofrecen de nuevo. */
+  encounters: ClinicalEncounter[]
 }
 
 const textFields = [
   { name: "reason", label: "Motivo de consulta", rows: 3, placeholder: "Síntomas y motivo referido por el paciente" },
-  { name: "diagnosis", label: "Diagnóstico", rows: 3, placeholder: "Diagnóstico clínico de la visita" },
-  { name: "procedures", label: "Procedimientos realizados", rows: 3, placeholder: "Procedimientos ejecutados en esta visita" },
-  { name: "evolution", label: "Evolución por visita", rows: 4, placeholder: "Evolución respecto a la visita anterior" },
-  { name: "notes", label: "Notas profesionales", rows: 3, placeholder: "Observaciones internas del profesional" },
+  { name: "diagnosis", label: "Diagnóstico", rows: 3, placeholder: "Diagnóstico clínico de la atención" },
+  { name: "procedures", label: "Procedimientos realizados", rows: 3, placeholder: "Procedimientos ejecutados en esta atención" },
+  { name: "evolution", label: "Evolución / indicaciones", rows: 4, placeholder: "Evolución respecto a la atención anterior e indicaciones" },
+  { name: "notes", label: "Observaciones", rows: 3, placeholder: "Observaciones internas del profesional" },
 ] as const
 
-export function ConsultationTab({ visit, record, readOnly }: ConsultationTabProps) {
+/** Campos clínicos de una atención nueva (formulario «Registrar atención»). */
+export function ConsultationTab({ patientId, encounters }: ConsultationTabProps) {
   const {
     control,
     register,
     formState: { errors },
-  } = useFormContext<VisitFormValues>()
+  } = useFormContext<EncounterFormValues>()
   const { data: professionals } = useProfessionals()
-  const { options } = usePatientAppointmentOptions(visit.patientId, record, visit.id)
+  const { options } = usePatientAppointmentOptions(patientId, encounters)
 
   const professionalItems: Record<string, string> = Object.fromEntries(
     (professionals ?? []).map((item) => [item.id, item.name])
   )
-  if (visit.professionalId && !professionalItems[visit.professionalId]) {
-    professionalItems[visit.professionalId] = visit.legacyProfessionalName ?? "Profesional no disponible"
-  }
   const appointmentItems: Record<string, string> = {
     [NO_APPOINTMENT]: "Sin cita vinculada",
     ...Object.fromEntries(options.map((option) => [option.appointment.id, option.label])),
-  }
-  if (visit.appointmentId && !appointmentItems[visit.appointmentId]) {
-    appointmentItems[visit.appointmentId] = "Cita vinculada (no disponible en la agenda)"
   }
 
   return (
@@ -56,13 +51,13 @@ export function ConsultationTab({ visit, record, readOnly }: ConsultationTabProp
         <FieldGroup>
           <div className="grid gap-4 md:grid-cols-3">
             <Field data-invalid={!!errors.date}>
-              <FieldLabel htmlFor="visit-date">Fecha de consulta</FieldLabel>
-              <Input id="visit-date" type="date" readOnly={readOnly} aria-invalid={!!errors.date} {...register("date")} />
+              <FieldLabel htmlFor="encounter-date">Fecha de la atención</FieldLabel>
+              <Input id="encounter-date" type="date" aria-invalid={!!errors.date} {...register("date")} />
               <FieldError errors={errors.date ? [errors.date] : undefined} />
             </Field>
 
             <Field data-invalid={!!errors.professionalId}>
-              <FieldLabel htmlFor="visit-professional">Profesional</FieldLabel>
+              <FieldLabel htmlFor="encounter-professional">Profesional</FieldLabel>
               <Controller
                 control={control}
                 name="professionalId"
@@ -71,9 +66,8 @@ export function ConsultationTab({ visit, record, readOnly }: ConsultationTabProp
                     items={professionalItems}
                     value={field.value || null}
                     onValueChange={(value) => field.onChange(value ?? "")}
-                    disabled={readOnly}
                   >
-                    <SelectTrigger id="visit-professional" className="w-full" aria-invalid={!!errors.professionalId}>
+                    <SelectTrigger id="encounter-professional" className="w-full" aria-invalid={!!errors.professionalId}>
                       <SelectValue placeholder="Selecciona un profesional..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -86,14 +80,11 @@ export function ConsultationTab({ visit, record, readOnly }: ConsultationTabProp
                   </Select>
                 )}
               />
-              {!visit.professionalId && visit.legacyProfessionalName && (
-                <FieldDescription>Registrado originalmente como «{visit.legacyProfessionalName}».</FieldDescription>
-              )}
               <FieldError errors={errors.professionalId ? [errors.professionalId] : undefined} />
             </Field>
 
             <Field data-invalid={!!errors.appointmentId}>
-              <FieldLabel htmlFor="visit-appointment">Cita vinculada</FieldLabel>
+              <FieldLabel htmlFor="encounter-appointment">Cita vinculada</FieldLabel>
               <Controller
                 control={control}
                 name="appointmentId"
@@ -102,9 +93,8 @@ export function ConsultationTab({ visit, record, readOnly }: ConsultationTabProp
                     items={appointmentItems}
                     value={field.value ?? NO_APPOINTMENT}
                     onValueChange={(value) => field.onChange(!value || value === NO_APPOINTMENT ? null : value)}
-                    disabled={readOnly}
                   >
-                    <SelectTrigger id="visit-appointment" className="w-full" aria-invalid={!!errors.appointmentId}>
+                    <SelectTrigger id="encounter-appointment" className="w-full" aria-invalid={!!errors.appointmentId}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -123,12 +113,12 @@ export function ConsultationTab({ visit, record, readOnly }: ConsultationTabProp
 
           {textFields.map(({ name, label, rows, placeholder }) => (
             <Field key={name} data-invalid={!!errors[name]}>
-              <FieldLabel htmlFor={`visit-${name}`}>{label}</FieldLabel>
+              <FieldLabel htmlFor={`encounter-${name}`}>{label}</FieldLabel>
               <Textarea
-                id={`visit-${name}`}
+                id={`encounter-${name}`}
                 rows={rows}
-                placeholder={readOnly ? undefined : placeholder}
-                readOnly={readOnly}
+                placeholder={placeholder}
+               
                 aria-invalid={!!errors[name]}
                 {...register(name)}
               />
@@ -137,8 +127,8 @@ export function ConsultationTab({ visit, record, readOnly }: ConsultationTabProp
           ))}
 
           <Field data-invalid={!!errors.nextVisit} className="md:max-w-xs">
-            <FieldLabel htmlFor="visit-nextVisit">Próximo control</FieldLabel>
-            <Input id="visit-nextVisit" type="date" readOnly={readOnly} aria-invalid={!!errors.nextVisit} {...register("nextVisit")} />
+            <FieldLabel htmlFor="encounter-nextVisit">Próximo control</FieldLabel>
+            <Input id="encounter-nextVisit" type="date" aria-invalid={!!errors.nextVisit} {...register("nextVisit")} />
             <FieldError errors={errors.nextVisit ? [errors.nextVisit] : undefined} />
           </Field>
         </FieldGroup>

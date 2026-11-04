@@ -5,7 +5,6 @@ import { useFormContext, useWatch } from "react-hook-form"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatDateOnly } from "@/shared/lib/date"
@@ -15,47 +14,18 @@ import {
   usePatientAssignments,
   useTreatmentsList,
 } from "@/modules/treatments/api/treatments.queries"
-import { assignmentStatusLabels, type TreatmentAssignment } from "@/modules/treatments/types/treatment.types"
+import { assignmentStatusLabels } from "@/modules/treatments/types/treatment.types"
 
-import {
-  assignablePlanStatuses,
-  planItemStatusLabels,
-  planItemStatuses,
-  type DentalRecord,
-  type PlanItem,
-  type VisitFormValues,
-} from "../types/clinical-history.types"
+import type { ClinicalEncounter, ProposedTreatment, RecordFormValues } from "../types/clinical-history.types"
 import { PlanItemForm } from "./plan-item-form"
-
-const statusItems = Object.fromEntries(planItemStatuses.map((status) => [status, planItemStatusLabels[status]]))
 
 interface TreatmentPlanTabProps {
   patientId: string
-  record: DentalRecord
-  readOnly: boolean
+  encounters: ClinicalEncounter[]
 }
 
-function followUpText(item: PlanItem, assignment: TreatmentAssignment | undefined) {
-  if (item.assignmentId) {
-    if (!assignment) return "Asignación no disponible"
-    return `${assignment.completedSessions}/${assignment.totalSessions} sesiones · ${assignmentStatusLabels[assignment.status]}`
-  }
-  if (assignablePlanStatuses.includes(item.status)) {
-    return item.status === "realizado"
-      ? "Se asigna al cerrar la visita y registra la primera sesión"
-      : "Se asigna al paciente al cerrar la visita"
-  }
-  if (item.status === "pendiente") return "Pasa a la próxima visita"
-  return "—"
-}
-
-export function TreatmentPlanTab({ patientId, record, readOnly }: TreatmentPlanTabProps) {
-  const {
-    control,
-    setValue,
-    trigger,
-    formState: { errors, isSubmitted },
-  } = useFormContext<VisitFormValues>()
+export function TreatmentPlanTab({ patientId, encounters }: TreatmentPlanTabProps) {
+  const { control, setValue } = useFormContext<RecordFormValues>()
   const plan = useWatch({ control, name: "plan" })
   const { data: activeTreatments } = useActiveTreatments()
   // Catálogo completo (incluye inactivos) para mostrar nombre y precio de ítems antiguos.
@@ -63,39 +33,34 @@ export function TreatmentPlanTab({ patientId, record, readOnly }: TreatmentPlanT
   const { data: assignments, isLoading: assignmentsLoading } = usePatientAssignments(patientId)
 
   const treatmentById = new Map((catalog?.items ?? activeTreatments ?? []).map((treatment) => [treatment.id, treatment]))
-  const assignmentById = new Map((assignments ?? []).map((assignment) => [assignment.id, assignment]))
-  const estimatedTotal = plan
-    .filter((item) => item.status !== "cancelado" && !item.assignmentId && item.treatmentId)
-    .reduce((sum, item) => sum + (treatmentById.get(item.treatmentId ?? "")?.price ?? 0), 0)
+  const estimatedTotal = plan.reduce((sum, item) => sum + (treatmentById.get(item.treatmentId ?? "")?.price ?? 0), 0)
 
-  function updatePlan(next: PlanItem[]) {
+  function updatePlan(next: ProposedTreatment[]) {
     setValue("plan", next, { shouldDirty: true })
-    if (isSubmitted) void trigger("plan")
   }
 
-  function visitDate(visitId: string | undefined) {
-    const visit = record.visits.find((item) => item.id === visitId)
-    return visit ? formatDateOnly(visit.date, { day: "2-digit", month: "short", year: "numeric" }) : null
+  // Los ids de las visitas antiguas se conservaron como ids de atención.
+  function encounterDate(encounterId: string | undefined) {
+    const encounter = encounters.find((item) => item.id === encounterId)
+    return encounter ? formatDateOnly(encounter.date, { day: "2-digit", month: "short", year: "numeric" }) : null
   }
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Plan de tratamiento de esta visita</CardTitle>
+          <CardTitle>Tratamientos propuestos</CardTitle>
           <CardDescription>
-            Los tratamientos aprobados o realizados se asignan al paciente al cerrar la visita y aparecen en
-            Tratamientos, Finanzas y Reportes. Los propuestos pasan a la siguiente visita.
+            Tratamientos sugeridos al paciente. Se agregan y se quitan con «Guardar cambios»; cuando se realizan, se
+            registran en la atención.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!readOnly && (
-            <PlanItemForm treatments={activeTreatments ?? []} onAdd={(item) => updatePlan([...plan, item])} />
-          )}
+          <PlanItemForm treatments={activeTreatments ?? []} onAdd={(item) => updatePlan([...plan, item])} />
 
           {plan.length === 0 ? (
             <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              {readOnly ? "Esta visita no registró tratamientos." : "Agrega tratamientos del catálogo al plan de la visita."}
+              No hay tratamientos propuestos. Agrégalos desde el catálogo.
             </div>
           ) : (
             <div className="rounded-lg border">
@@ -104,77 +69,32 @@ export function TreatmentPlanTab({ patientId, record, readOnly }: TreatmentPlanT
                   <TableRow>
                     <TableHead>Pieza / zona</TableHead>
                     <TableHead>Tratamiento</TableHead>
-                    <TableHead className="text-right">Sesiones</TableHead>
                     <TableHead className="text-right">Precio</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Seguimiento</TableHead>
-                    {!readOnly && <TableHead className="w-10" />}
+                    <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {plan.map((item, index) => {
-                    const editable = !readOnly && !item.assignmentId
+                  {plan.map((item) => {
                     const treatment = item.treatmentId ? treatmentById.get(item.treatmentId) : undefined
-                    const itemErrors = errors.plan?.[index]
-                    const message = itemErrors?.treatmentId?.message ?? itemErrors?.sessions?.message
+                    const name = treatment?.name ?? item.description
                     return (
                       <TableRow key={item.id}>
                         <TableCell>{item.tooth || "General"}</TableCell>
                         <TableCell className="whitespace-normal">
-                          <div className="font-medium">{treatment?.name ?? item.description}</div>
+                          <div className="font-medium">{name}</div>
                           {!item.treatmentId && <Badge variant="outline">Texto libre anterior</Badge>}
-                          {message && (
-                            <p role="alert" className="text-sm text-destructive">
-                              {message}
-                            </p>
-                          )}
                         </TableCell>
-                        <TableCell className="text-right">{item.sessions}</TableCell>
                         <TableCell className="text-right">{treatment ? formatCurrency(treatment.price) : "—"}</TableCell>
                         <TableCell>
-                          {editable ? (
-                            <Select
-                              items={statusItems}
-                              value={item.status}
-                              onValueChange={(value) =>
-                                value &&
-                                updatePlan(plan.map((row) => (row.id === item.id ? { ...row, status: value } : row)))
-                              }
-                            >
-                              <SelectTrigger size="sm" aria-label={`Estado de ${item.description}`} aria-invalid={!!itemErrors}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {planItemStatuses.map((status) => (
-                                  <SelectItem key={status} value={status}>
-                                    {planItemStatusLabels[status]}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge variant={item.status === "cancelado" ? "outline" : "secondary"}>
-                              {planItemStatusLabels[item.status]}
-                            </Badge>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Quitar ${name} de los propuestos`}
+                            onClick={() => updatePlan(plan.filter((row) => row.id !== item.id))}
+                          >
+                            <Trash2 />
+                          </Button>
                         </TableCell>
-                        <TableCell className="whitespace-normal text-sm text-muted-foreground">
-                          {followUpText(item, item.assignmentId ? assignmentById.get(item.assignmentId) : undefined)}
-                        </TableCell>
-                        {!readOnly && (
-                          <TableCell>
-                            {editable && (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label={`Quitar ${item.description} del plan`}
-                                onClick={() => updatePlan(plan.filter((row) => row.id !== item.id))}
-                              >
-                                <Trash2 />
-                              </Button>
-                            )}
-                          </TableCell>
-                        )}
                       </TableRow>
                     )
                   })}
@@ -185,8 +105,7 @@ export function TreatmentPlanTab({ patientId, record, readOnly }: TreatmentPlanT
 
           {plan.length > 0 && (
             <p className="text-right text-sm text-muted-foreground">
-              Total estimado de tratamientos por asignar:{" "}
-              <span className="font-medium text-foreground">{formatCurrency(estimatedTotal)}</span>
+              Total estimado: <span className="font-medium text-foreground">{formatCurrency(estimatedTotal)}</span>
             </p>
           )}
         </CardContent>
@@ -230,8 +149,8 @@ export function TreatmentPlanTab({ patientId, record, readOnly }: TreatmentPlanT
                         <Badge variant="outline">{assignmentStatusLabels[assignment.status]}</Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {visitDate(assignment.sourceVisitId)
-                          ? `Visita del ${visitDate(assignment.sourceVisitId)}`
+                        {encounterDate(assignment.sourceVisitId)
+                          ? `Atención del ${encounterDate(assignment.sourceVisitId)}`
                           : "Asignado desde Tratamientos"}
                       </TableCell>
                     </TableRow>
