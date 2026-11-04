@@ -13,11 +13,12 @@ import { RecordWorkspace, type RecordTab } from "../components/record-workspace"
 /**
  * Historia clínica odontológica de un paciente, editable al abrirla. `?atencion=` abre el historial
  * en esa atención; `?visita=` (enlaces anteriores) se trata igual, porque las visitas convertidas
- * conservan su id.
+ * conservan su id. `?cita=` (desde la agenda) abre la atención de esa cita o, si aún no tiene, abre
+ * «Registrar atención» con la cita preseleccionada.
  */
 export function PatientClinicalHistoryPage() {
   const { patientId } = useParams<{ patientId: string }>()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: patient, isLoading: patientLoading, error: patientError } = usePatient(patientId)
   const { data: history, isLoading: historyLoading, error: historyError, refetch } = useClinicalHistory(patientId)
   const [mountKey, setMountKey] = useState(0)
@@ -44,7 +45,11 @@ export function PatientClinicalHistoryPage() {
     )
   }
 
-  const encounterParam = searchParams.get("atencion") ?? searchParams.get("visita")
+  const appointmentParam = searchParams.get("cita")
+  const appointmentEncounter = appointmentParam
+    ? history.encounters.find((encounter) => encounter.appointmentId === appointmentParam)
+    : undefined
+  const encounterParam = searchParams.get("atencion") ?? searchParams.get("visita") ?? appointmentEncounter?.id ?? null
   const highlighted = history.encounters.some((encounter) => encounter.id === encounterParam) ? encounterParam : null
 
   function remount(tab: RecordTab) {
@@ -66,6 +71,9 @@ export function PatientClinicalHistoryPage() {
       highlightedEncounterId={highlighted}
       onReset={remount}
       onReload={(tab) => void reload(tab)}
+      pendingAppointmentId={appointmentParam && !appointmentEncounter ? appointmentParam : null}
+      onAppointmentHandled={() => setSearchParams({}, { replace: true })}
+      onShowEncounter={(encounterId) => setSearchParams({ atencion: encounterId }, { replace: true })}
     />
   )
 }

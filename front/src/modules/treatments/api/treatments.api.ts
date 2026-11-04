@@ -64,35 +64,6 @@ async function listAssignmentsMock(treatmentId: string): Promise<TreatmentAssign
   return mockTreatmentAssignments.filter((assignment) => assignment.treatmentId === treatmentId)
 }
 
-async function advanceSessionMock(assignmentId: string): Promise<TreatmentAssignment> {
-  await mockDelay(300)
-  const index = mockTreatmentAssignments.findIndex((item) => item.id === assignmentId)
-  if (index === -1) throw new ApiError("Asignación no encontrada", 404)
-
-  const assignment = mockTreatmentAssignments[index]
-  const completedSessions = Math.min(assignment.completedSessions + 1, assignment.totalSessions)
-  mockTreatmentAssignments[index] = {
-    ...assignment,
-    completedSessions,
-    status: completedSessions >= assignment.totalSessions ? "completado" : assignment.status,
-  }
-
-  const treatment = mockTreatments.find((item) => item.id === assignment.treatmentId)
-  if (treatment) {
-    for (const entry of treatment.consumption) {
-      await inventoryApi.registerConsumption({
-        itemId: entry.itemId,
-        quantity: entry.quantity,
-        reason: `Consumo clínico — ${treatment.name}`,
-        treatmentAssignmentId: assignment.id,
-        patientId: assignment.patientId,
-      })
-    }
-  }
-
-  return mockTreatmentAssignments[index]
-}
-
 // MOCK-ONLY
 async function listAssignmentsByPatientMock(patientId: string): Promise<TreatmentAssignment[]> {
   await mockDelay(200)
@@ -102,12 +73,13 @@ async function listAssignmentsByPatientMock(patientId: string): Promise<Treatmen
 }
 
 // MOCK-ONLY
-/** Idempotente por ítem de plan: reintentar el cierre de una visita no duplica asignaciones. */
+/**
+ * Registra un tratamiento realizado en una atención: queda completado (una sesión) y descuenta sus
+ * insumos en Inventario. Idempotente por `sourceKey`: reintentar el registro de la atención no lo duplica.
+ */
 async function createAssignmentMock(input: CreateAssignmentInput): Promise<TreatmentAssignment> {
   await mockDelay(250)
-  const existing = mockTreatmentAssignments.find(
-    (assignment) => assignment.sourcePlanItemId === input.sourcePlanItemId
-  )
+  const existing = mockTreatmentAssignments.find((assignment) => assignment.sourceKey === input.sourceKey)
   if (existing) return existing
 
   const treatment = mockTreatments.find((item) => item.id === input.treatmentId)
@@ -118,14 +90,25 @@ async function createAssignmentMock(input: CreateAssignmentInput): Promise<Treat
     id: nextId("asg"),
     treatmentId: input.treatmentId,
     patientId: input.patientId,
-    totalSessions: input.totalSessions,
-    completedSessions: 0,
-    status: "en_progreso",
-    startDate: input.startDate,
-    sourceVisitId: input.sourceVisitId,
-    sourcePlanItemId: input.sourcePlanItemId,
+    totalSessions: 1,
+    completedSessions: 1,
+    status: "completado",
+    startDate: input.date,
+    tooth: input.tooth,
+    sourceEncounterId: input.sourceEncounterId,
+    sourceKey: input.sourceKey,
   }
   mockTreatmentAssignments.push(assignment)
+
+  for (const entry of treatment.consumption) {
+    await inventoryApi.registerConsumption({
+      itemId: entry.itemId,
+      quantity: entry.quantity,
+      reason: `Consumo clínico — ${treatment.name}`,
+      treatmentAssignmentId: assignment.id,
+      patientId: assignment.patientId,
+    })
+  }
   return assignment
 }
 
@@ -170,21 +153,13 @@ async function listAssignmentsReal(treatmentId: string): Promise<TreatmentAssign
   return data
 }
 
-// TODO: conectar a endpoint real -> POST /treatment-assignments/:id/advance-session
-async function advanceSessionReal(assignmentId: string): Promise<TreatmentAssignment> {
-  const { data } = await http.post<TreatmentAssignment>(
-    `/treatment-assignments/${assignmentId}/advance-session`
-  )
-  return data
-}
-
 // TODO: conectar a endpoint real -> GET /treatment-assignments?patientId=
 async function listAssignmentsByPatientReal(patientId: string): Promise<TreatmentAssignment[]> {
   const { data } = await http.get<TreatmentAssignment[]>("/treatment-assignments", { params: { patientId } })
   return data
 }
 
-// TODO: conectar a endpoint real -> POST /treatment-assignments (idempotente por sourcePlanItemId)
+// TODO: conectar a endpoint real -> POST /treatment-assignments (idempotente por sourceKey; descuenta insumos)
 async function createAssignmentReal(input: CreateAssignmentInput): Promise<TreatmentAssignment> {
   const { data } = await http.post<TreatmentAssignment>("/treatment-assignments", input)
   return data
@@ -198,7 +173,6 @@ export const treatmentsApi = {
   update: env.useMockApi ? updateMock : updateReal,
   remove: env.useMockApi ? removeMock : removeReal,
   listAssignments: env.useMockApi ? listAssignmentsMock : listAssignmentsReal,
-  advanceSession: env.useMockApi ? advanceSessionMock : advanceSessionReal,
   listAssignmentsByPatient: env.useMockApi ? listAssignmentsByPatientMock : listAssignmentsByPatientReal,
   createAssignment: env.useMockApi ? createAssignmentMock : createAssignmentReal,
 }

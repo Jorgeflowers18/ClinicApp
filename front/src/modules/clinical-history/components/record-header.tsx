@@ -1,4 +1,4 @@
-import { ArrowLeft, ShieldAlert } from "lucide-react"
+import { ArrowLeft, Plus, ShieldAlert } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,10 +9,13 @@ interface RecordHeaderProps {
   patient: Patient
   /** El consentimiento de datos guardado sigue pendiente. */
   consentPending: boolean
+  /** El odontograma ya cargó: la atención necesita su copia. */
+  canRegister: boolean
   onBack: () => void
+  onRegisterEncounter: () => void
 }
 
-export function RecordHeader({ patient, consentPending, onBack }: RecordHeaderProps) {
+export function RecordHeader({ patient, consentPending, canRegister, onBack, onRegisterEncounter }: RecordHeaderProps) {
   return (
     <div>
       <Button variant="ghost" size="sm" className="mb-2 -ml-2" onClick={onBack}>
@@ -23,12 +26,18 @@ export function RecordHeader({ patient, consentPending, onBack }: RecordHeaderPr
         title="Historia clínica odontológica"
         description={`${patient.firstName} ${patient.lastName} · Cédula ${patient.documentId}`}
         actions={
-          consentPending && (
-            <Badge variant="outline" className="text-xs">
-              <ShieldAlert />
-              Consentimiento de datos pendiente
-            </Badge>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            {consentPending && (
+              <Badge variant="outline" className="text-xs">
+                <ShieldAlert />
+                Consentimiento de datos pendiente
+              </Badge>
+            )}
+            <Button disabled={!canRegister} onClick={onRegisterEncounter}>
+              <Plus />
+              Registrar atención
+            </Button>
+          </div>
         }
       />
     </div>

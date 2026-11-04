@@ -2,7 +2,7 @@
 
 - **Sección:** Historial clínico (`/historial-clinico` y `/historial-clinico/paciente/:patientId`)
 - **Módulo:** `front/src/modules/clinical-history`
-- **Estado:** En curso: fases 1 y 2 implementadas (§ 1–5 y § 8; § 6 y § 7 adelantados en lo mínimo para compilar)
+- **Estado:** Implementado (fases 1, 2, 6 y 7)
 - **Responsable:** Jorge Flores
 
 ## Objetivo

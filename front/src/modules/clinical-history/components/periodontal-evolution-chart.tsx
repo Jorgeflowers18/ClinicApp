@@ -48,7 +48,7 @@ export function PeriodontalEvolutionChart({ data }: { data: EvolutionPoint[] }) 
       </figure>
 
       <figure className="space-y-2">
-        <figcaption className="text-sm font-medium">Hallazgos por visita</figcaption>
+        <figcaption className="text-sm font-medium">Hallazgos por atención</figcaption>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>

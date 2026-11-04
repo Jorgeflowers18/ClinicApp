@@ -223,7 +223,7 @@ export function getPatientFinancialSummary(patientId: string): PatientFinancialS
 }
 
 // Se calcula en cada llamada (no al cargar el módulo) para incluir las asignaciones creadas en
-// tiempo de ejecución, por ejemplo al cerrar una visita clínica con plan de tratamiento.
+// tiempo de ejecución, por ejemplo al registrar tratamientos realizados en una atención clínica.
 export function buildPortfolioRows(): FinancialPortfolioRow[] {
   return mockTreatments.flatMap((treatment) =>
     mockTreatmentAssignments

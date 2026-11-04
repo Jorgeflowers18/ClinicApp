@@ -1,48 +1,28 @@
-import { Link } from "react-router-dom"
 import { Trash2 } from "lucide-react"
 import { useFormContext, useWatch } from "react-hook-form"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatDateOnly } from "@/shared/lib/date"
 import { formatCurrency } from "@/shared/lib/number"
-import {
-  useActiveTreatments,
-  usePatientAssignments,
-  useTreatmentsList,
-} from "@/modules/treatments/api/treatments.queries"
-import { assignmentStatusLabels } from "@/modules/treatments/types/treatment.types"
+import { useActiveTreatments, useTreatmentsList } from "@/modules/treatments/api/treatments.queries"
 
-import type { ClinicalEncounter, ProposedTreatment, RecordFormValues } from "../types/clinical-history.types"
+import type { ProposedTreatment, RecordFormValues } from "../types/clinical-history.types"
 import { PlanItemForm } from "./plan-item-form"
 
-interface TreatmentPlanTabProps {
-  patientId: string
-  encounters: ClinicalEncounter[]
-}
-
-export function TreatmentPlanTab({ patientId, encounters }: TreatmentPlanTabProps) {
+export function TreatmentPlanTab() {
   const { control, setValue } = useFormContext<RecordFormValues>()
   const plan = useWatch({ control, name: "plan" })
   const { data: activeTreatments } = useActiveTreatments()
   // Catálogo completo (incluye inactivos) para mostrar nombre y precio de ítems antiguos.
   const { data: catalog } = useTreatmentsList({ page: 1, pageSize: 100 })
-  const { data: assignments, isLoading: assignmentsLoading } = usePatientAssignments(patientId)
 
   const treatmentById = new Map((catalog?.items ?? activeTreatments ?? []).map((treatment) => [treatment.id, treatment]))
   const estimatedTotal = plan.reduce((sum, item) => sum + (treatmentById.get(item.treatmentId ?? "")?.price ?? 0), 0)
 
   function updatePlan(next: ProposedTreatment[]) {
     setValue("plan", next, { shouldDirty: true })
-  }
-
-  // Los ids de las visitas antiguas se conservaron como ids de atención.
-  function encounterDate(encounterId: string | undefined) {
-    const encounter = encounters.find((item) => item.id === encounterId)
-    return encounter ? formatDateOnly(encounter.date, { day: "2-digit", month: "short", year: "numeric" }) : null
   }
 
   return (
@@ -107,57 +87,6 @@ export function TreatmentPlanTab({ patientId, encounters }: TreatmentPlanTabProp
             <p className="text-right text-sm text-muted-foreground">
               Total estimado: <span className="font-medium text-foreground">{formatCurrency(estimatedTotal)}</span>
             </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Tratamientos asignados al paciente</CardTitle>
-          <CardDescription>Progreso real registrado en el módulo de Tratamientos.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {assignmentsLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : !assignments?.length ? (
-            <p className="text-sm text-muted-foreground">El paciente no tiene tratamientos asignados.</p>
-          ) : (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tratamiento</TableHead>
-                    <TableHead>Inicio</TableHead>
-                    <TableHead>Progreso</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Origen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assignments.map((assignment) => (
-                    <TableRow key={assignment.id}>
-                      <TableCell>
-                        <Link className="font-medium hover:underline" to={`/tratamientos/${assignment.treatmentId}`}>
-                          {treatmentById.get(assignment.treatmentId)?.name ?? "Tratamiento"}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{formatDateOnly(assignment.startDate)}</TableCell>
-                      <TableCell>
-                        {assignment.completedSessions}/{assignment.totalSessions} sesiones
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{assignmentStatusLabels[assignment.status]}</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {encounterDate(assignment.sourceVisitId)
-                          ? `Atención del ${encounterDate(assignment.sourceVisitId)}`
-                          : "Asignado desde Tratamientos"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
           )}
         </CardContent>
       </Card>

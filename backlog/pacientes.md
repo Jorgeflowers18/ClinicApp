@@ -2,7 +2,7 @@
 
 - **Sección:** Pacientes (`/pacientes/:id`, pestaña "Historial clínico")
 - **Módulos:** `front/src/modules/patients`, `front/src/modules/clinical-history`
-- **Estado:** Pendiente
+- **Estado:** Implementado (fase 6)
 - **Responsable:** Jorge Flores
 
 ## Objetivo

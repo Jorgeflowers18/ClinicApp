@@ -1,13 +1,25 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query"
 
 import { queryClient } from "@/shared/lib/query-client"
+import { getErrorMessage } from "@/shared/lib/error-message"
+import { appointmentsApi } from "@/modules/appointments/api/appointments.api"
+import { appointmentsKeys } from "@/modules/appointments/api/appointments.queries"
+import { treatmentsApi } from "@/modules/treatments/api/treatments.api"
+import { treatmentsKeys } from "@/modules/treatments/api/treatments.queries"
+import { inventoryKeys } from "@/modules/inventory/api/inventory.queries"
+import { financeKeys } from "@/modules/finance/api/finance.queries"
 
 import { clinicalHistoryApi } from "./clinical-history.api"
 import type {
+  AddEncounterNoteInput,
+  ClinicalEncounter,
   ClinicalRecord,
+  CreateEncounterInput,
   DentalAttachment,
   EncounterListQuery,
+  EncounterNote,
   PatientClinicalHistory,
+  PerformedTreatment,
   UploadAttachmentInput,
 } from "../types/clinical-history.types"
 
@@ -59,6 +71,134 @@ export function useSaveRecord() {
   return useMutation({
     mutationFn: (record: ClinicalRecord) => clinicalHistoryApi.saveRecord(record),
     onSuccess: updateCachedRecord,
+  })
+}
+
+export interface RegisterEncounterInput {
+  /** Historia tal como está en pantalla (con la revisión que se leyó). */
+  record: ClinicalRecord
+  /** Hay cambios de la historia sin guardar: se guardan antes de crear la atención. */
+  hasPendingChanges: boolean
+  encounter: CreateEncounterInput
+}
+
+export interface RegisterEncounterResult {
+  encounter: ClinicalEncounter
+  /** Última versión guardada de la historia, si la secuencia la guardó (cambios pendientes o propuestos usados). */
+  record: ClinicalRecord | null
+  appointmentCompleted: boolean
+  warnings: string[]
+}
+
+/**
+ * Registro de una atención coordinado desde el frontend (mismo criterio que citas → notificaciones):
+ * 1. guarda los cambios pendientes de la historia, así la copia del odontograma refleja lo que se ve;
+ * 2. registra cada tratamiento realizado en Tratamientos (ya completado; descuenta insumos y aparece
+ *    en Finanzas). Idempotente por atención + tratamiento: un reintento no lo duplica;
+ * 3. crea la atención con la copia del odontograma y los tratamientos (idempotente por `encounter.id`);
+ * 4. quita de la historia los tratamientos propuestos que se registraron (no fatal);
+ * 5. pasa la cita vinculada a "completada" (no fatal: la atención ya quedó registrada).
+ * Con backend real, debería ser una única transacción de `POST …/encounters`.
+ */
+async function registerEncounterSequence(patientId: string, input: RegisterEncounterInput): Promise<RegisterEncounterResult> {
+  const warnings: string[] = []
+  let current = input.record
+  let saved: ClinicalRecord | null = null
+  if (input.hasPendingChanges) {
+    saved = await clinicalHistoryApi.saveRecord(current)
+    current = saved
+    updateCachedRecord(saved)
+  }
+
+  const performedTreatments: PerformedTreatment[] = []
+  for (const item of input.encounter.performedTreatments) {
+    if (item.assignmentId || !item.treatmentId) {
+      performedTreatments.push(item)
+      continue
+    }
+    const assignment = await treatmentsApi.createAssignment({
+      treatmentId: item.treatmentId,
+      patientId,
+      date: input.encounter.date,
+      tooth: item.tooth,
+      sourceEncounterId: input.encounter.id,
+      sourceKey: `${input.encounter.id}:${item.id}`,
+    })
+    performedTreatments.push({ ...item, assignmentId: assignment.id })
+  }
+
+  const encounter = await clinicalHistoryApi.createEncounter(patientId, { ...input.encounter, performedTreatments })
+
+  const usedIds = new Set(performedTreatments.map((item) => item.id))
+  if (current.plan.some((item) => usedIds.has(item.id))) {
+    try {
+      saved = await clinicalHistoryApi.saveRecord({ ...current, plan: current.plan.filter((item) => !usedIds.has(item.id)) })
+      updateCachedRecord(saved)
+    } catch (error) {
+      warnings.push(`La atención se registró, pero no se quitaron los tratamientos propuestos: ${getErrorMessage(error)}`)
+    }
+  }
+
+  let appointmentCompleted = false
+  if (encounter.appointmentId) {
+    try {
+      const appointment = await appointmentsApi.get(encounter.appointmentId)
+      if (appointment.status === "programada" || appointment.status === "confirmada") {
+        await appointmentsApi.updateStatus(appointment.id, "completada")
+        appointmentCompleted = true
+      } else if (appointment.status === "cancelada" || appointment.status === "no_asistio") {
+        warnings.push("La cita vinculada está cancelada o marcada como no asistida; no se cambió su estado.")
+      }
+    } catch (error) {
+      warnings.push(`La atención se registró, pero no se pudo actualizar la cita: ${getErrorMessage(error)}`)
+    }
+  }
+
+  return { encounter, record: saved, appointmentCompleted, warnings }
+}
+
+export function useRegisterEncounter(patientId: string) {
+  return useMutation({
+    mutationFn: (input: RegisterEncounterInput) => registerEncounterSequence(patientId, input),
+    onSuccess: (result) => {
+      queryClient.setQueryData<PatientClinicalHistory>(clinicalHistoryKeys.record(patientId), (history) =>
+        history && !history.encounters.some((item) => item.id === result.encounter.id)
+          ? { ...history, encounters: [...history.encounters, result.encounter] }
+          : history
+      )
+      queryClient.invalidateQueries({ queryKey: clinicalHistoryKeys.encounters() })
+      if (result.encounter.performedTreatments.length) {
+        queryClient.invalidateQueries({ queryKey: treatmentsKeys.all })
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.all })
+        queryClient.invalidateQueries({ queryKey: financeKeys.all })
+      }
+      if (result.appointmentCompleted) queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() })
+    },
+    onError: () => {
+      // Una falla a mitad de camino pudo haber guardado la historia o registrado tratamientos.
+      queryClient.invalidateQueries({ queryKey: clinicalHistoryKeys.record(patientId) })
+      queryClient.invalidateQueries({ queryKey: treatmentsKeys.all })
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.all })
+    },
+  })
+}
+
+export function useAddEncounterNote(patientId: string) {
+  return useMutation({
+    mutationFn: ({ encounterId, input }: { encounterId: string; input: AddEncounterNoteInput }) =>
+      clinicalHistoryApi.addEncounterNote(patientId, encounterId, input),
+    onSuccess: (note: EncounterNote, { encounterId }) => {
+      queryClient.setQueryData<PatientClinicalHistory>(clinicalHistoryKeys.record(patientId), (history) =>
+        history
+          ? {
+              ...history,
+              encounters: history.encounters.map((encounter) =>
+                encounter.id === encounterId ? { ...encounter, addenda: [...encounter.addenda, note] } : encounter
+              ),
+            }
+          : history
+      )
+    },
   })
 }
 

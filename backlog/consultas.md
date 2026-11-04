@@ -2,7 +2,7 @@
 
 - **Sección:** Historial clínico → registro de atenciones
 - **Módulo:** `front/src/modules/clinical-history`
-- **Estado:** Pendiente
+- **Estado:** Implementado (fase 3)
 - **Responsable:** Jorge Flores
 
 ## Objetivo

@@ -2,7 +2,7 @@
 
 - **Sección:** Tratamientos (`/tratamientos`) y tratamientos del paciente en la historia clínica
 - **Módulos:** `front/src/modules/clinical-history`, `front/src/modules/treatments`
-- **Estado:** Pendiente
+- **Estado:** Implementado (fase 4)
 - **Responsable:** Jorge Flores
 
 ## Objetivo

@@ -17,7 +17,12 @@ import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { useAppointmentNotifications } from "@/modules/notifications/api/notifications.queries"
 
 import { useUpdateAppointmentStatus } from "../api/appointments.queries"
-import { appointmentStatusLabels, type Appointment, type AppointmentStatus } from "../types/appointment.types"
+import {
+  appointmentStatusLabels,
+  appointmentStatusVariants,
+  type Appointment,
+  type AppointmentStatus,
+} from "../types/appointment.types"
 
 interface AppointmentDetailDialogProps {
   open: boolean
@@ -32,14 +37,6 @@ interface AppointmentDetailDialogProps {
 
 /** Estados en los que la cita se puede abrir (o vincular) en la historia clínica del paciente. */
 const CLINICAL_HISTORY_STATUSES: AppointmentStatus[] = ["programada", "confirmada", "completada"]
-
-const STATUS_VARIANT: Record<AppointmentStatus, "default" | "outline" | "destructive" | "secondary"> = {
-  programada: "outline",
-  confirmada: "default",
-  completada: "secondary",
-  cancelada: "destructive",
-  no_asistio: "destructive",
-}
 
 export function AppointmentDetailDialog({
   open,
@@ -85,7 +82,7 @@ export function AppointmentDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {patientName}
-            <Badge variant={STATUS_VARIANT[appointment.status]}>
+            <Badge variant={appointmentStatusVariants[appointment.status]}>
               {appointmentStatusLabels[appointment.status]}
             </Badge>
           </DialogTitle>

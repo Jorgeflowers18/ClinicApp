@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { format } from "date-fns"
 
-import { useAppointmentsList, useProfessionals } from "@/modules/appointments/api/appointments.queries"
+import { useAppointmentsByPatient, useProfessionals } from "@/modules/appointments/api/appointments.queries"
 import type { Appointment, AppointmentStatus } from "@/modules/appointments/types/appointment.types"
 import { formatDateTime, formatTime } from "@/shared/lib/date"
 
@@ -25,15 +25,13 @@ export interface AppointmentOption {
  * no están ya vinculadas a otra atención (una cita por atención).
  */
 export function usePatientAppointmentOptions(patientId: string, encounters: readonly ClinicalEncounter[] | undefined) {
-  const { data: appointments, isLoading } = useAppointmentsList()
+  const { data: appointments, isLoading } = useAppointmentsByPatient(patientId)
   const { data: professionals } = useProfessionals()
 
   const options = useMemo<AppointmentOption[]>(() => {
     const linked = new Set((encounters ?? []).map((encounter) => encounter.appointmentId).filter(Boolean))
     return (appointments ?? [])
-      .filter((appointment) => appointment.patientId === patientId)
       .filter((appointment) => linkableAppointmentStatuses.includes(appointment.status) && !linked.has(appointment.id))
-      .sort((a, b) => b.start.localeCompare(a.start))
       .map((appointment) => {
         const professional = professionals?.find((item) => item.id === appointment.professionalId)
         const day = formatDateTime(appointment.start, { day: "2-digit", month: "short", year: "numeric" })
@@ -43,7 +41,7 @@ export function usePatientAppointmentOptions(patientId: string, encounters: read
           label: `${day} · ${formatTime(appointment.start)}${professional ? ` · ${professional.name}` : ""}`,
         }
       })
-  }, [appointments, professionals, encounters, patientId])
+  }, [appointments, professionals, encounters])
 
   return { options, isLoading }
 }

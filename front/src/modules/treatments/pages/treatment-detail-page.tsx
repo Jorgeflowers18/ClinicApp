@@ -1,20 +1,20 @@
-import { useNavigate, useParams } from "react-router-dom"
-import { toast } from "sonner"
-import { ArrowLeft, CreditCard, Pencil, Plus } from "lucide-react"
+import { Link, useNavigate, useParams } from "react-router-dom"
+import { ArrowLeft, CreditCard, Pencil } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageHeader } from "@/shared/components/page-header"
+import { formatDateOnly } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { useInventoryList } from "@/modules/inventory/api/inventory.queries"
 import { usePatientsList } from "@/modules/patients/api/patients.queries"
 
 import {
-  useAdvanceSession,
   useTreatment,
   useTreatmentAssignments,
 } from "../api/treatments.queries"
@@ -30,7 +30,9 @@ export function TreatmentDetailPage() {
   const { data: inventoryPage } = useInventoryList({ page: 1, pageSize: 100 })
   const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
   const { data: financialSummary } = useTreatmentFinancialSummary(id)
-  const advanceSession = useAdvanceSession(id ?? "")
+  // El enlace a la atención solo sirve a quienes pueden abrir la historia clínica.
+  const canOpenHistory = useAuthStore((state) => state.user?.role === "admin" || state.user?.role === "medico")
+  const received = [...(assignments ?? [])].sort((a, b) => b.startDate.localeCompare(a.startDate))
 
   if (isLoading) {
     return (
@@ -182,58 +184,64 @@ export function TreatmentDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Pacientes con este tratamiento</CardTitle>
+          <CardTitle>Pacientes que recibieron este tratamiento</CardTitle>
+          <CardDescription>
+            Los tratamientos se registran desde la atención en la historia clínica del paciente.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoadingAssignments ? (
             <Skeleton className="h-24 w-full" />
-          ) : assignments && assignments.length > 0 ? (
-            <div className="space-y-3">
-              {assignments.map((assignment) => (
-                <div
-                  key={assignment.id}
-                  className="flex items-center justify-between gap-4 rounded-lg border p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{patientName(assignment.patientId)}</p>
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <div className="h-1.5 w-32 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full bg-primary"
-                          style={{
-                            width: `${(assignment.completedSessions / assignment.totalSessions) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {assignment.completedSessions}/{assignment.totalSessions} sesiones
-                      </span>
-                    </div>
-                  </div>
-                  <Badge variant="outline">{assignmentStatusLabels[assignment.status]}</Badge>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={
-                      assignment.status === "completado" || advanceSession.isPending
-                    }
-                    onClick={() =>
-                      advanceSession.mutate(assignment.id, {
-                        onSuccess: () => toast.success("Sesión registrada"),
-                        onError: (err) => toast.error(getErrorMessage(err)),
-                      })
-                    }
-                  >
-                    <Plus />
-                    Sesión
-                  </Button>
-                </div>
-              ))}
+          ) : received.length > 0 ? (
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Pieza / zona</TableHead>
+                    <TableHead>Estado</TableHead>
+                    {canOpenHistory && <TableHead>Atención</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {received.map((assignment) => (
+                    <TableRow key={assignment.id}>
+                      <TableCell className="font-medium">{patientName(assignment.patientId)}</TableCell>
+                      <TableCell>{formatDateOnly(assignment.startDate, { day: "2-digit", month: "short", year: "numeric" })}</TableCell>
+                      <TableCell>{assignment.tooth || "General"}</TableCell>
+                      <TableCell>
+                        {/* Las asignaciones antiguas con varias sesiones conservan su progreso. */}
+                        {assignment.totalSessions > 1 ? (
+                          <span className="text-sm">
+                            {assignment.completedSessions}/{assignment.totalSessions} sesiones ·{" "}
+                            {assignmentStatusLabels[assignment.status]}
+                          </span>
+                        ) : (
+                          <Badge variant="outline">Realizado</Badge>
+                        )}
+                      </TableCell>
+                      {canOpenHistory && (
+                        <TableCell>
+                          {assignment.sourceEncounterId ? (
+                            <Link
+                              className="text-sm font-medium hover:underline"
+                              to={`/historial-clinico/paciente/${assignment.patientId}?atencion=${assignment.sourceEncounterId}`}
+                            >
+                              Ver atención
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Ningún paciente tiene este tratamiento asignado todavía.
-            </p>
+            <p className="text-sm text-muted-foreground">Ningún paciente ha recibido este tratamiento todavía.</p>
           )}
         </CardContent>
       </Card>

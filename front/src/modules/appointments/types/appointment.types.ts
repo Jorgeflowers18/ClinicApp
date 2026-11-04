@@ -89,3 +89,12 @@ export interface ScheduleBlock {
   reason: string
   createdAt: string
 }
+
+/** Variante del `Badge` para cada estado de cita (agenda e historia clínica). */
+export const appointmentStatusVariants: Record<AppointmentStatus, "default" | "outline" | "destructive" | "secondary"> = {
+  programada: "outline",
+  confirmada: "default",
+  completada: "secondary",
+  cancelada: "destructive",
+  no_asistio: "destructive",
+}

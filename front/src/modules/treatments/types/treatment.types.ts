@@ -40,16 +40,24 @@ export interface TreatmentAssignment {
   completedSessions: number
   status: AssignmentStatus
   startDate: string
-  /** Visita clínica y ítem de plan que originaron la asignación (vacío en asignaciones antiguas). */
-  sourceVisitId?: string
-  sourcePlanItemId?: string
+  /** Pieza o zona tratada (vacío en asignaciones antiguas). */
+  tooth?: string
+  /** Atención clínica en la que se realizó (vacío en asignaciones antiguas). */
+  sourceEncounterId?: string
+  /** Clave de idempotencia: atención + tratamiento realizado de esa atención. */
+  sourceKey?: string
 }
 
+/**
+ * Tratamiento realizado en una atención: se registra ya completado (una sesión), descontando sus
+ * insumos. Los tratamientos solo se registran desde la historia clínica.
+ */
 export interface CreateAssignmentInput {
   treatmentId: string
   patientId: string
-  totalSessions: number
-  startDate: string
-  sourceVisitId: string
-  sourcePlanItemId: string
+  /** Fecha de la atención. */
+  date: string
+  tooth: string
+  sourceEncounterId: string
+  sourceKey: string
 }

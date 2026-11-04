@@ -2,7 +2,7 @@
 
 - **Sección:** Agenda / citas (`/citas`) y pestaña "Citas" de la historia clínica
 - **Módulos:** `front/src/modules/appointments`, `front/src/modules/clinical-history`
-- **Estado:** Pendiente
+- **Estado:** Implementado (fase 5)
 - **Responsable:** Jorge Flores
 
 ## Objetivo

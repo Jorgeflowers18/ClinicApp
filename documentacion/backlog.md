@@ -44,14 +44,6 @@ Módulo financiero para manejo de pagos por tratamiento, cuotas, seguros, factur
 
 Realización completa de [`backlog_HC.md`](./backlog_HC.md): implementar en la página de historia clínica los elementos del formulario en papel "Historia Clínica Odontológica Integral" que usa el consultorio, clasificados entre Historial Clínico y Consulta, y quitar las partes del funcionamiento actual que dejen de aplicar.
 
-## 13. Simplificación de la historia clínica: de visitas a historia editable
-
-- **Estado:** En curso (fases 1 y 2 de 7 implementadas)
-- **Prioridad:** Alta
-- **Responsable:** Jorge Flores
-
-La clienta pidió poder editar la historia clínica directamente al abrirla. Se reemplaza el ciclo de visitas (borrador → cerrada) por una historia siempre editable, con guardado confirmado, y un historial de atenciones no editables que acumula tratamientos realizados y citas. Se implementa antes del ítem 12. Planes por sección en [`backlog/`](../backlog/README.md).
-
 ---
 
 ## Notas

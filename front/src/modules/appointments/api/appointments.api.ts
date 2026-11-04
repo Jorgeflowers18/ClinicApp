@@ -100,6 +100,14 @@ async function listMock(): Promise<Appointment[]> {
   return [...mockAppointments]
 }
 
+/** Citas de un paciente, de la más reciente a la más antigua. */
+async function listByPatientMock(patientId: string): Promise<Appointment[]> {
+  await mockDelay(250)
+  return mockAppointments
+    .filter((appointment) => appointment.patientId === patientId)
+    .sort((a, b) => b.start.localeCompare(a.start))
+}
+
 async function getMock(id: string): Promise<Appointment> {
   await mockDelay(200)
   const appointment = mockAppointments.find((item) => item.id === id)
@@ -231,6 +239,12 @@ async function listReal(): Promise<Appointment[]> {
   return data
 }
 
+// TODO: conectar a endpoint real -> GET /appointments?patientId= (ordenadas por fecha descendente)
+async function listByPatientReal(patientId: string): Promise<Appointment[]> {
+  const { data } = await http.get<Appointment[]>("/appointments", { params: { patientId } })
+  return data
+}
+
 // TODO: conectar a endpoint real -> GET /appointments/:id
 async function getReal(id: string): Promise<Appointment> {
   const { data } = await http.get<Appointment>(`/appointments/${id}`)
@@ -286,6 +300,7 @@ async function removeScheduleBlockReal(id: string): Promise<void> {
 
 export const appointmentsApi = {
   list: env.useMockApi ? listMock : listReal,
+  listByPatient: env.useMockApi ? listByPatientMock : listByPatientReal,
   get: env.useMockApi ? getMock : getReal,
   create: env.useMockApi ? createMock : createReal,
   update: env.useMockApi ? updateMock : updateReal,

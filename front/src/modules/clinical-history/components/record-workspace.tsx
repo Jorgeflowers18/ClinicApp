@@ -12,13 +12,15 @@ import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { formatDateOnly } from "@/shared/lib/date"
 import { env } from "@/shared/lib/env"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { createId } from "@/shared/lib/id"
 import { ApiError } from "@/shared/types/common"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 import { useTreatmentsList } from "@/modules/treatments/api/treatments.queries"
 import { KpiCard } from "@/modules/reports/components/kpi-card"
 import type { Patient } from "@/modules/patients/types/patient.types"
 
-import { useSaveRecord } from "../api/clinical-history.queries"
+import { useRegisterEncounter, useSaveRecord } from "../api/clinical-history.queries"
+import type { RecordDocumentContext } from "../lib/dental-export"
 import { computeChartIndicators } from "../lib/chart-indicators"
 import {
   changedSections,
@@ -33,6 +35,7 @@ import {
 import {
   recordFormSchema,
   type ChartSnapshot,
+  type EncounterFormValues,
   type PatientClinicalHistory,
   type RecordFormValues,
 } from "../types/clinical-history.types"
@@ -41,11 +44,22 @@ import { DataConsentTab } from "./data-consent-tab"
 import { EncountersTab } from "./encounters-tab"
 import { ExportCard } from "./export-card"
 import { OdontogramFrame, type ChartHandle } from "./odontogram-frame"
+import { PatientAppointmentsTab } from "./patient-appointments-tab"
+import { PerformedTreatmentsTab } from "./performed-treatments-tab"
 import { PeriodontalEvolutionTab } from "./periodontal-evolution-tab"
 import { RecordHeader } from "./record-header"
+import { RegisterEncounterDialog } from "./register-encounter-dialog"
 import { TreatmentPlanTab } from "./treatment-plan-tab"
 
-export type RecordTab = "odontograma" | "plan" | "consentimiento" | "archivos" | "atenciones" | "evolucion"
+export type RecordTab =
+  | "odontograma"
+  | "plan"
+  | "consentimiento"
+  | "archivos"
+  | "atenciones"
+  | "tratamientos"
+  | "citas"
+  | "evolucion"
 
 /** Pestaña donde vive cada sección editable, para saltar a ella cuando tiene errores. */
 const tabBySection: Record<keyof RecordFormValues, RecordTab> = {
@@ -72,13 +86,29 @@ interface RecordWorkspaceProps {
   onReset: (tab: RecordTab) => void
   /** Vuelve a pedir la historia al servidor (tras un conflicto) y la monta de nuevo. */
   onReload: (tab: RecordTab) => void
+  /** Cita de `?cita=` sin atención: abre «Registrar atención» con esa cita preseleccionada. */
+  pendingAppointmentId: string | null
+  /** Se cerró «Registrar atención» (con o sin guardar): la cita de la URL ya se atendió. */
+  onAppointmentHandled: () => void
+  /** Lleva a una atención (`?atencion=`): tras registrarla o desde la pestaña Tratamientos. */
+  onShowEncounter: (encounterId: string) => void
 }
 
 /**
  * Historia clínica editable. Los cambios quedan en pantalla hasta que se confirman con «Guardar
  * cambios»; no hay autoguardado.
  */
-export function RecordWorkspace({ patient, history, initialTab, highlightedEncounterId, onReset, onReload }: RecordWorkspaceProps) {
+export function RecordWorkspace({
+  patient,
+  history,
+  initialTab,
+  highlightedEncounterId,
+  onReset,
+  onReload,
+  pendingAppointmentId,
+  onAppointmentHandled,
+  onShowEncounter,
+}: RecordWorkspaceProps) {
   const navigate = useNavigate()
   const { record, encounters } = history
   const patientName = `${patient.firstName} ${patient.lastName}`
@@ -102,6 +132,14 @@ export function RecordWorkspace({ patient, history, initialTab, highlightedEncou
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [conflict, setConflict] = useState(false)
+  const registerEncounter = useRegisterEncounter(patient.id)
+  const [registerOpen, setRegisterOpen] = useState(Boolean(pendingAppointmentId))
+  // Cita con la que se abre «Registrar atención»: la de la URL o la elegida en la pestaña Citas.
+  const [registerAppointmentId, setRegisterAppointmentId] = useState(pendingAppointmentId)
+  // Id de la próxima atención: se genera antes de guardar, así un reintento no la duplica.
+  const encounterId = useRef(createId())
+  // Tras registrar, la URL ya apunta a la atención nueva: cerrar el diálogo no debe limpiarla.
+  const justRegistered = useRef(false)
 
   const values = useWatch({ control: form.control }) as RecordFormValues
   const changed = changedSections(saved, values)
@@ -184,19 +222,87 @@ export function RecordWorkspace({ patient, history, initialTab, highlightedEncou
     else navigate(`/pacientes/${patient.id}`)
   }
 
+  function openRegister(appointmentId: string | null) {
+    setRegisterAppointmentId(appointmentId)
+    setRegisterOpen(true)
+  }
+
+  function showEncounter(encounterId: string) {
+    setTab("atenciones")
+    onShowEncounter(encounterId)
+  }
+
+  function handleRegisterOpenChange(open: boolean) {
+    setRegisterOpen(open)
+    if (!open && pendingAppointmentId && !justRegistered.current) onAppointmentHandled()
+    justRegistered.current = false
+  }
+
+  /** Los cambios pendientes de la historia se guardan con la atención: antes deben ser válidos. */
+  async function validateRecordForEncounter() {
+    if (!hasChanges || (await form.trigger())) return true
+    setRegisterOpen(false)
+    onInvalid(form.formState.errors)
+    toast.info("Corrige la historia y vuelve a «Registrar atención»: lo escrito en la atención se conserva.")
+    return false
+  }
+
+  async function performRegister(values: EncounterFormValues) {
+    const current = currentValues()
+    const chartSnapshot = withCaseData(current.chart, { patientName, birthDate: patient.birthDate, date: values.date })
+    try {
+      const result = await registerEncounter.mutateAsync({
+        record: hasChanges ? { ...record, ...current } : record,
+        hasPendingChanges: hasChanges,
+        encounter: { ...values, id: encounterId.current, chartSnapshot },
+      })
+      if (result.record) {
+        const next = pickRecordValues(result.record)
+        form.reset(next)
+        setSaved(next)
+      }
+      encounterId.current = createId()
+      toast.success("Atención registrada")
+      if (result.appointmentCompleted) toast.success("La cita vinculada quedó como completada")
+      result.warnings.forEach((warning) => toast.warning(warning))
+      setTab("atenciones")
+      justRegistered.current = true
+      onShowEncounter(result.encounter.id)
+    } catch (error) {
+      // Un 409 sin campos es de la historia (revisión); con campos, es de la atención (cita ya usada).
+      if (error instanceof ApiError && error.status === 409 && !error.fieldErrors?.length) setConflict(true)
+      throw error
+    }
+  }
+
+  const documentContext: RecordDocumentContext = {
+    patientName,
+    documentId: patient.documentId,
+    professionalName: (encounter) => resolveProfessionalName(encounter, professionals),
+    treatmentName: (treatmentId, fallback) => (treatmentId && treatmentById.get(treatmentId)?.name) || fallback,
+  }
+
   const tabs: { value: RecordTab; label: string }[] = [
     { value: "odontograma", label: "Odontograma y periodontograma" },
     { value: "plan", label: "Plan de tratamiento" },
     { value: "consentimiento", label: "Consentimiento de datos" },
     { value: "archivos", label: "Fotos y documentos" },
     { value: "atenciones", label: "Atenciones" },
+    { value: "tratamientos", label: "Tratamientos" },
+    { value: "citas", label: "Citas" },
     { value: "evolucion", label: "Evolución periodontal" },
   ]
 
   return (
     <FormProvider {...form}>
       <div className="min-w-0 space-y-5">
-        <RecordHeader patient={patient} consentPending={record.dataConsent.status === "pendiente"} onBack={goBack} />
+        <RecordHeader
+          patient={patient}
+          consentPending={record.dataConsent.status === "pendiente"}
+          canRegister={chartReady}
+          onBack={goBack}
+          onRegisterEncounter={() => openRegister(null)}
+        />
 
         {/* MOCK-ONLY */}
         {env.useMockApi && (
@@ -227,7 +333,7 @@ export function RecordWorkspace({ patient, history, initialTab, highlightedEncou
           <KpiCard
             label="Próximo control"
             value={last?.nextVisit ? shortDate(last.nextVisit) : "Por definir"}
-            hint={last ? `Según la atención del ${shortDate(last.date)}` : undefined}
+            hint={last?.nextVisit ? `Según la atención del ${shortDate(last.date)}` : undefined}
             icon={CalendarClock}
           />
           <KpiCard
@@ -279,7 +385,7 @@ export function RecordWorkspace({ patient, history, initialTab, highlightedEncou
             />
           </div>
           <TabsContent value="plan">
-            <TreatmentPlanTab patientId={patient.id} encounters={encounters} />
+            <TreatmentPlanTab />
           </TabsContent>
           <TabsContent value="consentimiento">
             <DataConsentTab patientId={patient.id} />
@@ -288,7 +394,32 @@ export function RecordWorkspace({ patient, history, initialTab, highlightedEncou
             <AttachmentsTab patientId={patient.id} />
           </TabsContent>
           <TabsContent value="atenciones">
-            <EncountersTab encounters={encounters} highlightedId={highlightedEncounterId} />
+            <EncountersTab
+              patientId={patient.id}
+              patientName={patientName}
+              birthDate={patient.birthDate}
+              encounters={encounters}
+              highlightedId={highlightedEncounterId}
+              documentContext={documentContext}
+            />
+          </TabsContent>
+          <TabsContent value="tratamientos">
+            <PerformedTreatmentsTab
+              patientId={patient.id}
+              encounters={encounters}
+              professionalName={documentContext.professionalName}
+              onOpenEncounter={showEncounter}
+            />
+          </TabsContent>
+          <TabsContent value="citas">
+            <PatientAppointmentsTab
+              patientId={patient.id}
+              encounters={encounters}
+              treatmentName={(treatmentId) => treatmentById.get(treatmentId)?.name}
+              canRegister={chartReady}
+              onRegisterEncounter={openRegister}
+              onOpenEncounter={showEncounter}
+            />
           </TabsContent>
           <TabsContent value="evolucion">
             <PeriodontalEvolutionTab encounters={encounters} />
@@ -296,12 +427,7 @@ export function RecordWorkspace({ patient, history, initialTab, highlightedEncou
         </Tabs>
 
         <ExportCard
-          context={{
-            patientName,
-            documentId: patient.documentId,
-            professionalName: (encounter) => resolveProfessionalName(encounter, professionals),
-            treatmentName: (treatmentId, fallback) => (treatmentId && treatmentById.get(treatmentId)?.name) || fallback,
-          }}
+          context={documentContext}
           getCurrentHistory={() => ({ encounters, record: { ...record, ...currentValues() } })}
           captureOdontogramImage={async () => (await chartHandle.current?.captureImage()) ?? null}
           disabled={!chartReady}
@@ -359,6 +485,18 @@ export function RecordWorkspace({ patient, history, initialTab, highlightedEncou
         cancelLabel="Seguir editando"
         destructive
         onConfirm={() => navigate(`/pacientes/${patient.id}`)}
+      />
+      {/* Tiene su propio formulario (y su propio FormProvider): no comparte valores con la historia. */}
+      <RegisterEncounterDialog
+        open={registerOpen}
+        onOpenChange={handleRegisterOpenChange}
+        patientId={patient.id}
+        encounters={encounters}
+        appointmentId={registerAppointmentId}
+        proposed={values.plan}
+        pendingChanges={hasChanges ? changedLabels : ""}
+        validateRecord={validateRecordForEncounter}
+        onRegister={performRegister}
       />
     </FormProvider>
   )

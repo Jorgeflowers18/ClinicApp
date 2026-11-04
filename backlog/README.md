@@ -51,10 +51,10 @@ Se alinea con [`documentacion/backlog_HC.md`](../documentacion/backlog_HC.md): l
 |---|---|---|---|
 | 1 | historial-clinico.md | Tipos, API mock/real, almacenamiento y conversión de visitas | Hecha |
 | 2 | historial-clinico.md | Página de la historia editable con "Guardar cambios" y confirmación | Hecha (incluye la lista de atenciones de solo lectura) |
-| 3 | consultas.md | Registrar atención e historial de atenciones | Pendiente |
-| 4 | tratamientos.md | Tratamientos realizados en la atención, tratamientos propuestos y detalle del catálogo | Pendiente (la lista simple de propuestos ya está hecha) |
-| 5 | citas.md | Acceso desde la cita y citas del paciente | Pendiente |
-| 6 | pacientes.md, historial-clinico.md | Resumen del paciente, lista global y exportación | En parte: resumen, lista sin estado y exportación de la historia ya adaptados; falta el PDF por atención |
-| 7 | todos | Pruebas e2e y documentación (`arquitectura-frontend.md`, `back/backlog.md`, `documentacion/backlog.md`) | Pendiente |
+| 3 | consultas.md | Registrar atención e historial de atenciones | Hecha (incluye el PDF por atención y la apertura desde `?cita=`) |
+| 4 | tratamientos.md | Tratamientos realizados en la atención, tratamientos propuestos y detalle del catálogo | Hecha |
+| 5 | citas.md | Acceso desde la cita y citas del paciente | Hecha |
+| 6 | pacientes.md, historial-clinico.md | Resumen del paciente, lista global y exportación | Hecha |
+| 7 | todos | Pruebas e2e y documentación (`arquitectura-frontend.md`, `back/backlog.md`, `documentacion/backlog.md`) | Hecha: `front/tests/dental-history.spec.ts` reescrita |
 
 Tras cada fase: `npx tsc -p tsconfig.app.json --noEmit`, `npx oxlint`, `npm run build` y revisión en el servidor de desarrollo. Sin commits hasta que se pidan.
