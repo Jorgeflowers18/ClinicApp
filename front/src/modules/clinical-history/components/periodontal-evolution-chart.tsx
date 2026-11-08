@@ -10,7 +10,7 @@ const tooltipStyle = {
 }
 
 /**
- * Evolución de indicadores entre visitas. Porcentajes y conteos van en gráficos separados para no
+ * Evolución de indicadores entre atenciones. Porcentajes y conteos van en gráficos separados para no
  * mezclar unidades en un mismo eje.
  */
 export function PeriodontalEvolutionChart({ data }: { data: EvolutionPoint[] }) {
@@ -48,7 +48,7 @@ export function PeriodontalEvolutionChart({ data }: { data: EvolutionPoint[] }) 
       </figure>
 
       <figure className="space-y-2">
-        <figcaption className="text-sm font-medium">Hallazgos por visita</figcaption>
+        <figcaption className="text-sm font-medium">Hallazgos por atención</figcaption>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
@@ -61,6 +61,37 @@ export function PeriodontalEvolutionChart({ data }: { data: EvolutionPoint[] }) 
               <Bar dataKey="teethWithMobility" name="Piezas con movilidad" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="teethWithCaries" name="Piezas con caries" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
             </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </figure>
+
+      <figure className="space-y-2 lg:col-span-2">
+        <figcaption className="text-sm font-medium">Profundidad de sondaje y pérdida de inserción máximas (mm)</figcaption>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} className="text-xs" />
+              <YAxis tickLine={false} axisLine={false} className="text-xs" allowDecimals={false} unit=" mm" />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value) => `${value} mm`} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Line
+                type="monotone"
+                dataKey="maxProbingDepth"
+                name="Profundidad de sondaje máxima"
+                stroke="var(--chart-1)"
+                strokeWidth={2}
+                connectNulls
+              />
+              <Line
+                type="monotone"
+                dataKey="maxAttachmentLoss"
+                name="Pérdida de inserción clínica máxima"
+                stroke="var(--chart-4)"
+                strokeWidth={2}
+                connectNulls
+              />
+            </LineChart>
           </ResponsiveContainer>
         </div>
       </figure>

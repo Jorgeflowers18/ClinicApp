@@ -1,5 +1,6 @@
 import { mockPatients } from "@/modules/patients/api/patients.mock-data"
 import { mockTreatments, mockTreatmentAssignments } from "@/modules/treatments/api/treatments.mock-data"
+import { assignmentPrice } from "@/modules/treatments/types/treatment.types"
 
 import type {
   FinancialPayment,
@@ -169,9 +170,14 @@ export function getTreatmentFinancialSummary(treatmentId: string, patientId?: st
   const insurance = mockInsuranceCoverage.find((item) => item.treatmentId === treatmentId && item.patientId === resolvedPatientId) ?? null
   const invoice = mockInvoices.find((item) => item.treatmentId === treatmentId && item.patientId === resolvedPatientId) ?? null
   const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0)
+  // Valor cobrado en la atención más reciente de este tratamiento (o el precio del catálogo si no tiene).
+  const latestAssignment = mockTreatmentAssignments
+    .filter((assignment) => assignment.treatmentId === treatmentId && assignment.patientId === resolvedPatientId)
+    .sort((a, b) => b.startDate.localeCompare(a.startDate))[0]
+  const totalValue = latestAssignment ? assignmentPrice(latestAssignment, treatment.price) : treatment.price
   const insuranceCovered = insurance?.coveredValue ?? 0
-  const patientResponsibility = Math.max(treatment.price - insuranceCovered, 0)
-  const pendingBalance = Math.max(treatment.price - totalPaid, 0)
+  const patientResponsibility = Math.max(totalValue - insuranceCovered, 0)
+  const pendingBalance = Math.max(totalValue - totalPaid, 0)
   const overdueBalance = installments.reduce((sum, installment) => sum + (installment.status === "vencida" ? installment.balance : 0), 0)
   const nextDueDate = installments
     .filter((installment) => installment.status !== "pagada" && installment.status !== "cancelada")
@@ -181,7 +187,7 @@ export function getTreatmentFinancialSummary(treatmentId: string, patientId?: st
     treatmentId: treatment.id,
     patientId: resolvedPatientId,
     treatmentName: treatment.name,
-    totalValue: treatment.price,
+    totalValue,
     totalPaid,
     pendingBalance,
     overdueBalance,
@@ -223,7 +229,7 @@ export function getPatientFinancialSummary(patientId: string): PatientFinancialS
 }
 
 // Se calcula en cada llamada (no al cargar el módulo) para incluir las asignaciones creadas en
-// tiempo de ejecución, por ejemplo al cerrar una visita clínica con plan de tratamiento.
+// tiempo de ejecución, por ejemplo al registrar tratamientos realizados en una atención clínica.
 export function buildPortfolioRows(): FinancialPortfolioRow[] {
   return mockTreatments.flatMap((treatment) =>
     mockTreatmentAssignments

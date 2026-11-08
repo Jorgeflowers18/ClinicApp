@@ -15,13 +15,7 @@ import { usePatientFinancialSummary } from "@/modules/finance/api/finance.querie
 import { PatientClinicalSummary } from "@/modules/clinical-history/components/patient-clinical-summary"
 
 import { usePatient } from "../api/patients.queries"
-import { treatmentStatusLabels } from "../types/patient.types"
-
-const GENDER_LABELS: Record<string, string> = {
-  femenino: "Femenino",
-  masculino: "Masculino",
-  otro: "Otro",
-}
+import { genderLabels, maritalStatusLabels, treatmentStatusLabels } from "../types/patient.types"
 
 export function PatientDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -61,7 +55,7 @@ export function PatientDetailPage() {
         </Button>
         <PageHeader
           title={`${patient.firstName} ${patient.lastName}`}
-          description={`Cédula ${patient.documentId}${age !== null ? ` · ${age} años` : ""}`}
+          description={`Cédula ${patient.documentId}${age !== null ? ` · ${age} años` : ""}${patient.clinicalRecordNumber ? ` · Historia clínica ${patient.clinicalRecordNumber}` : ""}`}
           actions={
             <Button variant="outline" onClick={() => navigate(`/pacientes/${patient.id}/editar`)}>
               <Pencil />
@@ -90,8 +84,12 @@ export function PatientDetailPage() {
               <p className="font-medium">{patient.address || "—"}</p>
             </div>
             <div>
+              <p className="text-muted-foreground">Ciudad / provincia</p>
+              <p className="font-medium">{patient.city || "—"}</p>
+            </div>
+            <div>
               <p className="text-muted-foreground">Género</p>
-              <p className="font-medium">{GENDER_LABELS[patient.gender]}</p>
+              <p className="font-medium">{genderLabels[patient.gender]}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Fecha de nacimiento</p>
@@ -130,14 +128,37 @@ export function PatientDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
               <UserRound className="size-4" />
-              Historial médico
+              Datos del cliente
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p className="font-medium">Antecedentes</p>
-            <p>{patient.medicalHistory || "Sin antecedentes médicos registrados."}</p>
-            <p className="font-medium">Alergias</p>
-            <p>{patient.allergies || "Sin alergias registradas."}</p>
+            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
+              {[
+                ["N.° de historia clínica", patient.clinicalRecordNumber],
+                ["Edad", age !== null ? `${age} años` : ""],
+                ["Estado civil", maritalStatusLabels[patient.maritalStatus] ?? ""],
+                ["Ocupación", patient.occupation],
+                ["Empresa / institución", patient.company],
+                ["Nacionalidad", patient.nationality],
+              ].map(([label, value]) => (
+                <div key={label} className="contents">
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="font-medium">{value || "—"}</dd>
+                </div>
+              ))}
+            </dl>
+            {canSeeClinicalHistory && (
+              <p className="text-xs text-muted-foreground">
+                Estos datos, los antecedentes y las alergias se editan en la historia clínica.{" "}
+                <button
+                  type="button"
+                  className="text-primary underline-offset-2 hover:underline"
+                  onClick={() => navigate(`/historial-clinico/paciente/${patient.id}`)}
+                >
+                  Abrir historia clínica
+                </button>
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -151,7 +172,10 @@ export function PatientDetailPage() {
           <CardContent className="space-y-2 text-sm">
             <div>
               <p className="text-muted-foreground">Contacto</p>
-              <p className="font-medium">{patient.emergencyContactName || "—"}</p>
+              <p className="font-medium">
+                {patient.emergencyContactName || "—"}
+                {patient.emergencyContactRelationship && ` (${patient.emergencyContactRelationship})`}
+              </p>
               <p>{patient.emergencyContactPhone || "—"}</p>
             </div>
             <div>
@@ -172,8 +196,6 @@ export function PatientDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p className="font-medium">Historial del paciente</p>
-            <p>{patient.medicalHistory ? "Documentación clínica disponible" : "Sin documentación clínica registrada"}</p>
             <p className="font-medium">Consentimientos</p>
             <p>{patient.consentSigned ? "Consentimiento firmado" : "Consentimiento pendiente"}</p>
             <p className="font-medium">Notificaciones</p>

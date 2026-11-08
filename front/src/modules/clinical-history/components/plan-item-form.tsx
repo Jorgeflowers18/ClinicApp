@@ -10,24 +10,22 @@ import { formatCurrency } from "@/shared/lib/number"
 import { createId } from "@/shared/lib/id"
 import type { Treatment } from "@/modules/treatments/types/treatment.types"
 
+import { NO_PHASE, phaseItems } from "../lib/plan"
 import {
-  planItemFormSchema,
-  planItemStatusLabels,
-  type PlanItem,
-  type PlanItemFormValues,
+  proposedTreatmentFormSchema,
+  today,
+  type ProposedTreatment,
+  type ProposedTreatmentFormValues,
 } from "../types/clinical-history.types"
 
-const formStatuses = ["pendiente", "en-curso", "realizado"] as const
-const statusItems = Object.fromEntries(formStatuses.map((status) => [status, planItemStatusLabels[status]]))
-
-const emptyValues: PlanItemFormValues = { treatmentId: "", tooth: "", sessions: 1, status: "pendiente" }
+const emptyValues: ProposedTreatmentFormValues = { treatmentId: "", tooth: "", phase: "", plannedDate: "" }
 
 interface PlanItemFormProps {
   treatments: Treatment[]
-  onAdd: (item: PlanItem) => void
+  onAdd: (item: ProposedTreatment) => void
 }
 
-/** Alta de un ítem del plan: siempre a partir del catálogo de tratamientos activos. */
+/** Alta de un tratamiento propuesto: siempre a partir del catálogo de tratamientos activos. */
 export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
   const {
     control,
@@ -35,14 +33,14 @@ export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<PlanItemFormValues>({
-    resolver: zodResolver(planItemFormSchema),
+  } = useForm<ProposedTreatmentFormValues>({
+    resolver: zodResolver(proposedTreatmentFormSchema),
     defaultValues: emptyValues,
   })
 
   const treatmentItems = Object.fromEntries(treatments.map((treatment) => [treatment.id, treatment.name]))
 
-  function onSubmit(values: PlanItemFormValues) {
+  function onSubmit(values: ProposedTreatmentFormValues) {
     const treatment = treatments.find((item) => item.id === values.treatmentId)
     if (!treatment) return
     onAdd({
@@ -50,9 +48,8 @@ export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
       treatmentId: treatment.id,
       description: treatment.name,
       tooth: values.tooth.trim(),
-      sessions: values.sessions,
-      status: values.status,
-      assignmentId: null,
+      phase: values.phase,
+      plannedDate: values.plannedDate,
     })
     reset(emptyValues)
   }
@@ -60,8 +57,8 @@ export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="grid gap-3 rounded-lg border bg-muted/30 p-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_7rem_minmax(0,1.3fr)_auto] md:items-start"
-      aria-label="Agregar tratamiento al plan"
+      className="grid gap-3 rounded-lg border bg-muted/30 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto] xl:items-start"
+      aria-label="Agregar tratamiento propuesto"
     >
       <Field data-invalid={!!errors.treatmentId}>
         <FieldLabel htmlFor="plan-treatment">Tratamiento del catálogo</FieldLabel>
@@ -92,38 +89,41 @@ export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
         <FieldError errors={errors.tooth ? [errors.tooth] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.sessions}>
-        <FieldLabel htmlFor="plan-sessions">Sesiones</FieldLabel>
-        <Input id="plan-sessions" type="number" min={1} max={60} aria-invalid={!!errors.sessions} {...register("sessions")} />
-        <FieldError errors={errors.sessions ? [errors.sessions] : undefined} />
-      </Field>
-
-      <Field data-invalid={!!errors.status}>
-        <FieldLabel htmlFor="plan-status">Estado</FieldLabel>
+      <Field>
+        <FieldLabel htmlFor="plan-phase">Fase</FieldLabel>
         <Controller
           control={control}
-          name="status"
+          name="phase"
           render={({ field }) => (
-            <Select items={statusItems} value={field.value} onValueChange={(value) => value && field.onChange(value)}>
-              <SelectTrigger id="plan-status" className="w-full">
+            <Select
+              items={phaseItems}
+              value={field.value || NO_PHASE}
+              onValueChange={(value) => field.onChange(!value || value === NO_PHASE ? "" : value)}
+            >
+              <SelectTrigger id="plan-phase" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {formStatuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {planItemStatusLabels[status]}
+                {Object.entries(phaseItems).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
         />
-        <FieldError errors={errors.status ? [errors.status] : undefined} />
       </Field>
 
-      <Button type="submit" className="md:mt-6">
+      <Field data-invalid={!!errors.plannedDate}>
+        <FieldLabel htmlFor="plan-date">Fecha prevista</FieldLabel>
+        <Input id="plan-date" type="date" min={today()} aria-invalid={!!errors.plannedDate} {...register("plannedDate")} />
+        <FieldError errors={errors.plannedDate ? [errors.plannedDate] : undefined} />
+      </Field>
+
+      <Button type="submit" className="xl:mt-6">
         <Plus />
-        Agregar al plan
+        Agregar
       </Button>
     </form>
   )

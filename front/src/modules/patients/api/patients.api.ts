@@ -4,7 +4,7 @@ import { mockDelay, nextId, paginate } from "@/shared/lib/mock"
 import { ApiError, type PageQuery, type Paginated } from "@/shared/types/common"
 
 import { mockPatients } from "./patients.mock-data"
-import type { Patient, PatientFormValues } from "../types/patient.types"
+import { formatClinicalRecordNumber, type Patient, type PatientFormValues } from "../types/patient.types"
 
 async function listMock(query: PageQuery): Promise<Paginated<Patient>> {
   await mockDelay()
@@ -34,7 +34,14 @@ async function getMock(id: string): Promise<Patient> {
 
 async function createMock(values: PatientFormValues): Promise<Patient> {
   await mockDelay()
-  const patient: Patient = { ...values, id: nextId("pat"), createdAt: new Date().toISOString() }
+  // El N.° de historia clínica es correlativo; con backend real lo asigna el servidor.
+  const sequence = Math.max(0, ...mockPatients.map((item) => Number(item.clinicalRecordNumber.replace(/\D/g, "")) || 0)) + 1
+  const patient: Patient = {
+    ...values,
+    id: nextId("pat"),
+    clinicalRecordNumber: formatClinicalRecordNumber(sequence),
+    createdAt: new Date().toISOString(),
+  }
   mockPatients.unshift(patient)
   return patient
 }
@@ -43,7 +50,8 @@ async function updateMock(id: string, values: PatientFormValues): Promise<Patien
   await mockDelay()
   const index = mockPatients.findIndex((item) => item.id === id)
   if (index === -1) throw new ApiError("Paciente no encontrado", 404)
-  mockPatients[index] = { ...mockPatients[index], ...values }
+  // El N.° de historia clínica no se modifica.
+  mockPatients[index] = { ...mockPatients[index], ...values, clinicalRecordNumber: mockPatients[index].clinicalRecordNumber }
   return mockPatients[index]
 }
 
@@ -66,13 +74,13 @@ async function getReal(id: string): Promise<Patient> {
   return data
 }
 
-// TODO: conectar a endpoint real -> POST /patients
+// TODO: conectar a endpoint real -> POST /patients (el servidor asigna clinicalRecordNumber)
 async function createReal(values: PatientFormValues): Promise<Patient> {
   const { data } = await http.post<Patient>("/patients", values)
   return data
 }
 
-// TODO: conectar a endpoint real -> PUT /patients/:id
+// TODO: conectar a endpoint real -> PUT /patients/:id (clinicalRecordNumber es de solo lectura)
 async function updateReal(id: string, values: PatientFormValues): Promise<Patient> {
   const { data } = await http.put<Patient>(`/patients/${id}`, values)
   return data

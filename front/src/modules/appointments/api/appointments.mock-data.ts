@@ -3,9 +3,9 @@ import { addDays, setHours, setMinutes, startOfDay } from "date-fns"
 import type { Appointment, Professional, Room, ScheduleBlock } from "../types/appointment.types"
 
 export const mockProfessionals: Professional[] = [
-  { id: "prof_1", name: "Dra. Carla Ríos", specialty: "Odontología general" },
-  { id: "prof_2", name: "Dr. Andrés Vega", specialty: "Ortodoncia" },
-  { id: "prof_3", name: "Dra. Paula Nieto", specialty: "Endodoncia" },
+  { id: "prof_1", name: "Dra. Carla Ríos", specialty: "Odontología general", registrationNumber: "MSP-17-04581" },
+  { id: "prof_2", name: "Dr. Andrés Vega", specialty: "Ortodoncia", registrationNumber: "MSP-17-03922" },
+  { id: "prof_3", name: "Dra. Paula Nieto", specialty: "Endodoncia", registrationNumber: "MSP-09-01157" },
 ]
 
 export const mockRooms: Room[] = [

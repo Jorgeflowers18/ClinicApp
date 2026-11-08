@@ -9,35 +9,34 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 
 import {
   downloadBlob,
-  exportRecord,
+  exportHistory,
   openPrintWindow,
-  printVisit,
-  visitDocument,
-  type VisitDocumentContext,
+  printDocument,
+  recordDocument,
+  type RecordDocumentContext,
 } from "../lib/dental-export"
-import type { DentalRecord, DentalVisit } from "../types/clinical-history.types"
+import type { PatientClinicalHistory } from "../types/clinical-history.types"
 
 interface ExportCardProps {
-  record: DentalRecord
-  context: VisitDocumentContext
-  /** Devuelve la visita tal como está en pantalla (con el odontograma más reciente). */
-  getCurrentVisit: () => DentalVisit
+  context: RecordDocumentContext
+  /** Devuelve la historia tal como está en pantalla (con el odontograma más reciente, guardado o no). */
+  getCurrentHistory: () => PatientClinicalHistory
   /** Genera el PNG del odontograma con el exportador de la librería; `null` si no se pudo. */
   captureOdontogramImage: () => Promise<string | null>
   disabled: boolean
 }
 
-export function ExportCard({ record, context, getCurrentVisit, captureOdontogramImage, disabled }: ExportCardProps) {
+export function ExportCard({ context, getCurrentHistory, captureOdontogramImage, disabled }: ExportCardProps) {
   const [preparing, setPreparing] = useState(false)
 
-  /** Arma el documento de la visita con la imagen del odontograma incrustada. */
+  /** Arma el documento de la historia con la imagen del odontograma incrustada. */
   async function buildDocument() {
-    const visit = getCurrentVisit()
+    const history = getCurrentHistory()
     const odontogramImage = await captureOdontogramImage()
     if (!odontogramImage) {
       toast.warning("No se pudo generar la imagen del odontograma; el documento se exporta sin ella.")
     }
-    return { visit, html: visitDocument(visit, context, { odontogramImage }) }
+    return recordDocument(history, context, { odontogramImage })
   }
 
   async function print() {
@@ -51,8 +50,7 @@ export function ExportCard({ record, context, getCurrentVisit, captureOdontogram
     }
     setPreparing(true)
     try {
-      const { html } = await buildDocument()
-      await printVisit(report, html)
+      await printDocument(report, await buildDocument())
     } catch (error) {
       report.close()
       toast.error(getErrorMessage(error))
@@ -64,8 +62,8 @@ export function ExportCard({ record, context, getCurrentVisit, captureOdontogram
   async function downloadDocument() {
     setPreparing(true)
     try {
-      const { visit, html } = await buildDocument()
-      downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), `visita-${visit.date}.html`)
+      const html = await buildDocument()
+      downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), `historia-clinica-${getCurrentHistory().record.patientId}.html`)
     } catch (error) {
       toast.error(getErrorMessage(error))
     } finally {
@@ -73,13 +71,9 @@ export function ExportCard({ record, context, getCurrentVisit, captureOdontogram
     }
   }
 
-  function downloadRecord() {
+  function downloadHistory() {
     try {
-      const current = getCurrentVisit()
-      exportRecord(
-        { ...record, visits: record.visits.map((visit) => (visit.id === current.id ? current : visit)) },
-        context.patientName
-      )
+      exportHistory(getCurrentHistory(), context.patientName)
     } catch (error) {
       toast.error(getErrorMessage(error))
     }
@@ -103,17 +97,18 @@ export function ExportCard({ record, context, getCurrentVisit, captureOdontogram
           </Button>
           <Button variant="outline" disabled={busy} onClick={() => void downloadDocument()}>
             <Download />
-            Documento de la visita
+            Documento de la historia
           </Button>
-          <Button variant="outline" disabled={busy} onClick={downloadRecord}>
+          <Button variant="outline" disabled={busy} onClick={downloadHistory}>
             <Download />
             Historia completa JSON
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          El PDF y el documento de la visita incluyen la imagen del odontograma junto al registro clínico. El menú
-          «Exportar» del editor sigue ofreciendo su propio informe PDF, imágenes, SVG y FHIR. Las fotos y los
-          documentos originales se descargan desde su ficha.
+          El PDF y el documento incluyen la imagen del odontograma tal como se ve en pantalla, los tratamientos
+          propuestos, el consentimiento de datos y el listado de atenciones. El menú «Exportar» del editor sigue
+          ofreciendo su propio informe PDF, imágenes, SVG y FHIR. Las fotos y los documentos originales se descargan
+          desde su ficha.
           {/* MOCK-ONLY */}
           {env.useMockApi &&
             " En modo demostración la historia vive en este navegador: la «Historia completa JSON» sirve de respaldo."}

@@ -10,6 +10,8 @@ import type { Appointment, AppointmentFormValues, ScheduleBlockFormValues } from
 export const appointmentsKeys = {
   all: ["appointments"] as const,
   lists: () => [...appointmentsKeys.all, "list"] as const,
+  /** Bajo `lists()`: se invalida junto con la agenda al crear, editar o cambiar el estado de una cita. */
+  byPatient: (patientId: string) => [...appointmentsKeys.lists(), "patient", patientId] as const,
   detail: (id: string) => [...appointmentsKeys.all, "detail", id] as const,
   professionals: ["professionals"] as const,
   rooms: ["rooms"] as const,
@@ -20,6 +22,15 @@ export function useAppointmentsList() {
   return useQuery({
     queryKey: appointmentsKeys.lists(),
     queryFn: () => appointmentsApi.list(),
+  })
+}
+
+/** Citas de un paciente (de la más reciente a la más antigua). */
+export function useAppointmentsByPatient(patientId: string | undefined) {
+  return useQuery({
+    queryKey: appointmentsKeys.byPatient(patientId ?? ""),
+    queryFn: () => appointmentsApi.listByPatient(patientId as string),
+    enabled: Boolean(patientId),
   })
 }
 

@@ -21,6 +21,8 @@ export interface Professional {
   id: string
   name: string
   specialty: string
+  /** Registro profesional (por ejemplo, el del MSP / Senescyt). Vacío si no se registró. */
+  registrationNumber: string
 }
 
 export interface Room {
@@ -88,4 +90,13 @@ export interface ScheduleBlock {
   end: string
   reason: string
   createdAt: string
+}
+
+/** Variante del `Badge` para cada estado de cita (agenda e historia clínica). */
+export const appointmentStatusVariants: Record<AppointmentStatus, "default" | "outline" | "destructive" | "secondary"> = {
+  programada: "outline",
+  confirmada: "default",
+  completada: "secondary",
+  cancelada: "destructive",
+  no_asistio: "destructive",
 }
