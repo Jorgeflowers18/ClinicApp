@@ -11,10 +11,17 @@ function percent(value: number | null) {
   return value === null ? "Sin registro" : `${value}%`
 }
 
+function millimeters(value: number | null) {
+  return value === null ? "Sin registro" : `${value} mm`
+}
+
 export function PeriodontalEvolutionTab({ encounters }: { encounters: ClinicalEncounter[] }) {
   const { control } = useFormContext<RecordFormValues>()
   const chart = useWatch({ control, name: "chart" })
   const indicators = computeChartIndicators(chart)
+  // No se deduce del odontograma: es un dato del diagnóstico periodontal de la atención.
+  const lostToPerio = [...encounters].sort(compareEncounters).reverse().find((item) => item.periodontalDiagnosis.teethLostToPerio !== null)
+    ?.periodontalDiagnosis.teethLostToPerio
 
   // Un punto por atención (su copia del odontograma) más el estado actual de la historia, aunque no esté guardado.
   const series = buildEvolutionSeries([
@@ -28,11 +35,22 @@ export function PeriodontalEvolutionTab({ encounters }: { encounters: ClinicalEn
     ? [
         { label: "Piezas presentes", value: indicators.presentTeeth },
         { label: "Piezas ausentes", value: indicators.missingTeeth },
+        {
+          label: "Perdidas por periodontitis",
+          value: lostToPerio ?? "Sin registro",
+          hint: lostToPerio != null ? "Según el diagnóstico periodontal de la atención" : undefined,
+        },
         { label: "Implantes", value: indicators.implants },
         { label: "Piezas con caries", value: indicators.teethWithCaries },
         { label: "Sitios sondeados", value: indicators.sitesProbed },
         { label: `Sitios con bolsa ≥ ${POCKET_THRESHOLD_MM} mm`, value: indicators.sitesWithPocket },
-        { label: "Sitios con recesión", value: indicators.sitesWithRecession },
+        { label: "Profundidad de sondaje máxima", value: millimeters(indicators.maxProbingDepth) },
+        {
+          label: "Pérdida de inserción clínica máxima",
+          value: millimeters(indicators.maxAttachmentLoss),
+          hint: "Profundidad de sondaje + margen gingival",
+        },
+        { label: "Sitios con recesión (defectos mucogingivales)", value: indicators.sitesWithRecession },
         { label: "Sangrado al sondaje", value: percent(indicators.bleedingPercent) },
         { label: "Índice de placa (O'Leary)", value: percent(indicators.plaquePercent) },
         { label: "Piezas con movilidad", value: indicators.teethWithMobility },
@@ -57,6 +75,7 @@ export function PeriodontalEvolutionTab({ encounters }: { encounters: ClinicalEn
                 <div key={stat.label} className="rounded-lg border p-3">
                   <dt className="text-xs text-muted-foreground">{stat.label}</dt>
                   <dd className="text-lg font-semibold">{stat.value}</dd>
+                  {"hint" in stat && stat.hint && <dd className="text-xs text-muted-foreground">{stat.hint}</dd>}
                 </div>
               ))}
             </dl>

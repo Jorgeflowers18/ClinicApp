@@ -18,6 +18,7 @@ import type {
   DentalAttachment,
   EncounterListQuery,
   EncounterNote,
+  ExamRequest,
   PatientClinicalHistory,
   PerformedTreatment,
   UploadAttachmentInput,
@@ -75,40 +76,48 @@ export function useSaveRecord() {
 }
 
 export interface RegisterEncounterInput {
-  /** Historia tal como está en pantalla (con la revisión que se leyó). */
+  /** Historia guardada (con la revisión que se leyó): la atención copia su odontograma y sus alertas. */
   record: ClinicalRecord
-  /** Hay cambios de la historia sin guardar: se guardan antes de crear la atención. */
-  hasPendingChanges: boolean
   encounter: CreateEncounterInput
 }
 
 export interface RegisterEncounterResult {
   encounter: ClinicalEncounter
-  /** Última versión guardada de la historia, si la secuencia la guardó (cambios pendientes o propuestos usados). */
+  /** Última versión guardada de la historia, si la secuencia la guardó (propuestos usados o exámenes solicitados). */
   record: ClinicalRecord | null
   appointmentCompleted: boolean
   warnings: string[]
 }
 
+/** Exámenes solicitados en la atención, como requerimientos pendientes de la historia. */
+function examRequestsOf(encounter: ClinicalEncounter): ExamRequest[] {
+  return encounter.requestedExams.map((exam) => ({
+    id: exam.id,
+    kind: exam.kind,
+    detail: exam.detail,
+    status: "pendiente",
+    encounterId: encounter.id,
+    requestedAt: encounter.date,
+    attachmentId: null,
+    receivedAt: null,
+  }))
+}
+
 /**
- * Registro de una atención coordinado desde el frontend (mismo criterio que citas → notificaciones):
- * 1. guarda los cambios pendientes de la historia, así la copia del odontograma refleja lo que se ve;
- * 2. registra cada tratamiento realizado en Tratamientos (ya completado; descuenta insumos y aparece
+ * Registro de una atención coordinado desde el frontend (mismo criterio que citas → notificaciones).
+ * La historia debe estar guardada: la atención copia su odontograma y sus alertas.
+ * 1. registra cada tratamiento realizado en Tratamientos (ya completado; descuenta insumos y aparece
  *    en Finanzas). Idempotente por atención + tratamiento: un reintento no lo duplica;
- * 3. crea la atención con la copia del odontograma y los tratamientos (idempotente por `encounter.id`);
- * 4. quita de la historia los tratamientos propuestos que se registraron (no fatal);
- * 5. pasa la cita vinculada a "completada" (no fatal: la atención ya quedó registrada).
+ * 2. crea la atención con las copias y los tratamientos (idempotente por `encounter.id`);
+ * 3. en la historia, quita los tratamientos propuestos que se registraron y agrega los exámenes
+ *    solicitados como pendientes (no fatal: la atención ya quedó registrada);
+ * 4. pasa la cita vinculada a "completada" (no fatal).
  * Con backend real, debería ser una única transacción de `POST …/encounters`.
  */
 async function registerEncounterSequence(patientId: string, input: RegisterEncounterInput): Promise<RegisterEncounterResult> {
   const warnings: string[] = []
-  let current = input.record
+  const current = input.record
   let saved: ClinicalRecord | null = null
-  if (input.hasPendingChanges) {
-    saved = await clinicalHistoryApi.saveRecord(current)
-    current = saved
-    updateCachedRecord(saved)
-  }
 
   const performedTreatments: PerformedTreatment[] = []
   for (const item of input.encounter.performedTreatments) {
@@ -123,6 +132,7 @@ async function registerEncounterSequence(patientId: string, input: RegisterEncou
       tooth: item.tooth,
       sourceEncounterId: input.encounter.id,
       sourceKey: `${input.encounter.id}:${item.id}`,
+      price: item.cost,
     })
     performedTreatments.push({ ...item, assignmentId: assignment.id })
   }
@@ -130,12 +140,20 @@ async function registerEncounterSequence(patientId: string, input: RegisterEncou
   const encounter = await clinicalHistoryApi.createEncounter(patientId, { ...input.encounter, performedTreatments })
 
   const usedIds = new Set(performedTreatments.map((item) => item.id))
-  if (current.plan.some((item) => usedIds.has(item.id))) {
+  const existingRequests = new Set(current.examRequests.map((item) => item.id))
+  const newRequests = examRequestsOf(encounter).filter((item) => !existingRequests.has(item.id))
+  if (current.plan.some((item) => usedIds.has(item.id)) || newRequests.length) {
     try {
-      saved = await clinicalHistoryApi.saveRecord({ ...current, plan: current.plan.filter((item) => !usedIds.has(item.id)) })
+      saved = await clinicalHistoryApi.saveRecord({
+        ...current,
+        plan: current.plan.filter((item) => !usedIds.has(item.id)),
+        examRequests: [...current.examRequests, ...newRequests],
+      })
       updateCachedRecord(saved)
     } catch (error) {
-      warnings.push(`La atención se registró, pero no se quitaron los tratamientos propuestos: ${getErrorMessage(error)}`)
+      warnings.push(
+        `La atención se registró, pero no se actualizaron los propuestos ni los exámenes solicitados de la historia: ${getErrorMessage(error)}`
+      )
     }
   }
 

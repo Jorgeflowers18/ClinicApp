@@ -1,27 +1,48 @@
 // MOCK-ONLY: eliminar al conectar el backend (ver arquitectura-frontend.md § Código solo-mock).
 //
 // Convierte lo que haya en IndexedDB al modelo actual (historia editable + atenciones). Soporta:
-// - versión 3: el modelo actual;
+// - versión 3: el modelo actual; las secciones agregadas después (antecedentes, declaración,
+//   exámenes solicitados, evaluación de la atención…) se completan al leer, sin cambiar la versión;
 // - versión 2: visitas con estado borrador / cerrada;
 // - primera versión del módulo: profesional en texto libre, contenedor `draft`, `savedAt`.
 // Se aplica al leer: nada se reescribe hasta que el usuario guarda, así que los datos originales
 // nunca se pierden.
 import { createId } from "@/shared/lib/id"
 import { mockProfessionals } from "@/modules/appointments/api/appointments.mock-data"
+import { mockLegacyClinicalNotes } from "@/modules/patients/api/patients.mock-data"
 import { mockTreatments } from "@/modules/treatments/api/treatments.mock-data"
 
+import { diagnosesFromText, emptyEncounterValues } from "../lib/encounter"
 import { compareEncounters, matchProfessionalByName } from "../lib/record"
+import {
+  emptyAllergiesAndMedication,
+  emptyDentalBackground,
+  emptyHabits,
+  emptyMedicalBackground,
+  emptyPeriodontalBackground,
+  emptyTruthDeclaration,
+  medicalAlertKeys,
+  type Allergy,
+  type AllergiesAndMedication,
+  type MedicalBackground,
+  type Medication,
+} from "../types/background.types"
+import { examKindKeys, type Diagnosis, type RequestedExam } from "../types/encounter-assessment.types"
 import {
   attachmentKinds,
   dataConsentSigners,
   dataConsentStatuses,
   emptyDataConsent,
+  examRequestStatuses,
+  treatmentPhases,
+  type AttachmentKind,
   type ChartSnapshot,
   type ClinicalEncounter,
   type ClinicalRecord,
   type DataConsent,
   type DentalAttachment,
   type EncounterNote,
+  type ExamRequest,
   type PatientClinicalHistory,
   type PerformedTreatment,
   type ProposedTreatment,
@@ -50,12 +71,41 @@ function compact<T>(items: (T | null)[]) {
   return items.filter((item): item is T => item !== null)
 }
 
+/**
+ * Completa `raw` con la forma de `defaults`: conserva cada valor guardado del mismo tipo y usa el
+ * valor por defecto en lo que falte. Los números opcionales (`null` por defecto) aceptan números.
+ */
+function withDefaults<T>(defaults: T, raw: unknown): T {
+  if (Array.isArray(defaults)) return (Array.isArray(raw) ? raw : defaults) as T
+  if (isObject(defaults)) {
+    const source = isObject(raw) ? raw : {}
+    return Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, withDefaults(value, source[key])])) as T
+  }
+  if (defaults === null) return (typeof raw === "number" && Number.isFinite(raw) ? raw : null) as T
+  return (typeof raw === typeof defaults ? raw : defaults) as T
+}
+
+/** Lista de claves conocidas (descarta las que ya no existen). */
+const keysIn = <K extends string>(value: unknown, options: readonly K[]) =>
+  list(value).filter((item): item is K => options.includes(item as K))
+
+// ---------------------------------------------------------------------------------------------
+// Historia
+// ---------------------------------------------------------------------------------------------
+
+/** Tipos de archivo anteriores al ítem 12. */
+const legacyAttachmentKinds: Record<string, AttachmentKind> = {
+  radiografia: "radiografia_periapical",
+  fotografia: "fotografias",
+  documento: "otro",
+}
+
 function normalizeAttachment(raw: unknown): DentalAttachment | null {
   if (!isObject(raw) || !text(raw.id)) return null
   return {
     id: text(raw.id),
     name: text(raw.name, "archivo"),
-    kind: oneOf(raw.kind, attachmentKinds, "documento"),
+    kind: legacyAttachmentKinds[text(raw.kind)] ?? oneOf(raw.kind, attachmentKinds, "otro"),
     mime: text(raw.mime),
     size: Number(raw.size) || 0,
     createdAt: text(raw.createdAt, new Date(0).toISOString()),
@@ -69,6 +119,8 @@ function normalizeProposed(raw: unknown): ProposedTreatment | null {
     treatmentId: nullableText(raw.treatmentId),
     description: text(raw.description),
     tooth: text(raw.tooth),
+    phase: oneOf(raw.phase, ["", ...treatmentPhases] as const, ""),
+    plannedDate: text(raw.plannedDate),
   }
 }
 
@@ -97,35 +149,72 @@ function normalizeDataConsent(raw: unknown): DataConsent {
   }
 }
 
-function normalizeNote(raw: unknown): EncounterNote | null {
-  if (!isObject(raw) || !text(raw.id)) return null
+function normalizeAllergy(raw: unknown): Allergy | null {
+  if (!isObject(raw)) return null
+  return { ...withDefaults({ id: "", reaction: "", substance: "", manifestation: "" }, raw), id: text(raw.id) || createId() }
+}
+
+function normalizeMedication(raw: unknown): Medication | null {
+  if (!isObject(raw)) return null
+  return { ...withDefaults({ id: "", name: "", dose: "", indication: "" }, raw), id: text(raw.id) || createId() }
+}
+
+function normalizeAllergiesAndMedication(raw: unknown): AllergiesAndMedication {
+  const source = isObject(raw) ? raw : {}
   return {
-    id: text(raw.id),
-    text: text(raw.text),
-    authorName: text(raw.authorName, "Usuario"),
-    createdAt: text(raw.createdAt, new Date(0).toISOString()),
+    allergies: compact(list(source.allergies).map(normalizeAllergy)),
+    medications: compact(list(source.medications).map(normalizeMedication)),
+    alerts: keysIn(source.alerts, medicalAlertKeys),
   }
 }
 
-function normalizeEncounter(raw: unknown, patientId: string): ClinicalEncounter | null {
+function normalizeExamRequest(raw: unknown): ExamRequest | null {
   if (!isObject(raw) || !text(raw.id)) return null
   return {
     id: text(raw.id),
-    patientId,
-    date: text(raw.date),
-    professionalId: text(raw.professionalId),
-    legacyProfessionalName: nullableText(raw.legacyProfessionalName) ?? undefined,
-    appointmentId: nullableText(raw.appointmentId),
-    reason: text(raw.reason),
-    diagnosis: text(raw.diagnosis),
-    procedures: text(raw.procedures),
-    evolution: text(raw.evolution),
-    notes: text(raw.notes),
-    nextVisit: text(raw.nextVisit),
-    performedTreatments: compact(list(raw.performedTreatments).map(normalizePerformed)),
-    chartSnapshot: chartOf(raw.chartSnapshot),
-    addenda: compact(list(raw.addenda).map(normalizeNote)),
-    createdAt: text(raw.createdAt, new Date(0).toISOString()),
+    kind: oneOf(raw.kind, examKindKeys, "laboratorio"),
+    detail: text(raw.detail),
+    status: oneOf(raw.status, examRequestStatuses, "pendiente"),
+    encounterId: text(raw.encounterId),
+    requestedAt: text(raw.requestedAt),
+    attachmentId: nullableText(raw.attachmentId),
+    receivedAt: nullableText(raw.receivedAt),
+  }
+}
+
+const NO_DATA = /^(no registra|ninguna?|sin (alergias|registro)|-)\.?$/i
+const DENIES = /^(sin|niega) antecedentes/i
+
+/**
+ * Los textos libres «Antecedentes médicos» y «Alergias» que tenían los pacientes de ejemplo pasan a
+ * la historia: el antecedente queda en «Otro» (o en «Niega antecedentes relevantes») y la alergia,
+ * como una fila de la lista.
+ */
+function legacyClinicalSections(patientId: string): Pick<ClinicalRecord, "medicalBackground" | "allergiesAndMedication"> {
+  const medicalBackground: MedicalBackground = emptyMedicalBackground()
+  const allergiesAndMedication = emptyAllergiesAndMedication()
+  const legacy = mockLegacyClinicalNotes[patientId]
+  const history = legacy?.medicalHistory.trim() ?? ""
+  const allergies = legacy?.allergies.trim() ?? ""
+  if (DENIES.test(history)) medicalBackground.denies = true
+  else if (history && !NO_DATA.test(history)) medicalBackground.conditions.otro = { personal: true, family: false, detail: history }
+  if (allergies && !NO_DATA.test(allergies)) {
+    allergiesAndMedication.allergies.push({ id: `${patientId}_alergia_1`, reaction: allergies, substance: "", manifestation: "" })
+  }
+  return { medicalBackground, allergiesAndMedication }
+}
+
+/** Secciones agregadas a la historia después de la versión 3; las que no estén guardadas se completan. */
+function clinicalSections(raw: Raw, patientId: string) {
+  const legacy = !("medicalBackground" in raw) && !("allergiesAndMedication" in raw) ? legacyClinicalSections(patientId) : null
+  return {
+    medicalBackground: legacy?.medicalBackground ?? withDefaults(emptyMedicalBackground(), raw.medicalBackground),
+    allergiesAndMedication: legacy?.allergiesAndMedication ?? normalizeAllergiesAndMedication(raw.allergiesAndMedication),
+    habits: withDefaults(emptyHabits(), raw.habits),
+    dentalBackground: withDefaults(emptyDentalBackground(), raw.dentalBackground),
+    periodontalBackground: withDefaults(emptyPeriodontalBackground(), raw.periodontalBackground),
+    truthDeclaration: withDefaults(emptyTruthDeclaration(), raw.truthDeclaration),
+    examRequests: compact(list(raw.examRequests).map(normalizeExamRequest)),
   }
 }
 
@@ -134,6 +223,7 @@ export function emptyRecord(patientId: string, now = new Date().toISOString()): 
     patientId,
     revision: 0,
     chart: null,
+    ...clinicalSections({}, patientId),
     plan: [],
     dataConsent: { ...emptyDataConsent },
     attachments: [],
@@ -149,11 +239,67 @@ function normalizeRecord(raw: unknown, patientId: string): ClinicalRecord {
     patientId,
     revision: Number.isInteger(raw.revision) ? (raw.revision as number) : 0,
     chart: chartOf(raw.chart),
+    ...clinicalSections(raw, patientId),
     plan: compact(list(raw.plan).map(normalizeProposed)),
     dataConsent: normalizeDataConsent(raw.dataConsent),
     attachments: compact(list(raw.attachments).map(normalizeAttachment)),
     createdAt,
     updatedAt: text(raw.updatedAt, createdAt),
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Atenciones
+// ---------------------------------------------------------------------------------------------
+
+function normalizeNote(raw: unknown): EncounterNote | null {
+  if (!isObject(raw) || !text(raw.id)) return null
+  return {
+    id: text(raw.id),
+    text: text(raw.text),
+    authorName: text(raw.authorName, "Usuario"),
+    createdAt: text(raw.createdAt, new Date(0).toISOString()),
+  }
+}
+
+function normalizeDiagnosis(raw: unknown): Diagnosis | null {
+  if (!isObject(raw)) return null
+  const diagnosis = withDefaults<Diagnosis>({ id: "", description: "", tooth: "", priority: "" }, raw)
+  return { ...diagnosis, id: diagnosis.id || createId() }
+}
+
+function normalizeRequestedExam(raw: unknown): RequestedExam | null {
+  if (!isObject(raw)) return null
+  return {
+    id: text(raw.id) || createId(),
+    kind: oneOf(raw.kind, examKindKeys, "laboratorio"),
+    detail: text(raw.detail),
+  }
+}
+
+/** Las atenciones guardadas antes de la evaluación por pasos reciben sus campos vacíos («No evaluado»). */
+function normalizeEncounter(raw: unknown, patientId: string): ClinicalEncounter | null {
+  if (!isObject(raw) || !text(raw.id)) return null
+  const id = text(raw.id)
+  const defaults = emptyEncounterValues()
+  return {
+    ...withDefaults(defaults, raw),
+    id,
+    patientId,
+    date: text(raw.date),
+    professionalId: text(raw.professionalId),
+    legacyProfessionalName: nullableText(raw.legacyProfessionalName) ?? undefined,
+    appointmentId: nullableText(raw.appointmentId),
+    diagnoses: Array.isArray(raw.diagnoses)
+      ? compact(raw.diagnoses.map(normalizeDiagnosis))
+      : diagnosesFromText(id, text(raw.diagnosis)),
+    requestedExams: compact(list(raw.requestedExams).map(normalizeRequestedExam)),
+    riskAssessment: keysIn(raw.riskAssessment, ["hemorragico", "infeccioso", "ambulatorio"] as const),
+    performedTreatments: compact(list(raw.performedTreatments).map(normalizePerformed)),
+    chartSnapshot: chartOf(raw.chartSnapshot),
+    clinicalSnapshot: isObject(raw.clinicalSnapshot) ? normalizeAllergiesAndMedication(raw.clinicalSnapshot) : null,
+    addenda: compact(list(raw.addenda).map(normalizeNote)),
+    createdAt: text(raw.createdAt, new Date(0).toISOString()),
   }
 }
 
@@ -247,6 +393,7 @@ const catalogPrice = (treatmentId: string | null) => mockTreatments.find((item) 
 
 function visitToEncounter(visit: LegacyVisit, patientId: string): ClinicalEncounter {
   return {
+    ...emptyEncounterValues(),
     id: visit.id,
     patientId,
     date: visit.date,
@@ -254,7 +401,7 @@ function visitToEncounter(visit: LegacyVisit, patientId: string): ClinicalEncoun
     legacyProfessionalName: visit.legacyProfessionalName,
     appointmentId: visit.appointmentId,
     reason: visit.reason,
-    diagnosis: visit.diagnosis,
+    diagnoses: diagnosesFromText(visit.id, visit.diagnosis),
     procedures: visit.procedures,
     evolution: visit.evolution,
     notes: visit.notes,
@@ -271,6 +418,7 @@ function visitToEncounter(visit: LegacyVisit, patientId: string): ClinicalEncoun
         assignmentId: item.assignmentId,
       })),
     chartSnapshot: visit.chart ? structuredClone(visit.chart) : null,
+    clinicalSnapshot: null,
     addenda: [],
     createdAt: visit.closedAt ?? visit.createdAt,
   }
@@ -297,13 +445,18 @@ export function visitsToHistory(rawVisits: unknown[], patientId: string): Patien
   const attachments = new Map(visits.flatMap((visit) => visit.attachments).map((file) => [file.id, file]))
 
   const record: ClinicalRecord = {
-    patientId,
-    revision: 0,
+    ...emptyRecord(patientId),
     chart: current.chart ? structuredClone(current.chart) : null,
     plan: current.plan
       .filter((item) => item.status !== "cancelado" && !item.assignmentId)
-      .map((item) => ({ id: item.id, treatmentId: item.treatmentId, description: item.description, tooth: item.tooth })),
-    dataConsent: { ...emptyDataConsent },
+      .map((item) => ({
+        id: item.id,
+        treatmentId: item.treatmentId,
+        description: item.description,
+        tooth: item.tooth,
+        phase: "",
+        plannedDate: "",
+      })),
     attachments: [...attachments.values()],
     createdAt: visits[0].createdAt,
     updatedAt: visits.reduce((latest, visit) => (visit.updatedAt > latest ? visit.updatedAt : latest), visits[0].updatedAt),

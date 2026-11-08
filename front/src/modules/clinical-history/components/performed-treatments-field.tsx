@@ -11,6 +11,7 @@ import { createId } from "@/shared/lib/id"
 import { formatCurrency } from "@/shared/lib/number"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
 
+import { sumCosts } from "../lib/record"
 import type { EncounterFormValues, PerformedTreatment, ProposedTreatment } from "../types/clinical-history.types"
 
 interface PerformedTreatmentsFieldProps {
@@ -18,10 +19,54 @@ interface PerformedTreatmentsFieldProps {
   proposed: ProposedTreatment[]
 }
 
+interface CostInputProps {
+  index: number
+  item: PerformedTreatment
+  catalogPrice: number | undefined
+}
+
+/** Costo editable de un tratamiento realizado. Muestra el precio del catálogo si se ajustó. */
+function CostInput({ index, item, catalogPrice }: CostInputProps) {
+  const { setValue, formState } = useFormContext<EncounterFormValues>()
+  const error = formState.errors.performedTreatments?.[index]?.cost
+  const adjusted = catalogPrice !== undefined && Number.isFinite(item.cost) && item.cost !== catalogPrice
+
+  return (
+    <div className="ml-auto flex w-32 flex-col items-end gap-1">
+      <div className="relative w-full">
+        <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+        <Input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step="0.01"
+          className="pl-6 text-right"
+          aria-label={`Costo de ${item.description}`}
+          aria-invalid={!!error}
+          value={Number.isNaN(item.cost) ? "" : item.cost}
+          onChange={(event) =>
+            setValue(
+              `performedTreatments.${index}.cost`,
+              event.target.value === "" ? Number.NaN : Number(event.target.value),
+              // Si ya se mostró un error, se vuelve a validar al corregir.
+              { shouldDirty: true, shouldValidate: Boolean(error) }
+            )
+          }
+        />
+      </div>
+      {error ? (
+        <p className="text-xs text-destructive">{error.message}</p>
+      ) : (
+        adjusted && <p className="text-xs text-muted-foreground">Catálogo: {formatCurrency(catalogPrice)}</p>
+      )}
+    </div>
+  )
+}
+
 /**
- * Tratamientos realizados en la atención, siempre del catálogo de tratamientos activos. El costo es
- * el precio del catálogo y queda guardado en la atención. No es un `<form>` propio porque vive dentro
- * del formulario de la atención.
+ * Tratamientos realizados en la atención, siempre del catálogo de tratamientos activos. El costo
+ * parte del precio del catálogo y se puede ajustar; queda guardado en la atención y en Tratamientos.
+ * No es un `<form>` propio porque vive dentro del formulario de la atención.
  */
 export function PerformedTreatmentsField({ proposed }: PerformedTreatmentsFieldProps) {
   const { control, setValue } = useFormContext<EncounterFormValues>()
@@ -36,7 +81,7 @@ export function PerformedTreatmentsField({ proposed }: PerformedTreatmentsFieldP
   const treatmentItems = Object.fromEntries(catalog.map((treatment) => [treatment.id, treatment.name]))
   const addedIds = new Set(performed.map((item) => item.id))
   const shortcuts = proposed.filter((item) => !addedIds.has(item.id))
-  const total = performed.reduce((sum, item) => sum + item.cost, 0)
+  const total = sumCosts(performed)
 
   function add(item: PerformedTreatment) {
     setValue("performedTreatments", [...performed, item], { shouldDirty: true })
@@ -69,8 +114,9 @@ export function PerformedTreatmentsField({ proposed }: PerformedTreatmentsFieldP
     <FieldSet>
       <FieldLegend>Tratamientos realizados</FieldLegend>
       <FieldDescription>
-        Cada tratamiento se registra con el precio del catálogo y descuenta sus insumos. Se puede registrar aunque el
-        paciente tenga saldos pendientes.
+        Cada tratamiento se agrega con el precio del catálogo; el costo se puede ajustar (por ejemplo, un descuento) y
+        es el que se cobra en Finanzas. Descuenta sus insumos y se puede registrar aunque el paciente tenga saldos
+        pendientes.
       </FieldDescription>
 
       {shortcuts.length > 0 && (
@@ -153,11 +199,13 @@ export function PerformedTreatmentsField({ proposed }: PerformedTreatmentsFieldP
               </TableRow>
             </TableHeader>
             <TableBody>
-              {performed.map((item) => (
+              {performed.map((item, index) => (
                 <TableRow key={item.id}>
-                  <TableCell>{item.tooth || "General"}</TableCell>
-                  <TableCell className="whitespace-normal font-medium">{item.description}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(item.cost)}</TableCell>
+                  <TableCell className="align-top">{item.tooth || "General"}</TableCell>
+                  <TableCell className="whitespace-normal align-top font-medium">{item.description}</TableCell>
+                  <TableCell className="text-right align-top">
+                    <CostInput index={index} item={item} catalogPrice={treatmentById.get(item.treatmentId ?? "")?.price} />
+                  </TableCell>
                   <TableCell>
                     <Button
                       type="button"

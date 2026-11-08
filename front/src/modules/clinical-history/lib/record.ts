@@ -3,15 +3,17 @@ import type { ZodType } from "zod"
 import type { ApiFieldError } from "@/shared/types/common"
 import type { Professional } from "@/modules/appointments/types/appointment.types"
 
+import { medicalAlertLabels, type Allergy, type MedicalAlertKey } from "../types/background.types"
 import {
   recordFormSchema,
   type ChartSnapshot,
   type ClinicalEncounter,
   type ClinicalRecord,
+  type PerformedTreatment,
   type RecordFormValues,
 } from "../types/clinical-history.types"
 
-export { today } from "../types/clinical-history.types"
+export { today } from "./today"
 
 export function compareEncounters(a: Pick<ClinicalEncounter, "date" | "createdAt">, b: Pick<ClinicalEncounter, "date" | "createdAt">) {
   return a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt)
@@ -25,27 +27,61 @@ export function countPerformedTreatments(encounters: readonly ClinicalEncounter[
   return (encounters ?? []).reduce((total, encounter) => total + encounter.performedTreatments.length, 0)
 }
 
+/** Suma de costos; un costo a medio escribir (vacío) cuenta como cero hasta que se corrija. */
+export function sumCosts(items: readonly Pick<PerformedTreatment, "cost">[]) {
+  return items.reduce((sum, item) => sum + (Number.isFinite(item.cost) ? item.cost : 0), 0)
+}
+
 export function pickRecordValues(record: ClinicalRecord): RecordFormValues {
   return {
     chart: record.chart,
+    medicalBackground: record.medicalBackground,
+    allergiesAndMedication: record.allergiesAndMedication,
+    habits: record.habits,
+    dentalBackground: record.dentalBackground,
+    periodontalBackground: record.periodontalBackground,
     plan: record.plan,
     dataConsent: record.dataConsent,
+    truthDeclaration: record.truthDeclaration,
     attachments: record.attachments,
+    examRequests: record.examRequests,
   }
 }
 
 export const recordSectionLabels: Record<keyof RecordFormValues, string> = {
   chart: "Odontograma y periodontograma",
+  medicalBackground: "Antecedentes médicos",
+  allergiesAndMedication: "Alergias, medicamentos y alertas",
+  habits: "Hábitos y factores de riesgo",
+  dentalBackground: "Antecedentes odontológicos",
+  periodontalBackground: "Antecedentes periodontales",
   plan: "Plan de tratamiento",
   dataConsent: "Consentimiento de datos",
+  truthDeclaration: "Declaración de veracidad",
   attachments: "Fotos y documentos",
+  examRequests: "Exámenes solicitados",
 }
 
 const recordSections = Object.keys(recordSectionLabels) as (keyof RecordFormValues)[]
 
 /** Secciones de la historia que difieren del último estado guardado. */
-export function changedSections(saved: RecordFormValues, current: RecordFormValues) {
-  return recordSections.filter((section) => JSON.stringify(saved[section]) !== JSON.stringify(current[section]))
+export function changedSections<T extends object>(saved: T, current: T, sections: readonly (keyof T)[]) {
+  return sections.filter((section) => JSON.stringify(saved[section]) !== JSON.stringify(current[section]))
+}
+
+export const changedRecordSections = (saved: RecordFormValues, current: RecordFormValues) =>
+  changedSections(saved, current, recordSections)
+
+/** Alertas médicas y alergias registradas, en una lista corta para mostrarlas destacadas. */
+export function medicalAlertsOf(source: { alerts: readonly MedicalAlertKey[]; allergies: readonly Allergy[] }) {
+  return [
+    ...source.alerts.map((key) => medicalAlertLabels[key]),
+    ...source.allergies.map((allergy) => {
+      const substance = allergy.substance.trim()
+      const details = [substance ? allergy.reaction.trim() : "", allergy.manifestation.trim()].filter(Boolean)
+      return `Alergia: ${substance || allergy.reaction.trim()}${details.length ? ` (${details.join(", ")})` : ""}`
+    }),
+  ]
 }
 
 /** Reglas del formulario reutilizadas como validación "del servidor" en el modo demostración. */

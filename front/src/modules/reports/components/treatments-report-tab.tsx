@@ -18,7 +18,7 @@ export function TreatmentsReportTab({ period }: TreatmentsReportTabProps) {
   return (
     <ReportTableCard
       title="Tratamientos"
-      description="*Ingreso estimado = precio × asignaciones completadas en el periodo. No existe módulo de facturación (ítem 8 del backlog)."
+      description="*Ingreso estimado = suma del costo cobrado en las asignaciones completadas del periodo (precio del catálogo en las anteriores). No existe módulo de facturación (ítem 8 del backlog)."
       isLoading={isLoading}
       isEmpty={rows.length === 0}
       onExport={() =>

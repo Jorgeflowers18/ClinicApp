@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageHeader } from "@/shared/components/page-header"
 import { formatDateOnly } from "@/shared/lib/date"
+import { formatCurrency } from "@/shared/lib/number"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { useInventoryList } from "@/modules/inventory/api/inventory.queries"
@@ -19,7 +20,7 @@ import {
   useTreatmentAssignments,
 } from "../api/treatments.queries"
 import { useTreatmentFinancialSummary } from "@/modules/finance/api/finance.queries"
-import { assignmentStatusLabels } from "../types/treatment.types"
+import { assignmentPrice, assignmentStatusLabels } from "../types/treatment.types"
 
 export function TreatmentDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -200,6 +201,7 @@ export function TreatmentDetailPage() {
                     <TableHead>Paciente</TableHead>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Pieza / zona</TableHead>
+                    <TableHead className="text-right">Costo</TableHead>
                     <TableHead>Estado</TableHead>
                     {canOpenHistory && <TableHead>Atención</TableHead>}
                   </TableRow>
@@ -210,6 +212,7 @@ export function TreatmentDetailPage() {
                       <TableCell className="font-medium">{patientName(assignment.patientId)}</TableCell>
                       <TableCell>{formatDateOnly(assignment.startDate, { day: "2-digit", month: "short", year: "numeric" })}</TableCell>
                       <TableCell>{assignment.tooth || "General"}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(assignmentPrice(assignment, treatment.price))}</TableCell>
                       <TableCell>
                         {/* Las asignaciones antiguas con varias sesiones conservan su progreso. */}
                         {assignment.totalSessions > 1 ? (

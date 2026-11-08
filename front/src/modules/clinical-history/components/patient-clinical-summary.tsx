@@ -11,6 +11,8 @@ import { useProfessionals } from "@/modules/appointments/api/appointments.querie
 
 import { useClinicalHistory } from "../api/clinical-history.queries"
 import { countPerformedTreatments, latestEncounter, resolveProfessionalName } from "../lib/record"
+import { diagnosisSummary } from "../types/clinical-history.types"
+import { MedicalAlerts } from "./medical-alerts"
 
 const longDate = (value: string) => formatDateOnly(value, { day: "2-digit", month: "long", year: "numeric" })
 
@@ -38,7 +40,7 @@ export function PatientClinicalSummary({ patientId }: { patientId: string }) {
     {
       label: "Última atención",
       value: last ? longDate(last.date) : "Sin atenciones",
-      hint: last ? `${resolveProfessionalName(last, professionals)} · ${last.diagnosis}` : undefined,
+      hint: last ? `${resolveProfessionalName(last, professionals)} · ${diagnosisSummary(last)}` : undefined,
     },
     { label: "Próximo control", value: last?.nextVisit ? longDate(last.nextVisit) : "Por definir" },
     { label: "Tratamientos realizados", value: String(countPerformedTreatments(history.encounters)) },
@@ -49,6 +51,10 @@ export function PatientClinicalSummary({ patientId }: { patientId: string }) {
       <Badge variant="outline" className="text-xs">
         Dato clínico sensible · acceso restringido por rol
       </Badge>
+      <MedicalAlerts source={history.record.allergiesAndMedication} />
+      {history.record.medicalBackground.denies && (
+        <p className="text-sm text-muted-foreground">Niega antecedentes médicos relevantes.</p>
+      )}
       <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((item) => (
           <div key={item.label} className="rounded-lg border p-3">
@@ -58,6 +64,9 @@ export function PatientClinicalSummary({ patientId }: { patientId: string }) {
           </div>
         ))}
       </dl>
+      <p className="text-sm text-muted-foreground">
+        Los antecedentes, las alergias y los demás datos clínicos se editan en la historia clínica.
+      </p>
       <Button onClick={() => navigate(`/historial-clinico/paciente/${patientId}`)}>
         <Stethoscope />
         Abrir historia clínica

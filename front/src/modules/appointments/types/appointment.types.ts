@@ -21,6 +21,8 @@ export interface Professional {
   id: string
   name: string
   specialty: string
+  /** Registro profesional (por ejemplo, el del MSP / Senescyt). Vacío si no se registró. */
+  registrationNumber: string
 }
 
 export interface Room {

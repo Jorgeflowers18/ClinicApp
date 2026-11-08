@@ -5,7 +5,7 @@ import { mockDelay, paginate } from "@/shared/lib/mock"
 import { ApiError, type Paginated } from "@/shared/types/common"
 import { mockPatients } from "@/modules/patients/api/patients.mock-data"
 
-import { allowedAttachmentTypes, encounterFormSchema, maxAttachmentSize } from "../types/clinical-history.types"
+import { allowedAttachmentTypes, diagnosisSummary, encounterFormSchema, maxAttachmentSize } from "../types/clinical-history.types"
 import type {
   AddEncounterNoteInput,
   ClinicalEncounter,
@@ -30,7 +30,7 @@ function toListItem(encounter: ClinicalEncounter): EncounterListItem {
     professionalId: encounter.professionalId,
     legacyProfessionalName: encounter.legacyProfessionalName,
     reason: encounter.reason,
-    diagnosis: encounter.diagnosis,
+    diagnoses: encounter.diagnoses,
     nextVisit: encounter.nextVisit,
   }
 }
@@ -50,7 +50,7 @@ async function listEncountersMock(query: EncounterListQuery): Promise<Paginated<
     .filter((encounter) => {
       if (!search) return true
       const patient = mockPatients.find((item) => item.id === encounter.patientId)
-      return [encounter.reason, encounter.diagnosis, patient?.firstName, patient?.lastName, patient?.documentId]
+      return [encounter.reason, diagnosisSummary(encounter), patient?.firstName, patient?.lastName, patient?.documentId]
         .join(" ")
         .toLowerCase()
         .includes(search)

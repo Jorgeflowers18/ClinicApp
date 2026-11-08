@@ -64,6 +64,37 @@ export function PeriodontalEvolutionChart({ data }: { data: EvolutionPoint[] }) 
           </ResponsiveContainer>
         </div>
       </figure>
+
+      <figure className="space-y-2 lg:col-span-2">
+        <figcaption className="text-sm font-medium">Profundidad de sondaje y pérdida de inserción máximas (mm)</figcaption>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} className="text-xs" />
+              <YAxis tickLine={false} axisLine={false} className="text-xs" allowDecimals={false} unit=" mm" />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value) => `${value} mm`} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Line
+                type="monotone"
+                dataKey="maxProbingDepth"
+                name="Profundidad de sondaje máxima"
+                stroke="var(--chart-1)"
+                strokeWidth={2}
+                connectNulls
+              />
+              <Line
+                type="monotone"
+                dataKey="maxAttachmentLoss"
+                name="Pérdida de inserción clínica máxima"
+                stroke="var(--chart-4)"
+                strokeWidth={2}
+                connectNulls
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </figure>
     </div>
   )
 }

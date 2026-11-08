@@ -36,14 +36,6 @@ Módulo financiero para manejo de pagos por tratamiento, cuotas, seguros, factur
 
 **Incluye:** presupuestos, pagos parciales, cuotas, convenios, seguros, facturación, seguimiento de mora y reportes de ingresos por profesional y procedimiento.
 
-## 12. Mejoras de la historia clínica según el formulario del consultorio
-
-- **Estado:** Pendiente
-- **Prioridad:** Alta
-- **Responsable:** Jorge Flores
-
-Realización completa de [`backlog_HC.md`](./backlog_HC.md): implementar en la página de historia clínica los elementos del formulario en papel "Historia Clínica Odontológica Integral" que usa el consultorio, clasificados entre Historial Clínico y Consulta, y quitar las partes del funcionamiento actual que dejen de aplicar.
-
 ---
 
 ## Notas

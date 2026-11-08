@@ -32,6 +32,11 @@ export const assignmentStatusLabels: Record<AssignmentStatus, string> = {
   suspendido: "Suspendido",
 }
 
+/** Costo de una asignación: el cobrado en la atención o, en las antiguas, el precio del catálogo. */
+export function assignmentPrice(assignment: Pick<TreatmentAssignment, "price">, catalogPrice: number) {
+  return assignment.price ?? catalogPrice
+}
+
 export interface TreatmentAssignment {
   id: string
   treatmentId: string
@@ -44,6 +49,8 @@ export interface TreatmentAssignment {
   tooth?: string
   /** Atención clínica en la que se realizó (vacío en asignaciones antiguas). */
   sourceEncounterId?: string
+  /** Costo cobrado en la atención (puede diferir del catálogo, por ejemplo un descuento). Vacío en asignaciones antiguas: se usa el precio del catálogo. */
+  price?: number
   /** Clave de idempotencia: atención + tratamiento realizado de esa atención. */
   sourceKey?: string
 }
@@ -60,4 +67,6 @@ export interface CreateAssignmentInput {
   tooth: string
   sourceEncounterId: string
   sourceKey: string
+  /** Costo cobrado en la atención. */
+  price: number
 }

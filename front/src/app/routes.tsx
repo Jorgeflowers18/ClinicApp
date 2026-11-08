@@ -36,6 +36,12 @@ const PatientClinicalHistoryPage = lazy(() =>
   }))
 )
 
+const RegisterEncounterPage = lazy(() =>
+  import("@/modules/clinical-history/pages/register-encounter-page").then((module) => ({
+    default: module.RegisterEncounterPage,
+  }))
+)
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -66,6 +72,14 @@ export function AppRoutes() {
               element={
                 <Suspense fallback={<p>Cargando historia clínica…</p>}>
                   <PatientClinicalHistoryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/historial-clinico/paciente/:patientId/atencion/nueva"
+              element={
+                <Suspense fallback={<p>Cargando…</p>}>
+                  <RegisterEncounterPage />
                 </Suspense>
               }
             />

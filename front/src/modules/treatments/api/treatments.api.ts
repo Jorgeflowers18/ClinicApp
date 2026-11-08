@@ -97,6 +97,7 @@ async function createAssignmentMock(input: CreateAssignmentInput): Promise<Treat
     tooth: input.tooth,
     sourceEncounterId: input.sourceEncounterId,
     sourceKey: input.sourceKey,
+    price: input.price,
   }
   mockTreatmentAssignments.push(assignment)
 

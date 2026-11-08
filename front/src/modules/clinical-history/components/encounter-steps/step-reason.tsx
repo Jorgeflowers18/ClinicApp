@@ -6,26 +6,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 
-import type { AppointmentOption } from "../hooks/use-patient-appointment-options"
-import { NO_APPOINTMENT } from "../hooks/use-patient-appointment-options"
-import { today } from "../lib/record"
-import type { EncounterFormValues } from "../types/clinical-history.types"
+import type { AppointmentOption } from "../../hooks/use-patient-appointment-options"
+import { NO_APPOINTMENT } from "../../hooks/use-patient-appointment-options"
+import { today } from "../../lib/record"
+import type { EncounterFormValues } from "../../types/clinical-history.types"
 
-interface EncounterFieldsProps {
+interface StepReasonProps {
   /** Citas vinculables (ya filtradas: sin atención y de hoy o antes). */
   appointmentOptions: AppointmentOption[]
 }
 
 const textFields = [
   { name: "reason", label: "Motivo de consulta", rows: 3, placeholder: "Síntomas y motivo referido por el paciente" },
-  { name: "diagnosis", label: "Diagnóstico", rows: 3, placeholder: "Diagnóstico clínico de la atención" },
-  { name: "procedures", label: "Procedimientos realizados", rows: 3, placeholder: "Procedimientos ejecutados en esta atención" },
-  { name: "evolution", label: "Evolución / indicaciones", rows: 3, placeholder: "Evolución respecto a la atención anterior e indicaciones" },
-  { name: "notes", label: "Observaciones", rows: 2, placeholder: "Observaciones internas del profesional" },
+  {
+    name: "presentIllness",
+    label: "Enfermedad actual",
+    rows: 4,
+    placeholder: "Inicio, evolución, intensidad, factores desencadenantes y tratamientos previos",
+  },
 ] as const
 
-/** Campos clínicos de una atención nueva (formulario «Registrar atención»). */
-export function EncounterFields({ appointmentOptions }: EncounterFieldsProps) {
+/** Paso 1: cita, fecha, profesional, motivo de consulta y enfermedad actual. */
+export function StepReason({ appointmentOptions }: StepReasonProps) {
   const {
     control,
     register,
@@ -131,11 +133,6 @@ export function EncounterFields({ appointmentOptions }: EncounterFieldsProps) {
         </Field>
       ))}
 
-      <Field data-invalid={!!errors.nextVisit} className="md:max-w-xs">
-        <FieldLabel htmlFor="encounter-nextVisit">Próximo control</FieldLabel>
-        <Input id="encounter-nextVisit" type="date" aria-invalid={!!errors.nextVisit} {...register("nextVisit")} />
-        <FieldError errors={errors.nextVisit ? [errors.nextVisit] : undefined} />
-      </Field>
     </FieldGroup>
   )
 }

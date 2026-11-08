@@ -18,6 +18,7 @@ import { useCreatePatient, usePatient, useUpdatePatient } from "../api/patients.
 import {
   genderOptions,
   patientSchema,
+  toPatientFormValues,
   treatmentStatusOptions,
   type PatientFormValues,
 } from "../types/patient.types"
@@ -45,14 +46,18 @@ export function PatientFormPage() {
       documentId: "",
       birthDate: "",
       gender: "femenino",
+      maritalStatus: "",
+      occupation: "",
+      company: "",
+      nationality: "",
       phone: "",
       email: "",
       address: "",
+      city: "",
       notes: "",
       notificationsEnabled: true,
-      medicalHistory: "",
-      allergies: "",
       emergencyContactName: "",
+      emergencyContactRelationship: "",
       emergencyContactPhone: "",
       insuranceProvider: "",
       insurancePolicy: "",
@@ -65,27 +70,9 @@ export function PatientFormPage() {
   useEffect(() => {
     if (!patient) return
 
-    reset({
-      firstName: patient.firstName,
-      lastName: patient.lastName,
-      documentId: patient.documentId,
-      birthDate: patient.birthDate,
-      gender: patient.gender,
-      phone: patient.phone,
-      email: patient.email ?? "",
-      address: patient.address ?? "",
-      notes: patient.notes ?? "",
-      notificationsEnabled: patient.notificationsEnabled,
-      medicalHistory: patient.medicalHistory ?? "",
-      allergies: patient.allergies ?? "",
-      emergencyContactName: patient.emergencyContactName ?? "",
-      emergencyContactPhone: patient.emergencyContactPhone ?? "",
-      insuranceProvider: patient.insuranceProvider ?? "",
-      insurancePolicy: patient.insurancePolicy ?? "",
-      consentSigned: patient.consentSigned ?? false,
-      treatmentStatus: patient.treatmentStatus ?? "activo",
-      lastVisitAt: patient.lastVisitAt ?? "",
-    })
+    // Incluye los datos que se editan solo en la historia clínica (estado civil, ocupación…): no se
+    // muestran aquí, pero viajan con el formulario para no borrarlos al guardar.
+    reset(toPatientFormValues(patient))
   }, [patient, reset])
 
   async function onSubmit(values: PatientFormValues) {
@@ -243,27 +230,10 @@ export function PatientFormPage() {
             <FieldError errors={errors.notes ? [errors.notes] : undefined} />
           </Field>
 
-          <Field data-invalid={!!errors.medicalHistory}>
-            <FieldLabel htmlFor="medicalHistory">Antecedentes médicos</FieldLabel>
-            <Textarea
-              id="medicalHistory"
-              rows={3}
-              placeholder="Hipertensión, diabetes, cirugías, tratamientos previos..."
-              {...register("medicalHistory")}
-            />
-            <FieldError errors={errors.medicalHistory ? [errors.medicalHistory] : undefined} />
-          </Field>
-
-          <Field data-invalid={!!errors.allergies}>
-            <FieldLabel htmlFor="allergies">Alergias</FieldLabel>
-            <Textarea
-              id="allergies"
-              rows={2}
-              placeholder="Medicamentos, alimentos o materiales a los que es alérgico..."
-              {...register("allergies")}
-            />
-            <FieldError errors={errors.allergies ? [errors.allergies] : undefined} />
-          </Field>
+          <FieldDescription>
+            Los antecedentes médicos, las alergias y los demás datos del cliente (estado civil, ocupación, empresa,
+            nacionalidad, ciudad y parentesco del contacto de emergencia) se registran en la historia clínica.
+          </FieldDescription>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.emergencyContactName}>

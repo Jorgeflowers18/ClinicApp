@@ -18,6 +18,7 @@ import {
 } from "@/modules/appointments/api/appointments.mock-data"
 import { appointmentStatuses, appointmentStatusLabels } from "@/modules/appointments/types/appointment.types"
 import { mockTreatmentAssignments, mockTreatments } from "@/modules/treatments/api/treatments.mock-data"
+import { assignmentPrice } from "@/modules/treatments/types/treatment.types"
 import {
   mockInventoryItems,
   mockPurchaseOrders,
@@ -162,7 +163,9 @@ async function getTreatmentsMock(period: ReportPeriod): Promise<TreatmentsReport
       completedAssignments,
       sessionsDone: own.reduce((sum, item) => sum + item.completedSessions, 0),
       sessionsPlanned: own.reduce((sum, item) => sum + item.totalSessions, 0),
-      estimatedRevenue: treatment.price * completedAssignments,
+      estimatedRevenue: own
+        .filter((item) => item.status === "completado")
+        .reduce((sum, item) => sum + assignmentPrice(item, treatment.price), 0),
     }
   })
 

@@ -23,6 +23,13 @@ export interface ChartIndicators {
   bleedingPercent: number | null
   /** Índice de placa de O'Leary (% de superficies con placa); `null` si no se evaluó. */
   plaquePercent: number | null
+  /** Profundidad de sondaje máxima (mm); `null` sin sondaje. */
+  maxProbingDepth: number | null
+  /**
+   * Pérdida de inserción clínica máxima (mm). El nivel de inserción de cada sitio es la profundidad
+   * de sondaje más el margen gingival (recesión); `null` sin sondaje.
+   */
+  maxAttachmentLoss: number | null
 }
 
 /** Profundidad de sondaje a partir de la cual un sitio se considera bolsa periodontal. */
@@ -59,6 +66,8 @@ export function computeChartIndicators(chart: ChartSnapshot | null | undefined):
     sitesWithRecession: 0,
     bleedingPercent: null,
     plaquePercent: null,
+    maxProbingDepth: null,
+    maxAttachmentLoss: null,
   }
   let bleedingSites = 0
   let plaqueSurfaces = 0
@@ -91,6 +100,14 @@ export function computeChartIndicators(chart: ChartSnapshot | null | undefined):
       result.sitesProbed += probed.length
       result.sitesWithPocket += probed.filter(([, depth]) => Number(depth) >= POCKET_THRESHOLD_MM).length
       result.sitesWithRecession += numbers(value.perio.gm).filter((margin) => margin > 0).length
+      const margins = isObject(value.perio.gm) ? value.perio.gm : {}
+      for (const [site, depth] of probed) {
+        const pd = Number(depth)
+        const margin = Number(margins[site])
+        const attachment = pd + (Number.isFinite(margin) ? margin : 0)
+        result.maxProbingDepth = Math.max(result.maxProbingDepth ?? 0, pd)
+        result.maxAttachmentLoss = Math.max(result.maxAttachmentLoss ?? 0, attachment)
+      }
       if (Array.isArray(value.perio.bop)) {
         const probedSites = new Set(probed.map(([site]) => site))
         bleedingSites += value.perio.bop.filter((site) => probedSites.has(String(site))).length
@@ -116,6 +133,8 @@ export interface EvolutionPoint {
   sitesWithPocket: number
   teethWithMobility: number
   teethWithCaries: number
+  maxProbingDepth: number | null
+  maxAttachmentLoss: number | null
 }
 
 export interface EvolutionSource {
@@ -138,6 +157,8 @@ export function buildEvolutionSeries(sources: EvolutionSource[]): EvolutionPoint
         sitesWithPocket: indicators.sitesWithPocket,
         teethWithMobility: indicators.teethWithMobility,
         teethWithCaries: indicators.teethWithCaries,
+        maxProbingDepth: indicators.maxProbingDepth,
+        maxAttachmentLoss: indicators.maxAttachmentLoss,
       },
     ]
   })

@@ -21,8 +21,7 @@ interface PatientAppointmentsTabProps {
   patientId: string
   encounters: ClinicalEncounter[]
   treatmentName: (treatmentId: string) => string | undefined
-  /** «Registrar atención» se habilita cuando el odontograma terminó de cargar. */
-  canRegister: boolean
+  /** Abre «Registrar atención» con la cita precargada. */
   onRegisterEncounter: (appointmentId: string) => void
   onOpenEncounter: (encounterId: string) => void
 }
@@ -32,7 +31,6 @@ export function PatientAppointmentsTab({
   patientId,
   encounters,
   treatmentName,
-  canRegister,
   onRegisterEncounter,
   onOpenEncounter,
 }: PatientAppointmentsTabProps) {
@@ -107,7 +105,6 @@ export function PatientAppointmentsTab({
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={!canRegister}
                             onClick={() => onRegisterEncounter(appointment.id)}
                           >
                             Registrar atención

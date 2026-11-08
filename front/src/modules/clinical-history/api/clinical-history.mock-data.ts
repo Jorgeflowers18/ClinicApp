@@ -3,14 +3,25 @@
 // Historias de ejemplo: los 4 registros del historial clínico clásico convertidos en atenciones.
 // Sus tratamientos realizados apuntan a las asignaciones de ejemplo de `treatments.mock-data.ts`
 // (asg_1..asg_3), así se ve la integración sin crear datos nuevos.
+import { diagnosesFromText, emptyEncounterValues } from "../lib/encounter"
 import type { ClinicalEncounter, PatientClinicalHistory, ProposedTreatment } from "../types/clinical-history.types"
 import { emptyRecord } from "./clinical-history.mock-migration"
 
-type SeedEncounter = Omit<ClinicalEncounter, "appointmentId" | "chartSnapshot" | "addenda" | "evolution" | "nextVisit"> &
-  Partial<ClinicalEncounter>
+type SeedEncounter = Pick<
+  ClinicalEncounter,
+  "id" | "patientId" | "professionalId" | "date" | "reason" | "procedures" | "notes" | "performedTreatments" | "createdAt"
+> & { diagnosis: string }
 
-function seedEncounter(encounter: SeedEncounter): ClinicalEncounter {
-  return { appointmentId: null, chartSnapshot: null, addenda: [], evolution: "", nextVisit: "", ...encounter }
+/** Atenciones anteriores a la evaluación por pasos: solo motivo, diagnóstico de texto y procedimientos. */
+function seedEncounter({ diagnosis, ...encounter }: SeedEncounter): ClinicalEncounter {
+  return {
+    ...emptyEncounterValues(),
+    chartSnapshot: null,
+    clinicalSnapshot: null,
+    addenda: [],
+    ...encounter,
+    diagnoses: diagnosesFromText(encounter.id, diagnosis),
+  }
 }
 
 function seedHistory(patientId: string, encounters: ClinicalEncounter[], plan: ProposedTreatment[] = []): PatientClinicalHistory {
@@ -51,7 +62,7 @@ export const seedHistoriesByPatient: Record<string, PatientClinicalHistory> = {
         createdAt: "2026-01-05T10:00:00.000Z",
       }),
     ],
-    [{ id: "plan_hist_2_2", treatmentId: "trt_4", description: "Resina compuesta", tooth: "46" }]
+    [{ id: "plan_hist_2_2", treatmentId: "trt_4", description: "Resina compuesta", tooth: "46", phase: "restauradora", plannedDate: "" }]
   ),
   pat_3: seedHistory("pat_3", [
     seedEncounter({

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useParams, useSearchParams } from "react-router-dom"
+import { Navigate, useParams, useSearchParams } from "react-router-dom"
 import { AlertCircle } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -9,12 +9,13 @@ import { usePatient } from "@/modules/patients/api/patients.queries"
 
 import { useClinicalHistory } from "../api/clinical-history.queries"
 import { RecordWorkspace, type RecordTab } from "../components/record-workspace"
+import { registerEncounterPath } from "../lib/routes"
 
 /**
  * Historia clínica odontológica de un paciente, editable al abrirla. `?atencion=` abre el historial
  * en esa atención; `?visita=` (enlaces anteriores) se trata igual, porque las visitas convertidas
- * conservan su id. `?cita=` (desde la agenda) abre la atención de esa cita o, si aún no tiene, abre
- * «Registrar atención» con la cita preseleccionada.
+ * conservan su id. `?cita=` (desde la agenda) abre la atención de esa cita o, si aún no tiene, la
+ * página «Registrar atención» con la cita precargada.
  */
 export function PatientClinicalHistoryPage() {
   const { patientId } = useParams<{ patientId: string }>()
@@ -49,6 +50,9 @@ export function PatientClinicalHistoryPage() {
   const appointmentEncounter = appointmentParam
     ? history.encounters.find((encounter) => encounter.appointmentId === appointmentParam)
     : undefined
+  if (appointmentParam && !appointmentEncounter) {
+    return <Navigate to={registerEncounterPath(patient.id, appointmentParam)} replace />
+  }
   const encounterParam = searchParams.get("atencion") ?? searchParams.get("visita") ?? appointmentEncounter?.id ?? null
   const highlighted = history.encounters.some((encounter) => encounter.id === encounterParam) ? encounterParam : null
 
@@ -71,8 +75,6 @@ export function PatientClinicalHistoryPage() {
       highlightedEncounterId={highlighted}
       onReset={remount}
       onReload={(tab) => void reload(tab)}
-      pendingAppointmentId={appointmentParam && !appointmentEncounter ? appointmentParam : null}
-      onAppointmentHandled={() => setSearchParams({}, { replace: true })}
       onShowEncounter={(encounterId) => setSearchParams({ atencion: encounterId }, { replace: true })}
     />
   )

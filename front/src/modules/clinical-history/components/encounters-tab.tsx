@@ -11,10 +11,13 @@ import { formatCurrency } from "@/shared/lib/number"
 import { cn } from "@/lib/utils"
 
 import { encounterDocument, openPrintWindow, printDocument, type RecordDocumentContext } from "../lib/dental-export"
+import { encounterSections } from "../lib/encounter-summary"
 import { compareEncounters } from "../lib/record"
-import type { ClinicalEncounter } from "../types/clinical-history.types"
+import { diagnosisSummary, type ClinicalEncounter } from "../types/clinical-history.types"
 import { EncounterChartDialog, EncounterPrinter } from "./encounter-chart"
 import { EncounterNoteDialog } from "./encounter-note-dialog"
+import { EncounterSummary } from "./encounter-summary"
+import { MedicalAlerts } from "./medical-alerts"
 
 const longDate = (value: string) => formatDateOnly(value, { day: "2-digit", month: "long", year: "numeric" })
 
@@ -77,12 +80,8 @@ export function EncountersTab({ patientId, patientName, birthDate, encounters, h
         {sorted.map((encounter) => {
           const isHighlighted = encounter.id === highlightedId
           const total = encounter.performedTreatments.reduce((sum, item) => sum + item.cost, 0)
-          const details = [
-            { label: "Diagnóstico", value: encounter.diagnosis },
-            { label: "Procedimientos", value: encounter.procedures },
-            { label: "Evolución / indicaciones", value: encounter.evolution },
-            { label: "Observaciones", value: encounter.notes },
-          ].filter((item) => item.value.trim())
+          // El motivo va en el título y el próximo control al pie: no se repiten en el detalle.
+          const sections = encounterSections({ ...encounter, reason: "", nextVisit: "" })
           return (
             <article
               key={encounter.id}
@@ -106,12 +105,29 @@ export function EncountersTab({ patientId, patientName, birthDate, encounters, h
                   Registrada
                 </Badge>
               </div>
-              {details.map((item) => (
-                <p key={item.label} className="whitespace-pre-wrap text-sm">
-                  <strong>{item.label}: </strong>
-                  {item.value}
+              {encounter.diagnoses.length > 0 && (
+                <p className="text-sm">
+                  <strong>Diagnóstico: </strong>
+                  {diagnosisSummary(encounter)}
                 </p>
-              ))}
+              )}
+              {encounter.clinicalSnapshot && (
+                <MedicalAlerts source={encounter.clinicalSnapshot} title="Alertas al momento de la atención" />
+              )}
+              <details className="group rounded-md border px-3 py-2">
+                <summary className="cursor-pointer text-sm font-medium text-muted-foreground select-none">
+                  Detalle de la atención
+                </summary>
+                <EncounterSummary sections={sections} className="pt-3" />
+                {encounter.clinicalSnapshot && encounter.clinicalSnapshot.medications.length > 0 && (
+                  <p className="pt-3 text-sm">
+                    <strong>Medicación al momento de la atención: </strong>
+                    {encounter.clinicalSnapshot.medications
+                      .map((item) => [item.name, item.dose].filter(Boolean).join(" "))
+                      .join(" · ")}
+                  </p>
+                )}
+              </details>
               {encounter.performedTreatments.length > 0 && (
                 <div className="text-sm">
                   <strong>Tratamientos realizados: </strong>

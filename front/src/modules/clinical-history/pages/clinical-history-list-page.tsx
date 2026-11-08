@@ -16,7 +16,7 @@ import { useProfessionals } from "@/modules/appointments/api/appointments.querie
 
 import { useEncountersList } from "../api/clinical-history.queries"
 import { resolveProfessionalName } from "../lib/record"
-import type { EncounterListItem } from "../types/clinical-history.types"
+import { diagnosisSummary, type EncounterListItem } from "../types/clinical-history.types"
 
 const ALL = "todos"
 const shortDate = (value: string) => formatDateOnly(value, { day: "2-digit", month: "short", year: "numeric" })
@@ -60,7 +60,7 @@ export function ClinicalHistoryListPage() {
     { key: "date", header: "Fecha", cell: (row) => shortDate(row.date) },
     { key: "patient", header: "Paciente", cell: (row) => patientItems[row.patientId] ?? "Paciente" },
     { key: "reason", header: "Motivo de consulta", cell: (row) => row.reason || "—", className: "max-w-56 truncate" },
-    { key: "diagnosis", header: "Diagnóstico", cell: (row) => row.diagnosis || "—", className: "max-w-56 truncate" },
+    { key: "diagnosis", header: "Diagnóstico", cell: (row) => diagnosisSummary(row) || "—", className: "max-w-56 truncate" },
     { key: "professional", header: "Profesional", cell: (row) => resolveProfessionalName(row, professionals) },
     { key: "nextVisit", header: "Próximo control", cell: (row) => (row.nextVisit ? shortDate(row.nextVisit) : "—") },
   ]
