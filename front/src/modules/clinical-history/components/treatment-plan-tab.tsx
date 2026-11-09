@@ -1,242 +1,142 @@
-import { Link } from "react-router-dom"
 import { Trash2 } from "lucide-react"
 import { useFormContext, useWatch } from "react-hook-form"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatDateOnly } from "@/shared/lib/date"
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency } from "@/shared/lib/number"
-import {
-  useActiveTreatments,
-  usePatientAssignments,
-  useTreatmentsList,
-} from "@/modules/treatments/api/treatments.queries"
-import { assignmentStatusLabels, type TreatmentAssignment } from "@/modules/treatments/types/treatment.types"
+import { useActiveTreatments, useTreatmentsList } from "@/modules/treatments/api/treatments.queries"
 
-import {
-  assignablePlanStatuses,
-  planItemStatusLabels,
-  planItemStatuses,
-  type DentalRecord,
-  type PlanItem,
-  type VisitFormValues,
-} from "../types/clinical-history.types"
+import { groupPlanByPhase, NO_PHASE, phaseItems } from "../lib/plan"
+import { today, type ProposedTreatment, type RecordFormValues, type TreatmentPhase } from "../types/clinical-history.types"
 import { PlanItemForm } from "./plan-item-form"
 
-const statusItems = Object.fromEntries(planItemStatuses.map((status) => [status, planItemStatusLabels[status]]))
-
-interface TreatmentPlanTabProps {
-  patientId: string
-  record: DentalRecord
-  readOnly: boolean
-}
-
-function followUpText(item: PlanItem, assignment: TreatmentAssignment | undefined) {
-  if (item.assignmentId) {
-    if (!assignment) return "Asignación no disponible"
-    return `${assignment.completedSessions}/${assignment.totalSessions} sesiones · ${assignmentStatusLabels[assignment.status]}`
-  }
-  if (assignablePlanStatuses.includes(item.status)) {
-    return item.status === "realizado"
-      ? "Se asigna al cerrar la visita y registra la primera sesión"
-      : "Se asigna al paciente al cerrar la visita"
-  }
-  if (item.status === "pendiente") return "Pasa a la próxima visita"
-  return "—"
-}
-
-export function TreatmentPlanTab({ patientId, record, readOnly }: TreatmentPlanTabProps) {
-  const {
-    control,
-    setValue,
-    trigger,
-    formState: { errors, isSubmitted },
-  } = useFormContext<VisitFormValues>()
+export function TreatmentPlanTab() {
+  const { control, setValue } = useFormContext<RecordFormValues>()
   const plan = useWatch({ control, name: "plan" })
   const { data: activeTreatments } = useActiveTreatments()
   // Catálogo completo (incluye inactivos) para mostrar nombre y precio de ítems antiguos.
   const { data: catalog } = useTreatmentsList({ page: 1, pageSize: 100 })
-  const { data: assignments, isLoading: assignmentsLoading } = usePatientAssignments(patientId)
 
   const treatmentById = new Map((catalog?.items ?? activeTreatments ?? []).map((treatment) => [treatment.id, treatment]))
-  const assignmentById = new Map((assignments ?? []).map((assignment) => [assignment.id, assignment]))
-  const estimatedTotal = plan
-    .filter((item) => item.status !== "cancelado" && !item.assignmentId && item.treatmentId)
-    .reduce((sum, item) => sum + (treatmentById.get(item.treatmentId ?? "")?.price ?? 0), 0)
+  const priceOf = (item: ProposedTreatment) => treatmentById.get(item.treatmentId ?? "")?.price ?? 0
+  const estimatedTotal = plan.reduce((sum, item) => sum + priceOf(item), 0)
+  const groups = groupPlanByPhase(plan)
 
-  function updatePlan(next: PlanItem[]) {
+  function updatePlan(next: ProposedTreatment[]) {
     setValue("plan", next, { shouldDirty: true })
-    if (isSubmitted) void trigger("plan")
   }
 
-  function visitDate(visitId: string | undefined) {
-    const visit = record.visits.find((item) => item.id === visitId)
-    return visit ? formatDateOnly(visit.date, { day: "2-digit", month: "short", year: "numeric" }) : null
+  function updateItem(id: string, change: Partial<ProposedTreatment>) {
+    updatePlan(plan.map((item) => (item.id === id ? { ...item, ...change } : item)))
   }
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Plan de tratamiento de esta visita</CardTitle>
+          <CardTitle>Plan de tratamiento por fases</CardTitle>
           <CardDescription>
-            Los tratamientos aprobados o realizados se asignan al paciente al cerrar la visita y aparecen en
-            Tratamientos, Finanzas y Reportes. Los propuestos pasan a la siguiente visita.
+            Tratamientos propuestos al paciente, agrupados por fase. Se agregan y se quitan con «Guardar cambios»;
+            cuando se realizan, se registran en la atención y salen del plan.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!readOnly && (
-            <PlanItemForm treatments={activeTreatments ?? []} onAdd={(item) => updatePlan([...plan, item])} />
-          )}
+          <PlanItemForm treatments={activeTreatments ?? []} onAdd={(item) => updatePlan([...plan, item])} />
 
           {plan.length === 0 ? (
             <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              {readOnly ? "Esta visita no registró tratamientos." : "Agrega tratamientos del catálogo al plan de la visita."}
+              No hay tratamientos propuestos. Agrégalos desde el catálogo.
             </div>
           ) : (
             <div className="rounded-lg border">
-              <Table>
+              <Table aria-label="Tratamientos propuestos">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Pieza / zona</TableHead>
                     <TableHead>Tratamiento</TableHead>
-                    <TableHead className="text-right">Sesiones</TableHead>
+                    <TableHead className="w-56">Fase</TableHead>
+                    <TableHead className="w-40">Fecha prevista</TableHead>
                     <TableHead className="text-right">Precio</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Seguimiento</TableHead>
-                    {!readOnly && <TableHead className="w-10" />}
+                    <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {plan.map((item, index) => {
-                    const editable = !readOnly && !item.assignmentId
-                    const treatment = item.treatmentId ? treatmentById.get(item.treatmentId) : undefined
-                    const itemErrors = errors.plan?.[index]
-                    const message = itemErrors?.treatmentId?.message ?? itemErrors?.sessions?.message
-                    return (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.tooth || "General"}</TableCell>
-                        <TableCell className="whitespace-normal">
-                          <div className="font-medium">{treatment?.name ?? item.description}</div>
-                          {!item.treatmentId && <Badge variant="outline">Texto libre anterior</Badge>}
-                          {message && (
-                            <p role="alert" className="text-sm text-destructive">
-                              {message}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">{item.sessions}</TableCell>
-                        <TableCell className="text-right">{treatment ? formatCurrency(treatment.price) : "—"}</TableCell>
-                        <TableCell>
-                          {editable ? (
+                {groups.map((group) => (
+                  <TableBody key={group.phase || "sin-fase"} aria-label={`Fase: ${group.label}`}>
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableCell colSpan={4} className="font-medium">
+                        {group.label}
+                      </TableCell>
+                      <TableCell className="text-right text-sm font-medium">
+                        {formatCurrency(group.items.reduce((sum, item) => sum + priceOf(item), 0))}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                    {group.items.map((item) => {
+                      const treatment = item.treatmentId ? treatmentById.get(item.treatmentId) : undefined
+                      const name = treatment?.name ?? item.description
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.tooth || "General"}</TableCell>
+                          <TableCell className="whitespace-normal">
+                            <div className="font-medium">{name}</div>
+                            {!item.treatmentId && <Badge variant="outline">Texto libre anterior</Badge>}
+                          </TableCell>
+                          <TableCell>
                             <Select
-                              items={statusItems}
-                              value={item.status}
+                              items={phaseItems}
+                              value={item.phase || NO_PHASE}
                               onValueChange={(value) =>
-                                value &&
-                                updatePlan(plan.map((row) => (row.id === item.id ? { ...row, status: value } : row)))
+                                updateItem(item.id, { phase: !value || value === NO_PHASE ? "" : (value as TreatmentPhase) })
                               }
                             >
-                              <SelectTrigger size="sm" aria-label={`Estado de ${item.description}`} aria-invalid={!!itemErrors}>
+                              <SelectTrigger className="w-full" aria-label={`Fase de ${name}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {planItemStatuses.map((status) => (
-                                  <SelectItem key={status} value={status}>
-                                    {planItemStatusLabels[status]}
+                                {Object.entries(phaseItems).map(([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
-                          ) : (
-                            <Badge variant={item.status === "cancelado" ? "outline" : "secondary"}>
-                              {planItemStatusLabels[item.status]}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="whitespace-normal text-sm text-muted-foreground">
-                          {followUpText(item, item.assignmentId ? assignmentById.get(item.assignmentId) : undefined)}
-                        </TableCell>
-                        {!readOnly && (
-                          <TableCell>
-                            {editable && (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label={`Quitar ${item.description} del plan`}
-                                onClick={() => updatePlan(plan.filter((row) => row.id !== item.id))}
-                              >
-                                <Trash2 />
-                              </Button>
-                            )}
                           </TableCell>
-                        )}
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          {plan.length > 0 && (
-            <p className="text-right text-sm text-muted-foreground">
-              Total estimado de tratamientos por asignar:{" "}
-              <span className="font-medium text-foreground">{formatCurrency(estimatedTotal)}</span>
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Tratamientos asignados al paciente</CardTitle>
-          <CardDescription>Progreso real registrado en el módulo de Tratamientos.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {assignmentsLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : !assignments?.length ? (
-            <p className="text-sm text-muted-foreground">El paciente no tiene tratamientos asignados.</p>
-          ) : (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
+                          <TableCell>
+                            <Input
+                              type="date"
+                              min={today()}
+                              aria-label={`Fecha prevista de ${name}`}
+                              value={item.plannedDate}
+                              onChange={(event) => updateItem(item.id, { plannedDate: event.target.value })}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">{treatment ? formatCurrency(treatment.price) : "—"}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Quitar ${name} de los propuestos`}
+                              onClick={() => updatePlan(plan.filter((row) => row.id !== item.id))}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                ))}
+                <TableFooter>
                   <TableRow>
-                    <TableHead>Tratamiento</TableHead>
-                    <TableHead>Inicio</TableHead>
-                    <TableHead>Progreso</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Origen</TableHead>
+                    <TableCell colSpan={4}>Total estimado</TableCell>
+                    <TableCell className="text-right">{formatCurrency(estimatedTotal)}</TableCell>
+                    <TableCell />
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assignments.map((assignment) => (
-                    <TableRow key={assignment.id}>
-                      <TableCell>
-                        <Link className="font-medium hover:underline" to={`/tratamientos/${assignment.treatmentId}`}>
-                          {treatmentById.get(assignment.treatmentId)?.name ?? "Tratamiento"}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{formatDateOnly(assignment.startDate)}</TableCell>
-                      <TableCell>
-                        {assignment.completedSessions}/{assignment.totalSessions} sesiones
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{assignmentStatusLabels[assignment.status]}</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {visitDate(assignment.sourceVisitId)
-                          ? `Visita del ${visitDate(assignment.sourceVisitId)}`
-                          : "Asignado desde Tratamientos"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                </TableFooter>
               </Table>
             </div>
           )}

@@ -2,7 +2,6 @@ import { useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { FolderOpen } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
@@ -16,9 +15,9 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 import { usePatientsList } from "@/modules/patients/api/patients.queries"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 
-import { useDentalVisitsList } from "../api/clinical-history.queries"
-import { resolveProfessionalName } from "../lib/visit"
-import { visitStatuses, visitStatusLabels, type VisitListItem, type VisitStatus } from "../types/clinical-history.types"
+import { useEncountersList } from "../api/clinical-history.queries"
+import { resolveProfessionalName } from "../lib/record"
+import { diagnosisSummary, type EncounterListItem } from "../types/clinical-history.types"
 
 const ALL = "todos"
 const shortDate = (value: string) => formatDateOnly(value, { day: "2-digit", month: "short", year: "numeric" })
@@ -27,16 +26,14 @@ export function ClinicalHistoryListPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const patientId = searchParams.get("pacienteId") ?? undefined
-  const [status, setStatus] = useState<VisitStatus | undefined>()
   const [professionalId, setProfessionalId] = useState<string | undefined>()
   const { search, setSearch, debouncedSearch, page, setPage, pageSize } = useTableQueryState()
-  const { data, isLoading, isError, error } = useDentalVisitsList({
+  const { data, isLoading, isError, error } = useEncountersList({
     page,
     pageSize,
     search: debouncedSearch,
     patientId,
     professionalId,
-    status,
   })
   const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
   const { data: professionals } = useProfessionals()
@@ -48,10 +45,6 @@ export function ClinicalHistoryListPage() {
   const professionalItems: Record<string, string> = {
     [ALL]: "Todos los profesionales",
     ...Object.fromEntries((professionals ?? []).map((item) => [item.id, item.name])),
-  }
-  const statusItems: Record<string, string> = {
-    [ALL]: "Todos los estados",
-    ...Object.fromEntries(visitStatuses.map((item) => [item, visitStatusLabels[item]])),
   }
 
   function changePatient(value: string | null) {
@@ -87,23 +80,16 @@ export function ClinicalHistoryListPage() {
     setStatus(undefined)
   }
 
-  function openVisit(row: VisitListItem) {
-    navigate(`/historial-clinico/paciente/${row.patientId}?visita=${row.id}`)
+  function openEncounter(row: EncounterListItem) {
+    navigate(`/historial-clinico/paciente/${row.patientId}?atencion=${row.id}`)
   }
 
-  const columns: DataTableColumn<VisitListItem>[] = [
+  const columns: DataTableColumn<EncounterListItem>[] = [
     { key: "date", header: "Fecha", cell: (row) => shortDate(row.date) },
     { key: "patient", header: "Paciente", cell: (row) => patientItems[row.patientId] ?? "Paciente" },
     { key: "reason", header: "Motivo de consulta", cell: (row) => row.reason || "—", className: "max-w-56 truncate" },
-    { key: "diagnosis", header: "Diagnóstico", cell: (row) => row.diagnosis || "—", className: "max-w-56 truncate" },
+    { key: "diagnosis", header: "Diagnóstico", cell: (row) => diagnosisSummary(row) || "—", className: "max-w-56 truncate" },
     { key: "professional", header: "Profesional", cell: (row) => resolveProfessionalName(row, professionals) },
-    {
-      key: "status",
-      header: "Estado",
-      cell: (row) => (
-        <Badge variant={row.status === "borrador" ? "secondary" : "outline"}>{visitStatusLabels[row.status]}</Badge>
-      ),
-    },
     { key: "nextVisit", header: "Próximo control", cell: (row) => (row.nextVisit ? shortDate(row.nextVisit) : "—") },
   ]
 
@@ -146,7 +132,7 @@ export function ClinicalHistoryListPage() {
     <div className="space-y-4">
       <PageHeader
         title="Historial clínico"
-        description="Visitas odontológicas de todos los pacientes. Acceso restringido a personal médico y administración."
+        description="Atenciones odontológicas de todos los pacientes. Acceso restringido a personal médico y administración."
         actions={
           patientId && (
             <Button onClick={() => navigate(`/historial-clinico/paciente/${patientId}`)}>
@@ -157,6 +143,7 @@ export function ClinicalHistoryListPage() {
         }
       />
 
+<<<<<<< HEAD
       <ResponsiveFilterBar
         search={
           <SearchInput
@@ -220,6 +207,42 @@ export function ClinicalHistoryListPage() {
             </div>
           </div>
       </ResponsiveFilterBar>
+=======
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchInput value={search} onChange={setSearch} placeholder="Buscar por paciente, motivo o diagnóstico..." />
+        <Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
+          <SelectTrigger className="w-56" aria-label="Filtrar por paciente">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(patientItems).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          items={professionalItems}
+          value={professionalId ?? ALL}
+          onValueChange={(value) => {
+            setPage(1)
+            setProfessionalId(value && value !== ALL ? value : undefined)
+          }}
+        >
+          <SelectTrigger className="w-56" aria-label="Filtrar por profesional">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(professionalItems).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+>>>>>>> 901051621dc1257dfd8ecb309bef19db217149d6
 
       <DataTable
         columns={columns}
@@ -229,12 +252,12 @@ export function ClinicalHistoryListPage() {
         isLoading={isLoading}
         isError={isError}
         errorMessage={getErrorMessage(error)}
-        onRowClick={openVisit}
-        emptyTitle="Sin visitas"
+        onRowClick={openEncounter}
+        emptyTitle="Sin atenciones"
         emptyDescription={
           patientId
-            ? "Este paciente aún no tiene visitas. Abre su historia clínica para iniciar la primera."
-            : "No hay visitas con estos criterios."
+            ? "Este paciente aún no tiene atenciones. Abre su historia clínica para registrar la primera."
+            : "No hay atenciones con estos criterios."
         }
       />
 

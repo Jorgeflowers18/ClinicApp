@@ -5,182 +5,131 @@ import { mockDelay, paginate } from "@/shared/lib/mock"
 import { ApiError, type Paginated } from "@/shared/types/common"
 import { mockPatients } from "@/modules/patients/api/patients.mock-data"
 
-import { assignablePlanStatuses, allowedAttachmentTypes, maxAttachmentSize } from "../types/clinical-history.types"
+import { allowedAttachmentTypes, diagnosisSummary, encounterFormSchema, maxAttachmentSize } from "../types/clinical-history.types"
 import type {
+  AddEncounterNoteInput,
+  ClinicalEncounter,
+  ClinicalRecord,
+  CreateEncounterInput,
   DentalAttachment,
-  DentalRecord,
-  DentalVisit,
-  StartVisitInput,
+  EncounterListItem,
+  EncounterListQuery,
+  EncounterNote,
+  PatientClinicalHistory,
   UploadAttachmentInput,
-  VisitListItem,
-  VisitListQuery,
 } from "../types/clinical-history.types"
-import { compareVisits, findDraft, latestClosedVisit, today, validateVisitForClose } from "../lib/visit"
-import { readAllRecords, readFile, readRecord, seedOnce, storeFile, writeRecord } from "./clinical-history.mock-storage"
-import { seedVisitsByPatient } from "./clinical-history.mock-data"
+import { compareEncounters, validateRecord, validateWith } from "../lib/record"
+import { readAllHistories, readFile, readHistory, seedOnce, storeFile, writeHistory } from "./clinical-history.mock-storage"
+import { seedHistoriesByPatient } from "./clinical-history.mock-data"
 
-function toListItem(visit: DentalVisit): VisitListItem {
+function toListItem(encounter: ClinicalEncounter): EncounterListItem {
   return {
-    id: visit.id,
-    patientId: visit.patientId,
-    status: visit.status,
-    date: visit.date,
-    professionalId: visit.professionalId,
-    legacyProfessionalName: visit.legacyProfessionalName,
-    reason: visit.reason,
-    diagnosis: visit.diagnosis,
-    nextVisit: visit.nextVisit,
-    closedAt: visit.closedAt,
+    id: encounter.id,
+    patientId: encounter.patientId,
+    date: encounter.date,
+    professionalId: encounter.professionalId,
+    legacyProfessionalName: encounter.legacyProfessionalName,
+    reason: encounter.reason,
+    diagnoses: encounter.diagnoses,
+    nextVisit: encounter.nextVisit,
   }
 }
 
 // MOCK-ONLY
-const ensureSeeded = () => seedOnce(seedVisitsByPatient)
+const ensureSeeded = () => seedOnce(seedHistoriesByPatient)
 
 // MOCK-ONLY
-function assertAppointmentFree(record: DentalRecord, appointmentId: string | null, visitId?: string) {
-  if (!appointmentId) return
-  const other = record.visits.find((visit) => visit.appointmentId === appointmentId && visit.id !== visitId)
-  if (other) {
-    throw new ApiError("Esa cita ya está vinculada a otra visita del paciente", 409, [
-      { field: "appointmentId", message: "La cita ya está vinculada a otra visita" },
-    ])
-  }
-}
-
-// MOCK-ONLY
-function replaceVisit(record: DentalRecord, next: DentalVisit): DentalRecord {
-  return { ...record, visits: record.visits.map((visit) => (visit.id === next.id ? next : visit)).sort(compareVisits) }
-}
-
-// MOCK-ONLY
-function assertEditable(record: DentalRecord, visit: DentalVisit) {
-  const stored = record.visits.find((item) => item.id === visit.id)
-  if (!stored) throw new ApiError("Visita no encontrada", 404)
-  if (stored.status === "cerrada") throw new ApiError("La visita ya está cerrada y no se puede modificar", 409)
-  if (stored.revision !== visit.revision) {
-    throw new ApiError("Otra pestaña o usuario modificó esta visita. Recarga la historia antes de continuar.", 409)
-  }
-  return stored
-}
-
-// MOCK-ONLY
-async function listVisitsMock(query: VisitListQuery): Promise<Paginated<VisitListItem>> {
+async function listEncountersMock(query: EncounterListQuery): Promise<Paginated<EncounterListItem>> {
   await mockDelay(250)
   await ensureSeeded()
   const search = query.search?.trim().toLowerCase()
-  const visits = (await readAllRecords())
-    .flatMap((record) => record.visits)
-    .filter((visit) => !query.patientId || visit.patientId === query.patientId)
-    .filter((visit) => !query.professionalId || visit.professionalId === query.professionalId)
-    .filter((visit) => !query.status || visit.status === query.status)
-    .filter((visit) => {
+  const encounters = (await readAllHistories())
+    .flatMap((history) => history.encounters)
+    .filter((encounter) => !query.patientId || encounter.patientId === query.patientId)
+    .filter((encounter) => !query.professionalId || encounter.professionalId === query.professionalId)
+    .filter((encounter) => {
       if (!search) return true
-      const patient = mockPatients.find((item) => item.id === visit.patientId)
-      return [visit.reason, visit.diagnosis, patient?.firstName, patient?.lastName, patient?.documentId]
+      const patient = mockPatients.find((item) => item.id === encounter.patientId)
+      return [encounter.reason, diagnosisSummary(encounter), patient?.firstName, patient?.lastName, patient?.documentId]
         .join(" ")
         .toLowerCase()
         .includes(search)
     })
-    .sort((a, b) => compareVisits(b, a))
-  return paginate(visits.map(toListItem), query)
+    .sort((a, b) => compareEncounters(b, a))
+  return paginate(encounters.map(toListItem), query)
 }
 
 // MOCK-ONLY
-async function getRecordMock(patientId: string): Promise<DentalRecord> {
+async function getRecordMock(patientId: string): Promise<PatientClinicalHistory> {
   await mockDelay(200)
   await ensureSeeded()
-  return readRecord(patientId)
+  return readHistory(patientId)
 }
 
 // MOCK-ONLY
-/** Devuelve el borrador existente o crea uno que parte del odontograma y los ítems propuestos de la última visita cerrada. */
-async function startVisitMock(patientId: string, input: StartVisitInput): Promise<DentalVisit> {
+async function saveRecordMock(record: ClinicalRecord): Promise<ClinicalRecord> {
   await mockDelay(250)
-  await ensureSeeded()
-  let started: DentalVisit | undefined
-  await writeRecord(patientId, (record) => {
-    const draft = findDraft(record)
-    if (draft) {
-      started = draft
-      return record
+  const fieldErrors = validateRecord(record)
+  if (fieldErrors.length) throw new ApiError("Revisa los datos de la historia antes de guardar", 400, fieldErrors)
+  let saved: ClinicalRecord | undefined
+  await writeHistory(record.patientId, (history) => {
+    if (history.record.revision !== record.revision) {
+      throw new ApiError("Otra pestaña o usuario modificó esta historia. Recarga la historia antes de continuar.", 409)
     }
-    assertAppointmentFree(record, input.appointmentId)
-    const previous = latestClosedVisit(record)
-    const now = new Date().toISOString()
-    started = {
-      id: createId(),
-      patientId,
-      status: "borrador",
-      revision: 0,
-      date: input.date || today(),
-      professionalId: input.professionalId,
-      appointmentId: input.appointmentId,
-      reason: "",
-      diagnosis: "",
-      procedures: "",
-      evolution: "",
-      notes: "",
-      nextVisit: "",
-      chart: previous?.chart ? structuredClone(previous.chart) : null,
-      // Solo se arrastran las propuestas: lo aprobado ya vive como asignación en Tratamientos.
-      plan: (previous?.plan ?? [])
-        .filter((item) => item.status === "pendiente" && !item.assignmentId)
-        .map((item) => ({ ...item, id: createId() })),
-      consents: [],
-      attachments: [],
-      createdAt: now,
-      updatedAt: now,
-      closedAt: null,
-    }
-    return { ...record, visits: [...record.visits, started].sort(compareVisits) }
+    saved = { ...record, revision: record.revision + 1, updatedAt: new Date().toISOString() }
+    return { ...history, record: saved }
   })
-  return started as DentalVisit
+  return saved as ClinicalRecord
 }
 
 // MOCK-ONLY
-async function saveDraftMock(visit: DentalVisit): Promise<DentalVisit> {
-  let saved: DentalVisit | undefined
-  await writeRecord(visit.patientId, (record) => {
-    assertEditable(record, visit)
-    assertAppointmentFree(record, visit.appointmentId, visit.id)
-    saved = { ...visit, status: "borrador", revision: visit.revision + 1, updatedAt: new Date().toISOString() }
-    return replaceVisit(record, saved)
-  })
-  return saved as DentalVisit
-}
-
-// MOCK-ONLY
-async function closeVisitMock(visit: DentalVisit): Promise<DentalVisit> {
+/** Idempotente por `input.id`: reintentar el guardado de la misma atención no la duplica. */
+async function createEncounterMock(patientId: string, input: CreateEncounterInput): Promise<ClinicalEncounter> {
   await mockDelay(300)
-  const fieldErrors = validateVisitForClose(visit)
-  if (fieldErrors.length) throw new ApiError("Completa los datos obligatorios antes de cerrar la visita", 400, fieldErrors)
-  const pendingAssignment = visit.plan.findIndex((item) => assignablePlanStatuses.includes(item.status) && !item.assignmentId)
-  if (pendingAssignment !== -1) {
-    throw new ApiError("Hay tratamientos aprobados sin asignación creada", 400, [
-      { field: `plan.${pendingAssignment}.treatmentId`, message: "No se pudo crear la asignación de este tratamiento" },
-    ])
-  }
-  let closed: DentalVisit | undefined
-  await writeRecord(visit.patientId, (record) => {
-    assertEditable(record, visit)
-    assertAppointmentFree(record, visit.appointmentId, visit.id)
-    const now = new Date().toISOString()
-    closed = { ...visit, status: "cerrada", revision: visit.revision + 1, updatedAt: now, closedAt: now }
-    return replaceVisit(record, closed)
+  const fieldErrors = validateWith(encounterFormSchema, input)
+  if (fieldErrors.length) throw new ApiError("Completa los datos obligatorios de la atención", 400, fieldErrors)
+  let created: ClinicalEncounter | undefined
+  await writeHistory(patientId, (history) => {
+    const existing = history.encounters.find((encounter) => encounter.id === input.id)
+    if (existing) {
+      created = existing
+      return history
+    }
+    if (input.appointmentId && history.encounters.some((encounter) => encounter.appointmentId === input.appointmentId)) {
+      throw new ApiError("Esa cita ya está vinculada a otra atención del paciente", 409, [
+        { field: "appointmentId", message: "La cita ya está vinculada a otra atención" },
+      ])
+    }
+    created = { ...input, patientId, addenda: [], createdAt: new Date().toISOString() }
+    return { ...history, encounters: [...history.encounters, created].sort(compareEncounters) }
   })
-  return closed as DentalVisit
+  return created as ClinicalEncounter
 }
 
 // MOCK-ONLY
-async function discardDraftMock(patientId: string, visitId: string): Promise<void> {
+async function addEncounterNoteMock(patientId: string, encounterId: string, input: AddEncounterNoteInput): Promise<EncounterNote> {
   await mockDelay(250)
-  await writeRecord(patientId, (record) => {
-    const visit = record.visits.find((item) => item.id === visitId)
-    if (!visit) throw new ApiError("Visita no encontrada", 404)
-    if (visit.status !== "borrador") throw new ApiError("Solo se pueden descartar visitas en borrador", 409)
-    return { ...record, visits: record.visits.filter((item) => item.id !== visitId) }
+  if (input.text.trim().length < 10) {
+    throw new ApiError("La nota debe tener al menos 10 caracteres", 400, [{ field: "text", message: "Mínimo 10 caracteres" }])
+  }
+  const note: EncounterNote = {
+    id: createId(),
+    text: input.text.trim(),
+    authorName: input.authorName,
+    createdAt: new Date().toISOString(),
+  }
+  await writeHistory(patientId, (history) => {
+    if (!history.encounters.some((encounter) => encounter.id === encounterId)) {
+      throw new ApiError("Atención no encontrada", 404)
+    }
+    return {
+      ...history,
+      encounters: history.encounters.map((encounter) =>
+        encounter.id === encounterId ? { ...encounter, addenda: [...encounter.addenda, note] } : encounter
+      ),
+    }
   })
+  return note
 }
 
 function assertAttachment(file: File) {
@@ -192,7 +141,7 @@ function assertAttachment(file: File) {
 }
 
 // MOCK-ONLY
-/** Guarda solo el archivo; la visita lo referencia en el siguiente guardado del borrador. */
+/** Guarda solo el archivo; la historia lo referencia cuando se guardan los cambios. */
 async function uploadAttachmentMock(input: UploadAttachmentInput): Promise<DentalAttachment> {
   await mockDelay(200)
   assertAttachment(input.file)
@@ -213,39 +162,34 @@ async function getAttachmentFileMock(patientId: string, attachmentId: string): P
   return readFile(patientId, attachmentId)
 }
 
-// TODO: conectar a endpoint real -> GET /clinical-history/visits?page&pageSize&search&patientId&professionalId&status
-async function listVisitsReal(query: VisitListQuery): Promise<Paginated<VisitListItem>> {
-  const { data } = await http.get<Paginated<VisitListItem>>("/clinical-history/visits", { params: query })
+// TODO: conectar a endpoint real -> GET /clinical-history/encounters?page&pageSize&search&patientId&professionalId
+async function listEncountersReal(query: EncounterListQuery): Promise<Paginated<EncounterListItem>> {
+  const { data } = await http.get<Paginated<EncounterListItem>>("/clinical-history/encounters", { params: query })
   return data
 }
 
-// TODO: conectar a endpoint real -> GET /clinical-history/patients/:patientId
-async function getRecordReal(patientId: string): Promise<DentalRecord> {
-  const { data } = await http.get<DentalRecord>(`/clinical-history/patients/${patientId}`)
+// TODO: conectar a endpoint real -> GET /clinical-history/patients/:patientId (devuelve { record, encounters })
+async function getRecordReal(patientId: string): Promise<PatientClinicalHistory> {
+  const { data } = await http.get<PatientClinicalHistory>(`/clinical-history/patients/${patientId}`)
   return data
 }
 
-// TODO: conectar a endpoint real -> POST /clinical-history/patients/:patientId/visits
-async function startVisitReal(patientId: string, input: StartVisitInput): Promise<DentalVisit> {
-  const { data } = await http.post<DentalVisit>(`/clinical-history/patients/${patientId}/visits`, input)
+// TODO: conectar a endpoint real -> PUT /clinical-history/patients/:patientId (body incluye `revision`; 409 si no coincide)
+async function saveRecordReal(record: ClinicalRecord): Promise<ClinicalRecord> {
+  const { data } = await http.put<ClinicalRecord>(`/clinical-history/patients/${record.patientId}`, record)
   return data
 }
 
-// TODO: conectar a endpoint real -> PUT /clinical-history/visits/:visitId (body incluye `revision`; 409 si no coincide)
-async function saveDraftReal(visit: DentalVisit): Promise<DentalVisit> {
-  const { data } = await http.put<DentalVisit>(`/clinical-history/visits/${visit.id}`, visit)
+// TODO: conectar a endpoint real -> POST /clinical-history/patients/:patientId/encounters (idempotente por `id`)
+async function createEncounterReal(patientId: string, input: CreateEncounterInput): Promise<ClinicalEncounter> {
+  const { data } = await http.post<ClinicalEncounter>(`/clinical-history/patients/${patientId}/encounters`, input)
   return data
 }
 
-// TODO: conectar a endpoint real -> POST /clinical-history/visits/:visitId/close
-async function closeVisitReal(visit: DentalVisit): Promise<DentalVisit> {
-  const { data } = await http.post<DentalVisit>(`/clinical-history/visits/${visit.id}/close`, visit)
+// TODO: conectar a endpoint real -> POST /clinical-history/encounters/:encounterId/notes (el autor sale de la sesión)
+async function addEncounterNoteReal(_patientId: string, encounterId: string, input: AddEncounterNoteInput): Promise<EncounterNote> {
+  const { data } = await http.post<EncounterNote>(`/clinical-history/encounters/${encounterId}/notes`, { text: input.text })
   return data
-}
-
-// TODO: conectar a endpoint real -> DELETE /clinical-history/visits/:visitId (solo borradores)
-async function discardDraftReal(_patientId: string, visitId: string): Promise<void> {
-  await http.delete(`/clinical-history/visits/${visitId}`)
 }
 
 // TODO: conectar a endpoint real -> POST /clinical-history/attachments (multipart: file, kind, patientId)
@@ -266,12 +210,11 @@ async function getAttachmentFileReal(_patientId: string, attachmentId: string): 
 }
 
 export const clinicalHistoryApi = {
-  listVisits: env.useMockApi ? listVisitsMock : listVisitsReal,
+  listEncounters: env.useMockApi ? listEncountersMock : listEncountersReal,
   getRecord: env.useMockApi ? getRecordMock : getRecordReal,
-  startVisit: env.useMockApi ? startVisitMock : startVisitReal,
-  saveDraft: env.useMockApi ? saveDraftMock : saveDraftReal,
-  closeVisit: env.useMockApi ? closeVisitMock : closeVisitReal,
-  discardDraft: env.useMockApi ? discardDraftMock : discardDraftReal,
+  saveRecord: env.useMockApi ? saveRecordMock : saveRecordReal,
+  createEncounter: env.useMockApi ? createEncounterMock : createEncounterReal,
+  addEncounterNote: env.useMockApi ? addEncounterNoteMock : addEncounterNoteReal,
   uploadAttachment: env.useMockApi ? uploadAttachmentMock : uploadAttachmentReal,
   getAttachmentFile: env.useMockApi ? getAttachmentFileMock : getAttachmentFileReal,
 }

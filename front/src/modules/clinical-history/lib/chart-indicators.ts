@@ -1,6 +1,6 @@
 import { formatDateOnly } from "@/shared/lib/date"
 
-import type { ChartSnapshot, DentalVisit } from "../types/clinical-history.types"
+import type { ChartSnapshot } from "../types/clinical-history.types"
 
 /**
  * Indicadores derivados del estado del odontograma (`getStatusChart()` de react-advanced-odontogram).
@@ -23,6 +23,13 @@ export interface ChartIndicators {
   bleedingPercent: number | null
   /** Índice de placa de O'Leary (% de superficies con placa); `null` si no se evaluó. */
   plaquePercent: number | null
+  /** Profundidad de sondaje máxima (mm); `null` sin sondaje. */
+  maxProbingDepth: number | null
+  /**
+   * Pérdida de inserción clínica máxima (mm). El nivel de inserción de cada sitio es la profundidad
+   * de sondaje más el margen gingival (recesión); `null` sin sondaje.
+   */
+  maxAttachmentLoss: number | null
 }
 
 /** Profundidad de sondaje a partir de la cual un sitio se considera bolsa periodontal. */
@@ -59,6 +66,8 @@ export function computeChartIndicators(chart: ChartSnapshot | null | undefined):
     sitesWithRecession: 0,
     bleedingPercent: null,
     plaquePercent: null,
+    maxProbingDepth: null,
+    maxAttachmentLoss: null,
   }
   let bleedingSites = 0
   let plaqueSurfaces = 0
@@ -91,6 +100,14 @@ export function computeChartIndicators(chart: ChartSnapshot | null | undefined):
       result.sitesProbed += probed.length
       result.sitesWithPocket += probed.filter(([, depth]) => Number(depth) >= POCKET_THRESHOLD_MM).length
       result.sitesWithRecession += numbers(value.perio.gm).filter((margin) => margin > 0).length
+      const margins = isObject(value.perio.gm) ? value.perio.gm : {}
+      for (const [site, depth] of probed) {
+        const pd = Number(depth)
+        const margin = Number(margins[site])
+        const attachment = pd + (Number.isFinite(margin) ? margin : 0)
+        result.maxProbingDepth = Math.max(result.maxProbingDepth ?? 0, pd)
+        result.maxAttachmentLoss = Math.max(result.maxAttachmentLoss ?? 0, attachment)
+      }
       if (Array.isArray(value.perio.bop)) {
         const probedSites = new Set(probed.map(([site]) => site))
         bleedingSites += value.perio.bop.filter((site) => probedSites.has(String(site))).length
@@ -108,29 +125,40 @@ export function computeChartIndicators(chart: ChartSnapshot | null | undefined):
 }
 
 export interface EvolutionPoint {
-  visitId: string
+  /** Atención de origen; `null` en el punto del estado actual de la historia. */
+  encounterId: string | null
   label: string
   bleedingPercent: number | null
   plaquePercent: number | null
   sitesWithPocket: number
   teethWithMobility: number
   teethWithCaries: number
+  maxProbingDepth: number | null
+  maxAttachmentLoss: number | null
 }
 
-/** Serie cronológica de indicadores para las visitas cerradas que tienen odontograma. */
-export function buildEvolutionSeries(visits: DentalVisit[]): EvolutionPoint[] {
-  return visits.flatMap((visit) => {
-    const indicators = computeChartIndicators(visit.chart)
+export interface EvolutionSource {
+  encounterId: string | null
+  date: string
+  chart: ChartSnapshot | null
+}
+
+/** Serie cronológica de indicadores para los puntos (atenciones y estado actual) que tienen odontograma. */
+export function buildEvolutionSeries(sources: EvolutionSource[]): EvolutionPoint[] {
+  return sources.flatMap((source) => {
+    const indicators = computeChartIndicators(source.chart)
     if (!indicators) return []
     return [
       {
-        visitId: visit.id,
-        label: formatDateOnly(visit.date, { day: "2-digit", month: "short", year: "2-digit" }),
+        encounterId: source.encounterId,
+        label: source.encounterId === null ? "Actual" : formatDateOnly(source.date, { day: "2-digit", month: "short", year: "2-digit" }),
         bleedingPercent: indicators.bleedingPercent,
         plaquePercent: indicators.plaquePercent,
         sitesWithPocket: indicators.sitesWithPocket,
         teethWithMobility: indicators.teethWithMobility,
         teethWithCaries: indicators.teethWithCaries,
+        maxProbingDepth: indicators.maxProbingDepth,
+        maxAttachmentLoss: indicators.maxAttachmentLoss,
       },
     ]
   })
