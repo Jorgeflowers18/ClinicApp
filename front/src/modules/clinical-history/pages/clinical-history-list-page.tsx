@@ -143,71 +143,6 @@ export function ClinicalHistoryListPage() {
         }
       />
 
-<<<<<<< HEAD
-      <ResponsiveFilterBar
-        search={
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Buscar por paciente, motivo o diagnóstico..."
-          />
-        }
-        desktopFilters={desktopFilters}
-        panelTitle="Filtros del historial"
-        activeFilterCount={activeFilterCount}
-        onClear={clearFilters}
-      >
-        <div className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Paciente</p>
-              <Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
-                <SelectTrigger className="w-full" aria-label="Filtrar por paciente">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(patientItems).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Profesional</p>
-              <Select
-                items={professionalItems}
-                value={professionalId ?? ALL}
-                onValueChange={changeProfessional}
-              >
-                <SelectTrigger className="w-full" aria-label="Filtrar por profesional">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(professionalItems).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Estado</p>
-              <Select
-                items={statusItems}
-                value={status ?? ALL}
-                onValueChange={changeStatus}
-              >
-                <SelectTrigger className="w-full" aria-label="Filtrar por estado">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(statusItems).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-      </ResponsiveFilterBar>
-=======
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput value={search} onChange={setSearch} placeholder="Buscar por paciente, motivo o diagnóstico..." />
         <Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
@@ -242,7 +177,6 @@ export function ClinicalHistoryListPage() {
           </SelectContent>
         </Select>
       </div>
->>>>>>> 901051621dc1257dfd8ecb309bef19db217149d6
 
       <DataTable
         columns={columns}
