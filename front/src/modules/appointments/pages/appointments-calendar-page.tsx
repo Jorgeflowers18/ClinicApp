@@ -1,21 +1,26 @@
 import { useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Calendar, dateFnsLocalizer, type SlotInfo, type View } from "react-big-calendar"
-import { format, getDay, parse, startOfWeek } from "date-fns"
+import { addDays, format, getDay, isSameDay, parse, startOfWeek } from "date-fns"
 import { es } from "date-fns/locale"
-import { Plus, Slash } from "lucide-react"
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Slash } from "lucide-react"
 import { toast } from "sonner"
 
 import "react-big-calendar/lib/css/react-big-calendar.css"
 import "../appointments-calendar.css"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Calendar as DatePickerCalendar } from "@/components/ui/calendar"
+import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { PageHeader } from "@/shared/components/page-header"
+import { ResponsiveFilterBar } from "@/shared/components/responsive-filter-bar"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { usePatientsList } from "@/modules/patients/api/patients.queries"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
@@ -46,6 +51,7 @@ const ALL_PROFESSIONALS = "all"
 type CalendarEvent =
   | { kind: "appointment"; id: string; title: string; start: Date; end: Date; resource: Appointment }
   | { kind: "block"; id: string; title: string; start: Date; end: Date; resource: ScheduleBlock }
+type MobileAgendaView = "day" | "week"
 
 export function AppointmentsCalendarPage() {
   const [searchParams] = useSearchParams()
@@ -61,7 +67,9 @@ export function AppointmentsCalendarPage() {
   const deleteScheduleBlock = useDeleteScheduleBlock()
 
   const [view, setView] = useState<View>("week")
+  const [mobileAgendaView, setMobileAgendaView] = useState<MobileAgendaView>("day")
   const [date, setDate] = useState(new Date())
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>(undefined)
   const [blockFormOpen, setBlockFormOpen] = useState(false)
@@ -118,6 +126,64 @@ export function AppointmentsCalendarPage() {
     return [...appointmentEvents, ...blockEvents]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appointments, scheduleBlocks, patientFilter, professionalFilter, patientsPage])
+  const dayEvents = events
+    .filter((event) => isSameDay(event.start, date))
+    .sort((left, right) => left.start.getTime() - right.start.getTime())
+  const weekDays = Array.from({ length: 7 }, (_, index) =>
+    addDays(startOfWeek(date, { weekStartsOn: 1 }), index)
+  )
+
+  function renderAgendaEvent(event: CalendarEvent) {
+    const isBlock = event.kind === "block"
+    const appointment = isBlock ? undefined : event.resource
+    return (
+      <button
+        key={event.id}
+        type="button"
+        onClick={() => handleSelectEvent(event)}
+        className="block w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Card className="transition-colors hover:bg-muted/30">
+          <CardContent className="flex min-w-0 items-start gap-3 py-4">
+            <div className="w-16 shrink-0 text-sm font-semibold tabular-nums">
+              {format(event.start, "HH:mm")}
+              <span className="block text-xs font-normal text-muted-foreground">
+                {format(event.end, "HH:mm")}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="break-words font-medium">
+                {isBlock ? event.resource.reason : patientName(event.resource.patientId)}
+              </p>
+              <p className="break-words text-sm text-muted-foreground">
+                {isBlock
+                  ? event.resource.professionalId
+                    ? professionalName(event.resource.professionalId)
+                    : event.resource.roomId
+                      ? roomName(event.resource.roomId)
+                      : "Bloqueo de horario"
+                  : `${professionalName(event.resource.professionalId)}${treatmentName(event.resource.treatmentId) ? ` · ${treatmentName(event.resource.treatmentId)}` : ""}`}
+              </p>
+            </div>
+            <Badge
+              variant={
+                isBlock
+                  ? "secondary"
+                  : appointment?.status === "cancelada" || appointment?.status === "no_asistio"
+                    ? "destructive"
+                    : appointment?.status === "completada"
+                      ? "outline"
+                      : "default"
+              }
+              className="shrink-0"
+            >
+              {isBlock ? "Bloqueado" : appointmentStatusLabels[event.resource.status]}
+            </Badge>
+          </CardContent>
+        </Card>
+      </button>
+    )
+  }
 
   function handleSelectSlot(slotInfo: SlotInfo) {
     setEditingAppointment(undefined)
@@ -179,14 +245,39 @@ export function AppointmentsCalendarPage() {
         }
       />
 
-      <div className="flex items-end gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="professionalFilter">Profesional</Label>
+      <ResponsiveFilterBar
+        desktopFilters={
+          <div className="min-w-0 space-y-1">
+            <Label htmlFor="professionalFilter">Profesional</Label>
+            <Select
+              value={professionalFilter}
+              onValueChange={(value) => setProfessionalFilter(value ?? ALL_PROFESSIONALS)}
+            >
+              <SelectTrigger id="professionalFilter" className="w-full sm:w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_PROFESSIONALS}>Todos los profesionales</SelectItem>
+                {professionals?.map((professional) => (
+                  <SelectItem key={professional.id} value={professional.id}>
+                    {professional.name} · {professional.specialty}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+        panelTitle="Filtros de citas"
+        activeFilterCount={Number(professionalFilter !== ALL_PROFESSIONALS)}
+        onClear={() => setProfessionalFilter(ALL_PROFESSIONALS)}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="professionalFilterMobile">Profesional</Label>
           <Select
             value={professionalFilter}
             onValueChange={(value) => setProfessionalFilter(value ?? ALL_PROFESSIONALS)}
           >
-            <SelectTrigger id="professionalFilter" className="w-64">
+            <SelectTrigger id="professionalFilterMobile" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -199,7 +290,7 @@ export function AppointmentsCalendarPage() {
             </SelectContent>
           </Select>
         </div>
-      </div>
+      </ResponsiveFilterBar>
 
       {isError && (
         <Alert variant="destructive">
@@ -211,8 +302,96 @@ export function AppointmentsCalendarPage() {
       {isLoading ? (
         <Skeleton className="h-[600px] w-full" />
       ) : (
-        <div className="min-h-[600px] flex-1 rounded-xl border bg-background p-3">
-          <Calendar
+        <div className="@container min-h-0 min-w-0 flex-1">
+          <section className="space-y-4 @xl:hidden" aria-label="Agenda diaria">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label={mobileAgendaView === "day" ? "Día anterior" : "Semana anterior"}
+                onClick={() => setDate((current) => addDays(current, mobileAgendaView === "day" ? -1 : -7))}
+              >
+                <ChevronLeft />
+              </Button>
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger
+                  render={
+                    <Button variant="outline" className="min-w-0 flex-1 justify-center gap-2">
+                      <CalendarDays />
+                      <span className="truncate capitalize">
+                        {mobileAgendaView === "day"
+                          ? format(date, "EEEE d 'de' MMMM", { locale: es })
+                          : `${format(weekDays[0], "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM", { locale: es })}`}
+                      </span>
+                    </Button>
+                  }
+                />
+                <PopoverContent className="w-auto p-0">
+                  <DatePickerCalendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(selectedDate) => {
+                      if (selectedDate) setDate(selectedDate)
+                      setDatePickerOpen(false)
+                    }}
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label={mobileAgendaView === "day" ? "Día siguiente" : "Semana siguiente"}
+                onClick={() => setDate((current) => addDays(current, mobileAgendaView === "day" ? 1 : 7))}
+              >
+                <ChevronRight />
+              </Button>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileAgendaView((current) => current === "day" ? "week" : "day")}
+              >
+                Ver {mobileAgendaView === "day" ? "semana" : "día"}
+              </Button>
+            </div>
+            {mobileAgendaView === "day" && dayEvents.length === 0 ? (
+              <Card>
+                <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                  No hay citas ni bloqueos para este día.
+                </CardContent>
+              </Card>
+            ) : mobileAgendaView === "day" ? (
+              <div className="space-y-3">
+                {dayEvents.map(renderAgendaEvent)}
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {weekDays.map((weekDay) => {
+                  const dateEvents = events
+                    .filter((event) => isSameDay(event.start, weekDay))
+                    .sort((left, right) => left.start.getTime() - right.start.getTime())
+                  return (
+                    <section key={weekDay.toISOString()} className="space-y-2">
+                      <h2 className="text-sm font-semibold capitalize">
+                        {format(weekDay, "EEEE d 'de' MMMM", { locale: es })}
+                      </h2>
+                      {dateEvents.length > 0 ? (
+                        <div className="space-y-2">{dateEvents.map(renderAgendaEvent)}</div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Sin citas</p>
+                      )}
+                    </section>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+
+          <div className="hidden min-h-[600px] overflow-x-auto rounded-xl border bg-background p-3 @xl:block">
+            <div className="min-w-[560px] xl:min-w-0">
+              <Calendar
             localizer={localizer}
             culture="es"
             events={events}
@@ -252,7 +431,9 @@ export function AppointmentsCalendarPage() {
               agenda: "Agenda",
               noEventsInRange: "No hay citas en este rango.",
             }}
-          />
+            />
+            </div>
+          </div>
         </div>
       )}
 

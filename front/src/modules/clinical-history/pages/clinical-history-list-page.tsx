@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
 import { PageHeader } from "@/shared/components/page-header"
 import { PaginationBar } from "@/shared/components/pagination-bar"
+import { ResponsiveFilterBar } from "@/shared/components/responsive-filter-bar"
 import { SearchInput } from "@/shared/components/search-input"
 import { useTableQueryState } from "@/shared/hooks/use-table-query-state"
 import { formatDateOnly } from "@/shared/lib/date"
@@ -26,7 +27,6 @@ export function ClinicalHistoryListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const patientId = searchParams.get("pacienteId") ?? undefined
   const [professionalId, setProfessionalId] = useState<string | undefined>()
-
   const { search, setSearch, debouncedSearch, page, setPage, pageSize } = useTableQueryState()
   const { data, isLoading, isError, error } = useEncountersList({
     page,
@@ -49,7 +49,35 @@ export function ClinicalHistoryListPage() {
 
   function changePatient(value: string | null) {
     setPage(1)
-    setSearchParams(value && value !== ALL ? { pacienteId: value } : {})
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (value && value !== ALL) next.set("pacienteId", value)
+      else next.delete("pacienteId")
+      return next
+    })
+  }
+
+  function changeProfessional(value: string | null) {
+    setPage(1)
+    setProfessionalId(value && value !== ALL ? value : undefined)
+  }
+
+  function changeStatus(value: string | null) {
+    setPage(1)
+    setStatus(value && value !== ALL ? (value as VisitStatus) : undefined)
+  }
+
+  const activeFilterCount = Number(Boolean(patientId)) + Number(Boolean(professionalId)) + Number(Boolean(status))
+
+  function clearFilters() {
+    setPage(1)
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      next.delete("pacienteId")
+      return next
+    })
+    setProfessionalId(undefined)
+    setStatus(undefined)
   }
 
   function openEncounter(row: EncounterListItem) {
@@ -64,6 +92,41 @@ export function ClinicalHistoryListPage() {
     { key: "professional", header: "Profesional", cell: (row) => resolveProfessionalName(row, professionals) },
     { key: "nextVisit", header: "Próximo control", cell: (row) => (row.nextVisit ? shortDate(row.nextVisit) : "—") },
   ]
+
+  const desktopFilters = (
+    <>
+      <Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
+        <SelectTrigger className="w-56" aria-label="Filtrar por paciente">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(patientItems).map(([value, label]) => (
+            <SelectItem key={value} value={value}>{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select items={professionalItems} value={professionalId ?? ALL} onValueChange={changeProfessional}>
+        <SelectTrigger className="w-56" aria-label="Filtrar por profesional">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(professionalItems).map(([value, label]) => (
+            <SelectItem key={value} value={value}>{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select items={statusItems} value={status ?? ALL} onValueChange={changeStatus}>
+        <SelectTrigger className="w-44" aria-label="Filtrar por estado">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(statusItems).map(([value, label]) => (
+            <SelectItem key={value} value={value}>{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  )
 
   return (
     <div className="space-y-4">
@@ -117,6 +180,7 @@ export function ClinicalHistoryListPage() {
 
       <DataTable
         columns={columns}
+        mobileTitleKey="patient"
         data={data?.items ?? []}
         getRowId={(row) => row.id}
         isLoading={isLoading}

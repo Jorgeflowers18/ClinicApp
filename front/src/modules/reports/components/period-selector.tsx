@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ResponsiveFilterBar } from "@/shared/components/responsive-filter-bar"
 
 import { getPresetPeriod } from "../lib/period"
 import {
@@ -27,15 +28,20 @@ export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
     onChange({ preset: "custom", period: { ...value.period, [field]: date } })
   }
 
-  return (
-    <div className="flex flex-wrap items-end gap-3">
+  function clearFilters() {
+    const preset: ReportPeriodPreset = "last30"
+    onChange({ preset, period: getPresetPeriod(preset) })
+  }
+
+  const filters = (prefix: string) => (
+    <>
       <div className="space-y-1">
-        <Label htmlFor="reportPreset">Periodo</Label>
+        <Label htmlFor={`${prefix}ReportPreset`}>Periodo</Label>
         <Select
           value={value.preset}
           onValueChange={(preset) => handlePresetChange((preset ?? "last30") as ReportPeriodPreset)}
         >
-          <SelectTrigger id="reportPreset" className="w-48">
+          <SelectTrigger id={`${prefix}ReportPreset`} className="w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -48,9 +54,9 @@ export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
         </Select>
       </div>
       <div className="space-y-1">
-        <Label htmlFor="reportFrom">Desde</Label>
+        <Label htmlFor={`${prefix}ReportFrom`}>Desde</Label>
         <Input
-          id="reportFrom"
+          id={`${prefix}ReportFrom`}
           type="date"
           value={value.period.from}
           max={value.period.to}
@@ -60,9 +66,9 @@ export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="reportTo">Hasta</Label>
+        <Label htmlFor={`${prefix}ReportTo`}>Hasta</Label>
         <Input
-          id="reportTo"
+          id={`${prefix}ReportTo`}
           type="date"
           value={value.period.to}
           min={value.period.from}
@@ -71,6 +77,17 @@ export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
           className="w-auto"
         />
       </div>
-    </div>
+    </>
+  )
+
+  return (
+    <ResponsiveFilterBar
+      desktopFilters={<div className="flex flex-wrap items-end gap-3">{filters("desktop")}</div>}
+      panelTitle="Filtros del reporte"
+      activeFilterCount={Number(value.preset !== "last30")}
+      onClear={clearFilters}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">{filters("mobile")}</div>
+    </ResponsiveFilterBar>
   )
 }

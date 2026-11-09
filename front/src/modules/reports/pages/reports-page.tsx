@@ -2,7 +2,8 @@ import { useState } from "react"
 import { Info } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AdaptiveTabs } from "@/components/ui/adaptive-tabs"
+import { TabsContent } from "@/components/ui/tabs"
 import { PageHeader } from "@/shared/components/page-header"
 import { env } from "@/shared/lib/env"
 
@@ -41,14 +42,15 @@ export function ReportsPage() {
         </Alert>
       )}
 
-      <Tabs defaultValue="agenda">
-        <TabsList>
-          <TabsTrigger value="agenda">Agenda</TabsTrigger>
-          <TabsTrigger value="productividad">Productividad</TabsTrigger>
-          <TabsTrigger value="tratamientos">Tratamientos</TabsTrigger>
-          <TabsTrigger value="inventario">Inventario</TabsTrigger>
-        </TabsList>
-
+      <AdaptiveTabs
+        defaultValue="agenda"
+        items={[
+          { value: "agenda", label: "Agenda", accessibleLabel: "Agenda" },
+          { value: "productividad", label: "Productividad", accessibleLabel: "Productividad" },
+          { value: "tratamientos", label: "Tratamientos", accessibleLabel: "Tratamientos" },
+          { value: "inventario", label: "Inventario", accessibleLabel: "Inventario" },
+        ]}
+      >
         <TabsContent value="agenda" className="pt-4">
           <AgendaReportTab period={state.period} />
         </TabsContent>
@@ -61,7 +63,7 @@ export function ReportsPage() {
         <TabsContent value="inventario" className="pt-4">
           <InventoryReportTab period={state.period} />
         </TabsContent>
-      </Tabs>
+      </AdaptiveTabs>
     </div>
   )
 }

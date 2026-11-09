@@ -3,8 +3,7 @@ import { Plus } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
 import { formatDateOnly } from "@/shared/lib/date"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 
@@ -17,6 +16,28 @@ export function SterilizationTab() {
   const { data: cycles, isLoading } = useSterilizationCyclesList()
   const { data: inventoryPage } = useInventoryList({ page: 1, pageSize: 100 })
   const { data: professionals } = useProfessionals()
+  const columns: DataTableColumn<NonNullable<typeof cycles>[number]>[] = [
+    {
+      key: "date",
+      header: "Fecha",
+      cell: (cycle) => formatDateOnly(cycle.performedAt, { year: "numeric", month: "short", day: "2-digit" }),
+    },
+    { key: "items", header: "Instrumentos", cell: (cycle) => cycle.itemIds.map(itemName).join(", ") },
+    {
+      key: "result",
+      header: "Resultado",
+      cell: (cycle) => (
+        <Badge variant={cycle.result === "aprobado" ? "default" : "destructive"}>
+          {sterilizationResultLabels[cycle.result]}
+        </Badge>
+      ),
+    },
+    {
+      key: "professional",
+      header: "Responsable",
+      cell: (cycle) => professionalName(cycle.responsibleProfessionalId),
+    },
+  ]
 
   function itemName(itemId: string) {
     return inventoryPage?.items.find((item) => item.id === itemId)?.name ?? "Insumo"
@@ -35,42 +56,15 @@ export function SterilizationTab() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <Skeleton className="h-48 w-full" />
-      ) : cycles && cycles.length > 0 ? (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Instrumentos</TableHead>
-                <TableHead>Resultado</TableHead>
-                <TableHead>Responsable</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {cycles.map((cycle) => (
-                <TableRow key={cycle.id}>
-                  <TableCell className="text-muted-foreground">
-                    {formatDateOnly(cycle.performedAt, { year: "numeric", month: "short", day: "2-digit" })}
-                  </TableCell>
-                  <TableCell>{cycle.itemIds.map(itemName).join(", ")}</TableCell>
-                  <TableCell>
-                    <Badge variant={cycle.result === "aprobado" ? "default" : "destructive"}>
-                      {sterilizationResultLabels[cycle.result]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{professionalName(cycle.responsibleProfessionalId)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          Sin ciclos de esterilización registrados todavía.
-        </p>
-      )}
+      <DataTable
+        columns={columns}
+        data={cycles ?? []}
+        getRowId={(cycle) => cycle.id}
+        isLoading={isLoading}
+        mobileTitleKey="items"
+        emptyTitle="Sin ciclos de esterilización"
+        emptyDescription="Todavía no hay ciclos registrados."
+      />
 
       <SterilizationCycleFormDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>

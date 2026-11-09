@@ -4,8 +4,7 @@ import { Plus } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
 import { formatDateTime } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
 
@@ -31,6 +30,53 @@ export function PurchaseOrdersTab() {
   const receiveOrder = useReceivePurchaseOrder()
   const cancelOrder = useCancelPurchaseOrder()
   const { data: suppliers } = useSuppliersList()
+  const columns: DataTableColumn<PurchaseOrder>[] = [
+    { key: "supplier", header: "Proveedor", cell: (order) => supplierName(order.supplierId) },
+    { key: "lines", header: "Líneas", cell: (order) => order.lines.length },
+    {
+      key: "status",
+      header: "Estado",
+      cell: (order) => (
+        <Badge variant={STATUS_VARIANT[order.status]}>
+          {purchaseOrderStatusLabels[order.status]}
+        </Badge>
+      ),
+    },
+    {
+      key: "date",
+      header: "Fecha",
+      cell: (order) => formatDateTime(order.createdAt, { year: "numeric", month: "short", day: "2-digit" }),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-10 text-right",
+      cell: (order) => order.status === "pendiente" && (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(event) => {
+              event.stopPropagation()
+              handleReceive(order.id)
+            }}
+          >
+            Recibir
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(event) => {
+              event.stopPropagation()
+              handleCancel(order.id)
+            }}
+          >
+            Cancelar
+          </Button>
+        </div>
+      ),
+    },
+  ]
 
   function supplierName(supplierId: string) {
     return suppliers?.find((supplier) => supplier.id === supplierId)?.name ?? "Proveedor"
@@ -69,69 +115,15 @@ export function PurchaseOrdersTab() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <Skeleton className="h-48 w-full" />
-      ) : orders && orders.length > 0 ? (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Proveedor</TableHead>
-                <TableHead>Líneas</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id} className="cursor-pointer" onClick={() => openDetail(order)}>
-                  <TableCell className="font-medium">{supplierName(order.supplierId)}</TableCell>
-                  <TableCell>{order.lines.length}</TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[order.status]}>
-                      {purchaseOrderStatusLabels[order.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDateTime(order.createdAt, { year: "numeric", month: "short", day: "2-digit" })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {order.status === "pendiente" && (
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleReceive(order.id)
-                          }}
-                        >
-                          Recibir
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleCancel(order.id)
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          Sin órdenes de compra registradas todavía.
-        </p>
-      )}
+      <DataTable
+        columns={columns}
+        data={orders ?? []}
+        getRowId={(order) => order.id}
+        isLoading={isLoading}
+        emptyTitle="Sin órdenes de compra"
+        emptyDescription="Todavía no hay órdenes de compra registradas."
+        onRowClick={openDetail}
+      />
 
       <PurchaseOrderFormDialog open={dialogOpen} onOpenChange={setDialogOpen} order={selectedOrder} />
     </div>
