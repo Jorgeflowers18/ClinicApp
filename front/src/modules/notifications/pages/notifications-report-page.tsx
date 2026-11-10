@@ -142,6 +142,7 @@ export function NotificationsReportPage() {
           <SearchInput
             value={search}
             onChange={setSearch}
+            ariaLabel="Buscar notificaciones"
             placeholder="Buscar por nombre o identificación..."
           />
         }

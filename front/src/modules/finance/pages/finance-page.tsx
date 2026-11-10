@@ -1,19 +1,13 @@
 import { ArrowUpRight, CreditCard, DollarSign, ReceiptText, ShieldCheck } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageHeader } from "@/shared/components/page-header"
+import { formatCurrency } from "@/shared/lib/number"
 
 import { useFinancialPortfolio } from "../api/finance.queries"
-
-const currency = new Intl.NumberFormat("es-EC", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-})
+import { ActivePortfolio } from "../components/active-portfolio"
 
 export function FinancePage() {
   const navigate = useNavigate()
@@ -49,7 +43,7 @@ export function FinancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{currency.format(totalPaid)}</p>
+            <p className="text-2xl font-semibold">{formatCurrency(totalPaid)}</p>
           </CardContent>
         </Card>
 
@@ -61,7 +55,7 @@ export function FinancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{currency.format(totalPending)}</p>
+            <p className="text-2xl font-semibold">{formatCurrency(totalPending)}</p>
           </CardContent>
         </Card>
 
@@ -73,7 +67,7 @@ export function FinancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{currency.format(totalOverdue)}</p>
+            <p className="text-2xl font-semibold">{formatCurrency(totalOverdue)}</p>
           </CardContent>
         </Card>
 
@@ -94,41 +88,8 @@ export function FinancePage() {
         <CardHeader>
           <CardTitle>Cartera activa</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Tratamiento</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Pagado</TableHead>
-                <TableHead>Pendiente</TableHead>
-                <TableHead>Vencido</TableHead>
-                <TableHead>Próximo venc.</TableHead>
-                <TableHead>Días mora</TableHead>
-                <TableHead>Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={`${row.patientId}-${row.treatmentId}`}>
-                  <TableCell>{row.patientName}</TableCell>
-                  <TableCell>{row.treatmentName}</TableCell>
-                  <TableCell>{currency.format(row.total)}</TableCell>
-                  <TableCell>{currency.format(row.paid)}</TableCell>
-                  <TableCell>{currency.format(row.pending)}</TableCell>
-                  <TableCell>{currency.format(row.overdue)}</TableCell>
-                  <TableCell>{row.nextDueDate ?? "—"}</TableCell>
-                  <TableCell>{row.daysLate}</TableCell>
-                  <TableCell>
-                    <Badge variant={row.status === "vencida" ? "destructive" : row.status === "parcial" ? "secondary" : "outline"}>
-                      {row.status === "al_dia" ? "Al día" : row.status === "parcial" ? "Parcial" : "Vencida"}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent className="min-w-0 px-0 pb-4">
+          <ActivePortfolio rows={rows} />
         </CardContent>
       </Card>
 

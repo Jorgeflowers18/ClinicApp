@@ -1,0 +1,27 @@
+/* Application shell, navigation and page-header rules. */
+.clinic-app-shell { color: var(--foreground); }
+.clinic-app-canvas { background: var(--background); }
+.clinic-app-header, .clinic-app-sidebar, .clinic-app-sidebar-panel {
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  border-color: var(--border);
+}
+.clinic-app-header [role="group"] {
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.clinic-sidebar-link { border: 1px solid transparent; }
+.clinic-sidebar-link:hover { background: var(--muted); color: var(--foreground); }
+.clinic-sidebar-link[aria-current="page"] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  border-color: var(--border);
+  box-shadow: inset 2px 0 var(--sidebar-accent-foreground);
+}
+
+@media (max-width: 639px) {
+  [data-slot="page-header"] > :last-child > [data-slot="button"] {
+    max-width: 100%;
+    white-space: normal;
+  }
+}

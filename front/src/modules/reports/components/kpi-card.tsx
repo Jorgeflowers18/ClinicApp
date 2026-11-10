@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface KpiCardProps {
@@ -9,11 +10,21 @@ interface KpiCardProps {
   hint?: string
   icon?: LucideIcon
   isLoading?: boolean
+  className?: string
+  iconClassName?: string
 }
 
-export function KpiCard({ label, value, hint, icon: Icon, isLoading }: KpiCardProps) {
+export function KpiCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  isLoading,
+  className,
+  iconClassName,
+}: KpiCardProps) {
   return (
-    <Card>
+    <Card className={className}>
       <CardContent className="flex items-center justify-between p-4">
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>
@@ -25,7 +36,7 @@ export function KpiCard({ label, value, hint, icon: Icon, isLoading }: KpiCardPr
           {hint && !isLoading && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
         {Icon && (
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className={cn("flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary", iconClassName)}>
             <Icon className="size-5" />
           </div>
         )}

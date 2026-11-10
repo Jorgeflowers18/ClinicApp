@@ -118,7 +118,7 @@ export function AdaptiveTabs({
         <TabsList
           variant={variant}
           className={cn(
-            "h-10 min-w-0 max-w-full flex-nowrap justify-start gap-1 overflow-hidden",
+            "h-12 lg:h-10 min-w-0 max-w-full flex-nowrap justify-start gap-1 overflow-hidden",
             listClassName
           )}
         >
@@ -126,7 +126,7 @@ export function AdaptiveTabs({
             <TabsTrigger
               key={item.value}
               value={item.value}
-              className="h-8 flex-none px-3"
+              className="h-11 lg:h-8 flex-none px-3"
             >
               {item.label}
             </TabsTrigger>
@@ -163,7 +163,7 @@ export function AdaptiveTabs({
               }
               data-active={activeItemIsOverflowed || undefined}
               className={cn(
-                "inline-flex h-8 flex-none items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-background/70 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                "inline-flex h-11 lg:h-8 flex-none items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-background/70 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                 activeItemIsOverflowed && "bg-background text-foreground shadow-sm"
               )}
             >

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { useTheme } from "next-themes"
-import { CalendarDays, LockKeyhole, UserRound } from "lucide-react"
+import { CalendarDays, LockKeyhole } from "lucide-react"
 import { createId } from "@/shared/lib/id"
+import { formatDateOnly } from "@/shared/lib/date"
 import type { ChartSnapshot } from "../types/clinical-history.types"
 
 export interface ChartHandle {
@@ -79,6 +80,9 @@ export function OdontogramFrame({ source, patientName, birthDate, readOnly, onCh
     const listener = (event: MessageEvent) => {
       if (event.origin !== location.origin || event.source !== frame.current?.contentWindow || event.data?.channel !== "clinicapp:odontogram") return
       const { type, payload } = event.data
+      if (type === "diagnoses-open") {
+        frame.current?.scrollIntoView({ block: "end", behavior: "smooth" })
+      }
       if (type === "ready") {
         const data = initial.current
         themeRef.current()
@@ -110,14 +114,9 @@ export function OdontogramFrame({ source, patientName, birthDate, readOnly, onCh
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-muted-foreground">
-            <UserRound aria-hidden="true" className="size-4 shrink-0" />
-            <span className="shrink-0">Profesional:</span>
-            <span className="max-w-[16rem] truncate">{professionalName}</span>
-          </span>
           <span className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2">
             <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
-            {visit.status === "cerrada" ? "Cerrada" : "Abierta"}
+            {formatDateOnly(source.date)}
           </span>
           {readOnly && (
             <span className="inline-flex min-h-11 items-center gap-2 rounded-md bg-muted px-3 py-2 text-muted-foreground">
@@ -129,7 +128,7 @@ export function OdontogramFrame({ source, patientName, birthDate, readOnly, onCh
       </header>
       {!ready && <p role="status" className="p-4 text-sm text-muted-foreground">{error || "Cargando odontograma y periodontograma…"}</p>}
       <iframe ref={frame} src="/odontogram.html" title="Odontograma y periodontograma del paciente"
-        className="h-[850px] w-full border-0 bg-background" />
+        className="h-[min(850px,calc(100dvh-4rem))] w-full border-0 bg-background" />
     </section>
   )
 }

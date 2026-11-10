@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageHeader } from "@/shared/components/page-header"
 import { formatDateOnly, formatDateTime } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { formatCurrency } from "@/shared/lib/number"
 
 import { useInventoryItem, useInventoryLots, useInventoryMovements } from "../api/inventory.queries"
 import { RegisterMovementDialog } from "../components/register-movement-dialog"
@@ -92,7 +93,7 @@ export function InventoryItemDetailPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Costo unitario</p>
-            <p className="text-2xl font-semibold">${item.unitCost.toFixed(2)}</p>
+            <p className="text-2xl font-semibold">{formatCurrency(item.unitCost)}</p>
           </CardContent>
         </Card>
       </div>

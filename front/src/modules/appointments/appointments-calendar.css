@@ -5,8 +5,10 @@
 
 .rbc-toolbar button {
   color: var(--foreground);
-  border-color: var(--border);
-  border-radius: 0.5rem;
+  background: var(--card);
+  border-color: var(--input);
+  border-radius: var(--radius-control);
+  min-height: 36px;
 }
 
 .rbc-toolbar button:hover {
@@ -28,30 +30,32 @@
 }
 
 .rbc-event {
-  background-color: var(--primary);
+  background-color: var(--calendar-event);
+  color: var(--calendar-event-foreground);
   border-radius: 4px;
   border: none;
 }
 
 .rbc-event.rbc-event-completed {
   background-color: var(--muted-foreground);
-  opacity: 0.7;
+  color: var(--background);
 }
 
 .rbc-event.rbc-event-cancelled {
   background-color: var(--destructive);
-  opacity: 0.5;
+  color: var(--destructive-foreground);
   text-decoration: line-through;
 }
 
 .rbc-event.rbc-event-no-show {
-  background-color: var(--destructive);
-  opacity: 0.35;
+  background-color: var(--destructive-surface);
+  color: var(--destructive);
   border: 1px dashed var(--destructive);
 }
 
 .rbc-event.rbc-event-block {
   background-color: var(--muted-foreground);
+  color: var(--background);
   background-image: repeating-linear-gradient(
     45deg,
     transparent,
@@ -59,7 +63,6 @@
     rgba(255, 255, 255, 0.2) 4px,
     rgba(255, 255, 255, 0.2) 8px
   );
-  opacity: 0.6;
   cursor: default;
 }
 
@@ -75,6 +78,12 @@
 .rbc-time-slot {
   border-color: var(--border);
 }
+
+.rbc-header { background: var(--muted); color: var(--foreground); }
+.rbc-event.rbc-selected { outline: 2px solid var(--ring); outline-offset: 1px; }
+.rbc-show-more { color: var(--info); }
+.rbc-overlay { background: var(--popover); color: var(--popover-foreground); border-color: var(--border); }
+.rbc-toolbar button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 @media (max-width: 640px) {
   .rbc-toolbar {
@@ -98,6 +107,7 @@
   }
 
   .rbc-toolbar button {
+    min-height: 44px;
     padding: 0.375rem 0.5rem;
     font-size: 0.875rem;
   }

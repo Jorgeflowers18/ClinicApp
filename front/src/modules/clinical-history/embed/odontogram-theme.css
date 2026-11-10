@@ -33,7 +33,17 @@ body, .dark body { background: var(--clinic-background) !important; color: var(-
 .topbar button[hidden], .topbar a[hidden] { display: none !important; }
 .brand-logo { width: 34px; height: auto; }
 .title { font-size: 14px; }
-.layout { grid-template-columns: minmax(0, 1fr) 360px; padding: 12px; }
+.layout { grid-template-columns: minmax(0, 1fr) 360px; padding: 12px; min-width: 0; }
+.chart-column, .dental-chart-column, .chart, .panel { min-width: 0; max-width: 100%; }
+.chart { overflow: visible; container-type: inline-size; }
+.chart-header { min-width: 0; flex-wrap: wrap; }
+.chart-header > div:first-child { min-width: 0; flex: 1 1 12rem; }
+.chart-title, .chart-hint { overflow-wrap: anywhere; }
+.chart-actions { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+.chart-mode-toggle { max-width: 100%; flex-wrap: wrap; }
+.tooth-grid { min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.odontogram-root { width: 100%; min-width: 0; max-width: 100%; }
+html, body, #root { width: 100%; min-width: 0; min-height: 0; }
 .btn, .dark .btn, .btn-theme, .dark .btn-theme, .dropdown-item, .dark .dropdown-item,
 select, .dark select, input, .dark input, textarea, .dark textarea {
   color: var(--clinic-text) !important;
@@ -58,7 +68,169 @@ button:hover, .dark button:hover { background-color: color-mix(in srgb, var(--cl
 .chart { --odon-select-rgb: 100,100,100 !important; }
 .dark .chart { --odon-select-rgb: 220,220,220 !important; }
 @media (max-width: 1000px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+@container (max-width: 480px) {
+  .perio-overlay-body { padding: 10px 8px; }
+  .perio-fullgrid-arch {
+    grid-template-columns: 88px repeat(16, 46px) !important;
+  }
+  .perio-fullgrid-row-label {
+    min-width: 0;
+    box-sizing: border-box;
+    gap: 4px;
+    padding-inline: 6px;
+  }
+  .perio-fullgrid-row-label-text {
+    display: -webkit-box;
+    min-width: 0;
+    overflow: hidden;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .chart-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+  }
+  .chart-header > div:first-child { grid-column: 1 / -1; }
+  .chart-mode-toggle { grid-column: 1; grid-row: 2; }
+  .proposed-legend { grid-column: 2; grid-row: 2; justify-self: end; }
+  .chart-actions { grid-column: 1 / -1; grid-row: 3; justify-content: flex-start; }
+  .chart-mode-btn { min-height: 44px; padding-inline: 10px; }
+}
+@container (max-width: 220px) {
+  .perio-fullgrid-arch {
+    grid-template-columns: 38px repeat(16, 46px) !important;
+  }
+  .perio-fullgrid-row-label {
+    gap: 2px;
+    padding-inline: 2px;
+  }
+  .perio-fullgrid-row-label-text {
+    -webkit-line-clamp: 1;
+  }
+}
+@media (max-width: 480px) {
+  .topbar { padding: 10px; gap: 8px; }
+  .topbar-actions { width: 100%; justify-content: flex-start; gap: 6px; }
+  .layout { gap: 10px; padding: 8px; }
+  .chart-header { padding: 10px; }
+  .tooth-grid { scroll-padding-inline: 8px; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+#caseDiagnosesModal {
+  width: min(520px, calc(100vw - 32px));
+  max-width: 520px;
+  max-height: min(88vh, 720px);
+  min-height: 0;
+  overflow: hidden;
+  gap: 16px;
+  padding: 24px;
+}
+#caseDiagnosesModal .odon-credits-title {
+  max-width: 100%;
+  padding-right: 52px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+#caseDiagnosesModal .odon-settings-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+}
+#caseDiagnosesSection {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#caseDiagnosesSection #caseDxAddSelect {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  order: 0;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 0 6px;
+  padding-inline: 12px;
+  white-space: normal;
+  font-size: 16px;
+  background: var(--clinic-panel) !important;
+}
+#caseDiagnosesSection .case-diagnoses-row {
+  order: 1;
+  min-width: 0;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--clinic-line);
+}
+#caseDiagnosesSection .dx-name {
+  min-width: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+#caseDiagnosesSection .dx-name .dx-label {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+#caseDiagnosesSection .case-diagnoses-row select,
+#caseDiagnosesSection .case-dx-remove {
+  box-sizing: border-box;
+  min-height: 44px;
+}
+#caseDiagnosesSection .case-diagnoses-row select {
+  min-width: 0;
+  max-width: 100%;
+}
+#caseDiagnosesSection .case-dx-remove {
+  width: 44px;
+  flex: 0 0 44px;
+}
+#caseDiagnosesSection:not(:has(.case-diagnoses-row))::before {
+  order: 1;
+  padding: 16px 12px;
+  border: 1px dashed var(--clinic-line);
+  border-radius: 10px;
+  color: var(--clinic-muted);
+  text-align: center;
+  content: "Aún no hay diagnósticos registrados.";
+}
+@media (min-width: 601px) and (max-width: 900px) {
+  #caseDiagnosesModal { width: min(560px, calc(100vw - 40px)); }
+}
+@media (max-width: 600px) {
+  .odon-confirm-backdrop:has(#caseDiagnosesModal) {
+    align-items: flex-end;
+    padding: 0;
+  }
+  #caseDiagnosesModal {
+    width: 100%;
+    max-width: none;
+    max-height: min(88dvh, 720px);
+    gap: 14px;
+    padding: 24px 16px calc(12px + env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+    border-bottom: 0;
+  }
+  #caseDiagnosesModal .odon-credits-title {
+    padding-right: 52px;
+    font-size: 18px;
+  }
+}
 
 :root {
   --clinic-background: #f5f1eb;
@@ -77,6 +249,8 @@ html, body, #root {
 
 .odontogram-root {
   background: transparent !important;
+  width: 100%;
+  min-width: 0;
 }
 
 .chart,
@@ -93,6 +267,9 @@ html, body, #root {
   gap: 4px;
   background: transparent !important;
   padding: 0 !important;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .tooth-tile {

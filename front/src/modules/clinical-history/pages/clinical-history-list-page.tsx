@@ -62,12 +62,7 @@ export function ClinicalHistoryListPage() {
     setProfessionalId(value && value !== ALL ? value : undefined)
   }
 
-  function changeStatus(value: string | null) {
-    setPage(1)
-    setStatus(value && value !== ALL ? (value as VisitStatus) : undefined)
-  }
-
-  const activeFilterCount = Number(Boolean(patientId)) + Number(Boolean(professionalId)) + Number(Boolean(status))
+  const activeFilterCount = Number(Boolean(patientId)) + Number(Boolean(professionalId))
 
   function clearFilters() {
     setPage(1)
@@ -77,7 +72,6 @@ export function ClinicalHistoryListPage() {
       return next
     })
     setProfessionalId(undefined)
-    setStatus(undefined)
   }
 
   function openEncounter(row: EncounterListItem) {
@@ -115,16 +109,6 @@ export function ClinicalHistoryListPage() {
           ))}
         </SelectContent>
       </Select>
-      <Select items={statusItems} value={status ?? ALL} onValueChange={changeStatus}>
-        <SelectTrigger className="w-44" aria-label="Filtrar por estado">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {Object.entries(statusItems).map(([value, label]) => (
-            <SelectItem key={value} value={value}>{label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </>
   )
 
@@ -143,40 +127,53 @@ export function ClinicalHistoryListPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchInput value={search} onChange={setSearch} placeholder="Buscar por paciente, motivo o diagnóstico..." />
-        <Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
-          <SelectTrigger className="w-56" aria-label="Filtrar por paciente">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(patientItems).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          items={professionalItems}
-          value={professionalId ?? ALL}
-          onValueChange={(value) => {
-            setPage(1)
-            setProfessionalId(value && value !== ALL ? value : undefined)
-          }}
-        >
-          <SelectTrigger className="w-56" aria-label="Filtrar por profesional">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(professionalItems).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <ResponsiveFilterBar
+        search={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            ariaLabel="Buscar atenciones clínicas"
+            placeholder="Buscar por paciente, motivo o diagnóstico..."
+          />
+        }
+        desktopFilters={desktopFilters}
+        panelTitle="Filtros del historial"
+        activeFilterCount={activeFilterCount}
+        onClear={clearFilters}
+      >
+        <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Paciente</p>
+              <Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
+                <SelectTrigger className="w-full" aria-label="Filtrar por paciente">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(patientItems).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Profesional</p>
+              <Select
+                items={professionalItems}
+                value={professionalId ?? ALL}
+                onValueChange={changeProfessional}
+              >
+                <SelectTrigger className="w-full" aria-label="Filtrar por profesional">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(professionalItems).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+      </ResponsiveFilterBar>
 
       <DataTable
         columns={columns}
@@ -187,6 +184,7 @@ export function ClinicalHistoryListPage() {
         isError={isError}
         errorMessage={getErrorMessage(error)}
         onRowClick={openEncounter}
+        getRowLabel={(row) => `Abrir atención de ${patientItems[row.patientId] ?? "paciente"}`}
         emptyTitle="Sin atenciones"
         emptyDescription={
           patientId

@@ -11,6 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Inbox } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export interface DataTableColumn<T> {
   key: string
@@ -29,7 +30,9 @@ interface DataTableProps<T> {
   emptyTitle?: string
   emptyDescription?: string
   onRowClick?: (row: T) => void
+  getRowLabel?: (row: T) => string
   mobileTitleKey?: string
+  className?: string
 }
 
 export function DataTable<T>({
@@ -42,14 +45,16 @@ export function DataTable<T>({
   emptyTitle = "Sin resultados",
   emptyDescription = "No se encontraron registros con los criterios actuales.",
   onRowClick,
+  getRowLabel,
   mobileTitleKey,
+  className,
 }: DataTableProps<T>) {
   const titleColumn = columns.find((column) => column.key === mobileTitleKey) ?? columns[0]
   const detailColumns = columns.filter((column) => column !== titleColumn && column.header)
   const actionColumns = columns.filter((column) => !column.header)
 
   return (
-    <div className="@container min-w-0">
+    <div className={cn("@container min-w-0", className)}>
       <div className="hidden rounded-lg border @md:block">
         <Table>
           <TableHeader>
@@ -101,7 +106,24 @@ export function DataTable<T>({
                 <TableRow
                   key={getRowId(row)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
-                  className={onRowClick ? "cursor-pointer" : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.target !== event.currentTarget) return
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault()
+                            onRowClick(row)
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={onRowClick ? 0 : undefined}
+                  aria-label={onRowClick ? getRowLabel?.(row) : undefined}
+                  className={
+                    onRowClick
+                      ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                      : undefined
+                  }
                 >
                   {columns.map((column) => (
                     <TableCell key={column.key} className={column.className}>
@@ -172,6 +194,7 @@ export function DataTable<T>({
                   <div
                     role="button"
                     tabIndex={0}
+                    aria-label={getRowLabel?.(row)}
                     onClick={() => onRowClick(row)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {

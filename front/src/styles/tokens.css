@@ -1,0 +1,35 @@
+/* Shared palette, typography, spacing and geometry. Semantic theme roles live in themes.css. */
+:root {
+  /* Original values recovered from the project's clinic tokens in Git. */
+  --clinic-violet: #5350cc;
+  --clinic-violet-hover: #403cd5;
+  --linear-void: #08090a;
+  --linear-carbon: #0f1011;
+  --linear-obsidian: #161718;
+  --linear-graphite: #23252a;
+  --linear-smoke: #383b3f;
+  --linear-ash: #62666d;
+  --linear-fog: #8a8f98;
+  --linear-mist: #d0d6e0;
+  --linear-bone: #e5e5e6;
+  --linear-paper: #ffffff;
+  --linear-acid-lime: #e4f222;
+  --linear-pulse-green: #27a644;
+  --linear-coral-red: #eb5757;
+  --linear-signal-teal: #02b8cc;
+  --linear-iris-violet: #6366f1;
+  --linear-lavender: #8b5cf6;
+  --font-ui: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  --space-unit: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-small: 2px;
+  --radius-control: 6px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --radius: var(--radius-control);
+}

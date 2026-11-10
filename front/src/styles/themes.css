@@ -1,0 +1,105 @@
+/* Approved light and dark semantic values. next-themes owns the root class. */
+:root {
+  /* Compatibility aliases: CA and primary buttons share the same source. */
+  --brand-logo-background: var(--primary);
+  --brand-logo-foreground: var(--primary-foreground);
+  --institution-mark-background: #5350cc;
+  --institution-mark-foreground: var(--linear-paper);
+  --background: #f7f7f8;
+  --foreground: #17191c;
+  --card: var(--linear-paper);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--clinic-violet);
+  --primary-foreground: var(--linear-paper);
+  --primary-hover: var(--clinic-violet-hover);
+  --secondary: #f1f2f3;
+  --secondary-foreground: var(--foreground);
+  --muted: #f1f2f3;
+  --muted-foreground: #62666d;
+  --accent: color-mix(in srgb, var(--clinic-violet) 12%, var(--card));
+  --accent-foreground: var(--clinic-violet);
+  --destructive: #b42332;
+  --destructive-foreground: var(--linear-paper);
+  --destructive-surface: #fff0f1;
+  --success: #187d30;
+  --success-surface: #eaf6ed;
+  --warning: #805700;
+  --warning-surface: #fff7de;
+  --info: #007384;
+  --info-surface: #e9f8fb;
+  --border: #e1e3e6;
+  --separator: #e5e7eb;
+  /* Input boundaries are stronger than decorative borders for identification. */
+  --input: #858c97;
+  --input-surface: var(--card);
+  --ring: #007fbd;
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --chart-1: #02889a;
+  --chart-2: var(--linear-iris-violet);
+  --chart-3: var(--linear-lavender);
+  --chart-4: var(--success);
+  --chart-5: var(--linear-coral-red);
+  --calendar-event: #5350cc;
+  --calendar-event-foreground: var(--linear-paper);
+  --overlay: rgb(8 9 10 / 55%);
+  --shadow-card: 0 1px 2px rgb(8 9 10 / 3%);
+  --shadow-popover: 0 8px 24px rgb(8 9 10 / 12%);
+  /* Compatibility aliases; existing modules use the same values. */
+  --clinic-bg: var(--background);
+  --clinic-surface: var(--card);
+  --clinic-surface-elevated: var(--muted);
+  --clinic-border: var(--border);
+  --clinic-text: var(--foreground);
+  --clinic-text-muted: var(--muted-foreground);
+  --clinic-primary: var(--primary);
+  --clinic-primary-hover: var(--primary-hover);
+  --clinic-primary-text: var(--primary);
+  --clinic-on-primary: var(--primary-foreground);
+  --clinic-focus: var(--ring);
+  --clinic-data: var(--chart-1);
+  color-scheme: light;
+}
+
+.dark {
+  --background: var(--linear-void);
+  --foreground: var(--linear-paper);
+  --card: var(--linear-carbon);
+  --primary: var(--linear-acid-lime);
+  --primary-foreground: var(--linear-void);
+  --primary-hover: #d5e31d;
+  --secondary: var(--linear-obsidian);
+  --muted: var(--linear-obsidian);
+  --muted-foreground: var(--linear-mist);
+  --accent: var(--linear-graphite);
+  --accent-foreground: var(--foreground);
+  --destructive: #ff9099;
+  --destructive-foreground: var(--linear-void);
+  --destructive-surface: #35181d;
+  --success: #73d98b;
+  --success-surface: #12271a;
+  --warning: #f5cf6a;
+  --warning-surface: #302710;
+  --info: var(--linear-signal-teal);
+  --info-surface: #09292e;
+  --border: var(--linear-graphite);
+  --separator: var(--linear-smoke);
+  --input: #686e78;
+  --input-surface: var(--linear-obsidian);
+  --ring: var(--linear-iris-violet);
+  --chart-1: var(--linear-signal-teal);
+  --chart-4: var(--linear-pulse-green);
+  --calendar-event: var(--linear-signal-teal);
+  --calendar-event-foreground: var(--linear-void);
+  --shadow-card: none;
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 32%);
+  color-scheme: dark;
+}

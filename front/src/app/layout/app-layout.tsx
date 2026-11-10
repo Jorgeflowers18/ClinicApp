@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactElement } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
-import { Building2, LogOut, MoonStar, SunMedium, UserRound } from "lucide-react"
+import { Building2, LogOut, Menu, MoonStar, SunMedium, UserRound } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils"
 import { useLogout } from "@/modules/auth/api/auth.queries"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
+import { BrandLogo } from "@/shared/components/brand-logo"
 
 import { navItems, type NavItem } from "../nav-config"
 
@@ -74,6 +75,9 @@ export function AppLayout() {
   const visibleItems = navItems.filter(
     (item) => !item.roles || (user && item.roles.includes(user.role))
   )
+  const isClinicalRoute = pathname.startsWith("/historial-clinico")
+  const isPilotRoute = pathname === "/" || pathname === "/pacientes" || pathname.startsWith("/pacientes/")
+  const isAdminVisualRoute = !isClinicalRoute
   const currentSection = pathname === "/"
     ? navItems[0]
     : navItems.find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))
@@ -81,17 +85,26 @@ export function AppLayout() {
     pathname === "/perfil-institucion"
       ? "Perfil institucional"
       : pathname === "/perfil-usuario"
-        ? "Perfil"
+        ? "Mi perfil"
         : currentSection?.label ?? "Página no encontrada"
+
+  // Keep the existing first-login setup independent of the application chrome.
+  // ProtectedRoute still owns the same setup condition and redirects.
+  if (pathname === "/perfil-usuario" && (!user?.profile || !user.profile.fullName?.trim())) {
+    return <Outlet />
+  }
 
   return (
     <div
       className={cn(
-        "grid h-dvh min-h-0 min-w-0 grid-cols-[56px_minmax(0,1fr)] overflow-hidden transition-[grid-template-columns] duration-200 lg:grid-cols-[72px_minmax(0,1fr)]",
+        "clinic-app-shell grid h-dvh min-h-0 min-w-0 grid-cols-[minmax(0,1fr)] overflow-hidden transition-[grid-template-columns] duration-200 lg:grid-cols-[72px_minmax(0,1fr)]",
+        isAdminVisualRoute && "clinic-admin-shell",
+        isClinicalRoute && "clinic-clinical-shell",
+        isPilotRoute && "clinic-pilot-shell",
         isSidebarExpanded && !isMobileViewport && "lg:grid-cols-[256px_minmax(0,1fr)]"
       )}
     >
-      <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r bg-muted/20">
+      <aside className={cn("clinic-app-sidebar hidden min-h-0 min-w-0 flex-col overflow-hidden border-r bg-sidebar lg:flex", isAdminVisualRoute && "clinic-admin-sidebar")}>
         <SidebarContent
           visibleItems={visibleItems}
           isAdmin={user?.role === "admin"}
@@ -116,7 +129,7 @@ export function AppLayout() {
         <SheetContent
           side="left"
           showCloseButton={false}
-          className="w-[min(16rem,85vw)] max-w-none gap-0 overflow-hidden p-0 data-[side=left]:w-[min(16rem,85vw)]"
+          className={cn("clinic-app-sidebar-panel w-[min(16rem,85vw)] max-w-none gap-0 overflow-hidden p-0 data-[side=left]:w-[min(16rem,85vw)]", isAdminVisualRoute && "clinic-admin-sidebar-panel")}
         >
           <SheetTitle className="sr-only">Navegación principal</SheetTitle>
           <SidebarContent
@@ -139,7 +152,19 @@ export function AppLayout() {
       </Sheet>
 
       <div className="flex min-h-0 min-w-0 flex-col">
-        <header className="flex h-16 min-w-0 shrink-0 items-center justify-between gap-2 border-b px-3 sm:gap-3 sm:px-4 md:px-6">
+        <header className={cn("clinic-app-header flex h-16 min-w-0 shrink-0 items-center justify-between gap-2 border-b px-3 sm:gap-3 sm:px-4 md:px-6", isAdminVisualRoute && "clinic-admin-header")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0 lg:hidden"
+            aria-label="Abrir menú"
+            aria-haspopup="dialog"
+            aria-expanded={isMobileViewport && isSidebarExpanded}
+            onClick={() => setIsSidebarExpanded(true)}
+          >
+            <Menu aria-hidden="true" />
+          </Button>
           <nav aria-label="Migas de pan" className="min-w-0 flex-1 overflow-hidden">
             <ol className="flex min-w-0 items-center gap-2 text-sm">
               <li className="shrink-0">
@@ -166,7 +191,7 @@ export function AppLayout() {
                 <AvatarFallback>{user ? getInitials(user.name) : "?"}</AvatarFallback>
               )}
             </Avatar>
-            <div className="hidden max-w-44 text-left sm:block">
+            <div className="max-w-24 text-left sm:max-w-44">
               <p className="truncate text-sm font-medium leading-4">{user?.name}</p>
               <p className="truncate text-xs leading-4 text-muted-foreground">
                 {user ? ROLE_LABELS[user.role] : ""}
@@ -175,7 +200,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
+        <main className={cn("clinic-app-canvas min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6", isAdminVisualRoute && "clinic-admin-canvas", isClinicalRoute && "clinic-clinical-canvas", isPilotRoute && "clinic-pilot-canvas")}>
           <Outlet />
         </main>
       </div>
@@ -240,6 +265,7 @@ function SidebarContent({
   const linkClass = (active: boolean) =>
     cn(
       "flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+      "clinic-sidebar-link",
       isCollapsed && "justify-center px-0",
       active && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
     )
@@ -268,9 +294,7 @@ function SidebarContent({
           : "min-h-16 items-center justify-between gap-2 px-2 py-2"
       )}>
         <div className={cn("flex min-w-0 items-center", isCollapsed ? "justify-center" : "gap-2")}>
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
-            CA
-          </div>
+          <BrandLogo />
           {!isCollapsed && (
             <span className="min-w-0 flex-1 text-sm font-semibold leading-4">
               ClinicApp Odontología
@@ -315,7 +339,7 @@ function SidebarContent({
       <div className={cn("shrink-0 space-y-1 border-t", isCollapsed ? "p-1 lg:p-2" : "p-3")}>
         <SidebarNavLink
           to="/perfil-usuario"
-          label="Perfil"
+          label="Mi perfil"
           icon={<UserRound className="size-4 shrink-0" />}
           collapsed={isCollapsed}
           tooltipEnabled={tooltipEnabled}
@@ -378,7 +402,7 @@ function SidebarTooltip({
         <TooltipContent
           side={side}
           sideOffset={8}
-          className="duration-200 bg-neutral-800 text-white [&>svg]:bg-neutral-800 [&>svg]:fill-neutral-800"
+          className="duration-200 bg-popover text-popover-foreground [&>svg]:bg-popover [&>svg]:fill-popover"
         >
           {label}
         </TooltipContent>

@@ -123,7 +123,7 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   await editor.locator("#calculusRow label").click()
   await expect(editor.locator("#calculusToggle")).toBeChecked()
   await expect(saveBar(page)).toContainText("Odontograma y periodontograma")
-  await page.getByRole("button", { name: "Cambiar tema" }).click()
+  await page.getByRole("button", { name: "Modo claro", exact: true }).click()
   await expect(page.locator("html")).toHaveClass(/dark/)
   await expect(editor.locator("html")).toHaveClass(/dark/)
   const outerColor = await page.evaluate(() =>
@@ -134,7 +134,8 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
       editor.locator("html").evaluate((node) => getComputedStyle(node).getPropertyValue("--clinic-background").trim())
     )
     .toBe(outerColor)
-  await page.getByRole("button", { name: "Cambiar tema" }).click()
+  await page.screenshot({ path: "test-results/dental-dark.png", fullPage: true })
+  await page.getByRole("button", { name: "Modo oscuro", exact: true }).click()
   await expect(page.locator("html")).not.toHaveClass(/dark/)
 
   await editor.locator("#appViewDentalChart").click()
@@ -613,12 +614,12 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   // Navegando dentro de la app (sin recargar los mocks): el tratamiento quedó registrado en el catálogo
   // con el costo cobrado, que también usa el resumen financiero.
   await page.getByRole("link", { name: "Tratamientos", exact: true }).click()
-  await page.getByText("Resina compuesta", { exact: true }).click()
+  await page.getByRole("row", { name: /^Ver tratamiento: Resina compuesta/ }).click()
   await expect(page).toHaveURL(/\/tratamientos\/trt_4$/)
   const recipient = page.getByRole("row", { name: /María/ })
   await expect(recipient).toContainText("46")
   await expect(recipient).toContainText("$40,00")
-  await expect(page.getByText("$40.00").first()).toBeVisible()
+  await expect(page.getByText("$40,00", { exact: true }).first()).toBeVisible()
   await expect(page.getByRole("button", { name: /Sesión/ })).toHaveCount(0)
   expect(errors).toEqual([])
 })

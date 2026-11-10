@@ -1,0 +1,19 @@
+CLINICAPP ODONTOLOGÍA - USUARIOS DE PRUEBA
+
+Acceso local: http://localhost:5173/login
+Estas cuentas corresponden al modo de prueba (mock) del frontend.
+
+ADMINISTRADOR
+Correo: admin@clinica.com
+Contraseña: admin123
+
+RECEPCIÓN
+Correo: recepcion@clinica.com
+Contraseña: recepcion123
+
+MÉDICO
+Correo: medico@clinica.com
+Contraseña: medico123
+
+PRIMER INGRESO
+Si aparece "Completa tu perfil", completa los datos y pulsa "Continuar".
