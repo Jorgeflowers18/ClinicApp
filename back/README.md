@@ -4,11 +4,11 @@ Carpeta reservada para la API REST en .NET del sistema de gestión clínica. Aú
 
 El contrato completo que el frontend (`../front`) espera — endpoints, formato de error de validación (400), y notas de autenticación — está documentado en [`../documentacion/arquitectura-frontend.md`](../documentacion/arquitectura-frontend.md), sección "Endpoints que el backend .NET debe exponer".
 
-Ver [`backlog.md`](./backlog.md) para el desglose de TODOs pendientes por módulo.
+Ver [`backlog.md`](./backlog.md) para el desglose de TODOs pendientes por módulo y [`backlog-desgloce.md`](./backlog-desgloce.md) para el responsable y el orden de trabajo de cada módulo.
 
 ## Resumen rápido
 
 - Autenticación basada en JWT (`POST /auth/login`, `POST /auth/logout`), con cookie `httpOnly` de refresh para restaurar sesión vía `GET /auth/me`.
 - Errores de validación (400) en formato `ValidationProblemDetails` estándar de ASP.NET Core (`{ title, detail, errors: { campo: [mensajes] } }`).
-- Recursos: `patients`, `appointments`, `professionals`, `clinical-history`, `treatments`, `treatment-assignments`, `inventory/items`.
+- Recursos: `patients`, `appointments`, `professionals`, `rooms`, `schedule-blocks`, `clinical-history`, `treatments`, `treatment-assignments`, `inventory`, `notifications`, `finance`, `institution`, `reports`.
 - El frontend consume la API mediante `VITE_API_BASE_URL` (ver `../front/.env.example`) y hoy corre con datos mock (`VITE_USE_MOCK_API=true`) mientras esta API no existe.

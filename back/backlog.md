@@ -4,6 +4,10 @@ TODOs pendientes para la API .NET, extraídos directamente de los comentarios `/
 
 Dividido por módulo, usando los mismos nombres que `front/src/modules/`. Marca cada casilla al implementar el endpoint correspondiente.
 
+Algunos endpoints **no tienen todavía función `*Real` en el frontend** (`finance`, `institution` y parte de `auth`): esas pantallas usan datos de ejemplo o el almacenamiento del navegador. Están marcados como propuesta; al implementarlos hay que agregar también su función `*Real` en el frontend.
+
+La asignación de cada módulo a un responsable y el orden de trabajo están en [`backlog-desgloce.md`](./backlog-desgloce.md).
+
 ---
 
 ## Transversal (aplica a todos los módulos)
@@ -16,6 +20,16 @@ Dividido por módulo, usando los mismos nombres que `front/src/modules/`. Marca 
   El interceptor de Axios del frontend (`shared/lib/http.ts`) espera exactamente este formato para mostrar errores por campo en los formularios.
 - [ ] Conflictos de negocio (choque de horario, etc.) como `409` con el mismo formato `errors` cuando aplique a un campo específico (ej. `startTime`).
 - [ ] Paginación estándar donde el frontend la pide (`page`, `pageSize`, `search`) devolviendo `{ items, page, pageSize, totalItems, totalPages }`.
+- [ ] **Autorización por rol en la API**, igual a la que hoy aplica el frontend con rutas protegidas (que no son una barrera real de seguridad). `403` si el rol no corresponde:
+
+  | Módulo | Roles |
+  |---|---|
+  | `patients`, `appointments` (incluye `professionals`, `rooms`, `schedule-blocks`), `treatments`, `treatment-assignments` | `admin`, `recepcion`, `medico` |
+  | `clinical-history` | `admin`, `medico` |
+  | `inventory`, `notifications`, `finance` | `admin`, `recepcion` |
+  | `reports`, `PUT /institution/profile` | `admin` |
+
+  Ver los conflictos de rol anotados en `reports` y `finance`: algunas pantallas visibles para todos los roles consumen endpoints restringidos.
 
 ## `auth`
 
@@ -25,6 +39,14 @@ Dividido por módulo, usando los mismos nombres que `front/src/modules/`. Marca 
 - [ ] Roles soportados: `admin`, `recepcion`, `medico` (usados para autorización por endpoint, no solo en el frontend).
 - [ ] Vincular usuario y profesional: incluir `professionalId` (opcional) en el `user` de `/auth/login` y `/auth/me`. La historia clínica lo usa como profesional por defecto de una atención nueva; hoy el frontend lo deduce comparando el nombre del usuario con `GET /professionals` (`clinical-history/hooks/use-default-professional.ts`).
 
+**Endpoints sin función `*Real` en el frontend** (el frontend aún no los llama; los nombres son una propuesta y al implementarlos hay que agregar su función `*Real` en `auth.api.ts`):
+
+- [ ] `POST /auth/refresh` — renueva el `accessToken` con la cookie `httpOnly` de refresh. Lo necesita `GET /auth/me` para restaurar la sesión; el interceptor de `shared/lib/http.ts` hoy cierra la sesión ante cualquier `401`, sin intentar renovarla.
+- [ ] `PUT /auth/me/profile` — guarda el perfil del usuario (`UserProfile`: `fullName`, `title`, `specialty`, `bio`, `avatarColor`, `avatarImage`) desde "Mi perfil" (`/perfil-usuario`). `/auth/login` y `/auth/me` deben devolverlo en `user.profile`; si es `null`, el frontend obliga a completarlo al primer ingreso. Hoy el frontend lo guarda solo en la sesión (`auth-store.ts` → `updateUserProfile`) y se pierde al cerrar sesión. La foto (`avatarImage`) hoy es una imagen en base64: definir si se sube como archivo aparte (por ejemplo, `POST /auth/me/avatar`) con límite de tamaño.
+- [ ] `POST /auth/password-recovery` (body: `{ email }`) — envía el enlace de recuperación. Responder siempre `202`, exista o no el correo, para no revelar qué cuentas existen. Más `POST /auth/password-reset` (body: `{ token, password }`) para fijar la contraseña nueva. Hoy la pantalla "Recuperar contraseña" valida el correo pero el botón dice "aún no disponible". Requiere el canal de envío de correos (ver `notifications`).
+- [ ] `POST /auth/access-requests` (body: `{ email, fullName, institution, message }`) — registra una solicitud de acceso desde "Solicitar acceso". Hoy la pantalla valida los datos pero no los envía. Definir quién la revisa y cómo se crea el usuario.
+- [ ] **Gestión de usuarios:** no hay pantalla para crear usuarios, asignar roles ni desactivarlos. Mientras no exista, los usuarios se cargan por semilla (seed) o script. Definir con la clínica si se agrega una pantalla de administración.
+
 ## `patients`
 
 - [ ] `GET /patients` (query: `page`, `pageSize`, `search` — nombre/cédula/teléfono).
@@ -32,6 +54,7 @@ Dividido por módulo, usando los mismos nombres que `front/src/modules/`. Marca 
 - [ ] `POST /patients`.
 - [ ] `PUT /patients/:id`.
 - [ ] `DELETE /patients/:id`.
+- [ ] **Baja lógica en `DELETE /patients/:id`:** el backlog de producto (ítem 4) pide baja lógica, no borrado físico; el paciente tiene historia clínica, citas, tratamientos y pagos que deben conservarse. Definir si `GET /patients` oculta los dados de baja y si se pueden reactivar.
 - [ ] Campo `notificationsEnabled: boolean` en el body de `POST`/`PUT` — persistirlo; los pacientes nuevos deben crearse con `true` por defecto.
 - [ ] **Datos del cliente (ítem 12):** `POST`/`PUT /patients` reciben `maritalStatus` (`"" | soltero | casado | union_libre | divorciado | viudo`), `occupation`, `company` (máx. 120), `nationality` (máx. 60), `city` (ciudad / provincia, máx. 120) y `emergencyContactRelationship` (máx. 60). Se editan desde la historia clínica (pestaña "Datos del paciente") y desde la ficha; es el mismo registro. Se quitan `medicalHistory` y `allergies`: los reemplazan los antecedentes y las alergias de la historia clínica (definir la migración de los textos existentes; el mock los convierte en "Otro" y en una fila de alergia).
 - [ ] **N.° de historia clínica:** `clinicalRecordNumber` (formato `HC-000123`, correlativo) lo asigna el servidor al crear el paciente y es de solo lectura (`PUT` lo ignora). Confirmar con la clínica si ya tiene una numeración propia que haya que respetar.
@@ -119,6 +142,8 @@ Historia clínica odontológica única por paciente: un **registro editable** (`
 
 Todos restringidos al rol `admin`. Query `from`/`to` en `YYYY-MM-DD`, **inclusivos**, en la zona horaria de la clínica. La agregación debe hacerse en SQL del lado del servidor (el frontend hoy la simula en memoria); las formas de respuesta están en `front/src/modules/reports/types/report.types.ts`.
 
+- [ ] **Conflicto de rol con el Inicio:** la página de Inicio (`app/pages/dashboard-page.tsx`) la ven los tres roles y llama a `GET /reports/summary` y `GET /reports/agenda` del mes en curso. Si estos endpoints quedan solo para `admin`, recepción y médico recibirán `403` en el Inicio. Opciones: permitir esos dos endpoints a todos los roles, o crear `GET /dashboard/summary` con los indicadores del Inicio (y que el frontend lo use).
+
 - [ ] `GET /reports/summary` — `patientsTotal`, `activeTreatments` (asignaciones `en_progreso`) y `criticalStockItems` (`stock <= minStock`) son puntuales, ignoran el periodo. `patientsNewInPeriod` filtra `patients.createdAt`; `appointmentsInPeriod/Completed/NoShow` filtran `appointments.start`; `notificationsSent` filtra `sentAt` con `status = enviada`. `noShowRate = noShow / (completadas + noShow)` (0 si el denominador es 0).
 - [ ] `GET /reports/agenda` — `byDay` con todos los días del periodo (relleno en cero) y conteos por estado; `byStatus` con los 5 estados; `occupancyByRoom` con minutos reservados (citas no canceladas) y bloqueados por consultorio, más una fila "Sin consultorio" si hay citas sin `roomId`.
 - [ ] `GET /reports/productivity` — por profesional: programadas, completadas, no asistió, canceladas, `completionRate = completadas / max(1, programadas − canceladas)`. No incluir sesiones de tratamiento por profesional hasta que `treatment-assignments` registre `professionalId`.
@@ -134,6 +159,26 @@ Todos restringidos al rol `admin`. Query `from`/`to` en `YYYY-MM-DD`, **inclusiv
 - [ ] **Disparo automático de notificaciones** — el backend debe generar un `NotificationLog` (tipo `confirmacion_cita`) al crear una cita y uno (tipo `cancelacion_cita`) al cancelarla, reemplazando las variables de la plantilla con los datos reales, **solo si** `patient.notificationsEnabled` es `true`. En el frontend esto hoy está simulado en el propio mock (`notificationsApi.logAppointmentEvent`); no expone ni debe exponer un endpoint propio — es un efecto secundario de `POST /appointments` y `PATCH /appointments/:id/status`, no una llamada aparte del frontend.
 - [ ] **Recordatorios (`recordatorio_cita`)** — requieren un scheduler/cron real (disparo por tiempo antes de la cita, no por una acción de usuario). No hay forma de simular esto desde el frontend; queda enteramente del lado del backend/infraestructura.
 - [ ] Definir el canal real de envío (hoy el modelo soporta `email`/`sms` pero no hay integración con ningún proveedor).
+
+## `finance`
+
+Cartera y resúmenes financieros por tratamiento y por paciente. **El frontend no tiene funciones `*Real` ni `TODO` en este módulo:** `finance.api.ts` llama directamente a los cálculos del mock (`finance.mock-data.ts`). Los endpoints de abajo son una propuesta; al implementarlos hay que agregar el par Mock/Real en `finance.api.ts`. Las formas de respuesta están en `front/src/modules/finance/types/finance.types.ts`.
+
+- [ ] `GET /finance/portfolio` — cartera activa (`FinancialPortfolioRow[]`): una fila por paciente + tratamiento con `total`, `paid`, `pending`, `overdue`, `nextDueDate`, `daysLate` y `status` (`al_dia | parcial | vencida`). Pantalla "Finanzas" (`/finanzas`).
+- [ ] `GET /finance/treatments/:treatmentId/summary?patientId=` — `FinancialSummary` de un tratamiento (opcionalmente de un paciente): valor total, pagado, saldo pendiente y vencido, cobertura del seguro, responsabilidad del paciente, próximo vencimiento, pagos, cuotas, seguro y factura. Lo usa el detalle del tratamiento.
+- [ ] `GET /finance/patients/:patientId/summary` — `PatientFinancialSummary` (tratamientos, total pagado, pendiente, vencido, próximo vencimiento, cantidad de pagos). Lo usa la ficha del paciente.
+- [ ] Calcular los montos con el costo cobrado de cada asignación (`price`; ver `treatments`), no con el precio del catálogo.
+- [ ] **Conflicto de rol:** `/finanzas` es solo para `admin` y `recepcion`, pero la ficha del paciente y el detalle del tratamiento (visibles para los tres roles) muestran los resúmenes financieros. Definir si el médico puede verlos o si el frontend debe ocultarlos para ese rol.
+- [ ] **Pagos, cuotas, seguros y facturación (ítem 8 del backlog de producto):** el modelo ya existe en el frontend (`FinancialPayment`, `Installment`, `InsuranceCoverage`, `Invoice` con clave de acceso, XML y RIDE, para la facturación electrónica del SRI), pero no hay pantallas para registrarlos; hoy son datos de ejemplo. No crear sus endpoints de escritura hasta diseñar el ítem 8 en el frontend.
+
+## `institution`
+
+Perfil de la institución (`/perfil-institucion`). **El frontend no tiene archivo `institution.api.ts`:** lee y guarda el perfil en `localStorage` (`institution.types.ts` → `readInstitutionProfile` / `writeInstitutionProfile`). Los endpoints de abajo son una propuesta; al implementarlos hay que crear el par Mock/Real.
+
+- [ ] `GET /institution/profile` — `InstitutionProfile` (`name`, `legalName`, `ruc`, `phone`, `email`, `address`, `website`, `logoText`, `logoImage`, `notes`, `hours`, `branches[]` con `id`, `name`, `address`, `phone`, `hours`, `isMain`). **Debe ser público (sin token) o tener una variante pública** con nombre y logo: la pantalla de inicio de sesión muestra el logo de la institución (`auth-layout.tsx`).
+- [ ] `PUT /institution/profile` — solo `admin`. Validar el RUC (13 dígitos) y que haya como máximo una sede principal (`isMain`).
+- [ ] **Logo:** hoy `logoImage` es una imagen en base64 dentro del perfil. Definir si se sube como archivo aparte (por ejemplo, `POST /institution/logo`) con límite de tamaño y formato.
+- [ ] **Sedes:** el backlog de producto (ítem 2) tiene pendiente definir si el grupo maneja una o varias sedes. Si son varias, las citas, consultorios y profesionales podrían tener que vincularse a una sede; es un cambio de modelo, no solo de endpoint.
 
 ---
 
