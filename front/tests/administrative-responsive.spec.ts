@@ -48,7 +48,7 @@ test("mobile appointments keep a full date and a shortcut to today", async ({ pa
 for (const theme of ["light", "dark"] as const) {
   test(`financial portfolio preserves every field in cards and desktop table in ${theme}`, async ({ page }, testInfo) => {
     await login(page)
-    if (theme === "dark") await page.getByRole("button", { name: "Modo claro", exact: true }).click()
+    if (theme === "dark") await page.getByRole("switch", { name: "Modo oscuro", exact: true }).setChecked(true)
     await page.goto("/finanzas")
 
     const portfolio = page.locator('[data-slot="active-portfolio"]')

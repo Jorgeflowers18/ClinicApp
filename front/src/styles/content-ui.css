@@ -1,0 +1,139 @@
+/* Content only. Login, the application header and both sidebar presentations are outside this scope. */
+.clinic-app-canvas {
+  --ring: var(--primary);
+  --content-control-height: 38px;
+  --content-text-size: 0.875rem;
+  --content-label-size: 0.8125rem;
+  font-size: var(--content-text-size);
+  line-height: 1.5;
+}
+
+.clinic-app-canvas [data-slot="page-header"] {
+  gap: 12px 16px;
+  padding-bottom: 14px;
+}
+.clinic-app-canvas [data-slot="page-header"] h1 {
+  font-size: 24px;
+  line-height: 1.25;
+}
+.clinic-app-canvas [data-slot="card-title"]:not(.text-sm) {
+  font-size: 17px;
+  font-weight: 590;
+}
+.clinic-app-canvas :is([data-slot="label"], [data-slot="field-label"]) {
+  font-size: var(--content-label-size);
+  line-height: 1.4;
+  font-weight: 510;
+}
+.clinic-app-canvas :is([data-slot="input"], [data-slot="select-trigger"]) {
+  height: auto;
+  min-height: var(--content-control-height);
+  padding-block: 7px;
+  font-size: var(--content-text-size);
+  line-height: 20px;
+}
+.clinic-app-canvas [data-slot="button"] {
+  height: auto;
+  min-height: var(--content-control-height);
+  padding-block: 7px;
+  font-size: var(--content-label-size);
+  line-height: 20px;
+}
+.clinic-app-canvas [data-slot="textarea"] {
+  font-size: var(--content-text-size);
+  line-height: 1.5;
+}
+.clinic-admin-canvas [data-slot="field-group"] { gap: 16px; }
+.clinic-admin-canvas [data-slot="field"] { gap: 6px; }
+
+.clinic-kpi-card {
+  align-self: start;
+  --kpi-icon-color: var(--muted-foreground);
+  --kpi-icon-surface: var(--muted);
+  gap: 0;
+  padding-block: 0;
+}
+.clinic-kpi-card > [data-slot="card-content"] {
+  gap: 12px;
+  padding: 14px 16px;
+}
+.clinic-kpi-copy { min-width: 0; }
+.clinic-kpi-label { font-size: 13px; line-height: 1.4; font-weight: 510; }
+.clinic-kpi-value { margin-top: 4px; font-size: 24px; line-height: 1.2; font-weight: 590; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.clinic-kpi-value[data-textual="true"] { font-size: 21px; }
+.clinic-kpi-hint { margin-top: 4px; font-size: 12px; line-height: 1.4; }
+.clinic-kpi-card[data-icon-tone="info"] { --kpi-icon-color: var(--info); --kpi-icon-surface: var(--info-surface); }
+.clinic-kpi-card[data-icon-tone="success"] { --kpi-icon-color: var(--success); --kpi-icon-surface: var(--success-surface); }
+.clinic-kpi-card[data-icon-tone="warning"] { --kpi-icon-color: var(--warning); --kpi-icon-surface: var(--warning-surface); }
+.clinic-kpi-card[data-icon-tone="destructive"] { --kpi-icon-color: var(--destructive); --kpi-icon-surface: var(--destructive-surface); }
+.clinic-summary-icon { width: 32px; height: 32px; flex-shrink: 0; background: var(--kpi-icon-surface); color: var(--kpi-icon-color); }
+.clinic-demo-notice { display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--info) 22%, var(--border)); border-radius: var(--radius-control); background: var(--info-surface); color: var(--muted-foreground); font-size: 12px; line-height: 1.5; }
+.clinic-demo-notice > svg { color: var(--info); margin-top: 1px; }
+
+.clinic-app-canvas [data-slot="card"]:has(> [data-slot="card-content"].p-4:only-child) { padding-block: 0; }
+.clinic-data-table [data-slot="table-head"] { height: 42px; padding-inline: 12px; font-size: 13px; font-weight: 510; color: var(--muted-foreground); }
+.clinic-data-table [data-slot="table-cell"] { padding: 8px 12px; font-size: 14px; line-height: 20px; }
+.clinic-data-table [data-slot="table-body"] > [data-slot="table-row"] { height: 46px; }
+.clinic-data-table :is([data-column="price"], [data-column="unitPrice"], [data-column="total"], [data-column="paid"], [data-column="balance"]) { text-align: right; font-variant-numeric: tabular-nums; }
+.clinic-data-table :is([data-column="unitCost"], [data-column="stock"], [data-column="minStock"], [data-column="quantity"], [data-column="amount"]) { text-align: right; font-variant-numeric: tabular-nums; }
+.clinic-data-table [data-column="stock"] > div { justify-content: flex-end; }
+.clinic-data-table [data-slot="dropdown-menu-trigger"] { min-width: 34px; min-height: 34px; }
+.clinic-app-canvas [data-slot="button"][data-variant="outline"] { border-color: var(--border); background-color: var(--card); }
+.clinic-app-canvas [data-slot="button"][data-variant="outline"]:not(:disabled):hover { background-color: var(--muted); }
+.clinic-app-canvas [data-slot="tabs-trigger"][data-active]:not(.sr-only) { background: var(--accent); color: var(--accent-foreground); font-weight: 590; box-shadow: inset 0 -2px var(--primary); }
+.clinic-app-canvas [data-slot="tabs-trigger"][data-active]::after { background: var(--primary); }
+.clinic-app-canvas [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"][data-active] { box-shadow: none; }
+.clinic-app-canvas [data-slot="table-body"] > [data-slot="table-row"]:not([tabindex]):not(:has(button, a)):hover { background: transparent; }
+.clinic-pagination { padding-block: 8px; font-size: 13px; }
+.clinic-pagination :is(p, span) { font-size: 13px; font-variant-numeric: tabular-nums; }
+.clinic-admin-canvas [data-slot="table-head"] { height: 42px; font-size: 13px; font-weight: 590; }
+.clinic-admin-canvas [data-slot="table-cell"] { font-variant-numeric: tabular-nums; }
+.clinic-finance-table :is([data-column="total"], [data-column="paid"], [data-column="pending"], [data-column="overdue"], [data-column="daysLate"]) { text-align: right; font-variant-numeric: tabular-nums; }
+@media (min-width: 1024px) {
+  .clinic-admin-canvas form [data-slot="input"][type="number"] { max-width: 14rem; }
+}
+
+/* Portals belonging to content screens; excludes sidebar sheets, tooltips and every access screen. */
+body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="popover-content"], [data-slot="select-content"], [data-slot="dropdown-menu-content"]) { --ring: var(--primary); }
+body:has(.clinic-app-canvas) :is([data-slot="select-item"][data-selected], [data-slot="dropdown-menu-radio-item"][data-checked]) { background: var(--accent); color: var(--accent-foreground); font-weight: 590; box-shadow: inset 2px 0 var(--primary); }
+body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) [data-slot="button"] {
+  min-height: 38px;
+  font-size: 13px;
+}
+body:has(.clinic-app-canvas) :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="select-item"]) {
+  min-height: 38px;
+  padding-block: 8px;
+  font-size: 13px;
+  line-height: 20px;
+}
+body:has(.clinic-app-canvas) :is([data-slot="dialog-title"], [data-slot="alert-dialog-title"]) { font-size: 18px; }
+body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) :is([data-slot="label"], [data-slot="field-label"]) { font-size: 13px; }
+body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) :is([data-slot="input"], [data-slot="select-trigger"]) { min-height: 38px; font-size: 14px; }
+body:has(.clinic-app-canvas) [data-slot="dialog-content"] [data-slot="field-group"] { gap: 16px; }
+body:has(.clinic-app-canvas) [data-slot="dialog-content"] [data-slot="field"] { gap: 6px; }
+
+@media (max-width: 1023px), (pointer: coarse) {
+  .clinic-app-canvas { --content-control-height: 44px; }
+  .clinic-data-table [data-slot="dropdown-menu-trigger"] { min-width: 44px; min-height: 44px; }
+  body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) [data-slot="button"],
+  body:has(.clinic-app-canvas) :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="select-item"]) { min-height: 44px; }
+  body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) :is([data-slot="input"], [data-slot="select-trigger"]) { min-height: 44px; }
+  .clinic-app-canvas :is([data-slot="input"], [data-slot="textarea"]),
+  body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) :is([data-slot="input"], [data-slot="textarea"]) { font-size: 16px; }
+}
+
+/* Notification editing and preview share the same real form and state. */
+.clinic-notification-template { container: notification-template / inline-size; }
+.clinic-template-layout { display: grid; min-width: 0; gap: 16px; }
+.clinic-template-editor { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.clinic-template-variables { display: flex; flex-wrap: wrap; gap: 8px; }
+.clinic-template-preview { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--muted); padding: 16px; }
+.clinic-template-preview p { overflow-wrap: anywhere; }
+.clinic-template-actions { display: flex; justify-content: flex-end; }
+@container notification-template (min-width: 48rem) {
+  .clinic-template-layout { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+  .clinic-template-actions { grid-column: 1 / -1; }
+}
+@media (max-width: 639px) {
+  .clinic-app-canvas [data-slot="page-header"] h1 { font-size: 21px; }
+}

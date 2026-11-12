@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom"
 import { Calendar, dateFnsLocalizer, type SlotInfo, type View } from "react-big-calendar"
 import { addDays, format, getDay, isSameDay, parse, startOfWeek } from "date-fns"
 import { es } from "date-fns/locale"
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, Slash } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Slash } from "lucide-react"
 import { toast } from "sonner"
 
 import "react-big-calendar/lib/css/react-big-calendar.css"
@@ -12,10 +12,8 @@ import "../appointments-calendar.css"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar as DatePickerCalendar } from "@/components/ui/calendar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
@@ -33,6 +31,8 @@ import {
   useScheduleBlocksList,
 } from "../api/appointments.queries"
 import { AppointmentDetailDialog } from "../components/appointment-detail-dialog"
+import { AppointmentsToolbar } from "../components/appointments-toolbar"
+import { CalendarDateNavigator } from "../components/calendar-date-navigator"
 import { AppointmentFormDialog } from "../components/appointment-form-dialog"
 import { ScheduleBlockFormDialog } from "../components/schedule-block-form-dialog"
 import { appointmentStatusLabels, type Appointment, type ScheduleBlock } from "../types/appointment.types"
@@ -47,6 +47,7 @@ const localizer = dateFnsLocalizer({
 })
 
 const ALL_PROFESSIONALS = "all"
+const calendarComponents = { toolbar: AppointmentsToolbar }
 
 type CalendarEvent =
   | { kind: "appointment"; id: string; title: string; start: Date; end: Date; resource: Appointment }
@@ -60,6 +61,10 @@ export function AppointmentsCalendarPage() {
   const { data: appointments, isLoading, isError, error } = useAppointmentsList()
   const { data: scheduleBlocks } = useScheduleBlocksList()
   const { data: professionals } = useProfessionals()
+  const professionalItems = {
+    [ALL_PROFESSIONALS]: "Todos los profesionales",
+    ...Object.fromEntries((professionals ?? []).map((professional) => [professional.id, professional.name])),
+  }
   const { data: rooms } = useRooms()
   const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
   const { data: treatments } = useActiveTreatments()
@@ -70,7 +75,6 @@ export function AppointmentsCalendarPage() {
   // user's choice. Event, date, selection and form handlers remain shared.
   const mobileAgendaView = view === "day" ? "day" : "week"
   const [date, setDate] = useState(new Date())
-  const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>(undefined)
   const [blockFormOpen, setBlockFormOpen] = useState(false)
@@ -133,6 +137,14 @@ export function AppointmentsCalendarPage() {
   const weekDays = Array.from({ length: 7 }, (_, index) =>
     addDays(startOfWeek(date, { weekStartsOn: 1 }), index)
   )
+  const scrollToTime = useMemo(() => {
+    const visibleDays = view === "day" ? [date] : Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(date, { weekStartsOn: 1 }), index))
+    const hours = events.filter((event) => visibleDays.some((day) => isSameDay(day, event.start))).map((event) => event.start.getHours())
+    const hour = hours.length ? Math.max(0, Math.min(...hours) - 1) : new Date().getHours()
+    const target = new Date(date)
+    target.setHours(hour, 0, 0, 0)
+    return target
+  }, [events, date, view])
 
   function renderAgendaEvent(event: CalendarEvent) {
     const isBlock = event.kind === "block"
@@ -251,6 +263,7 @@ export function AppointmentsCalendarPage() {
           <div className="min-w-0 space-y-1">
             <Label htmlFor="professionalFilter">Profesional</Label>
             <Select
+              items={professionalItems}
               value={professionalFilter}
               onValueChange={(value) => setProfessionalFilter(value ?? ALL_PROFESSIONALS)}
             >
@@ -275,6 +288,7 @@ export function AppointmentsCalendarPage() {
         <div className="space-y-2">
           <Label htmlFor="professionalFilterMobile">Profesional</Label>
           <Select
+            items={professionalItems}
             value={professionalFilter}
             onValueChange={(value) => setProfessionalFilter(value ?? ALL_PROFESSIONALS)}
           >
@@ -303,7 +317,7 @@ export function AppointmentsCalendarPage() {
       {isLoading ? (
         <Skeleton className="h-[600px] w-full" />
       ) : (
-        <div className="@container min-h-0 min-w-0 flex-1">
+        <div className="clinic-appointments-calendar @container min-h-0 min-w-0 flex-1">
           <div className="mb-4 flex min-w-0 items-center gap-3 @xl:hidden">
             <Label htmlFor="compact-calendar-view">Vista</Label>
             <Select items={{ month: "Mes", week: "Semana", day: "Día" }} value={view} onValueChange={(nextView) => {
@@ -327,36 +341,14 @@ export function AppointmentsCalendarPage() {
               >
                 <ChevronLeft />
               </Button>
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger
-                  render={
-                    <Button variant="outline" className="min-w-0 flex-1 justify-center gap-2">
-                      <CalendarDays />
-                      <span className="hidden truncate capitalize @[22rem]:inline">
-                        {mobileAgendaView === "day"
-                          ? format(date, "EEEE d 'de' MMMM", { locale: es })
-                          : `${format(weekDays[0], "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM yyyy", { locale: es })}`}
-                      </span>
-                      <span className="truncate capitalize @[22rem]:hidden">
-                        {mobileAgendaView === "day"
-                          ? format(date, "d MMM yyyy", { locale: es })
-                          : `${format(weekDays[0], "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM yyyy", { locale: es })}`}
-                      </span>
-                    </Button>
-                  }
-                />
-                <PopoverContent className="w-auto p-0">
-                  <DatePickerCalendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(selectedDate) => {
-                      if (selectedDate) setDate(selectedDate)
-                      setDatePickerOpen(false)
-                    }}
-                    locale={es}
-                  />
-                </PopoverContent>
-              </Popover>
+              <CalendarDateNavigator
+                date={date}
+                onSelect={setDate}
+                className="flex-1"
+                label={mobileAgendaView === "day"
+                  ? format(date, "d MMM yyyy", { locale: es })
+                  : `${format(weekDays[0], weekDays[0].getFullYear() !== weekDays[6].getFullYear() ? "d MMM yyyy" : "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM yyyy", { locale: es })}`}
+              />
               <Button
                 variant="outline"
                 size="icon"
@@ -412,7 +404,7 @@ export function AppointmentsCalendarPage() {
           </section>}
 
           <div
-            className={`${view === "month" ? "block" : "hidden"} min-h-[600px] max-w-full overflow-x-auto rounded-xl border bg-card p-3 @xl:block`}
+            className={`clinic-calendar-frame ${view === "month" ? "block" : "hidden"} min-h-[600px] max-w-full overflow-x-auto rounded-xl border bg-card p-3 @xl:block`}
             role="region"
             aria-label="Calendario de citas, desplazable horizontalmente"
             tabIndex={0}
@@ -421,17 +413,19 @@ export function AppointmentsCalendarPage() {
               <Calendar
             localizer={localizer}
             culture="es"
+            components={calendarComponents}
             events={events}
             view={view}
             onView={setView}
             date={date}
             onNavigate={setDate}
+            scrollToTime={scrollToTime}
             views={["month", "week", "day"]}
             selectable
             popup
             onSelectSlot={handleSelectSlot}
             onSelectEvent={handleSelectEvent}
-            style={{ height: 600 }}
+            style={{ height: "clamp(600px, 72dvh, 760px)" }}
             eventPropGetter={(event: CalendarEvent) => {
               if (event.kind === "block") {
                 return { className: "rbc-event-block" }

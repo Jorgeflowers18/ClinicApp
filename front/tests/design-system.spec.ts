@@ -12,8 +12,7 @@ async function login(page: Page) {
 async function setTheme(page: Page, theme: "dark" | "light") {
   const currentIsDark = await page.locator("html").evaluate((element) => element.classList.contains("dark"))
   if (currentIsDark !== (theme === "dark")) {
-    const currentThemeButton = currentIsDark ? "Modo oscuro" : "Modo claro"
-    await page.getByRole("button", { name: currentThemeButton, exact: true }).click()
+    await page.getByRole("switch", { name: "Modo oscuro", exact: true }).setChecked(theme === "dark")
   }
   await expect.poll(() =>
     page.locator("html").evaluate((element) => element.classList.contains("dark"))

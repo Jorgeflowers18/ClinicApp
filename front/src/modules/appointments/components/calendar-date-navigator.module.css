@@ -1,0 +1,45 @@
+.trigger {
+  min-width: 0;
+  max-width: 100%;
+  justify-content: center;
+  gap: 8px;
+  white-space: normal;
+}
+.trigger > span { min-width: 0; line-height: 1.4; }
+.trigger > svg { flex-shrink: 0; }
+.popup[data-slot="popover-content"] {
+  --ring: var(--primary);
+  width: 336px;
+  max-width: min(calc(100vw - 16px), var(--available-width));
+  max-height: min(560px, var(--available-height));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 12px;
+  padding: 12px;
+}
+.fields { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; }
+.popupHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.monthNavigation { display: flex; gap: 4px; }
+.monthNavigation button { min-width: 34px; min-height: 34px; }
+.fields :is(input, [data-slot="select-trigger"]) { min-height: 38px; width: 100%; font-size: 14px; }
+.days[data-slot="calendar"] { width: 100%; padding: 0; background: transparent; }
+.days :global(.rdp-months) { width: 100%; }
+.days :global(.rdp-day) { min-width: 0; aspect-ratio: auto; }
+.days :global(.rdp-week) { margin-top: 4px; }
+.days button[data-slot="button"] {
+  min-width: 0;
+  min-height: 38px;
+  height: 38px;
+  width: 100%;
+  padding: 0;
+  aspect-ratio: auto;
+  font-size: 13px;
+}
+.days button[data-selected-single="true"] { background: var(--primary); color: var(--primary-foreground); font-weight: 590; }
+.days :global(.rdp-today):not([data-selected]) { box-shadow: inset 0 0 0 1px var(--input); }
+.days :global(.rdp-outside):not([data-selected]) { color: var(--muted-foreground); }
+@media (max-width: 1023px), (pointer: coarse) {
+  .monthNavigation button { min-width: 44px; min-height: 44px; }
+  .fields :is(input, [data-slot="select-trigger"]) { min-height: 44px; font-size: 16px; }
+  .days button[data-slot="button"] { min-height: 44px; height: 44px; }
+}

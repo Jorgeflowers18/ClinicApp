@@ -1,9 +1,9 @@
-.rbc-calendar {
+.clinic-appointments-calendar .rbc-calendar {
   font-family: inherit;
   color: var(--foreground);
 }
 
-.rbc-toolbar button {
+.clinic-appointments-calendar .rbc-toolbar button {
   color: var(--foreground);
   background: var(--card);
   border-color: var(--input);
@@ -11,49 +11,49 @@
   min-height: 36px;
 }
 
-.rbc-toolbar button:hover {
+.clinic-appointments-calendar .rbc-toolbar button:hover {
   background: var(--muted);
 }
 
-.rbc-toolbar button.rbc-active {
+.clinic-appointments-calendar .rbc-toolbar button.rbc-active {
   background: var(--primary);
   color: var(--primary-foreground);
   border-color: var(--primary);
 }
 
-.rbc-off-range-bg {
+.clinic-appointments-calendar .rbc-off-range-bg {
   background: var(--muted);
 }
 
-.rbc-today {
+.clinic-appointments-calendar .rbc-today {
   background-color: color-mix(in oklch, var(--primary), transparent 92%);
 }
 
-.rbc-event {
+.clinic-appointments-calendar .rbc-event {
   background-color: var(--calendar-event);
   color: var(--calendar-event-foreground);
   border-radius: 4px;
   border: none;
 }
 
-.rbc-event.rbc-event-completed {
+.clinic-appointments-calendar .rbc-event.rbc-event-completed {
   background-color: var(--muted-foreground);
   color: var(--background);
 }
 
-.rbc-event.rbc-event-cancelled {
+.clinic-appointments-calendar .rbc-event.rbc-event-cancelled {
   background-color: var(--destructive);
   color: var(--destructive-foreground);
   text-decoration: line-through;
 }
 
-.rbc-event.rbc-event-no-show {
+.clinic-appointments-calendar .rbc-event.rbc-event-no-show {
   background-color: var(--destructive-surface);
   color: var(--destructive);
   border: 1px dashed var(--destructive);
 }
 
-.rbc-event.rbc-event-block {
+.clinic-appointments-calendar .rbc-event.rbc-event-block {
   background-color: var(--muted-foreground);
   color: var(--background);
   background-image: repeating-linear-gradient(
@@ -66,49 +66,80 @@
   cursor: default;
 }
 
-.rbc-header,
-.rbc-time-header-content,
-.rbc-time-content,
-.rbc-month-view,
-.rbc-time-view {
+.clinic-appointments-calendar .rbc-header, .clinic-appointments-calendar .rbc-time-header-content, .clinic-appointments-calendar .rbc-time-content, .clinic-appointments-calendar .rbc-month-view, .clinic-appointments-calendar .rbc-time-view {
   border-color: var(--border);
 }
 
-.rbc-day-bg + .rbc-day-bg,
-.rbc-time-slot {
+.clinic-appointments-calendar .rbc-day-bg + .rbc-day-bg, .clinic-appointments-calendar .rbc-time-slot {
   border-color: var(--border);
 }
 
-.rbc-header { background: var(--muted); color: var(--foreground); }
-.rbc-event.rbc-selected { outline: 2px solid var(--ring); outline-offset: 1px; }
-.rbc-show-more { color: var(--info); }
-.rbc-overlay { background: var(--popover); color: var(--popover-foreground); border-color: var(--border); }
-.rbc-toolbar button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.clinic-appointments-calendar .rbc-header { background: var(--muted); color: var(--foreground); }
+.clinic-appointments-calendar .rbc-event.rbc-selected { outline: 2px solid var(--ring); outline-offset: 1px; }
+.clinic-appointments-calendar .rbc-show-more { color: var(--info); }
+.clinic-appointments-calendar .rbc-overlay { background: var(--popover); color: var(--popover-foreground); border-color: var(--border); }
+.clinic-appointments-calendar .rbc-toolbar button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 @media (max-width: 640px) {
-  .rbc-toolbar {
+  .clinic-appointments-calendar .rbc-toolbar {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.5rem;
   }
 
-  .rbc-toolbar-label {
+  .clinic-appointments-calendar .rbc-toolbar-label {
     flex-basis: 100%;
     order: -1;
     margin: 0;
     text-align: center;
   }
 
-  .rbc-btn-group {
+  .clinic-appointments-calendar .rbc-btn-group {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
   }
 
-  .rbc-toolbar button {
+  .clinic-appointments-calendar .rbc-toolbar button {
     min-height: 44px;
     padding: 0.375rem 0.5rem;
     font-size: 0.875rem;
   }
+}
+
+
+/* Calendar-specific density and semantic surfaces. All times and view handlers stay available. */
+.clinic-appointments-calendar { container: appointment-calendar / inline-size; }
+.clinic-appointments-calendar .rbc-toolbar { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; padding: 2px 0 12px; margin-bottom: 0; font-size: 14px; }
+.clinic-appointments-calendar .rbc-toolbar-label { padding: 0; font-size: 14px; font-weight: 590; }
+.clinic-appointments-calendar .rbc-toolbar-label { min-width: 0; }
+.clinic-appointments-calendar .rbc-toolbar-label button { width: 100%; }
+.clinic-appointments-calendar .rbc-toolbar-label button[data-calendar-date-trigger] { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.clinic-appointments-calendar .rbc-btn-group { display: flex; gap: 4px; }
+.clinic-appointments-calendar .rbc-btn-group:first-child { justify-self: start; }
+.clinic-appointments-calendar .rbc-btn-group:last-child { justify-self: end; }
+.clinic-appointments-calendar .rbc-toolbar button { min-height: 38px; padding: 6px 10px; font-size: 13px; line-height: 20px; margin: 0; border-radius: var(--radius-control); box-shadow: none; }
+.clinic-appointments-calendar .rbc-toolbar button.rbc-active { background: var(--accent); color: var(--accent-foreground); border-color: var(--border); box-shadow: inset 0 -2px var(--primary); font-weight: 590; }
+.clinic-appointments-calendar .rbc-header { display: flex; min-height: 38px; align-items: center; justify-content: center; padding: 6px; font-size: 13px; }
+.clinic-appointments-calendar .rbc-time-content, .clinic-appointments-calendar .rbc-timeslot-group,
+.clinic-appointments-calendar .rbc-time-header-content, .clinic-appointments-calendar .rbc-time-header,
+.clinic-appointments-calendar .rbc-time-content > * + * > *, .clinic-appointments-calendar .rbc-day-bg + .rbc-day-bg,
+.clinic-appointments-calendar .rbc-month-row + .rbc-month-row, .clinic-appointments-calendar .rbc-header + .rbc-header { border-color: var(--border); }
+.clinic-appointments-calendar .rbc-timeslot-group { min-height: 72px; }
+.clinic-appointments-calendar .rbc-day-slot .rbc-time-slot { border-color: color-mix(in srgb, var(--border) 45%, transparent); }
+.clinic-appointments-calendar .rbc-time-gutter .rbc-label { padding-inline: 6px; font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.clinic-appointments-calendar .rbc-today { background: color-mix(in srgb, var(--primary) 3%, var(--card)); }
+.clinic-appointments-calendar .rbc-event { padding: 2px 5px; font-size: 12px; line-height: 16px; }
+.clinic-appointments-calendar .rbc-event-label { font-size: 11px; line-height: 14px; font-weight: 510; font-variant-numeric: tabular-nums; }
+.clinic-appointments-calendar .rbc-event-content { font-size: 12px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@container appointment-calendar (max-width: 48rem) {
+  .clinic-appointments-calendar .rbc-toolbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .clinic-appointments-calendar .rbc-toolbar-label { flex-basis: 100%; order: -1; text-align: center; }
+}
+@container appointment-calendar (max-width: 35rem) {
+  .clinic-appointments-calendar .rbc-toolbar { width: calc(100cqw - 26px); position: sticky; left: 0; }
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .clinic-appointments-calendar .rbc-toolbar button { min-height: 44px; }
 }

@@ -17,6 +17,7 @@ test("diagnósticos del caso responden al viewport y conservan la historia guard
 
   const editor = frameOf(page)
   await expect(editor.locator("#toothGrid")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Registrar atenci\u00f3n", exact: true })).toBeEnabled()
   await editor.locator("#openCaseDiagnosesBtn").click()
   const modal = editor.locator("#caseDiagnosesModal")
   const emptyState = editor.locator("#caseDiagnosesSection")
@@ -28,7 +29,8 @@ test("diagnósticos del caso responden al viewport y conservan la historia guard
       const dialogRect = node.getBoundingClientRect()
       const top = frameRect.top + dialogRect.top
       const bottom = frameRect.top + dialogRect.bottom
-      return top >= 0 && bottom <= window.parent.innerHeight
+      // Native scroll offsets round CSS pixels; the iframe can end 0.25 px past the edge.
+      return top >= -0.5 && bottom <= window.parent.innerHeight + 0.5
     })
   ).toBe(true)
   const dialogPosition = await modal.evaluate((node) => {
@@ -36,8 +38,8 @@ test("diagnósticos del caso responden al viewport y conservan la historia guard
     const dialogRect = node.getBoundingClientRect()
     return { top: frameRect.top + dialogRect.top, bottom: frameRect.top + dialogRect.bottom }
   })
-  expect(dialogPosition.top).toBeGreaterThanOrEqual(0)
-  expect(dialogPosition.bottom).toBeLessThanOrEqual(844)
+  expect(dialogPosition.top).toBeGreaterThanOrEqual(-0.5)
+  expect(dialogPosition.bottom).toBeLessThanOrEqual(844.5)
   await expect.poll(() => emptyState.evaluate((node) => getComputedStyle(node, "::before").content))
     .toContain("Aún no hay diagnósticos registrados")
 
@@ -71,6 +73,7 @@ test("diagnósticos del caso responden al viewport y conservan la historia guard
 
   await page.reload()
   await expect(editor.locator("#toothGrid")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Registrar atenci\u00f3n", exact: true })).toBeEnabled()
   await editor.locator("#openCaseDiagnosesBtn").click()
   await expect(editor.locator(".case-diagnoses-row .dx-label")).toHaveText("Anomalías mayores del tamaño maxilar")
   await expect(editor.locator(".case-diagnoses-row .dx-code")).toHaveText("K07.0")
@@ -82,6 +85,7 @@ test("diagnósticos del caso responden al viewport y conservan la historia guard
   // Registrar una atención real conserva una copia de solo lectura del odontograma guardado.
   await page.reload()
   await expect(editor.locator("#toothGrid")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Registrar atenci\u00f3n", exact: true })).toBeEnabled()
   await page.getByRole("button", { name: "Registrar atención", exact: true }).click()
   await page.getByLabel("Profesional", { exact: true }).click()
   await page.getByRole("option", { name: /Dra\. Carla Ríos/ }).click()

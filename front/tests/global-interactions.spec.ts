@@ -69,7 +69,7 @@ for (const theme of ["light", "dark"] as const) {
       return [rect.x, rect.y, rect.width, rect.height]
     }), selectors)
     const before = await bounds()
-    await page.getByRole("button", { name: theme === "dark" ? "Modo oscuro" : "Modo claro", exact: true }).click()
+    await page.getByRole("switch", { name: "Modo oscuro", exact: true }).click()
     expect(await bounds()).toEqual(before)
     await expect(page.locator(".clinic-brand-mark")).toHaveCSS("background-color", theme === "dark" ? "rgb(83, 80, 204)" : "rgb(228, 242, 34)")
   })
@@ -89,7 +89,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: "Día", exact: true }).click()
     await page.setViewportSize({ width: 320, height: 900 })
     await expect(page.getByLabel("Vista", { exact: true })).toContainText("Día")
-    await page.locator('button:has(.lucide-calendar-days)').click()
+    await page.getByRole("button", { name: /^Elegir fecha:/ }).click()
     const picker = page.locator('[data-slot="popover-content"]')
     await expect(picker).toBeVisible()
     const pickerBounds = await picker.boundingBox()

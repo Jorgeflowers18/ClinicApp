@@ -40,19 +40,19 @@ export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
         role="region"
         aria-label="Cartera activa, tabla desplazable horizontalmente"
         tabIndex={0}
-        className="hidden min-w-0 overflow-x-auto px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring @[59rem]/portfolio:block"
+        className="clinic-finance-table hidden min-w-0 overflow-x-auto px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring @[59rem]/portfolio:block"
       >
         <div className="min-w-[56rem]">
           <Table>
             <TableHeader>
               <TableRow>
-                {columns.map((column) => <TableHead key={column.key}>{column.header}</TableHead>)}
+                {columns.map((column) => <TableHead key={column.key} data-column={column.key}>{column.header}</TableHead>)}
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={`${row.patientId}-${row.treatmentId}`}>
-                  {columns.map((column) => <TableCell key={column.key}>{column.cell(row)}</TableCell>)}
+                  {columns.map((column) => <TableCell key={column.key} data-column={column.key} className={column.key === "patientName" ? "font-medium" : undefined}>{column.cell(row)}</TableCell>)}
                 </TableRow>
               ))}
             </TableBody>
@@ -65,22 +65,22 @@ export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
           const id = `portfolio-${row.patientId}-${row.treatmentId}`
           return (
             <li key={`${row.patientId}-${row.treatmentId}`} className="min-w-0">
-              <article aria-labelledby={id} className="min-w-0 space-y-4 rounded-xl border bg-card p-4 text-card-foreground">
+              <article aria-labelledby={id} className="min-w-0 space-y-3 rounded-xl border bg-card p-4 text-card-foreground">
                 <h3 id={id} className="min-w-0 text-base font-semibold leading-snug [overflow-wrap:anywhere]">
                   {row.patientName}
                 </h3>
-                <dl className="space-y-3 text-sm">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                   {details.map((column) => (
                     <div
                       key={column.key}
                       className={column.key === "treatmentName"
-                        ? "grid min-w-0 grid-cols-1 gap-1"
-                        : "grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3"}
+                        ? "col-span-2 min-w-0 space-y-1"
+                        : "min-w-0 space-y-1"}
                     >
-                      <dt className="min-w-0 text-muted-foreground [overflow-wrap:anywhere]">{column.header}</dt>
+                      <dt className="min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere]">{column.header}</dt>
                       <dd className={column.key === "treatmentName"
                         ? "min-w-0 [overflow-wrap:anywhere]"
-                        : "min-w-0 text-right font-medium tabular-nums [overflow-wrap:anywhere]"}
+                        : "min-w-0 font-medium tabular-nums [overflow-wrap:anywhere]"}
                       >
                         {column.cell(row)}
                       </dd>

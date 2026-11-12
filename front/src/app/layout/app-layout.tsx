@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactElement } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
-import { Building2, LogOut, Menu, MoonStar, SunMedium, UserRound } from "lucide-react"
+import { Building2, LogOut, Menu, UserRound } from "lucide-react"
 import { useTheme } from "next-themes"
+import { SidebarThemeSwitch } from "./sidebar-theme-switch"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -359,13 +360,12 @@ function SidebarContent({
           />
         )}
 
-        <SidebarAction
-          label={isDarkTheme ? "Modo oscuro" : "Modo claro"}
-          icon={isDarkTheme ? <MoonStar className="size-4" /> : <SunMedium className="size-4" />}
+        <SidebarThemeSwitch
+          checked={isDarkTheme}
           collapsed={isCollapsed}
           tooltipEnabled={tooltipEnabled}
           className={actionClass}
-          onClick={onToggleTheme}
+          onToggle={onToggleTheme}
         />
 
         <div className="my-2 border-t" />

@@ -12,6 +12,7 @@ interface KpiCardProps {
   isLoading?: boolean
   className?: string
   iconClassName?: string
+  iconTone?: "neutral" | "info" | "success" | "warning" | "destructive"
 }
 
 export function KpiCard({
@@ -22,22 +23,23 @@ export function KpiCard({
   isLoading,
   className,
   iconClassName,
+  iconTone = "info",
 }: KpiCardProps) {
   return (
-    <Card className={className}>
-      <CardContent className="flex items-center justify-between p-4">
-        <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
+    <Card className={cn("clinic-kpi-card", className)} data-icon-tone={iconTone}>
+      <CardContent className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 px-4 py-3.5">
+        <div className="clinic-kpi-copy">
+          <p className="clinic-kpi-label text-muted-foreground">{label}</p>
           {isLoading ? (
             <Skeleton className="mt-1 h-8 w-16" />
           ) : (
-            <p className="text-2xl font-semibold">{value}</p>
+            <p className="clinic-kpi-value" data-textual={typeof value === "string" && !/^[\d\s.,%$€+-]+$/.test(value) ? "true" : undefined}>{value}</p>
           )}
-          {hint && !isLoading && <p className="text-xs text-muted-foreground">{hint}</p>}
+          {hint && !isLoading && <p className="clinic-kpi-hint text-muted-foreground">{hint}</p>}
         </div>
         {Icon && (
-          <div className={cn("flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary", iconClassName)}>
-            <Icon className="size-5" />
+          <div className={cn("clinic-summary-icon flex items-center justify-center rounded-lg", iconClassName)}>
+            <Icon aria-hidden="true" className="size-5" />
           </div>
         )}
       </CardContent>

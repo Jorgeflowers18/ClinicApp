@@ -54,13 +54,13 @@ export function DataTable<T>({
   const actionColumns = columns.filter((column) => !column.header)
 
   return (
-    <div className={cn("@container min-w-0", className)}>
-      <div className="hidden rounded-lg border @md:block">
+    <div className={cn("clinic-data-table @container min-w-0", className)}>
+      <div className="hidden rounded-lg @md:block">
         <Table>
           <TableHeader>
             <TableRow>
               {columns.map((column) => (
-                <TableHead key={column.key} className={column.className}>
+                <TableHead key={column.key} data-column={column.key} className={column.className}>
                   {column.header}
                 </TableHead>
               ))}
@@ -126,7 +126,7 @@ export function DataTable<T>({
                   }
                 >
                   {columns.map((column) => (
-                    <TableCell key={column.key} className={column.className}>
+                    <TableCell key={column.key} data-column={column.key} className={column.className}>
                       {column.cell(row)}
                     </TableCell>
                   ))}

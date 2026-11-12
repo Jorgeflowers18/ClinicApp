@@ -1,4 +1,5 @@
 import { test, expect, type Download, type Locator, type Page } from "@playwright/test"
+import { expectRecordSection, selectRecordSection } from "./helpers/clinical-navigation"
 
 // Cada prueba corre en un contexto nuevo: IndexedDB vacía, semillas insertadas una vez y mocks en memoria
 // recién cargados. `page.goto` recarga la app y reinicia los mocks en memoria (pacientes, citas,
@@ -43,7 +44,6 @@ async function downloadJson(page: Page) {
 }
 
 const saveBar = (page: Page) => page.getByRole("region", { name: "Cambios sin guardar" })
-const tab = (page: Page, name: string) => page.getByRole("tab", { name, exact: true })
 
 async function saveChanges(page: Page, sections: string[]) {
   await saveBar(page).getByRole("button", { name: "Guardar cambios" }).click()
@@ -123,7 +123,7 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   await editor.locator("#calculusRow label").click()
   await expect(editor.locator("#calculusToggle")).toBeChecked()
   await expect(saveBar(page)).toContainText("Odontograma y periodontograma")
-  await page.getByRole("button", { name: "Modo claro", exact: true }).click()
+  await page.getByRole("switch", { name: "Modo oscuro", exact: true }).setChecked(true)
   await expect(page.locator("html")).toHaveClass(/dark/)
   await expect(editor.locator("html")).toHaveClass(/dark/)
   const outerColor = await page.evaluate(() =>
@@ -135,7 +135,7 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
     )
     .toBe(outerColor)
   await page.screenshot({ path: "test-results/dental-dark.png", fullPage: true })
-  await page.getByRole("button", { name: "Modo oscuro", exact: true }).click()
+  await page.getByRole("switch", { name: "Modo oscuro", exact: true }).setChecked(false)
   await expect(page.locator("html")).not.toHaveClass(/dark/)
 
   await editor.locator("#appViewDentalChart").click()
@@ -153,7 +153,7 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   await editor.locator("#appViewOdontogram").click()
 
   // Plan: tratamiento propuesto del catálogo.
-  await tab(page, "Plan de tratamiento").click()
+  await selectRecordSection(page, "Plan de tratamiento")
   const planForm = page.getByRole("form", { name: "Agregar tratamiento propuesto" })
   await chooseOption(planForm, page, "Tratamiento del catálogo", /^Limpieza dental/)
   await planForm.getByLabel("Pieza / zona", { exact: true }).fill("16")
@@ -161,16 +161,16 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   await expect(page.getByRole("cell", { name: "Limpieza dental", exact: true })).toBeVisible()
 
   // Consentimiento de datos: aceptado exige firmante, cédula y fecha.
-  await tab(page, "Consentimiento y declaración").click()
+  await selectRecordSection(page, "Consentimiento y declaración")
   await chooseOption(page, page, "Estado", "Aceptado")
   await saveBar(page).getByRole("button", { name: "Guardar cambios" }).click()
   await expect(page.getByText("Indica el nombre de quien firma")).toBeVisible()
-  await expect(tab(page, "Consentimiento y declaración Con errores")).toHaveAttribute("aria-selected", "true")
+  await expectRecordSection(page, "Consentimiento y declaración Con errores")
   await page.getByLabel("Nombre de quien firma", { exact: true }).fill("Paciente de prueba")
   await page.getByLabel("Cédula de quien firma", { exact: true }).fill("0102030405")
   await page.getByLabel("Fecha de la decisión", { exact: true }).fill("2026-09-20")
 
-  await tab(page, "Fotos y documentos").click()
+  await selectRecordSection(page, "Fotos y documentos")
   await page
     .getByLabel("Seleccionar archivos clínicos")
     .setInputFiles({ name: "radiografia-prueba.png", mimeType: "image/png", buffer: png })
@@ -184,11 +184,11 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   await page.reload()
   await waitForChart(page)
   await expect(saveBar(page)).toHaveCount(0)
-  await tab(page, "Consentimiento y declaración").click()
+  await selectRecordSection(page, "Consentimiento y declaración")
   await expect(page.getByLabel("Nombre de quien firma", { exact: true })).toHaveValue("Paciente de prueba")
 
   // Descartar vuelve al último estado guardado.
-  await tab(page, "Plan de tratamiento").click()
+  await selectRecordSection(page, "Plan de tratamiento")
   await page.getByRole("button", { name: "Quitar Limpieza dental de los propuestos" }).click()
   await expect(page.getByText("No hay tratamientos propuestos.")).toBeVisible()
   await saveBar(page).getByRole("button", { name: "Descartar cambios" }).click()
@@ -226,7 +226,7 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   expect(await inkedSamples(page, `data:image/png;base64,${embedded![1]}`)).toBeGreaterThan(200)
 
   // El menú «Exportar» del editor sigue descargando su propia imagen después de la captura.
-  await tab(page, "Odontograma y periodontograma").click()
+  await selectRecordSection(page, "Odontograma y periodontograma")
   const editorPngPromise = page.waitForEvent("download")
   await editor.locator("#btnExportMenu").click()
   await editor.getByRole("menuitem", { name: "Imagen PNG" }).click()
@@ -241,13 +241,13 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   await expect.poll(() => popupImage.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
   await popup.close()
 
-  await tab(page, "Fotos y documentos").click()
+  await selectRecordSection(page, "Fotos y documentos")
   const attachmentPromise = page.waitForEvent("download")
   await page.getByRole("button", { name: "Descargar", exact: true }).click()
   expect(await readDownload(await attachmentPromise)).toEqual(png)
 
   // Indicadores calculados desde el periodontograma, incluidos los máximos de sondaje e inserción.
-  await tab(page, "Evolución periodontal").click()
+  await selectRecordSection(page, "Evolución periodontal")
   await expect(page.getByText("Sitios con bolsa ≥ 4 mm", { exact: true })).toBeVisible()
   const maxDepth = page.getByText("Profundidad de sondaje máxima", { exact: true }).locator("..")
   await expect(maxDepth).toContainText("5 mm")
@@ -257,7 +257,7 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   // Aislamiento por paciente.
   await page.goto("/historial-clinico/paciente/pat_1")
   await waitForChart(page)
-  await tab(page, "Fotos y documentos").click()
+  await selectRecordSection(page, "Fotos y documentos")
   await expect(page.getByText("radiografia-prueba.png", { exact: true })).toHaveCount(0)
   expect(errors).toEqual([])
 })
@@ -274,7 +274,7 @@ test("antecedentes, alertas, datos del paciente, declaración y plan por fases",
   await expect(page.getByText("Declaración de veracidad pendiente")).toBeVisible()
 
   // El texto libre «Antecedentes médicos» de la ficha quedó como «Otro» en la historia.
-  await tab(page, "Antecedentes").click()
+  await selectRecordSection(page, "Antecedentes")
   await expect(page.getByLabel("Detalle de Otro", { exact: true })).toHaveValue("Ortodoncia con seguimiento mensual.")
 
   // «Niega antecedentes relevantes» es excluyente; Cirugías previas exige el detalle.
@@ -285,7 +285,7 @@ test("antecedentes, alertas, datos del paciente, declaración y plan por fases",
   await saveBar(page).getByRole("button", { name: "Guardar cambios" }).click()
   await expect(page.getByText("«Niega antecedentes relevantes» no se puede marcar junto con otros antecedentes")).toBeVisible()
   await expect(page.getByText("Indica cuál y cuándo")).toBeVisible()
-  await expect(tab(page, "Antecedentes Con errores")).toHaveAttribute("aria-selected", "true")
+  await expectRecordSection(page, "Antecedentes Con errores")
   await page.getByRole("checkbox", { name: "Niega antecedentes relevantes" }).click()
   await page.getByLabel("Detalle de Cirugías previas", { exact: true }).fill("Apendicectomía en 2015")
 
@@ -311,14 +311,14 @@ test("antecedentes, alertas, datos del paciente, declaración y plan por fases",
   await expect(periodontal).toContainText("Higiene deficiente:Sí")
 
   // Datos del paciente: mismo registro que la ficha; N.° de historia y edad automáticos.
-  await tab(page, "Datos del paciente").click()
+  await selectRecordSection(page, "Datos del paciente")
   await expect(page.getByText("HC-000003", { exact: true })).toBeVisible()
   await expect(page.getByText(/^\d+ años$/)).toBeVisible()
   await page.getByLabel("Ocupación", { exact: true }).fill("Diseñadora gráfica")
   await page.getByLabel("Parentesco", { exact: true }).fill("Tía")
 
   // Declaración de veracidad: aceptada exige nombre, C.I. y fecha; muestra el registro profesional.
-  await tab(page, "Consentimiento y declaración").click()
+  await selectRecordSection(page, "Consentimiento y declaración")
   await page.getByRole("checkbox", { name: "El paciente acepta la declaración" }).click()
   await saveBar(page).getByRole("button", { name: "Guardar cambios" }).click()
   await expect(page.getByText("Indica el nombre del paciente o representante")).toBeVisible()
@@ -329,7 +329,7 @@ test("antecedentes, alertas, datos del paciente, declaración y plan por fases",
   await expect(page.getByLabel("Registro profesional")).toHaveText("MSP-09-01157")
 
   // Plan por fases: agrupado, con total por fase y general.
-  await tab(page, "Plan de tratamiento").click()
+  await selectRecordSection(page, "Plan de tratamiento")
   const planForm = page.getByRole("form", { name: "Agregar tratamiento propuesto" })
   await chooseOption(planForm, page, "Tratamiento del catálogo", /^Limpieza dental/)
   await chooseOption(planForm, page, "Fase", "Higiénica / periodontal básica")
@@ -378,14 +378,14 @@ test("antecedentes, alertas, datos del paciente, declaración y plan por fases",
   await expect(page.getByText("Diseñadora gráfica", { exact: true })).toBeVisible()
   await page.getByRole("button", { name: "Abrir historia clínica" }).first().click()
   await waitForChart(page)
-  await tab(page, "Datos del paciente").click()
+  await selectRecordSection(page, "Datos del paciente")
   await expect(page.getByLabel("Teléfono", { exact: true })).toHaveValue("0999111222")
   await expect(page.getByLabel("Ocupación", { exact: true })).toHaveValue("Diseñadora gráfica")
 
   // La historia (IndexedDB) sobrevive a una recarga.
   await page.reload()
   await waitForChart(page)
-  await tab(page, "Antecedentes").click()
+  await selectRecordSection(page, "Antecedentes")
   await expect(page.getByLabel("Detalle de Cirugías previas", { exact: true })).toHaveValue("Apendicectomía en 2015")
   const history = await downloadJson(page)
   expect(history.record.medicalBackground.conditions.cirugias).toMatchObject({ personal: true, family: false })
@@ -516,7 +516,7 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await expect(page.getByLabel("Diagnóstico clínico / CIE-10", { exact: true })).toHaveValue("Caries dentinaria en pieza 46 (K02.1)")
   await confirmEncounter(page)
 
-  await expect(tab(page, "Atenciones")).toHaveAttribute("aria-selected", "true")
+  await expectRecordSection(page, "Atenciones")
   await expect(saveBar(page)).toHaveCount(0)
 
   // La tarjeta muestra el diagnóstico, la copia de alertas y el detalle por pasos.
@@ -526,15 +526,15 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await expect(card).toContainText("Periodontitis: Estadio II")
 
   // El propuesto realizado salió del plan; la pestaña Tratamientos suma todo lo realizado.
-  await tab(page, "Plan de tratamiento").click()
+  await selectRecordSection(page, "Plan de tratamiento")
   await expect(page.getByText("No hay tratamientos propuestos.")).toBeVisible()
-  await tab(page, "Tratamientos").click()
+  await selectRecordSection(page, "Tratamientos")
   await expect(page.getByRole("cell", { name: "Resina compuesta", exact: true })).toBeVisible()
   await expect(page.getByRole("row", { name: /Resina compuesta/ })).toContainText("$40,00")
   await expect(page.getByRole("row", { name: /Total/ })).toContainText("$110,00")
 
   // Exámenes solicitados: pendientes en la historia; al subir el resultado pasan a «Recibido».
-  await tab(page, "Fotos y documentos").click()
+  await selectRecordSection(page, "Fotos y documentos")
   const requests = page.getByRole("list", { name: "Exámenes solicitados" })
   await expect(requests.getByRole("listitem", { name: "Panorámica" })).toContainText("Pendiente")
   await expect(requests.getByRole("listitem", { name: "Interconsulta médica" })).toContainText("Cardiología")
@@ -546,7 +546,7 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await saveChanges(page, ["Fotos y documentos", "Exámenes solicitados"])
 
   // Nota aclaratoria sobre la atención nueva.
-  await tab(page, "Atenciones").click()
+  await selectRecordSection(page, "Atenciones")
   await card.getByRole("button", { name: "Agregar nota aclaratoria" }).click()
   const noteDialog = page.getByRole("dialog", { name: "Agregar nota aclaratoria" })
   await noteDialog.getByLabel("Nota", { exact: true }).fill("corta")
@@ -604,11 +604,11 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   expect(history.record.examRequests.find((item: { kind: string }) => item.kind === "panoramica").status).toBe("pendiente")
 
   // Las alertas de la atención son una copia: editar los antecedentes después no la cambia.
-  await tab(page, "Antecedentes").click()
+  await selectRecordSection(page, "Antecedentes")
   await page.getByRole("checkbox", { name: "Alergia a látex" }).click()
   await saveChanges(page, ["Alergias, medicamentos y alertas"])
   await expect(page.getByRole("region", { name: "Alertas médicas" })).toContainText("Alergia a látex")
-  await tab(page, "Atenciones").click()
+  await selectRecordSection(page, "Atenciones")
   await expect(card.getByRole("region", { name: "Alertas al momento de la atención" })).not.toContainText("látex")
 
   // Navegando dentro de la app (sin recargar los mocks): el tratamiento quedó registrado en el catálogo
@@ -645,14 +645,14 @@ test("desde la cita: la página de la atención abre con la cita precargada y la
   await expect(page.getByText("La cita vinculada quedó como completada")).toBeVisible()
 
   // Pestaña Citas: la cita completada enlaza a su atención.
-  await tab(page, "Citas").click()
+  await selectRecordSection(page, "Citas")
   const row = page.getByRole("table", { name: "Citas del paciente" }).getByRole("row").filter({ hasText: "Completada" })
   await row.getByRole("button", { name: "Ver atención" }).click()
-  await expect(tab(page, "Atenciones")).toHaveAttribute("aria-selected", "true")
+  await expectRecordSection(page, "Atenciones")
 
   // Volver a abrir desde la cita lleva a la atención existente, sin abrir otra.
   await page.goto("/historial-clinico/paciente/pat_2?cita=apt_2")
-  await expect(tab(page, "Atenciones")).toHaveAttribute("aria-selected", "true")
+  await expectRecordSection(page, "Atenciones")
   await expect(page.getByText("Caries en pieza 26").first()).toBeVisible()
   await expect(page).toHaveURL(/\/historial-clinico\/paciente\/pat_2\?cita=apt_2$/)
   expect(errors).toEqual([])
@@ -727,17 +727,17 @@ test("visitas guardadas con la versión anterior se convierten en historia y ate
   // Los enlaces anteriores con `?visita=` abren la atención convertida (conserva el id).
   await page.goto("/historial-clinico/paciente/pat_5?visita=visita_antigua")
   await waitForChart(page)
-  await expect(tab(page, "Atenciones")).toHaveAttribute("aria-selected", "true")
+  await expectRecordSection(page, "Atenciones")
   await expect(page.locator("article")).toHaveCount(1)
   // El diagnóstico de texto pasa a ser el primer diagnóstico de la lista.
   await expect(page.locator("article")).toContainText("Diagnóstico: Pulpitis reversible")
   // El borrador sin motivo ni diagnóstico no se convierte en atención; su propuesto queda en el plan, sin fase.
-  await tab(page, "Plan de tratamiento").click()
+  await selectRecordSection(page, "Plan de tratamiento")
   await expect(page.getByRole("rowgroup", { name: "Fase: Sin fase" })).toContainText("Resina compuesta")
-  await tab(page, "Tratamientos").click()
+  await selectRecordSection(page, "Tratamientos")
   await expect(page.getByRole("cell", { name: "Limpieza dental", exact: true })).toBeVisible()
   // Los tipos de archivo anteriores se convierten a los del formulario.
-  await tab(page, "Fotos y documentos").click()
+  await selectRecordSection(page, "Fotos y documentos")
   await expect(page.getByText(/Radiografía periapical · /)).toBeVisible()
   await expect(page.getByText("Consentimiento de datos pendiente")).toBeVisible()
   await expect(page.getByText("Declaración de veracidad pendiente")).toBeVisible()
@@ -758,14 +758,14 @@ test("funciona sin HTTPS: sin crypto.randomUUID se generan los ids igual", async
   await waitForChart(page)
 
   // Tratamiento propuesto, adjunto y alergia (ids generados en el navegador).
-  await tab(page, "Plan de tratamiento").click()
+  await selectRecordSection(page, "Plan de tratamiento")
   const planForm = page.getByRole("form", { name: "Agregar tratamiento propuesto" })
   await chooseOption(planForm, page, "Tratamiento del catálogo", /^Limpieza dental/)
   await planForm.getByRole("button", { name: "Agregar", exact: true }).click()
-  await tab(page, "Fotos y documentos").click()
+  await selectRecordSection(page, "Fotos y documentos")
   await page.getByLabel("Seleccionar archivos clínicos").setInputFiles({ name: "rx.png", mimeType: "image/png", buffer: png })
   await expect(page.getByText("rx.png", { exact: true })).toBeVisible()
-  await tab(page, "Antecedentes").click()
+  await selectRecordSection(page, "Antecedentes")
   await page.getByRole("button", { name: "Agregar alergia" }).click()
   await page.getByLabel("Alergia / reacción", { exact: true }).fill("Látex")
   await saveChanges(page, ["Plan de tratamiento", "Fotos y documentos", "Alergias, medicamentos y alertas"])
@@ -811,7 +811,7 @@ test("rutas antiguas redirigen a la historia del paciente", async ({ page }) => 
   await expect(page.getByRole("columnheader", { name: "Estado" })).toHaveCount(0)
   await page.getByRole("cell", { name: "Sin hallazgos relevantes." }).click()
   await expect(page).toHaveURL(/\/historial-clinico\/paciente\/pat_1\?atencion=hist_\d+$/)
-  await expect(tab(page, "Atenciones")).toHaveAttribute("aria-selected", "true")
+  await expectRecordSection(page, "Atenciones")
 })
 
 test("recepción no puede acceder al módulo clínico ni ve las alertas en la ficha", async ({ page }) => {

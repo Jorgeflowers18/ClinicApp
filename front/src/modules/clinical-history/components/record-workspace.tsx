@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
-import { Activity, AlertCircle, CalendarClock, ClipboardList, Stethoscope } from "lucide-react"
+import { Activity, AlertCircle, CalendarClock, ClipboardList, Info, Stethoscope } from "lucide-react"
 import { FormProvider, useForm, useWatch, type FieldErrors, type Path } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { formatDateOnly } from "@/shared/lib/date"
 import { env } from "@/shared/lib/env"
@@ -43,6 +43,8 @@ import {
   withCaseData,
 } from "../lib/record"
 import { registerEncounterPath } from "../lib/routes"
+import { additionalRecordSections, recordSections, type RecordTab } from "../lib/record-sections"
+import { useNavigationPlacement, useSectionNavigation } from "../hooks/use-section-navigation"
 import {
   recordFormSchema,
   type ChartSnapshot,
@@ -51,6 +53,8 @@ import {
 } from "../types/clinical-history.types"
 import { AttachmentsTab } from "./attachments-tab"
 import { BackgroundTab } from "./background-tab"
+import { ClinicalNavigation, ClinicalNavigationFooter } from "./clinical-navigation"
+import navigationStyles from "./clinical-navigation.module.css"
 import { DataConsentTab } from "./data-consent-tab"
 import { EncountersTab } from "./encounters-tab"
 import { ExportCard } from "./export-card"
@@ -63,17 +67,7 @@ import { RecordHeader } from "./record-header"
 import { TreatmentPlanTab } from "./treatment-plan-tab"
 import { TruthDeclarationCard } from "./truth-declaration-card"
 
-export type RecordTab =
-  | "datos"
-  | "antecedentes"
-  | "odontograma"
-  | "plan"
-  | "consentimiento"
-  | "archivos"
-  | "atenciones"
-  | "tratamientos"
-  | "citas"
-  | "evolucion"
+export type { RecordTab } from "../lib/record-sections"
 
 /** Lo que se edita en la historia: sus secciones más los datos del paciente (mismo registro que Pacientes). */
 const workspaceSchema = recordFormSchema.extend({ patient: patientDataSchema })
@@ -157,6 +151,10 @@ export function RecordWorkspace({
   // Último estado guardado: contra él se detecta qué secciones cambiaron.
   const [saved, setSaved] = useState(initialValues)
   const [tab, setTab] = useState<RecordTab>(initialTab)
+  const sectionHeadingId = useId()
+  const navigationContainer = useRef<HTMLDivElement>(null)
+  const navigation = useSectionNavigation(recordSections, tab, setTab, additionalRecordSections)
+  const controlsInHeader = useNavigationPlacement(navigationContainer)
   const [confirmSave, setConfirmSave] = useState(false)
   // Secciones mostradas al pedir confirmación: el texto no cambia mientras el diálogo se cierra.
   const [saveSummary, setSaveSummary] = useState("")
@@ -316,29 +314,19 @@ export function RecordWorkspace({
     treatmentName: (treatmentId, fallback) => (treatmentId && treatmentById.get(treatmentId)?.name) || fallback,
   }
 
-  const tabs: { value: RecordTab; label: string }[] = [
-    { value: "datos", label: "Datos del paciente" },
-    { value: "antecedentes", label: "Antecedentes" },
-    { value: "odontograma", label: "Odontograma y periodontograma" },
-    { value: "plan", label: "Plan de tratamiento" },
-    { value: "consentimiento", label: "Consentimiento y declaración" },
-    { value: "archivos", label: "Fotos y documentos" },
-    { value: "atenciones", label: "Atenciones" },
-    { value: "tratamientos", label: "Tratamientos" },
-    { value: "citas", label: "Citas" },
-    { value: "evolucion", label: "Evolución periodontal" },
-  ]
-
   return (
     <FormProvider {...form}>
-      <div className="min-w-0 space-y-5">
+      <div ref={navigationContainer} className={`${navigationStyles.scope} min-w-0 space-y-5`}>
         <RecordHeader patient={patient} record={record} onBack={goBack} onRegisterEncounter={() => openRegister(null)} />
 
         {/* MOCK-ONLY */}
         {env.useMockApi && (
-          <p className="text-xs text-muted-foreground">
+          <p role="note" className="clinic-demo-notice">
+            <Info aria-hidden="true" className="size-4 shrink-0" />
+            <span>
             Modo demostración: la historia clínica se guarda en este navegador y no se sincroniza con un servidor. Los
             datos del paciente se guardan en memoria y vuelven a los de ejemplo al recargar la página.
+            </span>
           </p>
         )}
 
@@ -375,27 +363,16 @@ export function RecordWorkspace({
           />
         </div>
 
-        <Tabs value={tab} onValueChange={(value) => setTab(value as RecordTab)} className="relative">
-          <div className="overflow-x-auto pb-2">
-            <TabsList variant="line" className="gap-3">
-              {tabs.map((item) => (
-                <TabsTrigger key={item.value} value={item.value}>
-                  {item.label}
-                  {errorTabs.has(item.value) && (
-                    <span className="size-1.5 rounded-full bg-destructive" aria-label="Con errores" />
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+        <ClinicalNavigation navigation={navigation} controlsInHeader={controlsInHeader} headingId={sectionHeadingId} errorSections={errorTabs} />
 
-          <TabsContent value="datos">
+        <Tabs value={tab} onValueChange={(value) => setTab(value as RecordTab)} className="relative">
+          <TabsContent value="datos" role="region" aria-labelledby={sectionHeadingId}>
             <PatientDataTab patient={patient} record={record} />
           </TabsContent>
-          <TabsContent value="antecedentes">
+          <TabsContent value="antecedentes" role="region" aria-labelledby={sectionHeadingId}>
             <BackgroundTab />
           </TabsContent>
-          <TabsContent value="odontograma">
+          <TabsContent value="odontograma" role="region" aria-labelledby={sectionHeadingId}>
             <p className="text-sm text-muted-foreground">
               Selecciona una pieza para registrar hallazgos. Cambia a «Estado periodontal» dentro del editor para las
               mediciones por sitio.
@@ -421,17 +398,17 @@ export function RecordWorkspace({
               onChange={handleChartChange}
             />
           </div>
-          <TabsContent value="plan">
+          <TabsContent value="plan" role="region" aria-labelledby={sectionHeadingId}>
             <TreatmentPlanTab />
           </TabsContent>
-          <TabsContent value="consentimiento" className="space-y-4">
+          <TabsContent value="consentimiento" role="region" aria-labelledby={sectionHeadingId} className="space-y-4">
             <DataConsentTab patientId={patient.id} />
             <TruthDeclarationCard />
           </TabsContent>
-          <TabsContent value="archivos">
+          <TabsContent value="archivos" role="region" aria-labelledby={sectionHeadingId}>
             <AttachmentsTab patientId={patient.id} onOpenEncounter={showEncounter} />
           </TabsContent>
-          <TabsContent value="atenciones">
+          <TabsContent value="atenciones" role="region" aria-labelledby={sectionHeadingId}>
             <EncountersTab
               patientId={patient.id}
               patientName={patientName}
@@ -441,7 +418,7 @@ export function RecordWorkspace({
               documentContext={documentContext}
             />
           </TabsContent>
-          <TabsContent value="tratamientos">
+          <TabsContent value="tratamientos" role="region" aria-labelledby={sectionHeadingId}>
             <PerformedTreatmentsTab
               patientId={patient.id}
               encounters={encounters}
@@ -449,7 +426,7 @@ export function RecordWorkspace({
               onOpenEncounter={showEncounter}
             />
           </TabsContent>
-          <TabsContent value="citas">
+          <TabsContent value="citas" role="region" aria-labelledby={sectionHeadingId}>
             <PatientAppointmentsTab
               patientId={patient.id}
               encounters={encounters}
@@ -458,7 +435,7 @@ export function RecordWorkspace({
               onOpenEncounter={showEncounter}
             />
           </TabsContent>
-          <TabsContent value="evolucion">
+          <TabsContent value="evolucion" role="region" aria-labelledby={sectionHeadingId}>
             <PeriodontalEvolutionTab encounters={encounters} />
           </TabsContent>
         </Tabs>
@@ -490,6 +467,8 @@ export function RecordWorkspace({
             </div>
           </div>
         )}
+
+        <ClinicalNavigationFooter navigation={navigation} controlsInHeader={controlsInHeader} />
       </div>
 
       <ConfirmDialog

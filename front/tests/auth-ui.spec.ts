@@ -174,7 +174,7 @@ test("existing login, redirects, errors and application theme remain functional"
   await page.getByRole("button", { name: "Continuar", exact: true }).click()
   await expect(page).toHaveURL(/\/$/)
   await expect(page).toHaveTitle("ClinicApp")
-  await page.getByRole("button", { name: "Modo oscuro", exact: true }).click()
+  await page.getByRole("switch", { name: "Modo oscuro", exact: true }).setChecked(false)
   await page.getByRole("button", { name: "Salir", exact: true }).click()
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole("button", { name: "Tema claro", exact: true })).toHaveAttribute("aria-pressed", "true")

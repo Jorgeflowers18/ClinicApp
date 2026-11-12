@@ -36,7 +36,7 @@ export function DashboardPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Pacientes registrados"
           value={summary?.patientsTotal ?? 0}
@@ -64,6 +64,7 @@ export function DashboardPage() {
         />
         <KpiCard
           label="Insumos bajo mínimo"
+          iconTone="warning"
           value={summary?.criticalStockItems ?? 0}
           icon={Package}
           isLoading={isLoadingSummary}

@@ -77,7 +77,7 @@ export function NotificationTemplateEditor() {
   }
 
   return (
-    <Card>
+    <Card className="clinic-notification-template">
       <CardHeader>
         <CardTitle>Plantilla de notificación predeterminada</CardTitle>
         <CardDescription>
@@ -86,44 +86,49 @@ export function NotificationTemplateEditor() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {notificationVariables.map((variable) => (
-              <Button
-                key={variable.token}
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => insertVariable(variable.token)}
-              >
-                <Plus />
-                {variable.label}
-              </Button>
-            ))}
+        <form onSubmit={handleSubmit(onSubmit)} className="clinic-template-layout">
+          <div className="clinic-template-editor">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Insertar variable</p>
+              <div className="clinic-template-variables" role="group" aria-label="Insertar variable">
+                {notificationVariables.map((variable) => (
+                  <Button
+                    key={variable.token}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => insertVariable(variable.token)}
+                  >
+                    <Plus />
+                    {variable.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Field data-invalid={!!errors.message}>
+              <FieldLabel htmlFor="message">Mensaje</FieldLabel>
+              <Textarea
+                id="message"
+                rows={4}
+                placeholder="Hola [nombre del cliente], te escribimos desde..."
+                aria-invalid={!!errors.message}
+                {...messageRegister}
+                ref={(node) => {
+                  messageRef(node)
+                  textareaRef.current = node
+                }}
+              />
+              <FieldError errors={errors.message ? [errors.message] : undefined} />
+            </Field>
           </div>
 
-          <Field data-invalid={!!errors.message}>
-            <FieldLabel htmlFor="message">Mensaje</FieldLabel>
-            <Textarea
-              id="message"
-              rows={4}
-              placeholder="Hola [nombre del cliente], te escribimos desde..."
-              aria-invalid={!!errors.message}
-              {...messageRegister}
-              ref={(node) => {
-                messageRef(node)
-                textareaRef.current = node
-              }}
-            />
-            <FieldError errors={errors.message ? [errors.message] : undefined} />
-          </Field>
-
-          <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+          <section className="clinic-template-preview text-sm" aria-label="Vista previa del mensaje">
             <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">Vista previa</p>
             <p className="whitespace-pre-wrap text-foreground">{applyPreview(message || "")}</p>
-          </div>
+          </section>
 
-          <div className="flex justify-end">
+          <div className="clinic-template-actions">
             <Button type="submit" disabled={isSubmitting || !isDirty}>
               {isSubmitting ? "Guardando..." : "Guardar plantilla"}
             </Button>

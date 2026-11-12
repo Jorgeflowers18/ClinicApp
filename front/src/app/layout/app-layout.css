@@ -16,8 +16,9 @@
   background: var(--sidebar-accent);
   color: var(--sidebar-accent-foreground);
   border-color: var(--border);
-  box-shadow: inset 2px 0 var(--sidebar-accent-foreground);
+  box-shadow: inset 3px 0 var(--primary);
 }
+.clinic-sidebar-link[aria-current="page"] > svg { color: var(--primary); }
 
 @media (max-width: 639px) {
   [data-slot="page-header"] > :last-child > [data-slot="button"] {

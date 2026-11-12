@@ -1,0 +1,14 @@
+/* Preserve the former inline action's baseline space so the other footer links stay in place. */
+.row { display: flex; align-items: center; min-height: 44px; gap: 8px; padding-inline: 10px; padding-block-end: 4px; border-radius: var(--radius-control); }
+.row:hover { background: var(--muted); }
+.row[data-collapsed] { justify-content: center; padding-inline: 0; }
+.label { display: flex; flex: 1; align-items: center; min-width: 0; gap: 10px; font-size: 14px; font-weight: 500; line-height: 20px; cursor: pointer; }
+.label svg { color: var(--primary); }
+/* The real switch has a 44px hit area; its track stays compact inside it. */
+.control { position: relative; width: 44px; height: 44px; padding-inline: 7px; border: 0; border-radius: var(--radius-control); background: transparent; flex-shrink: 0; }
+.control::before { content: ""; position: absolute; left: 6px; top: 13px; width: 32px; height: 18px; border-radius: 999px; background: var(--input); transition: background-color 150ms; }
+.control::after { inset: 0; }
+.control[data-checked]::before { background: var(--primary); }
+.control [data-slot="switch-thumb"] { position: relative; z-index: 1; background: var(--card); }
+.control[data-checked] [data-slot="switch-thumb"] { background: var(--primary-foreground); }
+.control:focus-visible { outline: 2px solid var(--primary); outline-offset: 0; box-shadow: none; }

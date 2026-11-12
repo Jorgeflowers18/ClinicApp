@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageHeader } from "@/shared/components/page-header"
 import { formatCurrency } from "@/shared/lib/number"
+import { KpiCard } from "@/modules/reports/components/kpi-card"
 
 import { useFinancialPortfolio } from "../api/finance.queries"
 import { ActivePortfolio } from "../components/active-portfolio"
@@ -35,53 +36,10 @@ export function FinancePage() {
       />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>Cobrado este mes</span>
-              <DollarSign className="size-4" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{formatCurrency(totalPaid)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>Total pendiente</span>
-              <CreditCard className="size-4" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{formatCurrency(totalPending)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>Total vencido</span>
-              <ReceiptText className="size-4" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{formatCurrency(totalOverdue)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>Seguros pendientes</span>
-              <ShieldCheck className="size-4" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{dueSoon}</p>
-          </CardContent>
-        </Card>
+        <KpiCard label="Cobrado este mes" value={formatCurrency(totalPaid)} icon={DollarSign} iconTone="success" />
+        <KpiCard label="Total pendiente" value={formatCurrency(totalPending)} icon={CreditCard} />
+        <KpiCard label="Total vencido" value={formatCurrency(totalOverdue)} icon={ReceiptText} iconTone="destructive" />
+        <KpiCard label="Seguros pendientes" value={dueSoon} icon={ShieldCheck} />
       </div>
 
       <Card>

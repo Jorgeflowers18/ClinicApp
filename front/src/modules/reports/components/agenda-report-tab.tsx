@@ -38,8 +38,8 @@ export function AgendaReportTab({ period }: AgendaReportTabProps) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Citas en el periodo" value={summary?.appointmentsInPeriod ?? 0} icon={CalendarCheck} isLoading={isLoadingSummary} />
-        <KpiCard label="Completadas" value={summary?.appointmentsCompleted ?? 0} icon={CheckCircle2} isLoading={isLoadingSummary} />
-        <KpiCard label="No asistió" value={summary?.appointmentsNoShow ?? 0} icon={CalendarX} isLoading={isLoadingSummary} />
+        <KpiCard label="Completadas" value={summary?.appointmentsCompleted ?? 0} icon={CheckCircle2} iconTone="success" isLoading={isLoadingSummary} />
+        <KpiCard label="No asistió" value={summary?.appointmentsNoShow ?? 0} icon={CalendarX} iconTone="destructive" isLoading={isLoadingSummary} />
         <KpiCard
           label="Tasa de no-show"
           value={formatPercent(summary?.noShowRate ?? 0)}
