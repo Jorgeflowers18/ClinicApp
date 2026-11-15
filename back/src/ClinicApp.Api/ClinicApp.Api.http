@@ -1,0 +1,66 @@
+# Peticiones de prueba. En VS Code (extensión REST Client) o Visual Studio / Rider,
+# pulsa "Send Request" sobre cada una. La API debe estar corriendo (dotnet run).
+
+@api = http://localhost:5000/api
+
+### Chequeo de salud: "Healthy" (200) si la API llega a la base, "Unhealthy" (503) si no
+GET {{api}}/health
+
+### Ruta inexistente: 404 en formato ProblemDetails ("Recurso no encontrado")
+GET {{api}}/no-existe
+
+### Listar tratamientos (paginado, con búsqueda)
+GET {{api}}/treatments?page=1&pageSize=10&search=limpieza
+
+### Listar solo los activos (sin paginar)
+GET {{api}}/treatments?active=true
+
+### Crear un tratamiento
+# @name crear
+POST {{api}}/treatments
+Content-Type: application/json
+
+{
+  "name": "Limpieza dental",
+  "category": "Odontología general",
+  "description": "Profilaxis y control de placa bacteriana.",
+  "durationMinutes": 30,
+  "price": 35,
+  "active": true,
+  "consumption": []
+}
+
+### Ver el tratamiento recién creado
+GET {{api}}/treatments/{{crear.response.body.id}}
+
+### Editarlo
+PUT {{api}}/treatments/{{crear.response.body.id}}
+Content-Type: application/json
+
+{
+  "name": "Limpieza dental",
+  "category": "Odontología general",
+  "description": "Profilaxis, control de placa y fluorización.",
+  "durationMinutes": 40,
+  "price": 40,
+  "active": true,
+  "consumption": []
+}
+
+### Error de validación (400): nombre corto, duración y precio inválidos
+POST {{api}}/treatments
+Content-Type: application/json
+
+{
+  "name": "L",
+  "category": "Odontología general",
+  "durationMinutes": 2,
+  "price": -5,
+  "active": true
+}
+
+### Eliminarlo
+DELETE {{api}}/treatments/{{crear.response.body.id}}
+
+### No encontrado (404)
+GET {{api}}/treatments/00000000-0000-0000-0000-000000000000

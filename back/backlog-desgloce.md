@@ -37,15 +37,18 @@ El frontend ya está aprobado por la clienta. Cada módulo se da por terminado c
 
 Las fases 1 y 2 pueden avanzar en paralelo entre ambos responsables en cuanto la fase 0 esté lista.
 
-## Decisiones técnicas por definir antes de empezar
+## Decisiones técnicas
 
-Se acuerdan entre ambos responsables en la fase 0:
-- **Motor de base de datos y acceso a datos** (por ejemplo, SQL Server o PostgreSQL, con Entity Framework Core y migraciones).
-- **Almacenamiento de archivos:** adjuntos de la historia clínica, logo de la institución y foto de perfil (disco del servidor o almacenamiento de objetos, por ejemplo, DigitalOcean Spaces).
-- **Envío de correos y SMS:** proveedor para notificaciones de citas y recuperación de contraseña.
-- **Despliegue:** hoy el frontend se sirve con nginx en el Droplet de DigitalOcean, por HTTP en la IP. Definir si la API corre en el mismo Droplet y pasar a HTTPS con dominio (necesario para la cookie `httpOnly` de refresh con `Secure`).
-- **Identificadores:** el frontend genera UUID para atenciones y tratamientos propuestos; usar UUID en la base de datos simplifica el contrato.
-- **Zona horaria de la clínica** para fechas y reportes (Ecuador, UTC−5).
+Tomadas en [`documentacion/decisiones-backend.md`](../documentacion/decisiones-backend.md):
+- **API:** .NET 10 (LTS) con ASP.NET Core Web API y controladores, Entity Framework Core con migraciones, un solo proyecto con carpetas por módulo.
+- **Base de datos:** PostgreSQL en Docker, con tablas relacionales y columnas `jsonb` para las estructuras anidadas de la historia clínica; identificadores UUID.
+- **Despliegue:** API y base de datos en el mismo Droplet de DigitalOcean, detrás de nginx; HTTPS con dominio antes de producción; respaldos diarios.
+- **Adjuntos:** disco del Droplet por ahora.
+- **Zona horaria:** Ecuador (UTC−5).
+
+Siguen por definir:
+- **Envío de correos y SMS o WhatsApp:** proveedor para notificaciones de citas y recuperación de contraseña. Solo el 4 % de los pacientes tiene correo.
+- **Importación de la base de pacientes actual** (820 pacientes): ver las preguntas a la clínica en `decisiones-backend.md` § 5.
 
 ---
 
@@ -152,11 +155,12 @@ Se acuerdan entre ambos responsables en la fase 0:
 **Entidades:** tratamiento (con líneas de consumo), asignación de tratamiento.
 
 **Endpoints:**
-- [ ] `GET /treatments` (paginado y filtro `active`)
-- [ ] `GET /treatments/:id`
-- [ ] `POST /treatments`
-- [ ] `PUT /treatments/:id`
-- [ ] `DELETE /treatments/:id`
+- [x] `GET /treatments` (paginado y filtro `active`)
+- [x] `GET /treatments/:id`
+- [x] `POST /treatments`
+- [x] `PUT /treatments/:id`
+- [x] `DELETE /treatments/:id`
+- [ ] Insumos de cada tratamiento y `409` al eliminar uno ya usado (requieren `inventory` y las asignaciones)
 - [ ] `GET /treatments/:id/assignments`
 - [ ] `GET /treatment-assignments?patientId=`
 - [ ] `POST /treatment-assignments`

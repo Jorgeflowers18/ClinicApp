@@ -104,12 +104,14 @@ Historia clínica odontológica única por paciente: un **registro editable** (`
 
 ## `treatments`
 
-- [ ] `GET /treatments`.
-- [ ] `GET /treatments?active=true`.
-- [ ] `GET /treatments/:id`.
-- [ ] `POST /treatments`.
-- [ ] `PUT /treatments/:id`.
-- [ ] `DELETE /treatments/:id`.
+- [x] `GET /treatments` (paginado, búsqueda por nombre o categoría).
+- [x] `GET /treatments?active=true`.
+- [x] `GET /treatments/:id`.
+- [x] `POST /treatments`.
+- [x] `PUT /treatments/:id`.
+- [x] `DELETE /treatments/:id`.
+- [ ] **Insumos del tratamiento (`consumption`):** guardarlos en `POST`/`PUT` y devolverlos en las lecturas. Requiere la tabla de insumos de `inventory`; hoy la API ignora la lista recibida y devuelve `[]`.
+- [ ] **`DELETE /treatments/:id` de un tratamiento ya usado:** responder `409` si tiene tratamientos realizados (asignaciones) y sugerir desactivarlo.
 - [ ] `GET /treatments/:id/assignments`.
 - [ ] `GET /treatment-assignments?patientId=` — asignaciones de un paciente, de la más reciente a la más antigua. Lo usa la pestaña "Tratamientos" de la historia clínica para mostrar el progreso de las asignaciones antiguas con varias sesiones.
 - [ ] `POST /treatment-assignments` (body: `treatmentId`, `patientId`, `date`, `tooth`, `sourceEncounterId`, `sourceKey`, `price`) — registra un tratamiento **realizado** en una atención: crea la asignación ya `completado` con 1 de 1 sesión y descuenta stock de inventario por cada línea de `Treatment.consumption` (ver `inventory.registerConsumption`). **Idempotente por `sourceKey`** (atención + tratamiento de esa atención): si ya existe, devuelve la existente sin descontar de nuevo (el registro de la atención puede reintentarse). `404` si el tratamiento no existe y `400` si está inactivo. No valida deuda del paciente. Reemplaza a `POST /treatment-assignments/:id/advance-session`, que el frontend ya no usa (se quitó "+ Sesión").
