@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { getErrorMessage } from "@/shared/lib/error-message"
-import { usePatientsList } from "@/modules/patients/api/patients.queries"
+import { usePatient, usePatientsList } from "@/modules/patients/api/patients.queries"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
 
 import {
@@ -35,6 +35,7 @@ interface AppointmentFormDialogProps {
   onOpenChange: (open: boolean) => void
   appointment?: Appointment
   initialSlot?: { date: string; startTime: string; endTime: string }
+  initialPatientId?: string
 }
 
 export function AppointmentFormDialog({
@@ -42,9 +43,13 @@ export function AppointmentFormDialog({
   onOpenChange,
   appointment,
   initialSlot,
+  initialPatientId,
 }: AppointmentFormDialogProps) {
   const isEditMode = Boolean(appointment)
   const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
+  const { data: initialPatient } = usePatient(initialPatientId)
+  const patientOptions = initialPatient && !patientsPage?.items.some(patient => patient.id === initialPatient.id)
+    ? [initialPatient, ...(patientsPage?.items ?? [])] : patientsPage?.items ?? []
   const { data: professionals } = useProfessionals()
   const { data: rooms } = useRooms()
   const { data: treatments } = useActiveTreatments()
@@ -92,7 +97,7 @@ export function AppointmentFormDialog({
       })
     } else {
       reset({
-        patientId: "",
+        patientId: initialPatientId ?? "",
         professionalId: "",
         treatmentId: "",
         roomId: "",
@@ -102,7 +107,7 @@ export function AppointmentFormDialog({
         notes: "",
       })
     }
-  }, [open, appointment, initialSlot, reset])
+  }, [open, appointment, initialSlot, initialPatientId, reset])
 
   function handleTreatmentChange(treatmentId: string | null, onChange: (value: string) => void) {
     onChange(treatmentId ?? "")
@@ -151,12 +156,12 @@ export function AppointmentFormDialog({
                 control={control}
                 name="patientId"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries(patientOptions.map(patient => [patient.id, `${patient.firstName} ${patient.lastName}`]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="patientId" className="w-full">
                       <SelectValue placeholder="Selecciona un paciente..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {patientsPage?.items.map((patient) => (
+                      {patientOptions.map((patient) => (
                         <SelectItem key={patient.id} value={patient.id}>
                           {patient.firstName} {patient.lastName}
                         </SelectItem>

@@ -3,6 +3,7 @@ import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { FormActions } from "@/components/ui/form-actions"
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
@@ -80,12 +81,9 @@ function AlertDialogFooter({
   ...props
 }: React.ComponentProps<"div">) {
   return (
-    <div
+    <FormActions context="dialog"
       data-slot="alert-dialog-footer"
-      className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
-        className
-      )}
+      className={className}
       {...props}
     />
   )

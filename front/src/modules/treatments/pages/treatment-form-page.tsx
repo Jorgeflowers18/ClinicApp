@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { FormActions } from "@/components/ui/form-actions"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -223,14 +224,14 @@ export function TreatmentFormPage() {
           </div>
         </FieldGroup>
 
-        <div className="flex justify-end gap-2 border-t pt-4">
+        <FormActions>
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Guardando..." : isEditMode ? "Guardar cambios" : "Crear tratamiento"}
           </Button>
-        </div>
+        </FormActions>
       </form>
     </div>
   )

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
+import { navigateUserMenu } from "./helpers/app-navigation"
 
 test.use({ timezoneId: "America/Guayaquil" })
 test.describe.configure({ mode: "parallel" })
@@ -90,7 +91,9 @@ for (const theme of ["light", "dark"] as const) {
           const value = card.querySelector(".clinic-kpi-value")!.getBoundingClientRect()
           const last = (card.querySelector(".clinic-kpi-hint") ?? card.querySelector(".clinic-kpi-value"))!.getBoundingClientRect()
           const bounds = card.getBoundingClientRect()
-          return { height: bounds.height, gap: value.top - label.bottom, remainingBottom: bounds.bottom - last.bottom }
+          const heading = card.querySelector(".clinic-kpi-heading")?.getBoundingClientRect()
+          const reading = card.querySelector(".clinic-kpi-reading")?.getBoundingClientRect()
+          return { height: bounds.height, gap: heading && reading ? reading.top - heading.bottom : value.top - label.bottom, remainingBottom: bounds.bottom - (reading ?? last).bottom }
         }))
         for (const card of cards) {
           expect(card.gap).toBeGreaterThanOrEqual(3.9)
@@ -109,21 +112,22 @@ for (const theme of ["light", "dark"] as const) {
     const measured = []
     for (const width of widths) {
       await page.setViewportSize({ width, height: 1000 })
-      if (width < 1024) await page.getByRole("button", { name: "Abrir menú", exact: true }).click()
-      const sidebar = page.locator(width < 1024 ? ".clinic-app-sidebar-panel" : ".clinic-app-sidebar")
+      if (width < 768) await page.getByRole("button", { name: "Abrir menú", exact: true }).click()
+      const sidebar = page.locator(width < 768 ? ".clinic-app-sidebar-panel" : ".clinic-app-sidebar")
       await expect(sidebar).toBeVisible()
       await expect(sidebar.locator('a[aria-current="page"]')).toHaveCount(1)
       await expect(sidebar.locator('a[aria-current="page"]')).toHaveCSS("box-shadow", `${expectedAccent} 3px 0px 0px 0px inset`)
+      if (width < 768) await page.keyboard.press("Escape")
       await expect(themeSwitch(page)).toHaveAttribute("aria-checked", String(theme === "dark"))
       const bounds = await themeSwitch(page).boundingBox()
       expect(bounds!.width).toBeGreaterThanOrEqual(44)
       expect(bounds!.height).toBeGreaterThanOrEqual(44)
-      const track = await themeSwitch(page).evaluate((node) => getComputedStyle(node, "::before").backgroundColor)
-      expect(track).toBe(theme === "dark" ? expectedAccent : "rgb(133, 140, 151)")
+      const track = await themeSwitch(page).locator('[data-slot="switch-thumb"]').evaluate((node) => getComputedStyle(node).backgroundColor)
+      expect(track).toBe("rgba(0, 0, 0, 0)")
       measured.push({ width, bounds, track })
-      if (width < 1024) await page.keyboard.press("Escape")
-      else {
-        await expect(sidebar).toHaveCSS("width", "256px")
+      if (width >= 768) {
+        if (await sidebar.evaluate((node) => node.getBoundingClientRect().width) < 200) await page.getByRole("button", { name: "Abrir menú", exact: true }).click()
+        await expect(sidebar).toHaveCSS("width", "268px")
         await page.getByRole("button", { name: "Cerrar menú", exact: true }).click()
         await expect(sidebar).toHaveCSS("width", "72px")
         await expect(themeSwitch(page)).toBeVisible()
@@ -139,10 +143,11 @@ for (const theme of ["light", "dark"] as const) {
     await expect(themeSwitch(page)).toHaveAttribute("aria-checked", String(theme === "light"))
     await themeSwitch(page).setChecked(theme === "dark")
     for (const [name, route] of [["Pacientes", "/pacientes"], ["Citas", "/citas"], ["Historial clínico", "/historial-clinico"], ["Inventario", "/inventario"], ["Finanzas", "/finanzas"], ["Reportes", "/reportes"], ["Mi perfil", "/perfil-usuario"]]) {
-      await page.locator(".clinic-app-sidebar").getByRole("link", { name, exact: true }).click()
+      if (name === "Mi perfil") await navigateUserMenu(page)
+      else await page.locator(".clinic-app-sidebar").getByRole("link", { name, exact: true }).click()
       await expect(page).toHaveURL(new RegExp(`${route}$`))
-      await expect(page.locator('.clinic-app-sidebar a[aria-current="page"]')).toHaveCount(1)
-      await expect(page.locator('.clinic-app-sidebar a[aria-current="page"]')).toHaveText(name)
+      await expect(page.locator('.clinic-app-sidebar a[aria-current="page"]')).toHaveCount(name === "Mi perfil" ? 0 : 1)
+      if (name !== "Mi perfil") await expect(page.locator('.clinic-app-sidebar a[aria-current="page"]')).toHaveText(name)
     }
     await testInfo.attach("sidebar-theme-responsive", { body: JSON.stringify(measured, null, 2), contentType: "application/json" })
   })

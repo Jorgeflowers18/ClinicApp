@@ -1,3 +1,4 @@
+import { logoutFromHeader } from "./helpers/app-navigation"
 import { expect, test } from "@playwright/test"
 
 const screens = [
@@ -175,7 +176,7 @@ test("existing login, redirects, errors and application theme remain functional"
   await expect(page).toHaveURL(/\/$/)
   await expect(page).toHaveTitle("ClinicApp")
   await page.getByRole("switch", { name: "Modo oscuro", exact: true }).setChecked(false)
-  await page.getByRole("button", { name: "Salir", exact: true }).click()
+  await logoutFromHeader(page)
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole("button", { name: "Tema claro", exact: true })).toHaveAttribute("aria-pressed", "true")
 })

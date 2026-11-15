@@ -1,9 +1,12 @@
 import type { ToolbarProps, View } from "react-big-calendar"
 import { addDays, startOfWeek } from "date-fns"
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { CalendarDateNavigator } from "./calendar-date-navigator"
+import { useAppointmentsCalendar } from "./calendar-presentation-context"
 
 export function AppointmentsToolbar<TEvent extends object, TResource extends object>({ date, label, view, views, localizer, onNavigate, onView }: ToolbarProps<TEvent, TResource>) {
+  const { goToToday } = useAppointmentsCalendar()
   const messages = localizer.messages
   const availableViews = Array.isArray(views) ? views : Object.keys(views) as View[]
   const year = String(date.getFullYear())
@@ -17,12 +20,13 @@ export function AppointmentsToolbar<TEvent extends object, TResource extends obj
   return (
     <div className="rbc-toolbar">
       <div className="rbc-btn-group" role="group" aria-label="Navegación temporal">
-        <button type="button" onClick={() => onNavigate("TODAY")}>{messages.today}</button>
-        <button type="button" onClick={() => onNavigate("PREV")}>{messages.previous}</button>
-        <button type="button" onClick={() => onNavigate("NEXT")}>{messages.next}</button>
+        <button type="button" onClick={goToToday}><CalendarDays aria-hidden="true" />{messages.today}</button>
+        <button type="button" onClick={() => onNavigate("PREV")}><ChevronLeft aria-hidden="true" />{messages.previous}</button>
+        <button type="button" onClick={() => onNavigate("NEXT")}>{messages.next}<ChevronRight aria-hidden="true" /></button>
       </div>
       <div className="rbc-toolbar-label">
-        <CalendarDateNavigator date={date} label={periodLabel} onSelect={(target) => onNavigate("DATE", target)} />
+        <CalendarDateNavigator date={date} onSelect={(target) => onNavigate("DATE", target)} />
+        <p className="clinic-calendar-period" aria-label="Periodo visible">{periodLabel}</p>
       </div>
       <div className="rbc-btn-group" role="group" aria-label="Vista del calendario">
         {availableViews.map((name) => (

@@ -4,6 +4,8 @@ import { queryClient } from "@/shared/lib/query-client"
 
 import { authApi } from "./auth.api"
 import { useAuthStore } from "../store/auth-store"
+import { toast } from "sonner"
+import { getErrorMessage } from "@/shared/lib/error-message"
 import type { LoginFormValues } from "../types/auth.types"
 
 export function useLogin() {
@@ -23,8 +25,12 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authApi.logout(),
     onSettled: () => {
-      clearSession()
-      queryClient.clear()
+      try {
+        clearSession()
+        queryClient.clear()
+      } catch (error) {
+        toast.error(getErrorMessage(error))
+      }
     },
   })
 }

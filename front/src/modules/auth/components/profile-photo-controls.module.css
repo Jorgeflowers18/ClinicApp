@@ -1,0 +1,17 @@
+.avatarButton { position: relative; flex-shrink: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.avatarButton:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+.avatarButton:disabled { cursor: wait; }
+.camera { position: absolute; right: 0; bottom: 0; display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--card); color: var(--foreground); }
+.camera svg { width: 15px; height: 15px; }
+.upload { width: 100%; gap: 8px; min-height: 40px; }
+.menu { --ring: var(--primary); width: max-content; min-width: 208px; max-width: calc(100vw - 24px); }
+.menu [data-slot="dropdown-menu-item"] { min-height: 38px; padding: 8px; }
+.dialog { --ring: var(--primary); display: flex; width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); flex-direction: column; overflow-y: auto; }
+.dialog [data-slot="dialog-title"], .dialog [data-slot="alert-dialog-title"] { font-size: 18px; line-height: 24px; }
+.previewBody { display: grid; min-height: 0; place-items: center; overflow: auto; }
+.previewBody > img { max-width: 100%; width: 100%; height: min(240px, 30dvh); object-fit: contain; border-radius: 8px; background: var(--muted); }
+.previewBody p { display: flex; min-height: 80px; align-items: center; gap: 8px; }
+.previewBody svg { width: 18px; height: 18px; }
+.error { color: var(--destructive); font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+.status { color: var(--muted-foreground); font-size: 12px; line-height: 18px; text-align: center; }
+@media (max-width: 1023px), (pointer: coarse) { .upload, .menu [data-slot="dropdown-menu-item"], .dialog [data-slot="button"] { min-height: 44px; } }
