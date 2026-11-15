@@ -26,6 +26,17 @@ public class Treatment
     /// <summary>Fecha de creación, siempre en UTC.</summary>
     public DateTime CreatedAt { get; set; }
 
-    // Pendiente: la lista de insumos que consume el tratamiento ("consumption" en el frontend).
-    // Se agrega cuando exista la tabla de insumos del módulo de inventario.
+    /// <summary>Insumos que consume cada vez que se realiza ("consumption" en el frontend).</summary>
+    public List<TreatmentConsumption> Consumption { get; set; } = [];
+}
+
+/// <summary>
+/// Insumo que consume un tratamiento y cuánto. Tabla intermedia tratamiento ↔ insumo:
+/// la clave es el par (tratamiento, insumo), así un insumo no se repite en el mismo tratamiento.
+/// </summary>
+public class TreatmentConsumption
+{
+    public Guid TreatmentId { get; set; }
+    public Guid ItemId { get; set; }
+    public int Quantity { get; set; }
 }

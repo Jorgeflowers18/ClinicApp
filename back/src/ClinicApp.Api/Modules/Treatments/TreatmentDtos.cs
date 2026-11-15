@@ -25,14 +25,22 @@ public record TreatmentDto(
         treatment.DurationMinutes,
         treatment.Price,
         treatment.Active,
-        // Pendiente: los insumos se guardan cuando exista la tabla de inventario.
-        // Mientras tanto se devuelve una lista vacía, porque el frontend siempre espera el arreglo.
-        [],
+        treatment.Consumption.Select(consumption => new TreatmentConsumptionDto(consumption.ItemId, consumption.Quantity)).ToList(),
         treatment.CreatedAt);
 }
 
-/// <summary>Insumo que consume el tratamiento (pendiente del módulo de inventario).</summary>
-public record TreatmentConsumptionDto(string ItemId, int Quantity);
+/// <summary>Insumo que consume el tratamiento y cuánto.</summary>
+public record TreatmentConsumptionDto(Guid ItemId, int Quantity);
+
+/// <summary>Una línea de "insumos que consume" del formulario.</summary>
+public class TreatmentConsumptionRequest
+{
+    [Required(ErrorMessage = "Selecciona un insumo")]
+    public Guid? ItemId { get; set; }
+
+    [Range(1, 10_000, ErrorMessage = "Mínimo 1")]
+    public int Quantity { get; set; }
+}
 
 /// <summary>
 /// Lo que la API recibe al crear o editar: la forma de <c>TreatmentFormValues</c> del frontend.
@@ -65,9 +73,17 @@ public class TreatmentRequest
 
     public bool Active { get; set; }
 
-    // "consumption" también llega desde el frontend; por ahora se ignora (ver TreatmentDto).
+    /// <summary>
+    /// Insumos que consume. Si no viene, se toma como lista vacía. Que cada insumo exista y no se repita
+    /// lo revisa el controlador, porque necesita consultar la base.
+    /// </summary>
+    [MaxLength(50, ErrorMessage = "Máximo 50 insumos")]
+    public List<TreatmentConsumptionRequest> Consumption { get; set; } = [];
 
-    /// <summary>Copia los datos del formulario en la entidad (sirve para crear y para editar).</summary>
+    /// <summary>
+    /// Copia los datos del formulario en la entidad (sirve para crear y para editar).
+    /// Los consumos se sincronizan aparte (TreatmentsController.SyncConsumption).
+    /// </summary>
     public void ApplyTo(Treatment treatment)
     {
         treatment.Name = Name.Trim();

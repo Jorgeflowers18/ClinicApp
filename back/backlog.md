@@ -20,7 +20,7 @@ La asignación de cada módulo a un responsable y el orden de trabajo están en 
   El interceptor de Axios del frontend (`shared/lib/http.ts`) espera exactamente este formato para mostrar errores por campo en los formularios. Los demás errores (401, 403, 404, 405, 415, 429, 500) también salen como `ProblemDetails` con título en español (`Common/ProblemDetailsSetup.cs`).
 - [ ] Conflictos de negocio (choque de horario, etc.) como `409` con el mismo formato `errors` cuando aplique a un campo específico (ej. `startTime`).
 - [x] Paginación estándar donde el frontend la pide (`page`, `pageSize`, `search`) devolviendo `{ items, page, pageSize, totalItems, totalPages }`. Helper compartido: `Common/Paging.cs` (`PageQuery`, `PagedResult<T>`, `ToPagedResultAsync`).
-- [ ] **Autorización por rol en la API**, igual a la que hoy aplica el frontend con rutas protegidas (que no son una barrera real de seguridad). `403` si el rol no corresponde. Cada controlador lo declara con `[Authorize(Roles = ...)]` usando las constantes de `Modules/Auth/Roles.cs`. Hecho en `treatments`; aplicarlo en cada módulo nuevo:
+- [ ] **Autorización por rol en la API**, igual a la que hoy aplica el frontend con rutas protegidas (que no son una barrera real de seguridad). `403` si el rol no corresponde. Cada controlador lo declara con `[Authorize(Roles = ...)]` usando las constantes de `Modules/Auth/Roles.cs`. Hecho en `treatments` e `inventory` (con la excepción de lectura de insumos anotada en `inventory`); aplicarlo en cada módulo nuevo:
 
   | Módulo | Roles |
   |---|---|
@@ -125,7 +125,7 @@ Historia clínica odontológica única por paciente: un **registro editable** (`
 - [x] `POST /treatments`.
 - [x] `PUT /treatments/:id`.
 - [x] `DELETE /treatments/:id`.
-- [ ] **Insumos del tratamiento (`consumption`):** guardarlos en `POST`/`PUT` y devolverlos en las lecturas. Requiere la tabla de insumos de `inventory`; hoy la API ignora la lista recibida y devuelve `[]`.
+- [x] **Insumos del tratamiento (`consumption`):** se guardan en `POST`/`PUT` (tabla `treatment_consumptions`) y se devuelven en todas las lecturas. `400` por línea (`errors["consumption[1].itemId"]`) si un insumo no existe o está repetido. Si el body no trae `consumption`, se toma como lista vacía.
 - [ ] **`DELETE /treatments/:id` de un tratamiento ya usado:** responder `409` si tiene tratamientos realizados (asignaciones) y sugerir desactivarlo.
 - [ ] `GET /treatments/:id/assignments`.
 - [ ] `GET /treatment-assignments?patientId=` — asignaciones de un paciente, de la más reciente a la más antigua. Lo usa la pestaña "Tratamientos" de la historia clínica para mostrar el progreso de las asignaciones antiguas con varias sesiones.
@@ -135,25 +135,30 @@ Historia clínica odontológica única por paciente: un **registro editable** (`
 
 ## `inventory`
 
-- [ ] `GET /inventory/items`.
-- [ ] `GET /inventory/items/:id`.
-- [ ] `POST /inventory/items` — incluye `kind: "consumible" | "instrumental"`.
-- [ ] `PUT /inventory/items/:id`.
-- [ ] `DELETE /inventory/items/:id`.
-- [ ] `GET /inventory/items/:id/movements`.
-- [ ] `POST /inventory/items/:id/movements` — debe ajustar el stock del insumo según tipo de movimiento (entrada/salida); una entrada admite `expirationDate` opcional y **debe crear un lote nuevo** (ver `lots` abajo), no solo sumar al contador de stock.
-- [ ] `GET /inventory/items/:id/lots` — lotes del insumo (cantidad restante, vencimiento, orden de compra de origen si aplica), para mostrar "próximos a vencer".
-- [ ] **Consumo por lote (FEFO)** — cualquier salida de stock (manual o automática) debe descontarse de los lotes ordenados por vencimiento ascendente (primero en vencer, primero en salir), generando un movimiento por cada lote tocado si la salida abarca más de uno. El consumo automático (disparado por `POST /treatment-assignments` al registrar un tratamiento realizado) **no debe fallar si el stock no alcanza** — descuenta lo disponible y continúa; el consumo manual (vía `POST /inventory/items/:id/movements`) sí debe seguir validando que la cantidad no supere el stock disponible antes de ejecutarse.
-- [ ] `GET /inventory/suppliers` — catálogo de proveedores (`id, name, contactName?, phone?, email?, address?, notes?, createdAt`).
-- [ ] `POST /inventory/suppliers`.
-- [ ] `PUT /inventory/suppliers/:id`.
-- [ ] `DELETE /inventory/suppliers/:id` — debe responder `409` si el proveedor tiene órdenes de compra asociadas (así lo simula el mock).
-- [ ] `GET /inventory/purchase-orders` — listado de órdenes de compra (sin paginar, volumen bajo esperado).
-- [ ] `POST /inventory/purchase-orders` — crea con estado `pendiente`; el body trae `supplierId` (FK a `suppliers`), validar que exista.
-- [ ] `POST /inventory/purchase-orders/:id/receive` — solo si está `pendiente`; por cada línea crea un lote + movimiento de entrada, marca la orden `recibida` con `receivedAt`.
-- [ ] `POST /inventory/purchase-orders/:id/cancel` — solo si está `pendiente`.
-- [ ] `GET /inventory/sterilization-cycles`.
-- [ ] `POST /inventory/sterilization-cycles` — `itemIds` debe validarse contra insumos con `kind: "instrumental"`; `responsibleProfessionalId` referencia el mismo catálogo de `GET /professionals` del módulo `appointments`.
+Implementado en `back/src/ClinicApp.Api/Modules/Inventory/` (plan: [`docs/plan-inventario.md`](./docs/plan-inventario.md)). Roles: los tres pueden leer `GET /inventory/items` y `GET /inventory/items/:id` (los formularios de tratamientos, que usa el médico, cargan la lista); el resto es solo para `admin` y `recepcion`. Cada entrada y salida pasa por `StockService`, que bloquea la fila del insumo (`SELECT … FOR UPDATE`) dentro de una transacción y mantiene `stock = Σ lotes`: dos salidas simultáneas no pueden dejar el stock negativo. Movimientos, órdenes y ciclos guardan el usuario que los registró (`created_by_user_id`, no se expone).
+
+- [x] `GET /inventory/items` — paginado, ordenado por nombre; `search` busca en nombre, categoría y proveedor.
+- [x] `GET /inventory/items/:id`.
+- [x] `POST /inventory/items` — incluye `kind: "consumible" | "instrumental"`; nace con `stock = 0`.
+- [x] `PUT /inventory/items/:id` — no toca el stock.
+- [x] `DELETE /inventory/items/:id` — `409` si el insumo tiene movimientos o lotes, o aparece en una orden de compra, un ciclo de esterilización o un tratamiento.
+- [x] `GET /inventory/items/:id/movements` — del más reciente al más antiguo.
+- [x] `POST /inventory/items/:id/movements` — una entrada crea un lote nuevo (con `expirationDate` opcional, `"YYYY-MM-DD"` o vacío); una salida descuenta por FEFO y, si abarca varios lotes, crea un movimiento por lote y devuelve el primero. Salida mayor al stock: `400` "Stock insuficiente. Disponible: N" con `errors.quantity`.
+- [x] `GET /inventory/items/:id/lots` — en orden FEFO (los que no vencen, al final).
+- [x] **Consumo por lote (FEFO)** — `StockService.ConsumeAsync`: lotes por vencimiento ascendente, sin vencimiento al final y, entre iguales, el más antiguo. Es tolerante (si el stock no alcanza descuenta lo disponible y deja un aviso en el log); la salida manual valida antes. Lo usará `POST /treatment-assignments`.
+- [x] `GET /inventory/suppliers` — ordenados por nombre.
+- [x] `POST /inventory/suppliers` — solo el nombre es obligatorio; correo válido o vacío. Los campos vacíos se guardan como `null`.
+- [x] `PUT /inventory/suppliers/:id`.
+- [x] `DELETE /inventory/suppliers/:id` — `409` si el proveedor tiene órdenes de compra.
+- [x] `GET /inventory/purchase-orders` — de la más reciente a la más antigua, con sus líneas en el orden en que se crearon.
+- [x] `POST /inventory/purchase-orders` — crea con estado `pendiente`. `400` si el proveedor o un insumo no existen (`errors.supplierId`, `errors["lines[0].itemId"]`).
+- [x] `POST /inventory/purchase-orders/:id/receive` — en una sola transacción, por cada línea un lote y un movimiento de entrada (`reason` "Recepción de orden de compra #<id>"); la orden pasa a `recibida` con `receivedAt`. La orden se bloquea: dos recepciones simultáneas no duplican el stock. `409` si no está `pendiente` (el mock usa `400`; el mensaje es el mismo).
+- [x] `POST /inventory/purchase-orders/:id/cancel` — `409` si no está `pendiente`.
+- [x] `GET /inventory/sterilization-cycles` — por fecha, del más reciente al más antiguo.
+- [x] `POST /inventory/sterilization-cycles` — `itemIds` solo de insumos `instrumental` (`400` si alguno no existe o es consumible; los repetidos se unen). `performedAt` en `"YYYY-MM-DD"`, no futura (se tolera un día de diferencia con UTC por la zona horaria de la clínica).
+- [ ] **Llaves foráneas pendientes:** `sterilization_cycles.responsible_professional_id` → `professionals` (cuando exista `appointments`), y `stock_movements.patient_id` / `treatment_assignment_id` → `patients` / `treatment_assignments`. Hoy son UUID sin llave foránea: el responsable de un ciclo no se valida.
+- [ ] **Desactivar insumos:** un insumo con historia no se puede borrar (`409`) y el frontend no tiene opción de desactivarlo. Agregar `active` al insumo y al formulario si la clínica lo necesita.
+- [ ] **Más de 100 insumos:** "Stock crítico", el formulario de órdenes de compra, el de esterilización y los de tratamientos piden `GET /inventory/items?pageSize=100`, el máximo de la API. Con más insumos faltarían en esas pantallas: agregar un filtro (`?critical=true`, `?kind=instrumental`) o una lista sin paginar para los selectores.
 
 ## `reports`
 

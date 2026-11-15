@@ -1,6 +1,7 @@
 using ClinicApp.Api.Common;
 using ClinicApp.Api.Data;
 using ClinicApp.Api.Modules.Auth;
+using ClinicApp.Api.Modules.Inventory;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -38,7 +39,7 @@ builder.Services
         options.InvalidModelStateResponseFactory = context =>
             new BadRequestObjectResult(new ValidationProblemDetails(context.ModelState)
             {
-                Title = "Revisa los datos ingresados",
+                Title = Validation.Title,
                 Status = StatusCodes.Status400BadRequest,
             });
     });
@@ -86,6 +87,10 @@ builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
 builder.Services.AddClinicRateLimits();
+
+// Inventario: la única pieza que cambia el stock (entradas, salidas FEFO).
+// Scoped = una por petición, igual que el AppDbContext que usa.
+builder.Services.AddScoped<StockService>();
 
 // En producción la API está detrás de nginx, que atiende el HTTPS y le pasa la petición por HTTP.
 // nginx avisa en encabezados cuál era el esquema original (https) y la IP del cliente.

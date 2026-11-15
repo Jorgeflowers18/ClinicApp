@@ -168,7 +168,8 @@ Siguen por definir:
 - [x] `POST /treatments`
 - [x] `PUT /treatments/:id`
 - [x] `DELETE /treatments/:id`
-- [ ] Insumos de cada tratamiento y `409` al eliminar uno ya usado (requieren `inventory` y las asignaciones)
+- [x] Insumos de cada tratamiento (`consumption`)
+- [ ] `409` al eliminar un tratamiento ya usado (requiere las asignaciones)
 - [ ] `GET /treatments/:id/assignments`
 - [ ] `GET /treatment-assignments?patientId=`
 - [ ] `POST /treatment-assignments`
@@ -186,24 +187,31 @@ Siguen por definir:
 **Entidades:** insumo, movimiento de stock, lote, proveedor, orden de compra (con líneas), ciclo de esterilización.
 
 **Endpoints:**
-- [ ] `GET /inventory/items`
-- [ ] `GET /inventory/items/:id`
-- [ ] `POST /inventory/items`
-- [ ] `PUT /inventory/items/:id`
-- [ ] `DELETE /inventory/items/:id`
-- [ ] `GET /inventory/items/:id/movements`
-- [ ] `POST /inventory/items/:id/movements`
-- [ ] `GET /inventory/items/:id/lots`
-- [ ] `GET /inventory/suppliers`
-- [ ] `POST /inventory/suppliers`
-- [ ] `PUT /inventory/suppliers/:id`
-- [ ] `DELETE /inventory/suppliers/:id`
-- [ ] `GET /inventory/purchase-orders`
-- [ ] `POST /inventory/purchase-orders`
-- [ ] `POST /inventory/purchase-orders/:id/receive`
-- [ ] `POST /inventory/purchase-orders/:id/cancel`
-- [ ] `GET /inventory/sterilization-cycles`
-- [ ] `POST /inventory/sterilization-cycles`
+- [x] `GET /inventory/items`
+- [x] `GET /inventory/items/:id`
+- [x] `POST /inventory/items`
+- [x] `PUT /inventory/items/:id`
+- [x] `DELETE /inventory/items/:id`
+- [x] `GET /inventory/items/:id/movements`
+- [x] `POST /inventory/items/:id/movements`
+- [x] `GET /inventory/items/:id/lots`
+- [x] `GET /inventory/suppliers`
+- [x] `POST /inventory/suppliers`
+- [x] `PUT /inventory/suppliers/:id`
+- [x] `DELETE /inventory/suppliers/:id`
+- [x] `GET /inventory/purchase-orders`
+- [x] `POST /inventory/purchase-orders`
+- [x] `POST /inventory/purchase-orders/:id/receive`
+- [x] `POST /inventory/purchase-orders/:id/cancel`
+- [x] `GET /inventory/sterilization-cycles`
+- [x] `POST /inventory/sterilization-cycles`
+
+**Hecho además:** `StockService` (entradas y salidas FEFO con bloqueo de fila), listo para que `POST /treatment-assignments` descuente insumos sin fallar por falta de stock.
+
+**Pendiente:**
+- [ ] Llave foránea del responsable de esterilización a `professionals` (cuando exista `appointments`) y de `patient_id` / `treatment_assignment_id` de los movimientos.
+- [ ] Desactivar insumos en lugar de borrarlos (requiere cambio en el frontend).
+- [ ] Selectores y "Stock crítico" con más de 100 insumos.
 
 **Coordinar con Josue Cevallos:** el responsable de un ciclo de esterilización es un profesional del catálogo de `appointments`; el reporte de inventario usa los movimientos y las órdenes de compra.
 

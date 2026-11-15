@@ -145,3 +145,115 @@ Authorization: Bearer {{token}}
 ### No encontrado (404)
 GET {{api}}/treatments/00000000-0000-0000-0000-000000000000
 Authorization: Bearer {{token}}
+
+# ───────────────────────── inventory ─────────────────────────
+# Leer insumos: los tres roles. Todo lo demás: admin y recepcion.
+
+### Crear un insumo (nace con stock 0)
+# @name insumo
+POST {{api}}/inventory/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Guantes de nitrilo",
+  "category": "Protección",
+  "unit": "caja",
+  "kind": "consumible",
+  "minStock": 5,
+  "unitCost": 8.5,
+  "supplier": "Dental Sur"
+}
+
+### Listar insumos (paginado, busca en nombre, categoría y proveedor)
+GET {{api}}/inventory/items?page=1&pageSize=10&search=guantes
+Authorization: Bearer {{token}}
+
+### Entrada de stock: crea un lote (vencimiento opcional, "YYYY-MM-DD" o "")
+POST {{api}}/inventory/items/{{insumo.response.body.id}}/movements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "entrada",
+  "quantity": 10,
+  "reason": "Compra directa",
+  "expirationDate": "2027-03-31"
+}
+
+### Salida de stock: descuenta por FEFO (400 "Stock insuficiente" si supera el stock)
+POST {{api}}/inventory/items/{{insumo.response.body.id}}/movements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "salida",
+  "quantity": 3,
+  "reason": "Uso en consultorio 1"
+}
+
+### Movimientos del insumo (del más reciente al más antiguo)
+GET {{api}}/inventory/items/{{insumo.response.body.id}}/movements
+Authorization: Bearer {{token}}
+
+### Lotes del insumo (en orden FEFO)
+GET {{api}}/inventory/items/{{insumo.response.body.id}}/lots
+Authorization: Bearer {{token}}
+
+### Crear un proveedor
+# @name proveedor
+POST {{api}}/inventory/suppliers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Dental Sur",
+  "contactName": "Mario Pérez",
+  "phone": "0999999999",
+  "email": "ventas@dentalsur.com",
+  "address": "",
+  "notes": ""
+}
+
+### Listar proveedores
+GET {{api}}/inventory/suppliers
+Authorization: Bearer {{token}}
+
+### Crear una orden de compra (pendiente: no mueve stock)
+# @name orden
+POST {{api}}/inventory/purchase-orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "supplierId": "{{proveedor.response.body.id}}",
+  "notes": "Pedido mensual",
+  "lines": [
+    { "itemId": "{{insumo.response.body.id}}", "quantity": 20, "unitCost": 8.25, "expirationDate": "2027-06-30" }
+  ]
+}
+
+### Recibir la orden: un lote y una entrada por línea (409 si ya no está pendiente)
+POST {{api}}/inventory/purchase-orders/{{orden.response.body.id}}/receive
+Authorization: Bearer {{token}}
+
+### Listar órdenes de compra
+GET {{api}}/inventory/purchase-orders
+Authorization: Bearer {{token}}
+
+### Registrar un ciclo de esterilización (solo insumos "instrumental": este da 400)
+POST {{api}}/inventory/sterilization-cycles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "itemIds": ["{{insumo.response.body.id}}"],
+  "performedAt": "2026-11-15",
+  "result": "aprobado",
+  "responsibleProfessionalId": "0199a000-0000-7000-8000-000000000001",
+  "notes": "Autoclave 1"
+}
+
+### Listar ciclos de esterilización
+GET {{api}}/inventory/sterilization-cycles
+Authorization: Bearer {{token}}

@@ -24,7 +24,8 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> List([FromQuery] PageQuery query, [FromQuery] bool? active, CancellationToken cancellationToken)
     {
         // AsNoTracking: solo vamos a leer, así EF Core no vigila cambios en estos objetos (más rápido).
-        var treatments = db.Treatments.AsNoTracking();
+        // Include: trae también los insumos de cada tratamiento (tabla treatment_consumptions).
+        IQueryable<Treatment> treatments = db.Treatments.AsNoTracking().Include(treatment => treatment.Consumption);
 
         if (active == true)
         {
@@ -61,6 +62,7 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
     public async Task<ActionResult<TreatmentDto>> Get(Guid id, CancellationToken cancellationToken)
     {
         var treatment = await db.Treatments.AsNoTracking()
+            .Include(entry => entry.Consumption)
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
 
         if (treatment is null) return TreatmentNotFound();
@@ -73,8 +75,11 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
     public async Task<ActionResult<TreatmentDto>> Create(TreatmentRequest request, CancellationToken cancellationToken)
     {
         // Si llegamos aquí, [ApiController] ya validó el request: si algo fallaba, respondió 400 solo.
+        if (!await ValidateConsumptionAsync(request, cancellationToken)) return this.ValidationError(ModelState);
+
         var treatment = new Treatment { Id = Guid.CreateVersion7(), CreatedAt = DateTime.UtcNow };
         request.ApplyTo(treatment);
+        SyncConsumption(treatment, request);
 
         db.Treatments.Add(treatment);
         await db.SaveChangesAsync(cancellationToken); // aquí recién se ejecuta el INSERT
@@ -87,10 +92,15 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
     public async Task<ActionResult<TreatmentDto>> Update(Guid id, TreatmentRequest request, CancellationToken cancellationToken)
     {
         // Sin AsNoTracking: EF Core vigila el objeto y al guardar genera un UPDATE solo de lo que cambió.
-        var treatment = await db.Treatments.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        var treatment = await db.Treatments
+            .Include(entry => entry.Consumption)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (treatment is null) return TreatmentNotFound();
 
+        if (!await ValidateConsumptionAsync(request, cancellationToken)) return this.ValidationError(ModelState);
+
         request.ApplyTo(treatment);
+        SyncConsumption(treatment, request);
         await db.SaveChangesAsync(cancellationToken);
 
         return TreatmentDto.FromEntity(treatment);
@@ -109,6 +119,54 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync(cancellationToken);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Revisa contra la base que cada insumo exista y no se repita. Los errores van con el nombre del campo
+    /// del formulario ("consumption[1].itemId") para que el frontend marque la línea correcta.
+    /// </summary>
+    private async Task<bool> ValidateConsumptionAsync(TreatmentRequest request, CancellationToken cancellationToken)
+    {
+        var lines = request.Consumption ?? [];
+        var itemIds = lines.Select(line => line.ItemId!.Value).Distinct().ToList();
+        var existingIds = itemIds.Count == 0
+            ? []
+            : await db.InventoryItems
+                .Where(item => itemIds.Contains(item.Id))
+                .Select(item => item.Id)
+                .ToListAsync(cancellationToken);
+
+        var seen = new HashSet<Guid>();
+        for (var index = 0; index < lines.Count; index++)
+        {
+            var itemId = lines[index].ItemId!.Value;
+            if (!existingIds.Contains(itemId))
+                ModelState.AddModelError($"consumption[{index}].itemId", "El insumo no existe");
+            else if (!seen.Add(itemId))
+                ModelState.AddModelError($"consumption[{index}].itemId", "Insumo repetido: suma las cantidades en una sola línea");
+        }
+
+        return ModelState.IsValid;
+    }
+
+    /// <summary>
+    /// Deja los consumos del tratamiento iguales a los del formulario: actualiza la cantidad de los que siguen,
+    /// agrega los nuevos y quita los que ya no están. EF Core genera los UPDATE, INSERT y DELETE al guardar.
+    /// </summary>
+    private static void SyncConsumption(Treatment treatment, TreatmentRequest request)
+    {
+        var wanted = (request.Consumption ?? []).ToDictionary(line => line.ItemId!.Value, line => line.Quantity);
+
+        treatment.Consumption.RemoveAll(consumption => !wanted.ContainsKey(consumption.ItemId));
+
+        foreach (var (itemId, quantity) in wanted)
+        {
+            var existing = treatment.Consumption.Find(consumption => consumption.ItemId == itemId);
+            if (existing is not null)
+                existing.Quantity = quantity;
+            else
+                treatment.Consumption.Add(new TreatmentConsumption { TreatmentId = treatment.Id, ItemId = itemId, Quantity = quantity });
+        }
     }
 
     /// <summary>404 en formato ProblemDetails: el frontend muestra el "title" como mensaje.</summary>

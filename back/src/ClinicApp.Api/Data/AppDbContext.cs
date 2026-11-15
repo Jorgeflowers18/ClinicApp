@@ -1,4 +1,5 @@
 using ClinicApp.Api.Modules.Auth;
+using ClinicApp.Api.Modules.Inventory;
 using ClinicApp.Api.Modules.Treatments;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,12 +12,23 @@ namespace ClinicApp.Api.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Treatment> Treatments => Set<Treatment>();
+    public DbSet<TreatmentConsumption> TreatmentConsumptions => Set<TreatmentConsumption>();
 
     // auth
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<AccessRequest> AccessRequests => Set<AccessRequest>();
+
+    // inventory
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+    public DbSet<StockLot> StockLots => Set<StockLot>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderLine> PurchaseOrderLines => Set<PurchaseOrderLine>();
+    public DbSet<SterilizationCycle> SterilizationCycles => Set<SterilizationCycle>();
+    public DbSet<SterilizationCycleItem> SterilizationCycleItems => Set<SterilizationCycleItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

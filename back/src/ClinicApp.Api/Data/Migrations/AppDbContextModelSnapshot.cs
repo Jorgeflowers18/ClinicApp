@@ -220,6 +220,410 @@ namespace ClinicApp.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.InventoryItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<int>("MinStock")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_stock");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Stock")
+                        .HasColumnType("integer")
+                        .HasColumnName("stock");
+
+                    b.Property<string>("Supplier")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("supplier");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("unit");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("unit_cost");
+
+                    b.HasKey("Id")
+                        .HasName("pk_inventory_items");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_inventory_items_name");
+
+                    b.ToTable("inventory_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_inventory_items_kind", "kind IN ('consumible', 'instrumental')");
+
+                            t.HasCheckConstraint("ck_inventory_items_min_stock", "min_stock >= 0");
+
+                            t.HasCheckConstraint("ck_inventory_items_stock", "stock >= 0");
+
+                            t.HasCheckConstraint("ck_inventory_items_unit_cost", "unit_cost >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.PurchaseOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_purchase_orders");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_purchase_orders_created_at");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_purchase_orders_created_by_user_id");
+
+                    b.HasIndex("SupplierId")
+                        .HasDatabaseName("ix_purchase_orders_supplier_id");
+
+                    b.ToTable("purchase_orders", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_purchase_orders_status", "status IN ('pendiente', 'recibida', 'cancelada')");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.PurchaseOrderLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly?>("ExpirationDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expiration_date");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<Guid>("PurchaseOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("purchase_order_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("unit_cost");
+
+                    b.HasKey("Id")
+                        .HasName("pk_purchase_order_lines");
+
+                    b.HasIndex("ItemId")
+                        .HasDatabaseName("ix_purchase_order_lines_item_id");
+
+                    b.HasIndex("PurchaseOrderId")
+                        .HasDatabaseName("ix_purchase_order_lines_purchase_order_id");
+
+                    b.ToTable("purchase_order_lines", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_purchase_order_lines_quantity", "quantity >= 1");
+
+                            t.HasCheckConstraint("ck_purchase_order_lines_unit_cost", "unit_cost >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.SterilizationCycle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateOnly>("PerformedAt")
+                        .HasColumnType("date")
+                        .HasColumnName("performed_at");
+
+                    b.Property<Guid>("ResponsibleProfessionalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("responsible_professional_id");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("result");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sterilization_cycles");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_sterilization_cycles_created_by_user_id");
+
+                    b.HasIndex("PerformedAt")
+                        .HasDatabaseName("ix_sterilization_cycles_performed_at");
+
+                    b.ToTable("sterilization_cycles", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_sterilization_cycles_result", "result IN ('aprobado', 'fallido')");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.SterilizationCycleItem", b =>
+                {
+                    b.Property<Guid>("CycleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cycle_id");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.HasKey("CycleId", "ItemId")
+                        .HasName("pk_sterilization_cycle_items");
+
+                    b.HasIndex("ItemId")
+                        .HasDatabaseName("ix_sterilization_cycle_items_item_id");
+
+                    b.ToTable("sterilization_cycle_items", (string)null);
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.StockLot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly?>("ExpirationDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expiration_date");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<Guid?>("PurchaseOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("purchase_order_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stock_lots");
+
+                    b.HasIndex("PurchaseOrderId")
+                        .HasDatabaseName("ix_stock_lots_purchase_order_id");
+
+                    b.HasIndex("ItemId", "ExpirationDate")
+                        .HasDatabaseName("ix_stock_lots_item_id_expiration_date");
+
+                    b.ToTable("stock_lots", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_stock_lots_quantity", "quantity >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.StockMovement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<Guid?>("LotId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lot_id");
+
+                    b.Property<Guid?>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<Guid?>("PurchaseOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("purchase_order_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid?>("TreatmentAssignmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("treatment_assignment_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stock_movements");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_stock_movements_created_by_user_id");
+
+                    b.HasIndex("LotId")
+                        .HasDatabaseName("ix_stock_movements_lot_id");
+
+                    b.HasIndex("PurchaseOrderId")
+                        .HasDatabaseName("ix_stock_movements_purchase_order_id");
+
+                    b.HasIndex("ItemId", "CreatedAt")
+                        .HasDatabaseName("ix_stock_movements_item_id_created_at");
+
+                    b.ToTable("stock_movements", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_stock_movements_quantity", "quantity > 0");
+
+                            t.HasCheckConstraint("ck_stock_movements_type", "type IN ('entrada', 'salida')");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.Supplier", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("address");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("contact_name");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("phone");
+
+                    b.HasKey("Id")
+                        .HasName("pk_suppliers");
+
+                    b.ToTable("suppliers", (string)null);
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.Treatment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -265,6 +669,32 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasName("pk_treatments");
 
                     b.ToTable("treatments", (string)null);
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.TreatmentConsumption", b =>
+                {
+                    b.Property<Guid>("TreatmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("treatment_id");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.HasKey("TreatmentId", "ItemId")
+                        .HasName("pk_treatment_consumptions");
+
+                    b.HasIndex("ItemId")
+                        .HasDatabaseName("ix_treatment_consumptions_item_id");
+
+                    b.ToTable("treatment_consumptions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_treatment_consumptions_quantity", "quantity >= 1");
+                        });
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Auth.PasswordResetToken", b =>
@@ -328,6 +758,143 @@ namespace ClinicApp.Api.Data.Migrations
                         });
 
                     b.Navigation("Profile");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.PurchaseOrder", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_purchase_orders_users_created_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_purchase_orders_suppliers_supplier_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.PurchaseOrderLine", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.InventoryItem", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_purchase_order_lines_inventory_items_item_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.PurchaseOrder", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_purchase_order_lines_purchase_orders_purchase_order_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.SterilizationCycle", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_sterilization_cycles_users_created_by_user_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.SterilizationCycleItem", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.SterilizationCycle", null)
+                        .WithMany("Items")
+                        .HasForeignKey("CycleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sterilization_cycle_items_sterilization_cycles_cycle_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.InventoryItem", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sterilization_cycle_items_inventory_items_item_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.StockLot", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.InventoryItem", "Item")
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_stock_lots_inventory_items_item_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_lots_purchase_orders_purchase_order_id");
+
+                    b.Navigation("Item");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.StockMovement", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_stock_movements_users_created_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.InventoryItem", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_stock_movements_inventory_items_item_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.StockLot", null)
+                        .WithMany()
+                        .HasForeignKey("LotId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_movements_stock_lots_lot_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_movements_purchase_orders_purchase_order_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.TreatmentConsumption", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Inventory.InventoryItem", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_treatment_consumptions_inventory_items_item_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Treatments.Treatment", null)
+                        .WithMany("Consumption")
+                        .HasForeignKey("TreatmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_treatment_consumptions_treatments_treatment_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.PurchaseOrder", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.SterilizationCycle", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.Treatment", b =>
+                {
+                    b.Navigation("Consumption");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,3 +1,4 @@
+using ClinicApp.Api.Modules.Inventory;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,5 +18,28 @@ public class TreatmentConfiguration : IEntityTypeConfiguration<Treatment>
 
         // numeric(10,2): hasta 99 999 999.99 con dos decimales exactos.
         builder.Property(treatment => treatment.Price).HasPrecision(10, 2);
+
+        // Cascade: los consumos pertenecen al tratamiento y se borran con él.
+        builder.HasMany(treatment => treatment.Consumption)
+            .WithOne()
+            .HasForeignKey(consumption => consumption.TreatmentId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class TreatmentConsumptionConfiguration : IEntityTypeConfiguration<TreatmentConsumption>
+{
+    public void Configure(EntityTypeBuilder<TreatmentConsumption> builder)
+    {
+        builder.ToTable("treatment_consumptions", table =>
+            table.HasCheckConstraint("ck_treatment_consumptions_quantity", "quantity >= 1"));
+
+        builder.HasKey(consumption => new { consumption.TreatmentId, consumption.ItemId });
+
+        // Restrict: no se puede borrar un insumo que algún tratamiento consume.
+        builder.HasOne<InventoryItem>()
+            .WithMany()
+            .HasForeignKey(consumption => consumption.ItemId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
