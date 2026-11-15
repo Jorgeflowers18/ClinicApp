@@ -1,6 +1,10 @@
 using ClinicApp.Api.Common;
 using ClinicApp.Api.Data;
+using ClinicApp.Api.Modules.Auth;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.EntityFrameworkCore;
@@ -50,7 +54,38 @@ var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get
 
 builder.Services.AddCors(options =>
     options.AddPolicy(FrontendCorsPolicy, policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()
+            .AllowCredentials())); // deja que el navegador mande y guarde la cookie de refresh
+
+// Autenticación con JWT. La configuración (clave de firma, vida de los tokens) está en la sección "Auth".
+var authOptions = AuthOptions.Load(builder.Configuration);
+builder.Services.AddSingleton(authOptions);
+builder.Services.AddSingleton<TokenService>();
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddSingleton<IEmailSender, LogEmailSender>();
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false; // conserva los nombres cortos: "sub", "role", "name"
+        options.TokenValidationParameters = new()
+        {
+            ValidIssuer = authOptions.Issuer,
+            ValidAudience = authOptions.Audience,
+            IssuerSigningKey = authOptions.GetSigningKey(),
+            NameClaimType = AuthClaims.Name,
+            RoleClaimType = AuthClaims.Role,
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+    });
+
+// Por defecto TODOS los endpoints piden sesión. Los públicos lo dicen con [AllowAnonymous].
+// Cada controlador indica además qué roles pueden usarlo (tabla en backlog.md § Transversal).
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+
+builder.Services.AddClinicRateLimits();
 
 // En producción la API está detrás de nginx, que atiende el HTTPS y le pasa la petición por HTTP.
 // nginx avisa en encabezados cuál era el esquema original (https) y la IP del cliente.
@@ -63,7 +98,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database");
 
 // Descripción OpenAPI de todos los endpoints (/openapi/v1.json).
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
 var app = builder.Build();
 
@@ -76,17 +111,21 @@ app.UseStatusCodePages();       // da cuerpo ProblemDetails a los errores vacío
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference(); // página para probar los endpoints: http://localhost:5000/scalar
+    app.MapOpenApi().AllowAnonymous();
+    app.MapScalarApiReference().AllowAnonymous(); // página para probar los endpoints: http://localhost:5000/scalar
 }
 
 // Sin UseHttpsRedirection: en producción nginx redirige http → https y en desarrollo se usa http.
 
 app.UseCors(FrontendCorsPolicy);
 
-app.UseAuthorization();
+app.UseRateLimiter();
+app.UseAuthentication();   // lee el JWT del encabezado Authorization y arma el usuario (User)
+app.UseAuthorization();    // decide si ese usuario puede usar el endpoint: 401 sin sesión, 403 sin el rol
 
-app.MapHealthChecks("/api/health");
+app.MapHealthChecks("/api/health").AllowAnonymous();
 app.MapControllers();
+
+await app.SeedUsersAsync();
 
 app.Run();

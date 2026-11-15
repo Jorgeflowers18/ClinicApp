@@ -1,7 +1,9 @@
 # Peticiones de prueba. En VS Code (extensión REST Client) o Visual Studio / Rider,
 # pulsa "Send Request" sobre cada una. La API debe estar corriendo (dotnet run).
+# Casi todos los endpoints piden sesión: ejecuta primero "Iniciar sesión".
 
 @api = http://localhost:5000/api
+@token = {{login.response.body.accessToken}}
 
 ### Chequeo de salud: "Healthy" (200) si la API llega a la base, "Unhealthy" (503) si no
 GET {{api}}/health
@@ -9,15 +11,89 @@ GET {{api}}/health
 ### Ruta inexistente: 404 en formato ProblemDetails ("Recurso no encontrado")
 GET {{api}}/no-existe
 
+# ───────────────────────── auth ─────────────────────────
+# Cuentas de desarrollo (las crea la API al arrancar si la tabla users está vacía):
+# admin@clinica.com / admin123 · recepcion@clinica.com / recepcion123 · medico@clinica.com / medico123
+
+### Iniciar sesión (devuelve accessToken y la cookie de refresh)
+# @name login
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@clinica.com",
+  "password": "admin123"
+}
+
+### Usuario de la sesión
+GET {{api}}/auth/me
+Authorization: Bearer {{token}}
+
+### Renovar la sesión con la cookie de refresh (rota la cookie)
+POST {{api}}/auth/refresh
+
+### Guardar "Mi perfil"
+PUT {{api}}/auth/me/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Ana Morales",
+  "title": "Directora clínica",
+  "specialty": "Ortodoncia",
+  "bio": "",
+  "avatarColor": "#0f766e",
+  "avatarImage": null
+}
+
+### Recuperar contraseña (siempre 202; en desarrollo el enlace sale en la consola de la API)
+POST {{api}}/auth/password-recovery
+Content-Type: application/json
+
+{
+  "email": "medico@clinica.com"
+}
+
+### Fijar la contraseña nueva (pega el token del enlace)
+POST {{api}}/auth/password-reset
+Content-Type: application/json
+
+{
+  "token": "PEGA-AQUI-EL-TOKEN",
+  "password": "una-clave-nueva"
+}
+
+### Solicitud de acceso
+POST {{api}}/auth/access-requests
+Content-Type: application/json
+
+{
+  "email": "nueva@clinica.com",
+  "fullName": "Nueva Persona",
+  "institution": "Clínica Dental",
+  "message": "Hola, soy la nueva asistente."
+}
+
+### Cerrar sesión (invalida la cookie de refresh)
+POST {{api}}/auth/logout
+
+# ───────────────────────── treatments ─────────────────────────
+
+### Sin sesión: 401 ("Inicia sesión para continuar")
+GET {{api}}/treatments
+
 ### Listar tratamientos (paginado, con búsqueda)
 GET {{api}}/treatments?page=1&pageSize=10&search=limpieza
+Authorization: Bearer {{token}}
 
 ### Listar solo los activos (sin paginar)
 GET {{api}}/treatments?active=true
+Authorization: Bearer {{token}}
 
 ### Crear un tratamiento
 # @name crear
 POST {{api}}/treatments
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -32,9 +108,11 @@ Content-Type: application/json
 
 ### Ver el tratamiento recién creado
 GET {{api}}/treatments/{{crear.response.body.id}}
+Authorization: Bearer {{token}}
 
 ### Editarlo
 PUT {{api}}/treatments/{{crear.response.body.id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -49,6 +127,7 @@ Content-Type: application/json
 
 ### Error de validación (400): nombre corto, duración y precio inválidos
 POST {{api}}/treatments
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -61,6 +140,8 @@ Content-Type: application/json
 
 ### Eliminarlo
 DELETE {{api}}/treatments/{{crear.response.body.id}}
+Authorization: Bearer {{token}}
 
 ### No encontrado (404)
 GET {{api}}/treatments/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}

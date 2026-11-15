@@ -20,6 +20,7 @@ public static class ProblemDetailsSetup
         [StatusCodes.Status405MethodNotAllowed] = "Método no permitido",
         [StatusCodes.Status409Conflict] = "La operación entra en conflicto con los datos actuales",
         [StatusCodes.Status415UnsupportedMediaType] = "Formato de datos no soportado",
+        [StatusCodes.Status429TooManyRequests] = "Demasiados intentos. Espera un minuto e inténtalo de nuevo",
         [StatusCodes.Status500InternalServerError] = "Ocurrió un error inesperado",
     };
 

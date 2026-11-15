@@ -12,15 +12,15 @@ La asignación de cada módulo a un responsable y el orden de trabajo están en 
 
 ## Transversal (aplica a todos los módulos)
 
-- [ ] Autenticación JWT (`Authorization: Bearer <token>`), validada en cada endpoint salvo `/auth/login`.
-- [ ] Errores de validación (400) en formato `ValidationProblemDetails` estándar de ASP.NET Core:
+- [x] Autenticación JWT (`Authorization: Bearer <token>`). Por defecto **todos** los endpoints piden sesión (política de respaldo en `Program.cs`); los públicos llevan `[AllowAnonymous]`: `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/password-recovery`, `/auth/password-reset`, `/auth/access-requests` y `/health`. Sin sesión o con un token vencido: `401` "Inicia sesión para continuar".
+- [x] Errores de validación (400) en formato `ValidationProblemDetails` estándar de ASP.NET Core:
   ```json
   { "title": "...", "detail": "...", "errors": { "campo": ["mensaje"] } }
   ```
-  El interceptor de Axios del frontend (`shared/lib/http.ts`) espera exactamente este formato para mostrar errores por campo en los formularios.
+  El interceptor de Axios del frontend (`shared/lib/http.ts`) espera exactamente este formato para mostrar errores por campo en los formularios. Los demás errores (401, 403, 404, 405, 415, 429, 500) también salen como `ProblemDetails` con título en español (`Common/ProblemDetailsSetup.cs`).
 - [ ] Conflictos de negocio (choque de horario, etc.) como `409` con el mismo formato `errors` cuando aplique a un campo específico (ej. `startTime`).
-- [ ] Paginación estándar donde el frontend la pide (`page`, `pageSize`, `search`) devolviendo `{ items, page, pageSize, totalItems, totalPages }`.
-- [ ] **Autorización por rol en la API**, igual a la que hoy aplica el frontend con rutas protegidas (que no son una barrera real de seguridad). `403` si el rol no corresponde:
+- [x] Paginación estándar donde el frontend la pide (`page`, `pageSize`, `search`) devolviendo `{ items, page, pageSize, totalItems, totalPages }`. Helper compartido: `Common/Paging.cs` (`PageQuery`, `PagedResult<T>`, `ToPagedResultAsync`).
+- [ ] **Autorización por rol en la API**, igual a la que hoy aplica el frontend con rutas protegidas (que no son una barrera real de seguridad). `403` si el rol no corresponde. Cada controlador lo declara con `[Authorize(Roles = ...)]` usando las constantes de `Modules/Auth/Roles.cs`. Hecho en `treatments`; aplicarlo en cada módulo nuevo:
 
   | Módulo | Roles |
   |---|---|
@@ -33,19 +33,34 @@ La asignación de cada módulo a un responsable y el orden de trabajo están en 
 
 ## `auth`
 
-- [ ] `POST /auth/login` — valida credenciales, devuelve `{ accessToken, expiresIn, user }`.
-- [ ] `POST /auth/logout`.
-- [ ] `GET /auth/me` — **no implementado aún ni siquiera en el frontend real** (pendiente de agregar en ambos lados). Necesario para restaurar sesión sin re-login en cada carga, respaldado por una cookie `httpOnly` de refresh. Mientras no exista, el token vive solo en memoria en el frontend y se pierde al recargar la página (fuera de modo mock).
-- [ ] Roles soportados: `admin`, `recepcion`, `medico` (usados para autorización por endpoint, no solo en el frontend).
-- [ ] Vincular usuario y profesional: incluir `professionalId` (opcional) en el `user` de `/auth/login` y `/auth/me`. La historia clínica lo usa como profesional por defecto de una atención nueva; hoy el frontend lo deduce comparando el nombre del usuario con `GET /professionals` (`clinical-history/hooks/use-default-professional.ts`).
+Implementado en `back/src/ClinicApp.Api/Modules/Auth/`. Sesión: el `accessToken` (JWT, 15 min) va en `Authorization` y el frontend lo guarda solo en memoria; el token de refresh (7 días, se renueva con cada uso) va en la cookie `clinicapp_refresh` (`httpOnly`, `Secure`, `SameSite=Strict`, ruta `/api/auth`). En la base solo se guardan hashes de contraseñas (PBKDF2) y de tokens (SHA-256). Límite de 20 intentos por minuto por IP en login, recuperación, restablecimiento y solicitudes de acceso (`429` con `Retry-After`).
 
-**Endpoints sin función `*Real` en el frontend** (el frontend aún no los llama; los nombres son una propuesta y al implementarlos hay que agregar su función `*Real` en `auth.api.ts`):
+- [x] `POST /auth/login` — valida credenciales, devuelve `{ accessToken, expiresIn, user }` y la cookie de refresh. `401` "Correo o contraseña incorrectos" (mismo mensaje y tiempo de respuesta exista o no el correo); `403` si la cuenta está desactivada (solo si la contraseña era correcta). El correo no distingue mayúsculas.
+- [x] `POST /auth/logout` — invalida el token de refresh y borra la cookie (`204`).
+- [x] `GET /auth/me` — usuario de la sesión (`AuthUser`). `401` si el usuario ya no existe o fue desactivado.
+- [x] Roles soportados: `admin`, `recepcion`, `medico` (restricción `ck_users_role` en la tabla `users`).
+- [ ] Vincular usuario y profesional: `user.professionalId` ya viaja en `/auth/login`, `/auth/refresh` y `/auth/me` (hoy siempre `null`). Falta la llave foránea y una forma de asignarlo cuando exista el catálogo de profesionales (`appointments`). La historia clínica lo usa como profesional por defecto de una atención nueva; hoy el frontend lo deduce comparando el nombre del usuario con `GET /professionals` (`clinical-history/hooks/use-default-professional.ts`).
 
-- [ ] `POST /auth/refresh` — renueva el `accessToken` con la cookie `httpOnly` de refresh. Lo necesita `GET /auth/me` para restaurar la sesión; el interceptor de `shared/lib/http.ts` hoy cierra la sesión ante cualquier `401`, sin intentar renovarla.
-- [ ] `PUT /auth/me/profile` — guarda el perfil del usuario (`UserProfile`: `fullName`, `title`, `specialty`, `bio`, `avatarColor`, `avatarImage`) desde "Mi perfil" (`/perfil-usuario`). `/auth/login` y `/auth/me` deben devolverlo en `user.profile`; si es `null`, el frontend obliga a completarlo al primer ingreso. Hoy el frontend lo guarda solo en la sesión (`auth-store.ts` → `updateUserProfile`) y se pierde al cerrar sesión. La foto (`avatarImage`) hoy es una imagen en base64: definir si se sube como archivo aparte (por ejemplo, `POST /auth/me/avatar`) con límite de tamaño.
-- [ ] `POST /auth/password-recovery` (body: `{ email }`) — envía el enlace de recuperación. Responder siempre `202`, exista o no el correo, para no revelar qué cuentas existen. Más `POST /auth/password-reset` (body: `{ token, password }`) para fijar la contraseña nueva. Hoy la pantalla "Recuperar contraseña" valida el correo pero el botón dice "aún no disponible". Requiere el canal de envío de correos (ver `notifications`).
-- [ ] `POST /auth/access-requests` (body: `{ email, fullName, institution, message }`) — registra una solicitud de acceso desde "Solicitar acceso". Hoy la pantalla valida los datos pero no los envía. Definir quién la revisa y cómo se crea el usuario.
-- [ ] **Gestión de usuarios:** no hay pantalla para crear usuarios, asignar roles ni desactivarlos. Mientras no exista, los usuarios se cargan por semilla (seed) o script. Definir con la clínica si se agrega una pantalla de administración.
+**Endpoints sin función `*Real` en el frontend** (implementados en la API; falta agregar su función `*Real` en `auth.api.ts`, ver "Pendiente en el frontend" abajo):
+
+- [x] `POST /auth/refresh` — renueva la sesión con la cookie y devuelve lo mismo que el login (`{ accessToken, expiresIn, user }`), rotando la cookie. Si llegan dos renovaciones con el mismo token en menos de 30 s (dos pestañas), ambas funcionan. Reusar un token ya reemplazado después de ese margen se trata como robo: se cierran todas las sesiones del usuario y queda un aviso en el log.
+- [x] `PUT /auth/me/profile` — guarda el perfil (`UserProfile`) en una columna `jsonb` de `users` y devuelve el `AuthUser` actualizado. `/auth/login`, `/auth/refresh` y `/auth/me` lo devuelven en `user.profile` (`null` hasta completarlo). Validación: nombre obligatorio (máx. 120), cargo y especialidad (máx. 80), bio (máx. 1000), color `#RRGGBB`, foto como data URL PNG/JPG/WEBP/GIF de hasta ~300 KB.
+- [x] `POST /auth/password-recovery` (body: `{ email }`) — siempre `202`. Si la cuenta existe y está activa, genera un enlace de un solo uso válido 60 min (`{Auth:FrontendBaseUrl}/restablecer-contrasena?token=...`); solo vale el último enviado. `POST /auth/password-reset` (body: `{ token, password }`, mínimo 8 caracteres) fija la contraseña (`204`) y cierra todas las sesiones; `400` "El enlace no es válido o ya expiró".
+  - [ ] **Proveedor de correo:** hoy `LogEmailSender` escribe el correo en el log solo en desarrollo; en producción no se envía nada. Reemplazarlo por un proveedor real (ver `notifications`).
+- [x] `POST /auth/access-requests` (body: `{ email, fullName, institution, message }`) — guarda la solicitud en `access_requests` con estado `pendiente` (`202`).
+  - [ ] Definir quién la revisa, cómo se le avisa y cómo se crea el usuario (no hay endpoint para listarlas).
+- [ ] **Gestión de usuarios:** no hay pantalla para crear usuarios, asignar roles ni desactivarlos. Mientras tanto, `UserSeeder` crea en desarrollo las tres cuentas del modo mock (`admin@clinica.com` / `admin123`, `recepcion@clinica.com` / `recepcion123`, `medico@clinica.com` / `medico123`) si la tabla está vacía, y en cualquier entorno un administrador inicial si existen `Seed__AdminEmail` y `Seed__AdminPassword` (mínimo 12 caracteres). Definir con la clínica si se agrega una pantalla de administración.
+- [ ] **Limpieza de tokens viejos:** borrar periódicamente los tokens de refresh y de recuperación vencidos (tarea programada o al iniciar sesión).
+
+**Pendiente en el frontend para conectar `auth`** (registrar los cambios en `documentacion/arquitectura-frontend.md`):
+
+- [ ] `shared/lib/http.ts`: `withCredentials: true` para que el navegador mande y guarde la cookie de refresh (en desarrollo el frontend y la API están en puertos distintos).
+- [ ] Al cargar la app, llamar a `POST /auth/refresh` para restaurar la sesión (reemplaza a `sessionStorage` del modo mock).
+- [ ] Ante un `401` de otro endpoint, intentar una sola renovación (`POST /auth/refresh`, compartida si hay varias peticiones a la vez) y repetir la petición; si falla, cerrar la sesión como hoy.
+- [ ] Funciones `*Real` en `auth.api.ts` para `refresh`, `me`, `updateProfile`, `passwordRecovery`, `passwordReset` y `accessRequest`, y conectar las pantallas "Mi perfil", "Recuperar contraseña" y "Solicitar acceso".
+- [ ] Nueva pantalla `/restablecer-contrasena?token=...` (contraseña nueva y confirmación) que llama a `POST /auth/password-reset`.
+- [ ] "Mi perfil": reducir la foto (por ejemplo a 256 × 256 px) antes de enviarla; la API rechaza fotos de más de ~300 KB.
+- [ ] Agregar `professionalId: string | null` al tipo `AuthUser`.
 
 ## `patients`
 

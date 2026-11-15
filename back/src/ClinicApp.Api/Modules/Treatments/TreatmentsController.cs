@@ -1,5 +1,7 @@
 using ClinicApp.Api.Common;
 using ClinicApp.Api.Data;
+using ClinicApp.Api.Modules.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +13,7 @@ namespace ClinicApp.Api.Modules.Treatments;
 /// </summary>
 [ApiController]
 [Route("api/treatments")]
+[Authorize(Roles = Roles.Todos)] // admin, recepcion y medico
 public class TreatmentsController(AppDbContext db) : ControllerBase
 {
     /// <summary>

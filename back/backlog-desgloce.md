@@ -67,13 +67,21 @@ Siguen por definir:
 **Entidades:** usuario (nombre, correo, contraseña cifrada, rol, profesional vinculado, perfil), token de refresh, token de recuperación de contraseña, solicitud de acceso.
 
 **Endpoints:**
-- [ ] `POST /auth/login`
-- [ ] `POST /auth/logout`
-- [ ] `GET /auth/me`
-- [ ] `POST /auth/refresh` (propuesta)
-- [ ] `PUT /auth/me/profile` (propuesta)
-- [ ] `POST /auth/password-recovery` y `POST /auth/password-reset` (propuesta)
-- [ ] `POST /auth/access-requests` (propuesta)
+- [x] `POST /auth/login`
+- [x] `POST /auth/logout`
+- [x] `GET /auth/me`
+- [x] `POST /auth/refresh`
+- [x] `PUT /auth/me/profile`
+- [x] `POST /auth/password-recovery` y `POST /auth/password-reset` (falta el proveedor de correo)
+- [x] `POST /auth/access-requests`
+
+**Hecho además:** proyecto, base de datos y migraciones, CORS, errores `400` y `ProblemDetails`, paginación, usuarios iniciales por semilla, límite de intentos por IP, autorización por rol (aplicada en `treatments`), chequeo de salud y configuración de producción por variables de entorno.
+
+**Pendiente:**
+- [ ] Conectar el frontend (`withCredentials`, restaurar la sesión al cargar, renovar ante un `401`, funciones `*Real`, pantalla `/restablecer-contrasena`): lista en [`backlog.md` § `auth`](./backlog.md#auth).
+- [ ] `professionalId`: llave foránea cuando exista el catálogo de profesionales.
+- [ ] Proveedor de correo para la recuperación de contraseña.
+- [ ] Despliegue en el Droplet (nginx, servicio `systemd`, migraciones y respaldos): `tutorial/fase-0.md` § 5.9.
 
 **Coordinar con Josue Cevallos:** el `professionalId` del usuario apunta al catálogo de profesionales de `appointments`.
 

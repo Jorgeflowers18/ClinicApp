@@ -1,3 +1,4 @@
+using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.Treatments;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,12 @@ namespace ClinicApp.Api.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Treatment> Treatments => Set<Treatment>();
+
+    // auth
+    public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<AccessRequest> AccessRequests => Set<AccessRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
