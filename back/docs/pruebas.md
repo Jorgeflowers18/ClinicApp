@@ -56,6 +56,8 @@ Todos desde la carpeta `back/`.
 | `notifications` | `Unit/NotificationRulesTests.cs` | Formato de hora (12 h) y fecha en español, reemplazo de todas las variables de la plantilla |
 | | `Integration/NotificationsTests.cs` | Confirmación pendiente al agendar y enviada después, paciente sin notificaciones, cancelación que descarta la confirmación, proveedor caído (3 intentos y `fallida`), un solo recordatorio, sin proveedor no se registra nada, reporte con búsqueda y fechas, roles y plantilla |
 | `finance` | `Integration/FinanceTests.cs` | Suma de todas las asignaciones, pago parcial y completo, anulación (sin motivo, dos veces), saldo excedido, tratamiento no realizado, fecha futura, pagos simultáneos que no superan el saldo, redondeo (3 × 33,33), resúmenes de tratamiento y de paciente, 400 con varios pacientes, médico sin acceso y estado de la fila |
+| `reports` | `Unit/ReportPeriodTests.cs` | Periodo inclusivo en hora de la clínica, periodos inválidos y etiquetas de los días ("lun 12") |
+| | `Integration/ReportsTests.cs` | Datos conocidos en marzo de 2031: resumen, agenda por día de la clínica (también una cita a las 23:30), estados, ocupación con bloqueo recortado y "Sin consultorio", productividad, tratamientos con ingreso estimado; inventario del día; roles y periodo inválido |
 
 ## Problemas comunes
 

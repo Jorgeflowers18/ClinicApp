@@ -1495,6 +1495,9 @@ namespace ClinicApp.Api.Data.Migrations
                     b.HasIndex("ItemId", "CreatedAt")
                         .HasDatabaseName("ix_stock_movements_item_id_created_at");
 
+                    b.HasIndex("Type", "CreatedAt")
+                        .HasDatabaseName("ix_stock_movements_type_created_at");
+
                     b.ToTable("stock_movements", null, t =>
                         {
                             t.HasCheckConstraint("ck_stock_movements_quantity", "quantity > 0");

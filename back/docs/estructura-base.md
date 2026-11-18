@@ -1,6 +1,6 @@
 # Estructura base del backend — ClinicApp
 
-Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients`, `appointments` (profesionales, consultorios, citas y bloqueos), `clinical-history`, `institution`, `notifications` y `finance` (etapa A). Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
+Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients`, `appointments` (profesionales, consultorios, citas y bloqueos), `clinical-history`, `institution`, `notifications`, `finance` (etapa A) y `reports`: **todos los módulos del frontend**. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
 
 ## 1. Tecnología
 
@@ -52,7 +52,8 @@ back/
         ├── ClinicalHistory/ ← historia, versiones, atenciones, notas y adjuntos
         ├── Institution/  ← perfil de la clínica y sus sedes
         ├── Notifications/ ← plantilla, registro y envío automático de avisos de citas
-        └── Finance/      ← pagos de los pacientes, cartera y resúmenes
+        ├── Finance/      ← pagos de los pacientes, cartera y resúmenes
+        └── Reports/      ← los 5 reportes por periodo (consultas agrupadas)
 ```
 
 **Patrón de cada módulo:**
@@ -601,6 +602,7 @@ Pagos de los pacientes por sus tratamientos. Un pago no se borra: se anula, con 
 | `20261118030811_CrearInstitucion` | `institutions` e `institution_branches` |
 | `20261118031243_CrearNotificaciones` | `notification_templates` (con la plantilla predeterminada) y `notification_logs` |
 | `20261118031703_CrearPagos` | `financial_payments` |
+| `20261118032137_IndicesReportes` | Índice `stock_movements (type, created_at)` para el reporte de inventario |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -610,8 +612,8 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 |---|---|---|
 | `treatment_assignments.source_encounter_id` | `clinical_encounters` | `clinical-history` |
 
-**Módulos sin tablas todavía:**
-- `reports` (no necesita tablas: calcula sobre las demás). Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
+**Módulos sin tablas propias:**
+- `reports`: calcula sobre las demás tablas (con `ReportQueries`), sin tablas propias. Lo pendiente de cada módulo está en [`backlog.md`](../backlog.md).
 
 **Multi-clínica (propuesta en espera):** el sistema se venderá a varias clínicas. Cuando se apruebe, se agrega la tabla `institutions` y la columna `institution_id` en las tablas de datos, con un filtro automático para que cada clínica vea solo lo suyo. Detalle en [`plan-multiclinica.md`](./plan-multiclinica.md). Mientras tanto, los módulos se hacen para una sola clínica.
 

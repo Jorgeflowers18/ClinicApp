@@ -22,6 +22,7 @@ public class ClinicClock
     public ClinicClock(string timeZoneId, TimeProvider time)
     {
         _time = time;
+        ZoneId = timeZoneId;
         try
         {
             Zone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
@@ -36,6 +37,9 @@ public class ClinicClock
 
     /// <summary>Zona horaria de la clínica.</summary>
     public TimeZoneInfo Zone { get; }
+
+    /// <summary>Nombre IANA de la zona ("America/Guayaquil"), el que entiende PostgreSQL en AT TIME ZONE.</summary>
+    public string ZoneId { get; }
 
     /// <summary>Momento actual en UTC.</summary>
     public DateTime UtcNow => _time.GetUtcNow().UtcDateTime;

@@ -586,3 +586,25 @@ Authorization: Bearer {{token}}
 ### Resumen de un paciente
 GET {{api}}/finance/patients/{{paciente.response.body.id}}/summary
 Authorization: Bearer {{token}}
+
+### ───────────── Reportes (from/to inclusivos, en hora de la clínica) ─────────────
+
+### Resumen (los tres roles: lo usa el Inicio)
+GET {{api}}/reports/summary?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+### Agenda: por día, por estado y ocupación por consultorio (los tres roles)
+GET {{api}}/reports/agenda?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+### Productividad por profesional (solo admin)
+GET {{api}}/reports/productivity?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+### Tratamientos (solo admin)
+GET {{api}}/reports/treatments?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+### Inventario: críticos, compras y consumo (solo admin)
+GET {{api}}/reports/inventory?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}

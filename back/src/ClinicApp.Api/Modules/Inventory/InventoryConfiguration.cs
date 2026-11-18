@@ -71,6 +71,8 @@ public class StockMovementConfiguration : IEntityTypeConfiguration<StockMovement
 
         // Historial de un insumo, del más reciente al más antiguo.
         builder.HasIndex(movement => new { movement.ItemId, movement.CreatedAt });
+        // Reporte de inventario: salidas de un periodo.
+        builder.HasIndex(movement => new { movement.Type, movement.CreatedAt });
     }
 }
 

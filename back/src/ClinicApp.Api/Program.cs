@@ -7,6 +7,7 @@ using ClinicApp.Api.Modules.Finance;
 using ClinicApp.Api.Modules.Institution;
 using ClinicApp.Api.Modules.Inventory;
 using ClinicApp.Api.Modules.Notifications;
+using ClinicApp.Api.Modules.Reports;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -124,6 +125,9 @@ builder.Services.AddHostedService(services => services.GetRequiredService<Notifi
 
 // Finanzas: totales de la cartera calculados en la base.
 builder.Services.AddScoped<FinanceCalculator>();
+
+// Reportes: consultas agrupadas en la base.
+builder.Services.AddScoped<ReportQueries>();
 
 // Historia clínica: archivos en disco (Attachments:RootPath), nombres del catálogo para mostrar e imprimir,
 // y la tarea que borra los adjuntos nunca guardados (y el protocolo de conservación, apagado por defecto).

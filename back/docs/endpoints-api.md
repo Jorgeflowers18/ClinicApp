@@ -1,6 +1,6 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **75 endpoints implementados**:
+Estado al **2026-11-17**: **80 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 9 de `treatments` (catálogo y tratamientos realizados);
@@ -11,7 +11,8 @@ Estado al **2026-11-17**: **75 endpoints implementados**:
 - 7 de `clinical-history`;
 - 3 de `institution`;
 - 3 de `notifications`;
-- 5 de `finance`.
+- 5 de `finance`;
+- 5 de `reports`.
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
 
@@ -45,6 +46,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `institution` | perfil público: sin sesión; leer: los tres; guardar: `admin` |
 | `notifications` | `admin`, `recepcion`; las de una cita (`?appointmentId=`): los tres |
 | `finance` | `admin`, `recepcion` (el médico no ve montos) |
+| `reports` | resumen y agenda: los tres; los demás: `admin` |
 
 ### Errores
 
@@ -168,6 +170,11 @@ La respuesta tiene esta forma:
 | `GET` | `/api/finance/patients/:patientId/summary` | admin, recepcion | `200` |
 | `POST` | `/api/finance/payments` | admin, recepcion | `201` |
 | `POST` | `/api/finance/payments/:id/void` | admin, recepcion | `200` |
+| `GET` | `/api/reports/summary` | los tres | `200` |
+| `GET` | `/api/reports/agenda` | los tres | `200` |
+| `GET` | `/api/reports/productivity` | admin | `200` |
+| `GET` | `/api/reports/treatments` | admin | `200` |
+| `GET` | `/api/reports/inventory` | admin | `200` |
 | `GET` | `/openapi/v1.json`, `/scalar` | público, **solo en desarrollo** | Descripción OpenAPI y página de pruebas |
 
 ## 3. Salud
@@ -785,6 +792,39 @@ Solo `admin` y `recepcion`: **el médico no ve montos** (`403`). Contrato: `fron
 - No puede superar el saldo pendiente: `409` "El pago supera el saldo pendiente (N)" con `errors.amount`. Dos pagos simultáneos no pasan los dos el control (candado por paciente + tratamiento).
 - Respuesta `201` `FinancialPayment`: `{ id, patientId, treatmentId, date, amount, method, reference, registeredBy, observations, status, voidReason }`. `registeredBy` es el nombre del usuario.
 
+## 14. `reports`
+
+Todos con `?from=YYYY-MM-DD&to=YYYY-MM-DD`, **obligatorios e inclusivos**, en hora de la clínica (de `from` 00:00 a `to` 23:59:59). Máximo 366 días. `400` si falta una fecha, si `from > to` o si el periodo es más largo. Formas de respuesta: `front/src/modules/reports/types/report.types.ts`. Todo se cuenta y se suma en PostgreSQL.
+
+| Endpoint | Roles | Respuesta |
+|---|---|---|
+| `GET /api/reports/summary` | los tres (lo usa el Inicio) | `ReportsSummary` |
+| `GET /api/reports/agenda` | los tres (lo usa el Inicio) | `AgendaReport` |
+| `GET /api/reports/productivity` | admin | `ProductivityReport` |
+| `GET /api/reports/treatments` | admin | `TreatmentsReport` |
+| `GET /api/reports/inventory` | admin | `InventoryReport` |
+
+**Resumen y agenda abiertos a los tres roles:** la página de Inicio la ven todos y no muestran dinero. Así el frontend no cambia.
+
+| Reporte | Indicador | Cálculo |
+|---|---|---|
+| Resumen | `patientsTotal` | Pacientes activos, sin importar el periodo |
+| | `patientsNewInPeriod` | Pacientes creados en el periodo |
+| | `appointmentsInPeriod`, `appointmentsCompleted`, `appointmentsNoShow` | Citas que empiezan en el periodo: todas, completadas y no asistió |
+| | `noShowRate` | `noShow / (completadas + noShow)`; 0 si no hay |
+| | `activeTreatments` | Tratamientos realizados `en_progreso` (la API solo registra completados: será 0 salvo en datos importados) |
+| | `criticalStockItems` | Insumos con `stock <= minStock` |
+| | `notificationsSent` | Notificaciones `enviada` en el periodo |
+| Agenda | `byDay` | Todos los días del periodo, también los vacíos, con `label` como el mock ("lun 12"). Agrupa por el **día de la clínica**: una cita a las 23:30 en Ecuador cuenta en ese día, aunque en UTC ya sea el siguiente. |
+| | `byStatus` | Los 5 estados, también los que están en cero |
+| | `occupancyByRoom` | Por consultorio activo (o con datos en el periodo): citas no canceladas, minutos reservados y minutos bloqueados recortados al periodo. Una fila "Sin consultorio" (`roomId: ""`) si hay citas sin consultorio. |
+| Productividad | por profesional | Agendadas, completadas, no asistió, canceladas y `completionRate = completadas / max(1, agendadas − canceladas)`, de más a menos completadas |
+| Tratamientos | por tratamiento | Citas del periodo con ese tratamiento; tratamientos realizados (por su fecha) activos y completados; sesiones hechas y planificadas; `estimatedRevenue` = Σ costo cobrado de los completados (**provisional** hasta que exista facturación) |
+| Inventario | `criticalItems` | Insumos en stock crítico, sin importar el periodo |
+| | `purchasesInPeriod` | Órdenes creadas en el periodo, con proveedor, estado y `total = Σ cantidad × costo` |
+| | `purchasesTotal` | Suma de las anteriores sin las canceladas |
+| | `consumptionInPeriod` | Salidas de stock del periodo, por insumo, de mayor a menor |
+
 ## Estado de los módulos
 
 | Módulo | Responsable | Estado |
@@ -800,7 +840,7 @@ Solo `admin` y `recepcion`: **el médico no ve montos** (`403`). Contrato: `fron
 | `institution` | Jorge Flores | ✅ Los 3 endpoints (falta su `institution.api.ts` en el frontend) |
 | `notifications` | Jorge Flores | ✅ Los 3 endpoints y el envío automático. ⏳ Falta elegir el proveedor de envío. |
 | `finance` | Jorge Flores | ✅ Etapa A: cartera, resúmenes y pagos. ⏳ Etapa B (cuotas, seguros y factura) espera el ítem 8. |
-| `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
+| `reports` | Jorge Flores | ✅ Los 5 reportes, agregados en la base |
 
 **Para conectar el frontend** (`VITE_USE_MOCK_API=false`): falta la parte de sesión del frontend, detallada en `backlog.md` § `auth`.
 - `withCredentials: true` en `shared/lib/http.ts`.
@@ -809,3 +849,5 @@ Solo `admin` y `recepcion`: **el médico no ve montos** (`403`). Contrato: `fron
 - Las funciones `*Real` que faltan en `auth.api.ts`.
 
 Sin eso, la sesión se pierde al recargar la página.
+
+**Lo demás que el frontend debe cambiar** para usar estos endpoints (pares Mock/Real nuevos, pantallas y ajustes por módulo) está en [`backlog-desgloce.md` § Pendientes al cerrar los planes](../backlog-desgloce.md#pendientes-al-cerrar-los-planes-2026-11-17).

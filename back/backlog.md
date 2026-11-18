@@ -182,15 +182,17 @@ Implementado en `back/src/ClinicApp.Api/Modules/Inventory/`. Roles: los tres pue
 
 ## `reports`
 
-Todos restringidos al rol `admin`. Query `from`/`to` en `YYYY-MM-DD`, **inclusivos**, en la zona horaria de la clínica. La agregación debe hacerse en SQL del lado del servidor (el frontend hoy la simula en memoria); las formas de respuesta están en `front/src/modules/reports/types/report.types.ts`.
+Implementado en `back/src/ClinicApp.Api/Modules/Reports/`. Query `from`/`to` en `YYYY-MM-DD`, **obligatorios e inclusivos**, en la zona horaria de la clínica (máximo 366 días). La agregación se hace en SQL (`GROUP BY`, `COUNT`, `SUM`); las formas de respuesta son las de `front/src/modules/reports/types/report.types.ts`. Detalle y fórmulas en [`docs/endpoints-api.md`](./docs/endpoints-api.md).
 
-- [ ] **Conflicto de rol con el Inicio:** la página de Inicio (`app/pages/dashboard-page.tsx`) la ven los tres roles y llama a `GET /reports/summary` y `GET /reports/agenda` del mes en curso. Si estos endpoints quedan solo para `admin`, recepción y médico recibirán `403` en el Inicio. Opciones: permitir esos dos endpoints a todos los roles, o crear `GET /dashboard/summary` con los indicadores del Inicio (y que el frontend lo use).
-
-- [ ] `GET /reports/summary` — `patientsTotal`, `activeTreatments` (asignaciones `en_progreso`) y `criticalStockItems` (`stock <= minStock`) son puntuales, ignoran el periodo. `patientsNewInPeriod` filtra `patients.createdAt`; `appointmentsInPeriod/Completed/NoShow` filtran `appointments.start`; `notificationsSent` filtra `sentAt` con `status = enviada`. `noShowRate = noShow / (completadas + noShow)` (0 si el denominador es 0).
-- [ ] `GET /reports/agenda` — `byDay` con todos los días del periodo (relleno en cero) y conteos por estado; `byStatus` con los 5 estados; `occupancyByRoom` con minutos reservados (citas no canceladas) y bloqueados por consultorio, más una fila "Sin consultorio" si hay citas sin `roomId`.
-- [ ] `GET /reports/productivity` — por profesional: programadas, completadas, no asistió, canceladas, `completionRate = completadas / max(1, programadas − canceladas)`. No incluir sesiones de tratamiento por profesional hasta que `treatment-assignments` registre `professionalId`.
-- [ ] `GET /reports/treatments` — por tratamiento: citas del periodo (`appointments.treatmentId`), asignaciones activas/completadas y sesiones (filtrando `assignments.startDate`), `estimatedRevenue` = suma de `price` (costo cobrado; precio del catálogo si falta) de las asignaciones completadas — **provisional**, reemplazar por ingresos reales cuando exista facturación (ítem 8).
-- [ ] `GET /reports/inventory` — `criticalItems` puntual; `purchasesInPeriod` filtra `purchase_orders.createdAt` con `total = Σ qty × unitCost` y `purchasesTotal` excluyendo canceladas; `consumptionInPeriod` = movimientos `salida` del periodo agrupados por insumo.
+- [x] **Conflicto de rol con el Inicio (decidido):** `GET /reports/summary` y `GET /reports/agenda` quedan abiertos a los tres roles (no muestran dinero), así el Inicio funciona sin cambios. Los otros tres, solo `admin`.
+- [x] `GET /reports/summary`.
+- [x] `GET /reports/agenda` — `byDay` agrupa por el día de la clínica (no por el día UTC) y rellena con ceros; `occupancyByRoom` con minutos reservados y bloqueados recortados al periodo, más "Sin consultorio".
+- [x] `GET /reports/productivity`.
+- [x] `GET /reports/treatments` — `estimatedRevenue` con el costo cobrado; **provisional** hasta que exista facturación.
+- [x] `GET /reports/inventory`.
+- [ ] **Sesiones por profesional** en productividad, cuando los tratamientos realizados registren `professionalId` (con el registro transaccional de la atención).
+- [ ] **Ingresos reales** (pagos o facturas) en lugar del ingreso estimado, cuando exista la facturación (finanzas, etapa B).
+- [ ] **Medir el rendimiento** con volumen real (miles de citas). Los filtros por fecha ya tienen índice (`appointments.start`, `patients.created_at`, `notification_logs.sent_at`, `stock_movements (type, created_at)`).
 
 ## `notifications`
 
