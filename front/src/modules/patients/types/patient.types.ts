@@ -1,4 +1,7 @@
 import { z } from "zod"
+import type { PageQuery } from "@/shared/types/common"
+
+const optionalPhone = z.string().trim().refine(value => !value || /^\+?[\d\s().-]+(?:\s*(?:ext\.?|x)\s*\d{1,6})?$/i.test(value) && value.replace(/\D/g, "").length >= 7, "Ingresa un teléfono válido o deja el campo vacío")
 
 export const genderOptions = [
   { value: "femenino", label: "Femenino" },
@@ -40,6 +43,7 @@ export const patientSchema = z.object({
   firstName: z.string().min(2, "Mínimo 2 caracteres"),
   lastName: z.string().min(2, "Mínimo 2 caracteres"),
   documentId: z.string().min(5, "Documento inválido"),
+  documentType: z.enum(["cedula", "pasaporte", "otro"]).optional(),
   birthDate: z.string().min(1, "La fecha de nacimiento es obligatoria"),
   gender: z.enum(["femenino", "masculino", "otro"], {
     message: "Selecciona un género",
@@ -48,7 +52,7 @@ export const patientSchema = z.object({
   occupation: z.string().max(120, "Máximo 120 caracteres").default(""),
   company: z.string().max(120, "Máximo 120 caracteres").default(""),
   nationality: z.string().max(60, "Máximo 60 caracteres").default(""),
-  phone: z.string().min(7, "Teléfono inválido"),
+  phone: optionalPhone,
   email: z.string().email("Correo inválido").or(z.literal("")).default(""),
   address: z.string().default(""),
   /** Ciudad / provincia. */
@@ -57,7 +61,7 @@ export const patientSchema = z.object({
   notificationsEnabled: z.boolean().default(true),
   emergencyContactName: z.string().default(""),
   emergencyContactRelationship: z.string().max(60, "Máximo 60 caracteres").default(""),
-  emergencyContactPhone: z.string().default(""),
+  emergencyContactPhone: optionalPhone.default(""),
   insuranceProvider: z.string().default(""),
   insurancePolicy: z.string().default(""),
   consentSigned: z.boolean().default(false),
@@ -74,6 +78,13 @@ export interface Patient extends PatientFormValues {
   createdAt: string
 }
 
+export interface PatientsQuery extends PageQuery {
+  status?: Patient["treatmentStatus"]
+  gender?: Patient["gender"]
+  registeredFrom?: string
+  registeredTo?: string
+}
+
 /** Formato del N.° de historia clínica: HC-000123. */
 export function formatClinicalRecordNumber(sequence: number) {
   return `HC-${String(sequence).padStart(6, "0")}`
@@ -85,6 +96,7 @@ export function toPatientFormValues(patient: Patient): PatientFormValues {
     firstName: patient.firstName,
     lastName: patient.lastName,
     documentId: patient.documentId,
+    documentType: patient.documentType,
     birthDate: patient.birthDate,
     gender: patient.gender,
     maritalStatus: patient.maritalStatus ?? "",

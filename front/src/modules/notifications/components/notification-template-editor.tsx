@@ -5,6 +5,7 @@ import { Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { FormActions } from "@/components/ui/form-actions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -128,11 +129,11 @@ export function NotificationTemplateEditor() {
             <p className="whitespace-pre-wrap text-foreground">{applyPreview(message || "")}</p>
           </section>
 
-          <div className="clinic-template-actions">
+          <FormActions className="clinic-template-actions">
             <Button type="submit" disabled={isSubmitting || !isDirty}>
               {isSubmitting ? "Guardando..." : "Guardar plantilla"}
             </Button>
-          </div>
+          </FormActions>
         </form>
       </CardContent>
     </Card>

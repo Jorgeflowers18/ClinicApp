@@ -97,7 +97,7 @@
 body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="popover-content"], [data-slot="select-content"], [data-slot="dropdown-menu-content"]) { --ring: var(--primary); }
 body:has(.clinic-app-canvas) :is([data-slot="select-item"][data-selected], [data-slot="dropdown-menu-radio-item"][data-checked]) { background: var(--accent); color: var(--accent-foreground); font-weight: 590; box-shadow: inset 2px 0 var(--primary); }
 body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) [data-slot="button"] {
-  min-height: 38px;
+  min-height: var(--content-control-height, 38px);
   font-size: 13px;
 }
 body:has(.clinic-app-canvas) :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="select-item"]) {
@@ -108,7 +108,7 @@ body:has(.clinic-app-canvas) :is([data-slot="dropdown-menu-item"], [data-slot="d
 }
 body:has(.clinic-app-canvas) :is([data-slot="dialog-title"], [data-slot="alert-dialog-title"]) { font-size: 18px; }
 body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) :is([data-slot="label"], [data-slot="field-label"]) { font-size: 13px; }
-body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) :is([data-slot="input"], [data-slot="select-trigger"]) { min-height: 38px; font-size: 14px; }
+body:has(.clinic-app-canvas) :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) :is([data-slot="input"], [data-slot="select-trigger"]) { min-height: var(--content-control-height, 38px); font-size: 14px; }
 body:has(.clinic-app-canvas) [data-slot="dialog-content"] [data-slot="field-group"] { gap: 16px; }
 body:has(.clinic-app-canvas) [data-slot="dialog-content"] [data-slot="field"] { gap: 6px; }
 

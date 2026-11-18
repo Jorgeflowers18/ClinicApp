@@ -1,0 +1,53 @@
+.dashboard {
+  container: dashboard / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.header { align-items: center; }
+.kpis { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.dashboard .kpis :global(.clinic-kpi-card) { align-self: stretch; min-height: 114px; }
+.dashboard .kpis :global(.clinic-kpi-card) > [data-slot="card-content"] { display: flex; flex: 1; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 8px; padding: 16px; }
+.kpis :global(.clinic-kpi-heading), .kpis :global(.clinic-kpi-reading) { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 36px; }
+.kpis :global(.clinic-kpi-heading) :global(.clinic-kpi-label) { min-width: 0; line-height: 18px; }
+.kpis :global(.clinic-kpi-reading) { align-items: baseline; gap: 8px; }
+.kpis :global(.clinic-kpi-value) { min-width: 0; margin: 0; font-size: 30px; line-height: 36px; font-weight: 620; letter-spacing: -.035em; }
+.kpis :global(.clinic-kpi-hint) { flex-shrink: 0; margin: 0; font-size: 11px; line-height: 18px; text-align: right; }
+.kpis [data-slot="skeleton"] { margin: 0; height: 36px; }
+.kpis :global(.clinic-summary-icon) { border-radius: var(--radius-control); }
+.dashboard .appointments { --kpi-icon-color: var(--primary); --kpi-icon-surface: color-mix(in srgb, var(--primary) 10%, var(--card)); }
+.dashboard .needsAttention { border-color: color-mix(in srgb, var(--warning) 40%, var(--border)); }
+.needsAttention :global(.clinic-kpi-value), .needsAttention :global(.clinic-kpi-hint) { color: var(--warning); }
+
+.chart { gap: 16px; padding-block: 20px; }
+.dashboard .chartHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-inline: 20px; }
+.chartDescription { margin-top: 4px; font-size: 12px; line-height: 18px; color: var(--muted-foreground); }
+.chartTotal { display: flex; align-items: baseline; gap: 6px; color: var(--muted-foreground); font-size: 12px; white-space: nowrap; }
+.chartTotal strong { color: var(--foreground); font-size: 20px; line-height: 28px; font-weight: 620; font-variant-numeric: tabular-nums; }
+.chartContent { min-width: 0; padding-inline: 16px; }
+.chartCanvas { min-width: 0; height: 236px; }
+.chartCanvas :global(.recharts-surface):focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; border-radius: var(--radius-control); }
+.chartLoading { height: 100%; }
+.empty { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; text-align: center; }
+.empty > svg { width: 24px; height: 24px; color: var(--muted-foreground); }
+.empty > p { font-size: 14px; font-weight: 510; }
+.empty > span { color: var(--muted-foreground); font-size: 12px; }
+.notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px; border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border)); border-radius: var(--radius-control); background: var(--warning-surface); color: var(--foreground); font-size: 13px; }
+.chartContent > .notice { margin-bottom: 12px; }
+
+@container dashboard (min-width: 34rem) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chartCanvas { height: 260px; }
+}
+@container dashboard (min-width: 58rem) {
+  .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+}
+@media (max-width: 639px) {
+  .dashboard { gap: 16px; }
+  .header { align-items: stretch; }
+  .chart { padding-block: 16px; }
+  .dashboard .chartHeader { padding-inline: 16px; }
+  .chartContent { padding-inline: 12px; }
+}

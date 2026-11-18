@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Calendar, dateFnsLocalizer, type SlotInfo, type View } from "react-big-calendar"
-import { addDays, format, getDay, isSameDay, parse, startOfWeek } from "date-fns"
+import { addDays, format, getDay, isSameDay, parse, startOfDay, startOfWeek } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, Plus, Slash } from "lucide-react"
 import { toast } from "sonner"
@@ -33,6 +33,8 @@ import {
 import { AppointmentDetailDialog } from "../components/appointment-detail-dialog"
 import { AppointmentsToolbar } from "../components/appointments-toolbar"
 import { CalendarDateNavigator } from "../components/calendar-date-navigator"
+import { CalendarMonthContent, MonthDateHeader, MonthEvent, type CalendarEvent } from "../components/calendar-month-content"
+import { CalendarEventLegend, DayDateHeader, TimeEvent, TimeEventWrapper, WeekDateHeader } from "../components/calendar-time-content"
 import { AppointmentFormDialog } from "../components/appointment-form-dialog"
 import { ScheduleBlockFormDialog } from "../components/schedule-block-form-dialog"
 import { appointmentStatusLabels, type Appointment, type ScheduleBlock } from "../types/appointment.types"
@@ -47,11 +49,12 @@ const localizer = dateFnsLocalizer({
 })
 
 const ALL_PROFESSIONALS = "all"
-const calendarComponents = { toolbar: AppointmentsToolbar }
-
-type CalendarEvent =
-  | { kind: "appointment"; id: string; title: string; start: Date; end: Date; resource: Appointment }
-  | { kind: "block"; id: string; title: string; start: Date; end: Date; resource: ScheduleBlock }
+const calendarComponents = {
+  toolbar: AppointmentsToolbar,
+  month: { dateHeader: MonthDateHeader, event: MonthEvent },
+  week: { header: WeekDateHeader, event: TimeEvent, eventWrapper: TimeEventWrapper },
+  day: { header: DayDateHeader, event: TimeEvent, eventWrapper: TimeEventWrapper },
+}
 
 export function AppointmentsCalendarPage() {
   const [searchParams] = useSearchParams()
@@ -75,6 +78,7 @@ export function AppointmentsCalendarPage() {
   // user's choice. Event, date, selection and form handlers remain shared.
   const mobileAgendaView = view === "day" ? "day" : "week"
   const [date, setDate] = useState(new Date())
+  const goToToday = useCallback(() => setDate(startOfDay(new Date())), [])
   const [formOpen, setFormOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>(undefined)
   const [blockFormOpen, setBlockFormOpen] = useState(false)
@@ -154,7 +158,8 @@ export function AppointmentsCalendarPage() {
         key={event.id}
         type="button"
         onClick={() => handleSelectEvent(event)}
-        className="block w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        data-calendar-event-state={isBlock ? "block" : event.resource.status}
+        className="clinic-agenda-event block w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Card className="transition-colors hover:bg-muted/30">
           <CardContent className="flex min-w-0 items-start gap-3 py-4">
@@ -317,6 +322,7 @@ export function AppointmentsCalendarPage() {
       {isLoading ? (
         <Skeleton className="h-[600px] w-full" />
       ) : (
+        <CalendarMonthContent date={date} events={events} treatments={treatments} goToToday={goToToday}>
         <div className="clinic-appointments-calendar @container min-h-0 min-w-0 flex-1">
           <div className="mb-4 flex min-w-0 items-center gap-3 @xl:hidden">
             <Label htmlFor="compact-calendar-view">Vista</Label>
@@ -341,14 +347,12 @@ export function AppointmentsCalendarPage() {
               >
                 <ChevronLeft />
               </Button>
-              <CalendarDateNavigator
-                date={date}
-                onSelect={setDate}
-                className="flex-1"
-                label={mobileAgendaView === "day"
+              <div className="min-w-0 flex-1">
+                <CalendarDateNavigator date={date} onSelect={setDate} className="w-full" />
+                <p className="clinic-calendar-period" aria-label="Periodo visible">{mobileAgendaView === "day"
                   ? format(date, "d MMM yyyy", { locale: es })
-                  : `${format(weekDays[0], weekDays[0].getFullYear() !== weekDays[6].getFullYear() ? "d MMM yyyy" : "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM yyyy", { locale: es })}`}
-              />
+                  : `${format(weekDays[0], weekDays[0].getFullYear() !== weekDays[6].getFullYear() ? "d MMM yyyy" : "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM yyyy", { locale: es })}`}</p>
+              </div>
               <Button
                 variant="outline"
                 size="icon"
@@ -359,7 +363,7 @@ export function AppointmentsCalendarPage() {
               </Button>
             </div>
             <div className="flex items-center justify-between">
-              <Button variant="ghost" size="sm" onClick={() => setDate(new Date())}>
+              <Button variant="ghost" size="sm" onClick={goToToday}>
                 Hoy
               </Button>
               <Button
@@ -404,7 +408,8 @@ export function AppointmentsCalendarPage() {
           </section>}
 
           <div
-            className={`clinic-calendar-frame ${view === "month" ? "block" : "hidden"} min-h-[600px] max-w-full overflow-x-auto rounded-xl border bg-card p-3 @xl:block`}
+            className={`clinic-calendar-frame ${view === "month" ? "block" : "hidden"} max-w-full overflow-x-auto rounded-xl border bg-card p-3 @xl:block`}
+            data-calendar-view={view}
             role="region"
             aria-label="Calendario de citas, desplazable horizontalmente"
             tabIndex={0}
@@ -423,9 +428,10 @@ export function AppointmentsCalendarPage() {
             views={["month", "week", "day"]}
             selectable
             popup
+            dayPropGetter={(day) => isSameDay(day, date) ? { className: "clinic-calendar-selected-day" } : {}}
             onSelectSlot={handleSelectSlot}
             onSelectEvent={handleSelectEvent}
-            style={{ height: "clamp(600px, 72dvh, 760px)" }}
+            style={view === "month" ? undefined : { height: "clamp(600px, 72dvh, 760px)" }}
             eventPropGetter={(event: CalendarEvent) => {
               if (event.kind === "block") {
                 return { className: "rbc-event-block" }
@@ -450,12 +456,15 @@ export function AppointmentsCalendarPage() {
               week: "Semana",
               day: "Día",
               agenda: "Agenda",
+              showMore: (count) => `+${count} más`,
               noEventsInRange: "No hay citas en este rango.",
             }}
             />
             </div>
           </div>
+          <CalendarEventLegend />
         </div>
+        </CalendarMonthContent>
       )}
 
       <AppointmentFormDialog

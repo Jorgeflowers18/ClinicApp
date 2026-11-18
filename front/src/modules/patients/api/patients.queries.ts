@@ -1,19 +1,18 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query"
 
 import { queryClient } from "@/shared/lib/query-client"
-import type { PageQuery } from "@/shared/types/common"
 
 import { patientsApi } from "./patients.api"
-import type { PatientFormValues } from "../types/patient.types"
+import type { PatientFormValues, PatientsQuery } from "../types/patient.types"
 
 export const patientsKeys = {
   all: ["patients"] as const,
   lists: () => [...patientsKeys.all, "list"] as const,
-  list: (query: PageQuery) => [...patientsKeys.lists(), query] as const,
+  list: (query: PatientsQuery) => [...patientsKeys.lists(), query] as const,
   detail: (id: string) => [...patientsKeys.all, "detail", id] as const,
 }
 
-export function usePatientsList(query: PageQuery) {
+export function usePatientsList(query: PatientsQuery) {
   return useQuery({
     queryKey: patientsKeys.list(query),
     queryFn: () => patientsApi.list(query),
@@ -52,7 +51,7 @@ export function useDeletePatient() {
   return useMutation({
     mutationFn: (id: string) => patientsApi.remove(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patientsKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: patientsKeys.all })
     },
   })
 }

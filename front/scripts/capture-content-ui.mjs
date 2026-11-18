@@ -46,7 +46,7 @@ try {
       await expect(page.frameLocator("iframe").locator("#toothGrid")).toBeVisible()
       for (const width of [390, 1440]) {
         await page.setViewportSize({ width, height: 1000 })
-        if (width >= 1024) await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "256px")
+        if (width >= 1024) await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "268px")
         snapshots.push({ area: "header", theme, width, nodes: await snapshot(page, ".clinic-app-header") })
         if (width < 1024) {
           await page.getByRole("button", { name: "Abrir menú", exact: true }).click()

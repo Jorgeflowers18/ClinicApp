@@ -1,17 +1,18 @@
-import { useId, useState } from "react"
+import { useId, useState, type ComponentProps } from "react"
 import { addMonths, format, isValid } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { Calendar, CalendarDayButton } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverDescription, PopoverTitle, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 import styles from "./calendar-date-navigator.module.css"
+import { useAppointmentsCalendar } from "./calendar-presentation-context"
 
 const months = Array.from({ length: 12 }, (_, index) => ({
   value: String(index),
@@ -29,12 +30,27 @@ function monthInYear(cursor: Date, text: string) {
   return isValid(result) ? result : null
 }
 
-export function CalendarDateNavigator({ date, label, onSelect, className }: {
+function AppointmentDayButton(props: ComponentProps<typeof CalendarDayButton>) {
+  const { counts } = useAppointmentsCalendar()
+  const count = counts.get(format(props.day.date, "yyyy-MM-dd")) ?? 0
+  const dayLabel = props["aria-label"] ?? format(props.day.date, "PPP", { locale: es })
+  return (
+    <CalendarDayButton
+      {...props}
+      locale={es}
+      data-appointment-count={count || undefined}
+      aria-label={count ? `${dayLabel}, ${count} ${count === 1 ? "cita" : "citas"}` : dayLabel}
+    />
+  )
+}
+
+export function CalendarDateNavigator({ date, onSelect, className }: {
   date: Date
-  label: string
   onSelect: (date: Date) => void
   className?: string
 }) {
+  const { goToToday } = useAppointmentsCalendar()
+  const selectedLabel = format(date, "d 'de' MMMM 'de' yyyy", { locale: es })
   const id = useId()
   const [open, setOpen] = useState(false)
   // This cursor only browses the popup. The page's date remains the source of truth.
@@ -58,17 +74,20 @@ export function CalendarDateNavigator({ date, label, onSelect, className }: {
           type="button"
           variant="outline"
           data-calendar-date-trigger
-          aria-label={`Elegir fecha: ${label}`}
+          aria-label={`Elegir fecha: ${selectedLabel}`}
           className={cn(styles.trigger, className)}
         >
           <CalendarDays aria-hidden="true" />
-          <span>{label}</span>
+          <span>{selectedLabel}</span>
           <ChevronDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
         </Button>
       } />
-      <PopoverContent className={styles.popup}>
+      <PopoverContent className={styles.popup} sideOffset={8}>
         <div className={styles.popupHeader}>
-          <PopoverTitle>Ir a una fecha</PopoverTitle>
+          <div className={styles.heading}>
+            <PopoverTitle><span className="sr-only">Ir a una fecha: </span>{format(cursor, "LLLL yyyy", { locale: es })}</PopoverTitle>
+            <PopoverDescription>Selecciona únicamente un día</PopoverDescription>
+          </div>
           <div className={styles.monthNavigation} role="group" aria-label="Cambiar mes del selector">
             <Button type="button" variant="ghost" size="icon" aria-label="Mes anterior" onClick={() => browseMonth(addMonths(cursor, -1))}>
               <ChevronLeft aria-hidden="true" />
@@ -78,6 +97,7 @@ export function CalendarDateNavigator({ date, label, onSelect, className }: {
             </Button>
           </div>
         </div>
+        <div className={styles.body} data-calendar-date-body>
         <div className={styles.fields}>
           <div className="min-w-0 space-y-1">
             <Label htmlFor={`${id}-month`}>Mes</Label>
@@ -114,6 +134,7 @@ export function CalendarDateNavigator({ date, label, onSelect, className }: {
         {invalidYear && <p id={`${id}-year-error`} role="alert" className="text-xs text-destructive">Introduce un año válido.</p>}
         <Calendar
           mode="single"
+          required
           locale={es}
           month={cursor}
           onMonthChange={browseMonth}
@@ -122,13 +143,28 @@ export function CalendarDateNavigator({ date, label, onSelect, className }: {
           hideNavigation
           className={styles.days}
           classNames={{ month_caption: "sr-only", month: "flex w-full flex-col gap-2" }}
+          components={{ DayButton: AppointmentDayButton }}
+          formatters={{ formatWeekdayName: (day) => format(day, "EEEEE", { locale: es }).toLocaleUpperCase("es") }}
           onSelect={(selectedDate) => {
             if (!selectedDate) return
             onSelect(selectedDate)
             setOpen(false)
           }}
         />
-        <p className="text-xs text-muted-foreground">Selecciona un día para ir a esa fecha.</p>
+        </div>
+        <div className={styles.footer} data-calendar-date-footer>
+          <div className={styles.selection}>
+            <span>Fecha seleccionada</span>
+            <time dateTime={format(date, "yyyy-MM-dd")} data-calendar-selected-date>{selectedLabel}</time>
+          </div>
+          <Button type="button" variant="secondary" className={styles.todayButton} onClick={() => {
+            goToToday()
+            setOpen(false)
+          }}>
+            <CalendarDays aria-hidden="true" />
+            Hoy
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   )

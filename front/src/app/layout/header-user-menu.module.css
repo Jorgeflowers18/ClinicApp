@@ -1,0 +1,13 @@
+.trigger { min-width: 44px; min-height: 44px; height: auto; gap: 8px; padding: 4px; border-radius: var(--radius-control); }
+.identity { display: none; min-width: 0; text-align: left; font-weight: 500; line-height: 1.3; }
+.identity > span { display: block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.role { color: var(--muted-foreground); font-size: 12px; font-weight: 400; }
+.chevron { display: none; }
+.menu { width: 280px; max-width: calc(100vw - 16px); --ring: var(--primary); }
+.summary { display: flex; align-items: center; gap: 12px; padding: 12px 8px; }
+.summary > div { min-width: 0; overflow-wrap: anywhere; }
+.summary p:first-child { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.summary [data-user-avatar] { flex-shrink: 0; }
+.menu > [data-slot="dropdown-menu-item"] { min-height: 44px; padding: 8px 10px; gap: 10px; }
+.menu [aria-current="page"] { background: var(--accent); color: var(--accent-foreground); }
+@media (min-width: 1024px) { .identity { display: block; } .chevron { display: block; color: var(--muted-foreground); } .trigger { padding-inline: 6px; } }

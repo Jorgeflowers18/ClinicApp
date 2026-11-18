@@ -1,0 +1,30 @@
+.page { width: 100%; max-width: 1200px; min-width: 0; margin-inline: auto; display: grid; gap: 20px; container: institution / inline-size; font-family: var(--font-ui); }
+.columns, .details, .form { display: grid; min-width: 0; gap: 16px; }
+.columns { align-items: start; }
+.identity { align-self: start; }
+.card { min-width: 0; gap: 16px; padding-block: 20px; }
+.card > :global([data-slot="card-header"]), .card > :global([data-slot="card-content"]) { padding-inline: 20px; min-width: 0; }
+.title { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; }
+.title > svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--muted-foreground); }
+.pair { display: grid; gap: 16px; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field > label { font-size: 13px; font-weight: 500; }
+.field > input, .field > textarea { min-width: 0; width: 100%; }
+.logoPreview { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.logoPreview > div { min-width: 0; overflow-wrap: anywhere; }
+.logoImage { width: 80px; height: 80px; object-fit: contain; border-radius: var(--radius-card); flex-shrink: 0; background: var(--muted); }
+.previewTitle { margin-bottom: 4px; font-size: 14px; font-weight: 500; }
+.hint, .pending, .storageNote { color: var(--muted-foreground); font-size: 12px; line-height: 1.6; }
+.pending { padding-inline: 4px; }
+.upload { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--input); border-radius: var(--radius-control); cursor: pointer; font-size: 14px; font-weight: 500; }
+.upload:hover { background: var(--muted); }
+.upload:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
+.error { color: var(--destructive); background: var(--card); border: 1px solid var(--destructive); border-radius: var(--radius-control); padding: 12px; font-size: 14px; }
+@container institution (min-width: 480px) { .pair { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container institution (min-width: 900px) { .columns { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); } }
+@media (max-width: 599px) {
+  .page { gap: 16px; }
+  .card { padding-block: 16px; }
+  .card > :global([data-slot="card-header"]), .card > :global([data-slot="card-content"]) { padding-inline: 16px; }
+  .upload { min-height: 44px; }
+}
