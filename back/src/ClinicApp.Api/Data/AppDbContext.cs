@@ -1,6 +1,7 @@
 using ClinicApp.Api.Common;
 using ClinicApp.Api.Modules.Appointments;
 using ClinicApp.Api.Modules.Auth;
+using ClinicApp.Api.Modules.ClinicalHistory;
 using ClinicApp.Api.Modules.Inventory;
 using ClinicApp.Api.Modules.Patients;
 using ClinicApp.Api.Modules.Treatments;
@@ -42,6 +43,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Room> Rooms => Set<Room>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<ScheduleBlock> ScheduleBlocks => Set<ScheduleBlock>();
+
+    // clinical-history
+    public DbSet<ClinicalRecord> ClinicalRecords => Set<ClinicalRecord>();
+    public DbSet<ClinicalRecordVersion> ClinicalRecordVersions => Set<ClinicalRecordVersion>();
+    public DbSet<ClinicalEncounter> ClinicalEncounters => Set<ClinicalEncounter>();
+    public DbSet<EncounterNote> EncounterNotes => Set<EncounterNote>();
+    public DbSet<ClinicalAttachment> ClinicalAttachments => Set<ClinicalAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

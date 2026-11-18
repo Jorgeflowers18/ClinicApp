@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Adjuntos de la historia clínica en desarrollo (datos de pacientes: nunca al repositorio)
+App_Data/

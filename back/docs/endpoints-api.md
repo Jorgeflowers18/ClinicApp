@@ -1,13 +1,14 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **57 endpoints implementados**:
+Estado al **2026-11-17**: **64 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 9 de `treatments` (catálogo y tratamientos realizados);
 - 18 de `inventory`;
 - 6 de `patients`;
 - 7 de `professionals` y `rooms`;
-- 8 de `appointments` y `schedule-blocks`.
+- 8 de `appointments` y `schedule-blocks`;
+- 7 de `clinical-history`.
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
 
@@ -37,6 +38,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `patients` | los tres; dar de baja: `admin` y `recepcion`; reactivar: `admin` |
 | `professionals`, `rooms` | leer: los tres; crear y editar: `admin` |
 | `appointments`, `schedule-blocks` | los tres |
+| `clinical-history` | `admin`, `medico` |
 
 ### Errores
 
@@ -142,6 +144,13 @@ La respuesta tiene esta forma:
 | `GET` | `/api/schedule-blocks` | los tres | `200` lista |
 | `POST` | `/api/schedule-blocks` | los tres | `201` |
 | `DELETE` | `/api/schedule-blocks/:id` | los tres | `204` |
+| `GET` | `/api/clinical-history/encounters` | admin, medico | `200` paginado |
+| `GET` | `/api/clinical-history/patients/:patientId` | admin, medico | `200` |
+| `PUT` | `/api/clinical-history/patients/:patientId` | admin, medico | `200` |
+| `POST` | `/api/clinical-history/patients/:patientId/encounters` | admin, medico | `201` (o `200` si ya existía) |
+| `POST` | `/api/clinical-history/encounters/:encounterId/notes` | admin, medico | `201` |
+| `POST` | `/api/clinical-history/attachments` | admin, medico | `201` |
+| `GET` | `/api/clinical-history/attachments/:attachmentId/file` | admin, medico | `200` archivo |
 | `GET` | `/openapi/v1.json`, `/scalar` | público, **solo en desarrollo** | Descripción OpenAPI y página de pruebas |
 
 ## 3. Salud
@@ -281,7 +290,7 @@ Si la cuenta existe y está activa:
 | `GET /api/treatments/:id` | `200`, o `404` "Tratamiento no encontrado" |
 | `POST /api/treatments` | `201` con el tratamiento y el encabezado `Location`; `400` |
 | `PUT /api/treatments/:id` | `200`; `400`, `404`. Los insumos se reemplazan por los del body. |
-| `DELETE /api/treatments/:id` | `204` (también borra sus insumos); `404`; `409` "Este tratamiento ya se usó. Desactívalo en su lugar." si aparece en una cita o en un tratamiento realizado. |
+| `DELETE /api/treatments/:id` | `204` (también borra sus insumos); `404`; `409` "Este tratamiento ya se usó. Desactívalo en su lugar." si aparece en una cita, un tratamiento realizado, o en el plan o una atención de una historia clínica. |
 
 
 ### Tratamientos realizados (`treatment-assignments`)
@@ -637,6 +646,48 @@ Cuenta como ocupado toda cita **no cancelada** y todo bloqueo. Dos citas pegadas
 | `POST /api/schedule-blocks` | `201`; `400`; `409` si cae sobre una cita no cancelada ("El profesional tiene una cita agendada en ese horario" / "El consultorio tiene una cita agendada en ese horario"). Los bloqueos sí pueden superponerse entre sí. |
 | `DELETE /api/schedule-blocks/:id` | `204`; `404` "Bloqueo no encontrado" |
 
+## 10. `clinical-history`
+
+Solo `admin` y `medico` (`403` para `recepcion`). Contrato: `front/src/modules/clinical-history/types/` (`clinical-history.types.ts`, `background.types.ts`, `encounter-assessment.types.ts`).
+
+| Endpoint | Detalle |
+|---|---|
+| `GET /api/clinical-history/encounters?page&pageSize&search&patientId&professionalId` | `200` paginado de `EncounterListItem` (`id, patientId, date, professionalId, legacyProfessionalName, reason, diagnoses, nextVisit`), de la más reciente a la más antigua. `search` busca sin tildes en el motivo, los diagnósticos y el nombre o la cédula del paciente. |
+| `GET /api/clinical-history/patients/:patientId` | `200` `{ record, encounters, references }` (ver abajo); `404` "Paciente no encontrado" |
+| `PUT /api/clinical-history/patients/:patientId` | `200` con la historia guardada y `revision + 1`; `400` por campo; `404`; `409` (revisión vieja, o paciente dado de baja) |
+| `POST /api/clinical-history/patients/:patientId/encounters` | `201` con la atención, o `200` si el `id` ya existía para ese paciente; `400`; `404`; `409` (mismo `id` en otro paciente, cita ya vinculada, paciente dado de baja) |
+| `POST /api/clinical-history/encounters/:encounterId/notes` | Body `{ text }` (10 a 4000). `201` `{ id, text, authorName, createdAt }`; el autor sale de la sesión. `400`; `404` "Atención no encontrada". |
+| `POST /api/clinical-history/attachments` | Multipart: `file`, `kind`, `patientId`. `201` `{ id, name, kind, mime, size, createdAt }`. `400` con `errors.file` y el título "<nombre>: utiliza JPG, PNG, WebP o PDF de hasta 20 MB". |
+| `GET /api/clinical-history/attachments/:attachmentId/file` | `200` con el archivo, su tipo y `Content-Disposition` con el alias; `404`; `410` si el protocolo de conservación lo borró |
+
+**`GET` de la historia:**
+- `record` (`ClinicalRecord`): `{ patientId, revision, chart, medicalBackground, allergiesAndMedication, habits, dentalBackground, periodontalBackground, plan, dataConsent, truthDeclaration, attachments, examRequests, createdAt, updatedAt }`. Sin historia: una vacía con `revision: 0`, que no se guarda.
+- `encounters`: de la más antigua a la más reciente, cada una con sus notas en `addenda`.
+- `references`: los nombres de lo que la historia nombra por id, calculados al leer. **Es lo que debe usar la impresión** (incluye inactivos y tratamientos fuera de los primeros 100 del catálogo):
+  ```json
+  "references": {
+    "treatments": { "<id>": { "name": "Endodoncia unirradicular", "category": "Endodoncia", "active": false } },
+    "professionals": { "<id>": { "name": "Dra. Carla Ríos", "specialty": "Odontología general", "registrationNumber": "MSP-17-04581", "active": true } }
+  }
+  ```
+
+**`PUT` de la historia** (body = el `ClinicalRecord` completo, con la `revision` que se leyó):
+- **Concurrencia:** si la `revision` no es la guardada, `409` "Otra pestaña o usuario modificó esta historia. Recarga la historia antes de continuar." Dos guardados simultáneos con la misma revisión: uno `200`, el otro `409`.
+- **Versiones:** antes de sobrescribir, la versión anterior se copia completa en `clinical_record_versions`, con quién la guardó y cuándo.
+- **Validación** con las reglas de los esquemas Zod. Los errores llevan la ruta del campo: `medicalBackground.conditions.otro.detail`, `dataConsent.signerName`, `allergiesAndMedication.allergies[0].reaction`, `plan[0].treatmentId`. Las fechas firmadas no pueden ser futuras (según el día de la clínica).
+- **Referencias:** cada `plan[i].treatmentId` debe existir en el catálogo; `truthDeclaration.professionalId`, ser un profesional existente; `examRequests[i].encounterId`, una atención del paciente; los `attachmentId` del consentimiento y de los exámenes, estar en `attachments`.
+- **Adjuntos:** la lista `attachments` (se usa solo el `id`) decide cuáles quedan. Deben ser del paciente (`400` en `attachments[i].id`). Los que salen se marcan como quitados, pero el archivo no se borra.
+- **Solo referencias:** en el plan, `description` se descarta si hay `treatmentId`; el nombre sale de `references`.
+
+**`POST` de la atención** (body = `CreateEncounterInput`: `encounterFormSchema` + `id`, `chartSnapshot`, `clinicalSnapshot`):
+- Obligatorios: `id` (UUID que genera el frontend), `date` (no futura), `professionalId` (existente y activo), `reason` (≥ 3) y al menos un diagnóstico.
+- Reglas de `encounterFormSchema`: signos vitales en rango y PA `NNN/NN`; hallazgo obligatorio si una estructura está `alterado` (`extraoralExam.atm.finding`); interconsulta con detalle; intervalo `otro` con texto; `nextVisit` igual o posterior a la fecha.
+- `appointmentId` opcional: cita existente del mismo paciente, y sin otra atención (`409`).
+- Las estructuras del examen extraoral (6) e intraoral (8) que no vienen se guardan `no_evaluado`.
+- No cambia la cita ni la historia: eso lo sigue haciendo el frontend (ver pendientes en `backlog.md`).
+
+**Adjuntos:** se reconocen por los primeros bytes (no por la extensión). Se guardan en `{Attachments:RootPath}/{patientId}/{id}.{ext}`; lo guardado en una historia se conserva siempre, y los subidos que nunca se guardaron se borran a las 24 h.
+
 ## Estado de los módulos
 
 | Módulo | Responsable | Estado |
@@ -645,7 +696,7 @@ Cuenta como ocupado toda cita **no cancelada** y todo bloqueo. Dos citas pegadas
 | `auth` | Jorge Flores | ✅ Endpoints hechos. Faltan el proveedor de correo, la gestión de usuarios, la revisión de solicitudes de acceso y la limpieza de tokens viejos. |
 | `treatments` | Jorge Flores | ✅ Catálogo, insumos y tratamientos realizados |
 | `inventory` | Jorge Flores | ✅ Los 18 endpoints |
-| `clinical-history` | Jorge Flores | 📝 Plan en revisión: [`plan-historia-clinica.md`](./plan-historia-clinica.md) |
+| `clinical-history` | Jorge Flores | ✅ Los 7 endpoints, con versiones, adjuntos y referencias. ⏳ Registro transaccional de la atención. |
 | `patients` | Jorge Flores | ✅ Los 6 endpoints, con baja lógica y N.° de historia |
 | `appointments`: profesionales y consultorios | Jorge Flores | ✅ Los 7 endpoints |
 | `appointments`: citas y bloqueos | Jorge Flores | ✅ Los 8 endpoints, con choques, candados y hora de la clínica |

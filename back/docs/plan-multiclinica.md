@@ -124,7 +124,7 @@ Las referencias entre tablas también quedan protegidas. Por ejemplo, una orden 
 | `inventory_items`, `stock_lots`, `stock_movements` | ✅ | Lotes y movimientos se consultan solos (FEFO, historial) |
 | `suppliers`, `purchase_orders`, `sterilization_cycles` | ✅ | |
 | `purchase_order_lines`, `sterilization_cycle_items` | ❌ | Se leen por su orden o ciclo |
-| Historia clínica: `clinical_records`, `clinical_record_versions`, `clinical_encounters`, `clinical_attachments` | ✅ | Ver `plan-historia-clinica.md` |
+| Historia clínica: `clinical_records`, `clinical_record_versions`, `clinical_encounters`, `clinical_attachments` | ✅ | Ver `estructura-base.md` § `clinical-history` |
 | `encounter_notes` | ❌ | Se lee por su atención |
 | Módulos futuros (`patients`, `appointments`, `professionals`, `treatment_assignments`, `finance`, `notifications`...) | ✅ | **Regla para todo lo que venga:** toda tabla de datos de una clínica lleva `institution_id` |
 

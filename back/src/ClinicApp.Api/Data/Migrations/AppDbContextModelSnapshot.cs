@@ -460,6 +460,442 @@ namespace ClinicApp.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Alias")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("alias");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTime?>("LinkedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("linked_at");
+
+                    b.Property<string>("Mime")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("mime");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<DateTime?>("PurgedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("purged_at");
+
+                    b.Property<DateTime?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("removed_at");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("storage_path");
+
+                    b.Property<Guid?>("UploadedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uploaded_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clinical_attachments");
+
+                    b.HasIndex("PatientId")
+                        .HasDatabaseName("ix_clinical_attachments_patient_id");
+
+                    b.HasIndex("UploadedByUserId")
+                        .HasDatabaseName("ix_clinical_attachments_uploaded_by_user_id");
+
+                    b.HasIndex("LinkedAt", "CreatedAt")
+                        .HasDatabaseName("ix_clinical_attachments_linked_at_created_at");
+
+                    b.ToTable("clinical_attachments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_clinical_attachments_kind", "kind IN ('radiografia_periapical', 'bitewing', 'panoramica', 'cbct', 'fotografias', 'modelos', 'pruebas_pulpares', 'laboratorio', 'interconsulta', 'biopsia', 'consentimiento', 'otro')");
+
+                            t.HasCheckConstraint("ck_clinical_attachments_mime", "mime IN ('image/jpeg', 'image/png', 'image/webp', 'application/pdf')");
+
+                            t.HasCheckConstraint("ck_clinical_attachments_size", "size BETWEEN 1 AND 20971520");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalEncounter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AppointmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("appointment_id");
+
+                    b.Property<string>("Asa")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("asa");
+
+                    b.Property<string>("CariesRisk")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("caries_risk");
+
+                    b.Property<string>("ChartSnapshot")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("chart_snapshot");
+
+                    b.Property<string>("ClinicalSnapshot")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("clinical_snapshot");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<string>("Diagnoses")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("diagnoses");
+
+                    b.Property<string>("DiagnosisSummary")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("diagnosis_summary");
+
+                    b.Property<string>("Evolution")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("evolution");
+
+                    b.Property<string>("ExamFindings")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("exam_findings");
+
+                    b.Property<string>("ExtraoralExam")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("extraoral_exam");
+
+                    b.Property<string>("IntraoralExam")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("intraoral_exam");
+
+                    b.Property<string>("LegacyProfessionalName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("legacy_professional_name");
+
+                    b.Property<string>("MaintenanceInterval")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("maintenance_interval");
+
+                    b.Property<string>("Materials")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("materials");
+
+                    b.Property<DateOnly?>("NextVisit")
+                        .HasColumnType("date")
+                        .HasColumnName("next_visit");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Pain")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("pain");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("PerformedTreatments")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("performed_treatments");
+
+                    b.Property<string>("PeriodontalDiagnosis")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("periodontal_diagnosis");
+
+                    b.Property<string>("PeriodontalRisk")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("periodontal_risk");
+
+                    b.Property<string>("PresentIllness")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("present_illness");
+
+                    b.Property<string>("Procedures")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("procedures");
+
+                    b.Property<Guid>("ProfessionalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("professional_id");
+
+                    b.Property<string>("Prognosis")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("prognosis");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("RequestedExams")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("requested_exams");
+
+                    b.Property<string>("RiskAssessment")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("risk_assessment");
+
+                    b.Property<string>("Vitals")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("vitals");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clinical_encounters");
+
+                    b.HasIndex("AppointmentId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_clinical_encounters_appointment_id")
+                        .HasFilter("appointment_id IS NOT NULL");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_clinical_encounters_created_by_user_id");
+
+                    b.HasIndex("Date")
+                        .HasDatabaseName("ix_clinical_encounters_date");
+
+                    b.HasIndex("ProfessionalId")
+                        .HasDatabaseName("ix_clinical_encounters_professional_id");
+
+                    b.HasIndex("PatientId", "Date")
+                        .HasDatabaseName("ix_clinical_encounters_patient_id_date");
+
+                    b.ToTable("clinical_encounters", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_clinical_encounters_asa", "asa IN ('', 'I', 'II', 'III', 'IV')");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalRecord", b =>
+                {
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("AllergiesAndMedication")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("allergies_and_medication");
+
+                    b.Property<string>("Chart")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("chart");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DataConsent")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("data_consent");
+
+                    b.Property<string>("DentalBackground")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("dental_background");
+
+                    b.Property<string>("ExamRequests")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("exam_requests");
+
+                    b.Property<string>("Habits")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("habits");
+
+                    b.Property<string>("MedicalBackground")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("medical_background");
+
+                    b.Property<string>("PeriodontalBackground")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("periodontal_background");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("plan");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("TruthDeclaration")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("truth_declaration");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("PatientId")
+                        .HasName("pk_clinical_records");
+
+                    b.HasIndex("UpdatedByUserId")
+                        .HasDatabaseName("ix_clinical_records_updated_by_user_id");
+
+                    b.ToTable("clinical_records", (string)null);
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalRecordVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("data");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer")
+                        .HasColumnName("revision");
+
+                    b.Property<DateTime>("SavedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("saved_at");
+
+                    b.Property<Guid?>("SavedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("saved_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clinical_record_versions");
+
+                    b.HasIndex("SavedByUserId")
+                        .HasDatabaseName("ix_clinical_record_versions_saved_by_user_id");
+
+                    b.HasIndex("PatientId", "Revision")
+                        .IsUnique()
+                        .HasDatabaseName("ix_clinical_record_versions_patient_id_revision");
+
+                    b.ToTable("clinical_record_versions", (string)null);
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.EncounterNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("author_name");
+
+                    b.Property<Guid?>("AuthorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EncounterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("encounter_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id")
+                        .HasName("pk_encounter_notes");
+
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("ix_encounter_notes_author_user_id");
+
+                    b.HasIndex("EncounterId")
+                        .HasDatabaseName("ix_encounter_notes_encounter_id");
+
+                    b.ToTable("encounter_notes", (string)null);
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.InventoryItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1376,6 +1812,99 @@ namespace ClinicApp.Api.Data.Migrations
                     b.Navigation("Profile");
                 });
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalAttachment", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_clinical_attachments_patients_patient_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_clinical_attachments_users_uploaded_by_user_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalEncounter", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_clinical_encounters_appointments_appointment_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_clinical_encounters_users_created_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_clinical_encounters_patients_patient_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Professional", null)
+                        .WithMany()
+                        .HasForeignKey("ProfessionalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_clinical_encounters_professionals_professional_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalRecord", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Patients.Patient", null)
+                        .WithOne()
+                        .HasForeignKey("ClinicApp.Api.Modules.ClinicalHistory.ClinicalRecord", "PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_clinical_records_patients_patient_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_clinical_records_users_updated_by_user_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalRecordVersion", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.ClinicalHistory.ClinicalRecord", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_clinical_record_versions_clinical_records_patient_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("SavedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_clinical_record_versions_users_saved_by_user_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.EncounterNote", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_encounter_notes_users_author_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.ClinicalHistory.ClinicalEncounter", null)
+                        .WithMany("Addenda")
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_encounter_notes_clinical_encounters_encounter_id");
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.PurchaseOrder", b =>
                 {
                     b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
@@ -1565,6 +2094,11 @@ namespace ClinicApp.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_treatment_consumptions_treatments_treatment_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalEncounter", b =>
+                {
+                    b.Navigation("Addenda");
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.PurchaseOrder", b =>

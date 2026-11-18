@@ -24,6 +24,8 @@ Al arrancar en desarrollo con la tabla `users` vacía, la API crea las cuentas d
 | `ASPNETCORE_URLS` | `http://127.0.0.1:5000` |
 | `AllowedHosts` | `midominio.com` |
 | `Seed__AdminEmail`, `Seed__AdminPassword` | Administrador inicial (solo la primera vez; mínimo 12 caracteres) |
+| `Attachments__RootPath` | Carpeta de los adjuntos de la historia clínica, fuera de la carpeta de la app (por ejemplo `/var/lib/clinicapp/attachments`). **Debe estar en el respaldo diario**, junto con la base. |
+| `Clinic__TimeZone` | Zona horaria IANA de la clínica (por defecto `America/Guayaquil`) |
 
 El contrato completo que el frontend (`../front`) espera — endpoints, formato de error de validación (400), y notas de autenticación — está documentado en [`../documentacion/arquitectura-frontend.md`](../documentacion/arquitectura-frontend.md), sección "Endpoints que el backend .NET debe exponer".
 

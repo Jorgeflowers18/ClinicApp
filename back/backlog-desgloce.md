@@ -18,7 +18,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ 2 | `appointments`: profesionales y consultorios | Hecho (falta su pantalla en el frontend) | 1 | Base |
 | ✅ 3 | `appointments`: citas y bloqueos | Hecho (falta que el frontend envíe el rango del calendario) | 2 | `patients`, profesionales y consultorios |
 | ✅ 4 | `treatments`: tratamientos realizados (`treatment-assignments`) | Hecho | 2 | `patients`, `treatments`, `inventory` |
-| **5** | `clinical-history` | Plan aprobado, en espera de su turno: [`docs/plan-historia-clinica.md`](./docs/plan-historia-clinica.md) | 3 | `patients`, profesionales, citas, tratamientos realizados |
+| ✅ 5 | `clinical-history` | Hecho (falta el registro transaccional de la atención) | 3 | `patients`, profesionales, citas, tratamientos realizados |
 | **6** | `institution` | Plan en revisión: [`docs/plan-institucion.md`](./docs/plan-institucion.md) | 1 | Base |
 | **7** | `notifications` | Plan en revisión: [`docs/plan-notificaciones.md`](./docs/plan-notificaciones.md). Falta elegir el proveedor de envío. | 2 | Citas, `patients` |
 | **8** | `finance` | Plan en revisión: [`docs/plan-finanzas.md`](./docs/plan-finanzas.md). Pagos aprobados; cuotas, seguros y factura esperan el ítem 8. | 4 | Tratamientos realizados, `patients` |
@@ -196,11 +196,11 @@ Siguen por definir:
 - Descuenta insumos con `StockService` (ya listo) y llena `stock_movements.treatment_assignment_id`.
 - Finanzas y Reportes calculan los montos con el costo cobrado (`price`) de cada asignación.
 
-## 5. `clinical-history`
+## 5. `clinical-history` ✅
 
 - **Responsable:** Jorge Flores
 - **Fase:** 3
-- **Detalle:** [`backlog.md` § `clinical-history`](./backlog.md#clinical-history). Plan de implementación en [`docs/plan-historia-clinica.md`](./docs/plan-historia-clinica.md).
+- **Detalle:** [`backlog.md` § `clinical-history`](./backlog.md#clinical-history). Implementado en `Modules/ClinicalHistory/`.
 
 **Alcance:**
 - Historia editable por paciente con concurrencia optimista (`revision`): odontograma, antecedentes, alergias y medicación, hábitos, plan por fases, consentimiento, declaración de veracidad, adjuntos y exámenes solicitados.
@@ -212,13 +212,13 @@ Siguen por definir:
 **Entidades:** historia clínica, atención, nota aclaratoria, adjunto, examen solicitado.
 
 **Endpoints:**
-- [ ] `GET /clinical-history/encounters` (paginado, con búsqueda)
-- [ ] `GET /clinical-history/patients/:patientId`
-- [ ] `PUT /clinical-history/patients/:patientId`
-- [ ] `POST /clinical-history/patients/:patientId/encounters`
-- [ ] `POST /clinical-history/encounters/:encounterId/notes`
-- [ ] `POST /clinical-history/attachments`
-- [ ] `GET /clinical-history/attachments/:attachmentId/file`
+- [x] `GET /clinical-history/encounters` (paginado, con búsqueda)
+- [x] `GET /clinical-history/patients/:patientId`
+- [x] `PUT /clinical-history/patients/:patientId`
+- [x] `POST /clinical-history/patients/:patientId/encounters`
+- [x] `POST /clinical-history/encounters/:encounterId/notes`
+- [x] `POST /clinical-history/attachments`
+- [x] `GET /clinical-history/attachments/:attachmentId/file`
 
 **Relación con otros módulos:** datos del paciente (`patients`), profesional de la atención, paso de la cita a `completada` (`appointments`) y tratamientos realizados.
 

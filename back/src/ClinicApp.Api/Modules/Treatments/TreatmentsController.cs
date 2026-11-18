@@ -194,10 +194,27 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
         return assignments.Select(TreatmentAssignmentDto.FromEntity).ToList();
     }
 
-    /// <summary>¿Aparece en alguna cita o en un tratamiento realizado?</summary>
-    private async Task<bool> IsInUseAsync(Guid treatmentId, CancellationToken cancellationToken) =>
-        await db.Appointments.AnyAsync(appointment => appointment.TreatmentId == treatmentId, cancellationToken)
-        || await db.TreatmentAssignments.AnyAsync(assignment => assignment.TreatmentId == treatmentId, cancellationToken);
+    /// <summary>
+    /// ¿Aparece en alguna cita, en un tratamiento realizado, o en el plan o los tratamientos de una historia
+    /// clínica? Los dos últimos están dentro de columnas jsonb: se buscan con el operador @> de PostgreSQL
+    /// ("el arreglo contiene un objeto con este treatmentId").
+    /// </summary>
+    private async Task<bool> IsInUseAsync(Guid treatmentId, CancellationToken cancellationToken)
+    {
+        if (await db.Appointments.AnyAsync(appointment => appointment.TreatmentId == treatmentId, cancellationToken)
+            || await db.TreatmentAssignments.AnyAsync(assignment => assignment.TreatmentId == treatmentId, cancellationToken))
+        {
+            return true;
+        }
+
+        var reference = $$"""[{"treatmentId":"{{treatmentId}}"}]""";
+        return await db.Database
+            .SqlQuery<bool>($"""
+                SELECT EXISTS (SELECT 1 FROM clinical_records WHERE plan @> {reference}::jsonb)
+                    OR EXISTS (SELECT 1 FROM clinical_encounters WHERE performed_treatments @> {reference}::jsonb) AS "Value"
+                """)
+            .SingleAsync(cancellationToken);
+    }
 
     /// <summary>404 en formato ProblemDetails: el frontend muestra el "title" como mensaje.</summary>
     private ObjectResult TreatmentNotFound() =>

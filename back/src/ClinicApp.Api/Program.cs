@@ -2,6 +2,7 @@ using ClinicApp.Api.Common;
 using ClinicApp.Api.Data;
 using ClinicApp.Api.Modules.Appointments;
 using ClinicApp.Api.Modules.Auth;
+using ClinicApp.Api.Modules.ClinicalHistory;
 using ClinicApp.Api.Modules.Inventory;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -101,6 +102,13 @@ builder.Services.AddScoped<StockService>();
 // Agenda: candados y choques de horario. IAppointmentEvents lo reemplaza el módulo de notificaciones.
 builder.Services.AddScoped<AvailabilityService>();
 builder.Services.AddScoped<IAppointmentEvents, NoAppointmentEvents>();
+
+// Historia clínica: archivos en disco (Attachments:RootPath), nombres del catálogo para mostrar e imprimir,
+// y la tarea que borra los adjuntos nunca guardados (y el protocolo de conservación, apagado por defecto).
+builder.Services.AddSingleton<AttachmentStorage>();
+builder.Services.AddScoped<ReferenceResolver>();
+builder.Services.AddSingleton<AttachmentCleanupService>();
+builder.Services.AddHostedService(services => services.GetRequiredService<AttachmentCleanupService>());
 
 // En producción la API está detrás de nginx, que atiende el HTTPS y le pasa la petición por HTTP.
 // nginx avisa en encabezados cuál era el esquema original (https) y la IP del cliente.

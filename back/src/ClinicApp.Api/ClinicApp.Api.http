@@ -418,3 +418,82 @@ Authorization: Bearer {{token}}
 ### Pacientes que recibieron un tratamiento
 GET {{api}}/treatments/{{crear.response.body.id}}/assignments
 Authorization: Bearer {{token}}
+
+### ───────────── Historia clínica (admin o médico) ─────────────
+
+### Historia de un paciente: { record, encounters, references }. Sin historia, una vacía con revision 0.
+GET {{api}}/clinical-history/patients/{{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Subir un adjunto (multipart). Solo JPG, PNG, WebP o PDF de hasta 20 MB.
+# @name adjunto
+POST {{api}}/clinical-history/attachments
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="kind"
+
+radiografia_periapical
+--limite
+Content-Disposition: form-data; name="patientId"
+
+{{paciente.response.body.id}}
+--limite
+Content-Disposition: form-data; name="file"; filename="rx.pdf"
+Content-Type: application/pdf
+
+%PDF-1.7 ejemplo
+--limite--
+
+### Descargar el adjunto (con el nombre original como alias)
+GET {{api}}/clinical-history/attachments/{{adjunto.response.body.id}}/file
+Authorization: Bearer {{token}}
+
+### Registrar una atención (el id lo genera el frontend: un reintento con el mismo id devuelve 200)
+# @name atencion
+POST {{api}}/clinical-history/patients/{{paciente.response.body.id}}/encounters
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "0199d000-0000-7000-8000-000000000001",
+  "date": "2026-11-17",
+  "professionalId": "{{profesional.response.body.id}}",
+  "appointmentId": null,
+  "reason": "Dolor en molar superior",
+  "presentIllness": "",
+  "vitals": { "bloodPressure": "120/80", "heartRate": 72, "respiratoryRate": null, "spo2": 98, "temperature": 36.5, "weight": null, "height": null },
+  "asa": "I",
+  "riskAssessment": ["ambulatorio"],
+  "extraoralExam": {},
+  "intraoralExam": {},
+  "pain": { "scale": 6, "location": "16", "character": "Pulsátil" },
+  "cariesRisk": { "level": "alto", "factors": "" },
+  "periodontalRisk": { "level": "", "factors": "" },
+  "diagnoses": [{ "id": "d1", "description": "Caries profunda", "tooth": "16", "priority": "alta" }],
+  "prognosis": { "level": "favorable", "notes": "" },
+  "periodontalDiagnosis": { "gingival": "", "stage": "", "extent": "", "grade": "", "stability": "", "periImplant": "", "smoking": "", "diabetes": "", "otherFactors": "", "teethLostToPerio": null },
+  "maintenanceInterval": { "option": "6", "other": "" },
+  "procedures": "Apertura cameral",
+  "materials": "Lidocaína 2 %",
+  "requestedExams": [],
+  "examFindings": "",
+  "evolution": "",
+  "notes": "",
+  "nextVisit": "",
+  "performedTreatments": [],
+  "chartSnapshot": null,
+  "clinicalSnapshot": null
+}
+
+### Agregar una nota aclaratoria (el autor sale de la sesión)
+POST {{api}}/clinical-history/encounters/{{atencion.response.body.id}}/notes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "text": "Corrección: la pieza tratada fue la 17." }
+
+### Lista global de atenciones (busca sin tildes en motivo, diagnósticos y nombre o cédula del paciente)
+GET {{api}}/clinical-history/encounters?page=1&pageSize=10&search=caries
+Authorization: Bearer {{token}}

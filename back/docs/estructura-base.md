@@ -1,6 +1,6 @@
 # Estructura base del backend — ClinicApp
 
-Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients` y `appointments` (profesionales, consultorios, citas y bloqueos). Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
+Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients`, `appointments` (profesionales, consultorios, citas y bloqueos) y `clinical-history`. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
 
 ## 1. Tecnología
 
@@ -36,6 +36,7 @@ back/
     │   ├── Validation.cs                    ← título de los 400, ValidationError(), FieldConflict() (409 con campo), [IsoDate]
     │   ├── ClinicClock.cs                   ← "hoy" y conversión de horas en la zona horaria de la clínica
     │   ├── TextSearch.cs                    ← búsqueda sin tildes (unaccent) y patrones ILIKE
+    │   ├── JsonbConversion.cs               ← HasJsonbConversion(): una clase de C# en una columna jsonb
     │   ├── RateLimits.cs                    ← límite de intentos de los endpoints públicos de auth
     │   ├── Email.cs                         ← IEmailSender (hoy solo escribe en el log)
     │   └── BearerSecuritySchemeTransformer.cs ← botón "Bearer" en Scalar
@@ -47,7 +48,8 @@ back/
         ├── Treatments/   ← catálogo de tratamientos, sus insumos y los tratamientos realizados
         ├── Inventory/    ← insumos, lotes, movimientos, proveedores, órdenes, esterilización
         ├── Patients/     ← pacientes (baja lógica, N.° de historia clínica)
-        └── Appointments/ ← profesionales, consultorios, citas y bloqueos de horario
+        ├── Appointments/ ← profesionales, consultorios, citas y bloqueos de horario
+        └── ClinicalHistory/ ← historia, versiones, atenciones, notas y adjuntos
 ```
 
 **Patrón de cada módulo:**
@@ -71,7 +73,7 @@ back/
 | Dinero | `numeric(10,2)` (`decimal` en C#): hasta 99 999 999,99 sin errores de redondeo |
 | Texto | `varchar(n)` con el largo máximo del formulario |
 | Opciones fijas | Texto con restricción `CHECK` (por ejemplo `role IN ('admin', 'recepcion', 'medico')`). Los valores son los mismos del frontend. |
-| Estructuras anidadas | `jsonb` (hoy solo `users.profile`; la historia clínica lo usará para sus secciones) |
+| Estructuras anidadas | `jsonb`: `users.profile` y las secciones de la historia clínica |
 | Borrados | Las tablas de historia (movimientos, lotes) usan **restrict**: no se puede borrar lo que tiene historial. Las partes de un todo (líneas de una orden, consumos de un tratamiento, tokens de un usuario) usan **cascade**. Las referencias de auditoría a `users` usan **set null**. |
 | Auditoría | `created_by_user_id` en movimientos de stock, órdenes de compra y ciclos de esterilización (no se expone en la API) |
 | Secretos | En la base nunca hay contraseñas ni tokens en claro: contraseñas con PBKDF2 (`PasswordHasher`), tokens de sesión y de recuperación como hash SHA-256 |
@@ -110,9 +112,16 @@ erDiagram
     treatments ||--o{ treatment_assignments : "realizados"
     patients ||--o{ treatment_assignments : ""
     treatment_assignments ||--o{ stock_movements : "consumo"
+    patients ||--o| clinical_records : "historia"
+    clinical_records ||--o{ clinical_record_versions : "versiones"
+    patients ||--o{ clinical_encounters : "atenciones"
+    professionals ||--o{ clinical_encounters : ""
+    appointments ||--o| clinical_encounters : ""
+    clinical_encounters ||--o{ encounter_notes : "notas"
+    patients ||--o{ clinical_attachments : "adjuntos"
 ```
 
-`access_requests` no tiene relaciones. `treatment_assignments.source_encounter_id` es un UUID **sin llave foránea** todavía (ver § 10).
+`access_requests` no tiene relaciones. `treatment_assignments.source_encounter_id` es un UUID **sin llave foránea** todavía (ver § 11).
 
 ## 5. Módulo `auth`
 
@@ -411,7 +420,84 @@ Las horas van en UTC; la API convierte desde y hacia la hora de la clínica.
 
 **Sin choques de horario:** lo garantiza la API (`AvailabilityService`), no la base, porque el choque puede ser con otra tabla (un bloqueo). Para que dos peticiones simultáneas no pasen las dos, toma un candado de PostgreSQL (`pg_advisory_xact_lock`) por profesional y por consultorio durante la transacción.
 
-## 10. Migraciones aplicadas
+## 10. Módulo `clinical-history`
+
+Las secciones anidadas del formulario van en columnas `jsonb` (una por sección), guardadas con `HasJsonbConversion()` (`Common/JsonbConversion.cs`) y validadas por la API con las reglas de los esquemas Zod. Lo que se busca, filtra u ordena va en columnas normales.
+
+### `clinical_records` (una por paciente)
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `patient_id` | `uuid` PK, FK → `patients` (restrict) | | |
+| `revision` | `integer` | | Concurrencia optimista (token de EF Core) |
+| `chart` | `jsonb` | sí | Odontograma y periodontograma tal como los exporta la librería; no se valida por dentro |
+| `medical_background`, `allergies_and_medication`, `habits`, `dental_background`, `periodontal_background`, `plan`, `data_consent`, `truth_declaration`, `exam_requests` | `jsonb` | | Una sección cada una |
+| `created_at`, `updated_at` | `timestamptz` | | |
+| `updated_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+
+### `clinical_record_versions` (inmutable)
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `patient_id` | `uuid` FK → `clinical_records` (restrict) | | Único `(patient_id, revision)` |
+| `revision` | `integer` | | La revisión que se reemplazó |
+| `data` | `jsonb` | sí | La historia completa en esa revisión (con la forma de la respuesta de la API) |
+| `saved_by_user_id` | `uuid` FK → `users` (set null) | sí | Quién había guardado esa versión |
+| `saved_at` | `timestamptz` | | Cuándo |
+
+### `clinical_encounters` (inmutable)
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | Lo genera el frontend (idempotencia) |
+| `patient_id` | `uuid` FK → `patients` (restrict) | | Índice `(patient_id, date)` |
+| `date` | `date` | | No futura. Índice. |
+| `professional_id` | `uuid` FK → `professionals` (restrict) | | Índice |
+| `legacy_professional_name` | `varchar(120)` | sí | Solo para atenciones importadas |
+| `appointment_id` | `uuid` FK → `appointments` (restrict) | sí | Único cuando no es `null`: una cita, una atención |
+| `reason`, `present_illness` | `varchar(500)`, `varchar(2000)` | | |
+| `asa` | `varchar(3)` | | `''`, `I` a `IV` (`CHECK`) |
+| `vitals`, `risk_assessment`, `extraoral_exam`, `intraoral_exam`, `pain`, `caries_risk`, `periodontal_risk`, `diagnoses`, `prognosis`, `periodontal_diagnosis`, `maintenance_interval`, `requested_exams`, `performed_treatments` | `jsonb` | | Una sección cada una |
+| `chart_snapshot`, `clinical_snapshot` | `jsonb` | sí | Copias del odontograma y de las alertas al guardar |
+| `diagnosis_summary` | `text` | | Diagnósticos unidos por " · ", para buscar. No se expone. |
+| `procedures`, `evolution`, `notes` | `varchar(4000)` | | |
+| `materials`, `exam_findings` | `varchar(1000)` | | |
+| `next_visit` | `date` | sí | |
+| `created_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+| `created_at` | `timestamptz` | | |
+
+### `encounter_notes` (inmutable)
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `encounter_id` | `uuid` FK → `clinical_encounters` (restrict) | | |
+| `text` | `varchar(4000)` | | Mínimo 10 |
+| `author_user_id` | `uuid` FK → `users` (set null) | sí | |
+| `author_name` | `varchar(120)` | | Copia del nombre al firmar |
+| `created_at` | `timestamptz` | | |
+
+### `clinical_attachments`
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `patient_id` | `uuid` FK → `patients` (restrict) | | Índice |
+| `alias` | `varchar(255)` | | Nombre con que lo subió el usuario (`name` en la API) |
+| `kind` | `varchar(30)` | | 12 tipos (`CHECK`) |
+| `mime` | `varchar(50)` | | JPG, PNG, WebP o PDF (`CHECK`); lo decide el servidor por los primeros bytes |
+| `size` | `bigint` | | 1 byte a 20 MB (`CHECK`) |
+| `storage_path` | `varchar(200)` | | `{patientId}/{id}.{ext}`, relativo a `Attachments:RootPath`. No se expone. |
+| `linked_at` | `timestamptz` | sí | `null` = nunca se guardó en una historia (se borra a las 24 h) |
+| `removed_at` | `timestamptz` | sí | Se quitó de la historia; el archivo se conserva |
+| `purged_at` | `timestamptz` | sí | El protocolo de conservación borró el archivo (apagado por defecto); la fila queda |
+| `uploaded_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+| `created_at` | `timestamptz` | | Índice `(linked_at, created_at)` para la limpieza |
+
+**Archivos:** en `Attachments:RootPath` (producción: `/var/lib/clinicapp/attachments`, incluida en los respaldos; desarrollo: `App_Data/attachments`, ignorada por git). La tarea `AttachmentCleanupService` corre cada hora.
+
+## 11. Migraciones aplicadas
 
 | Migración | Crea |
 |---|---|
@@ -422,6 +508,7 @@ Las horas van en UTC; la API convierte desde y hacia la hora de la clínica.
 | `20261118023839_CrearProfesionalesYConsultorios` | `professionals`, `rooms` y las FK `users.professional_id` y `sterilization_cycles.responsible_professional_id`. Pasa los ciclos con responsables inexistentes a un profesional inactivo "Responsable no registrado". |
 | `20261118024431_CrearCitas` | `appointments` y `schedule_blocks` |
 | `20261118024917_CrearTratamientosRealizados` | `treatment_assignments` y la FK `stock_movements.treatment_assignment_id` |
+| `20261118025957_CrearHistoriaClinica` | Las 5 tablas de la historia clínica (26 columnas `jsonb`) |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -433,11 +520,10 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 
 **Módulos sin tablas todavía:**
 - `institution`, `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
-- `clinical-history`. El plan de la historia clínica está en [`plan-historia-clinica.md`](./plan-historia-clinica.md).
 
 **Multi-clínica (propuesta en espera):** el sistema se venderá a varias clínicas. Cuando se apruebe, se agrega la tabla `institutions` y la columna `institution_id` en las tablas de datos, con un filtro automático para que cada clínica vea solo lo suyo. Detalle en [`plan-multiclinica.md`](./plan-multiclinica.md). Mientras tanto, los módulos se hacen para una sola clínica.
 
-## 11. Configuración
+## 12. Configuración
 
 `appsettings.json` solo tiene valores no secretos. Los secretos y lo propio de cada entorno van en variables de entorno, con `__` en lugar de `:` (`Auth:SigningKey` → `Auth__SigningKey`). Si `ASPNETCORE_ENVIRONMENT` no está definida, .NET asume `Production`.
 
@@ -452,5 +538,8 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 | `Seed:AdminEmail`, `Seed:AdminPassword`, `Seed:AdminName` | Variable de entorno, solo la primera vez | Administrador inicial |
 | `ASPNETCORE_URLS`, `AllowedHosts` | Variable de entorno en producción | `http://127.0.0.1:5000`, el dominio |
 | `Clinic:TimeZone` | `appsettings.json`; en producción, variable `Clinic__TimeZone` | Zona horaria IANA de la clínica (`America/Guayaquil`). Define "hoy" para las fechas que no pueden ser futuras. Un nombre inválido detiene el arranque. |
+| `Attachments:RootPath` | `appsettings.json` (vacío = `App_Data/attachments`); en producción, `Attachments__RootPath=/var/lib/clinicapp/attachments` | Carpeta de los adjuntos. **Debe estar en los respaldos.** |
+| `Attachments:OrphanHours`, `Attachments:CleanupIntervalMinutes` | `appsettings.json` | 24 y 60: los adjuntos nunca guardados se borran a las 24 h; la tarea corre cada hora |
+| `Attachments:Retention:RemovedDays`, `Attachments:Retention:DryRun` | `appsettings.json` | Vacío y `true`: el protocolo de conservación está apagado. Ver `backlog.md` § `clinical-history`. |
 
 Los logs de consola incluyen el `TraceId` de cada petición (formato `simple` con scopes), el mismo que devuelven las respuestas de error.
