@@ -88,6 +88,11 @@ builder.Services.AddAuthorizationBuilder()
 
 builder.Services.AddClinicRateLimits();
 
+// "Hoy" y conversión de horas en la zona horaria de la clínica (Clinic:TimeZone).
+// TimeProvider permite que las pruebas simulen otra fecha.
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<ClinicClock>();
+
 // Inventario: la única pieza que cambia el stock (entradas, salidas FEFO).
 // Scoped = una por petición, igual que el AppDbContext que usa.
 builder.Services.AddScoped<StockService>();
@@ -106,6 +111,9 @@ builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database");
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
 var app = builder.Build();
+
+// Se crea al arrancar para que una zona horaria mal escrita detenga la API de inmediato.
+app.Services.GetRequiredService<ClinicClock>();
 
 // ───────────────────────── 2. PIPELINE ─────────────────────────
 // El orden importa: cada petición pasa por estas piezas de arriba abajo.
@@ -134,3 +142,6 @@ app.MapControllers();
 await app.SeedUsersAsync();
 
 app.Run();
+
+/// <summary>Visible para el proyecto de pruebas (WebApplicationFactory&lt;Program&gt;).</summary>
+public partial class Program;

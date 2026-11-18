@@ -1,4 +1,5 @@
 using ClinicApp.Api.Modules.Auth;
+using ClinicApp.Api.Modules.Patients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -64,6 +65,8 @@ public class StockMovementConfiguration : IEntityTypeConfiguration<StockMovement
         builder.HasOne<PurchaseOrder>().WithMany().HasForeignKey(movement => movement.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
         // SetNull: si algún día se borra un usuario, el movimiento queda (sin autor).
         builder.HasOne<User>().WithMany().HasForeignKey(movement => movement.CreatedByUserId).OnDelete(DeleteBehavior.SetNull);
+        // Paciente al que se le consumió el insumo (tratamiento realizado).
+        builder.HasOne<Patient>().WithMany().HasForeignKey(movement => movement.PatientId).OnDelete(DeleteBehavior.Restrict);
 
         // Historial de un insumo, del más reciente al más antiguo.
         builder.HasIndex(movement => new { movement.ItemId, movement.CreatedAt });

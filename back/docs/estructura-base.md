@@ -1,6 +1,6 @@
 # Estructura base del backend — ClinicApp
 
-Estado al **2026-11-15**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos) e `inventory`. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
+Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory` y `patients`. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
 
 ## 1. Tecnología
 
@@ -25,6 +25,7 @@ back/
 ├── README.md, backlog.md, backlog-desgloce.md
 ├── docs/                                    ← este documento, endpoints-api.md y los planes en curso
 ├── tutorial/fase-0.md                       ← guía paso a paso de cómo se armó la base
+├── tests/ClinicApp.Api.Tests/              ← pruebas unitarias y de integración (ver docs/pruebas.md)
 └── src/ClinicApp.Api/
     ├── Program.cs                           ← servicios y pipeline (orden de los middlewares)
     ├── appsettings.json, appsettings.Development.json
@@ -32,7 +33,9 @@ back/
     ├── Common/
     │   ├── Paging.cs                        ← PageQuery, PagedResult<T>, ToPagedResultAsync
     │   ├── ProblemDetailsSetup.cs           ← títulos de error en español; 500 sin detalle en producción
-    │   ├── Validation.cs                    ← título de los 400, ValidationError(), [IsoDate]
+    │   ├── Validation.cs                    ← título de los 400, ValidationError(), FieldConflict() (409 con campo), [IsoDate]
+    │   ├── ClinicClock.cs                   ← "hoy" y conversión de horas en la zona horaria de la clínica
+    │   ├── TextSearch.cs                    ← búsqueda sin tildes (unaccent) y patrones ILIKE
     │   ├── RateLimits.cs                    ← límite de intentos de los endpoints públicos de auth
     │   ├── Email.cs                         ← IEmailSender (hoy solo escribe en el log)
     │   └── BearerSecuritySchemeTransformer.cs ← botón "Bearer" en Scalar
@@ -42,7 +45,8 @@ back/
     └── Modules/
         ├── Auth/         ← usuarios, sesiones, recuperación de contraseña, solicitudes de acceso
         ├── Treatments/   ← catálogo de tratamientos y sus insumos
-        └── Inventory/    ← insumos, lotes, movimientos, proveedores, órdenes, esterilización
+        ├── Inventory/    ← insumos, lotes, movimientos, proveedores, órdenes, esterilización
+        └── Patients/     ← pacientes (baja lógica, N.° de historia clínica)
 ```
 
 **Patrón de cada módulo:**
@@ -92,9 +96,11 @@ erDiagram
     users ||--o{ stock_movements : "registró"
     users ||--o{ purchase_orders : "creó"
     users ||--o{ sterilization_cycles : "registró"
+    patients ||--o{ stock_movements : "consumo"
+    users ||--o{ patients : "registró"
 ```
 
-`access_requests` no tiene relaciones. `users.professional_id`, `sterilization_cycles.responsible_professional_id`, `stock_movements.patient_id` y `stock_movements.treatment_assignment_id` son UUID **sin llave foránea** todavía (ver § 8).
+`access_requests` no tiene relaciones. `users.professional_id`, `sterilization_cycles.responsible_professional_id` y `stock_movements.treatment_assignment_id` son UUID **sin llave foránea** todavía (ver § 9).
 
 ## 5. Módulo `auth`
 
@@ -278,13 +284,50 @@ Insumos que consume un tratamiento cada vez que se realiza.
 | `cycle_id` | `uuid` FK → `sterilization_cycles` (cascade) | | PK compuesta `(cycle_id, item_id)` |
 | `item_id` | `uuid` FK → `inventory_items` (restrict) | | Solo insumos `instrumental` (lo valida la API) |
 
-## 8. Migraciones aplicadas
+## 8. Módulo `patients`
+
+### `patients`
+
+Baja lógica: un paciente nunca se borra, porque tiene citas, tratamientos, historia y pagos. Los textos opcionales se guardan como `""`.
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `record_number` | `integer` | | N.° de historia clínica. Lo asigna la secuencia `patient_record_number_seq` (`DEFAULT nextval(...)`). Único. La API lo muestra como `HC-000123`. |
+| `first_name`, `last_name` | `varchar(80)` | | 2 a 80 |
+| `document_id` | `varchar(20)` | | Cédula o pasaporte. Índice **no único**: los datos que se importarán tienen cédulas repetidas. La API rechaza repetidas entre pacientes activos. |
+| `birth_date` | `date` | sí | Obligatoria en la API; nulable solo para datos importados con fechas imposibles |
+| `gender` | `varchar(10)` | | `femenino`, `masculino`, `otro` (`CHECK`) |
+| `marital_status` | `varchar(15)` | | `""` o 5 opciones (`CHECK`) |
+| `occupation`, `company` | `varchar(120)` | | |
+| `nationality` | `varchar(60)` | | |
+| `phone` | `varchar(30)` | | |
+| `email` | `varchar(254)` | | En minúsculas, o `""` |
+| `address` | `varchar(250)` | | |
+| `city` | `varchar(120)` | | |
+| `notes` | `varchar(2000)` | | |
+| `notifications_enabled` | `boolean` | | `true` por defecto |
+| `emergency_contact_name` / `_relationship` / `_phone` | `varchar(120)` / `(60)` / `(30)` | | |
+| `insurance_provider`, `insurance_policy` | `varchar(120)`, `varchar(60)` | | |
+| `consent_signed` | `boolean` | | |
+| `treatment_status` | `varchar(20)` | | `activo`, `en seguimiento`, `pendiente`, `inactivo` (`CHECK`) |
+| `last_visit_at` | `date` | sí | Manual por ahora |
+| `created_at` | `timestamptz` | | Índice (orden de la lista) |
+| `updated_at` | `timestamptz` | sí | |
+| `created_by_user_id`, `updated_by_user_id` | `uuid` FK → `users` (set null) | sí | Auditoría |
+| `deleted_at` | `timestamptz` | sí | Baja lógica. Índice. |
+| `deleted_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+
+**Búsqueda sin tildes:** la extensión `unaccent` de PostgreSQL (`TextSearch.Unaccent` en el código) permite que "perez" encuentre "Pérez".
+
+## 9. Migraciones aplicadas
 
 | Migración | Crea |
 |---|---|
 | `20261114042117_CrearTratamientos` | `treatments` |
 | `20261115051345_CrearUsuariosYSesiones` | `users`, `refresh_tokens`, `password_reset_tokens`, `access_requests` |
 | `20261115180228_CrearInventario` | Las 8 tablas de inventario y `treatment_consumptions` |
+| `20261118023006_CrearPacientes` | `patients`, la secuencia `patient_record_number_seq`, la extensión `unaccent` y la FK `stock_movements.patient_id` → `patients` |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -294,16 +337,15 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 |---|---|---|
 | `users.professional_id` | `professionals` | `appointments` |
 | `sterilization_cycles.responsible_professional_id` | `professionals` | `appointments` |
-| `stock_movements.patient_id` | `patients` | `patients` |
 | `stock_movements.treatment_assignment_id` | `treatment_assignments` | `treatments` (Jorge) |
 
 **Módulos sin tablas todavía:**
-- `patients`, `appointments`, `institution`, `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
+- `appointments`, `institution`, `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
 - Tratamientos realizados (`treatment_assignments`) y `clinical-history` (Jorge). El plan de la historia clínica está en [`plan-historia-clinica.md`](./plan-historia-clinica.md).
 
 **Multi-clínica (propuesta en espera):** el sistema se venderá a varias clínicas. Cuando se apruebe, se agrega la tabla `institutions` y la columna `institution_id` en las tablas de datos, con un filtro automático para que cada clínica vea solo lo suyo. Detalle en [`plan-multiclinica.md`](./plan-multiclinica.md). Mientras tanto, los módulos se hacen para una sola clínica.
 
-## 9. Configuración
+## 10. Configuración
 
 `appsettings.json` solo tiene valores no secretos. Los secretos y lo propio de cada entorno van en variables de entorno, con `__` en lugar de `:` (`Auth:SigningKey` → `Auth__SigningKey`). Si `ASPNETCORE_ENVIRONMENT` no está definida, .NET asume `Production`.
 
@@ -317,5 +359,6 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 | `Cors:AllowedOrigins` | `appsettings*.json` | Orígenes del frontend (con cookies: `AllowCredentials`) |
 | `Seed:AdminEmail`, `Seed:AdminPassword`, `Seed:AdminName` | Variable de entorno, solo la primera vez | Administrador inicial |
 | `ASPNETCORE_URLS`, `AllowedHosts` | Variable de entorno en producción | `http://127.0.0.1:5000`, el dominio |
+| `Clinic:TimeZone` | `appsettings.json`; en producción, variable `Clinic__TimeZone` | Zona horaria IANA de la clínica (`America/Guayaquil`). Define "hoy" para las fechas que no pueden ser futuras. Un nombre inválido detiene el arranque. |
 
 Los logs de consola incluyen el `TraceId` de cada petición (formato `simple` con scopes), el mismo que devuelven las respuestas de error.

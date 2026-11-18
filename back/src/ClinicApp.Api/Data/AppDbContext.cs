@@ -1,5 +1,7 @@
+using ClinicApp.Api.Common;
 using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.Inventory;
+using ClinicApp.Api.Modules.Patients;
 using ClinicApp.Api.Modules.Treatments;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,8 +32,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SterilizationCycle> SterilizationCycles => Set<SterilizationCycle>();
     public DbSet<SterilizationCycleItem> SterilizationCycleItems => Set<SterilizationCycleItem>();
 
+    // patients
+    public DbSet<Patient> Patients => Set<Patient>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Extensión de PostgreSQL para buscar sin distinguir tildes (TextSearch.Unaccent).
+        modelBuilder.HasPostgresExtension("unaccent");
+        modelBuilder.HasDbFunction(typeof(TextSearch).GetMethod(nameof(TextSearch.Unaccent))!)
+            .HasName("unaccent")
+            .IsBuiltIn();
+
+        // N.° de historia clínica correlativo (HC-000001, HC-000002...).
+        modelBuilder.HasSequence<int>(PatientConfiguration.RecordNumberSequence).StartsAt(1);
+
         // Aplica todas las clases IEntityTypeConfiguration del proyecto
         // (por ejemplo, TreatmentConfiguration) sin tener que listarlas una por una.
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

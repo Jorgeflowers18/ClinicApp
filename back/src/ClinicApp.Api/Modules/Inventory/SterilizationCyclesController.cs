@@ -11,7 +11,7 @@ namespace ClinicApp.Api.Modules.Inventory;
 [ApiController]
 [Route("api/inventory/sterilization-cycles")]
 [Authorize(Roles = Roles.AdminYRecepcion)]
-public class SterilizationCyclesController(AppDbContext db) : ControllerBase
+public class SterilizationCyclesController(AppDbContext db, ClinicClock clock) : ControllerBase
 {
     /// <summary>GET /api/inventory/sterilization-cycles → por fecha, del más reciente al más antiguo.</summary>
     [HttpGet]
@@ -32,9 +32,8 @@ public class SterilizationCyclesController(AppDbContext db) : ControllerBase
     {
         var performedAt = Validation.ParseDate(request.PerformedAt)!.Value;
 
-        // La fecha no puede ser futura. Se compara con "mañana" en UTC para no rechazar por error
-        // el día de hoy en la zona horaria de la clínica, que puede ir adelantada respecto a UTC.
-        if (performedAt > DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1))
+        // La fecha no puede ser futura: se compara con "hoy" en la zona horaria de la clínica.
+        if (performedAt > clock.Today)
         {
             ModelState.AddModelError("performedAt", "La fecha no puede ser futura");
         }

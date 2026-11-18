@@ -14,7 +14,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ | Base del proyecto y `auth` | Hecho (falta conectar el frontend y desplegar) | 0 | — |
 | ✅ | `treatments`: catálogo con sus insumos | Hecho | 1 | Base, `inventory` |
 | ✅ | `inventory` | Hecho | 1 y 2 | Base |
-| **1** | `patients` | Plan en revisión: [`docs/plan-pacientes.md`](./docs/plan-pacientes.md) | 1 | Base |
+| ✅ 1 | `patients` | Hecho (falta importar los pacientes de la clínica) | 1 | Base |
 | **2** | `appointments`: profesionales y consultorios | Plan en revisión: [`docs/plan-profesionales-consultorios.md`](./docs/plan-profesionales-consultorios.md) | 1 | Base |
 | **3** | `appointments`: citas y bloqueos | Plan en revisión: [`docs/plan-citas.md`](./docs/plan-citas.md) | 2 | `patients`, profesionales y consultorios |
 | **4** | `treatments`: tratamientos realizados (`treatment-assignments`) | Plan en revisión: [`docs/plan-tratamientos-realizados.md`](./docs/plan-tratamientos-realizados.md) | 2 | `patients`, `treatments`, `inventory` |
@@ -113,7 +113,7 @@ Siguen por definir:
 - [ ] Desactivar insumos en lugar de borrarlos (requiere cambio en el frontend).
 - [ ] Selectores y "Stock crítico" con más de 100 insumos.
 
-## 1. `patients`
+## 1. `patients` ✅
 
 - **Responsable:** Jorge Flores
 - **Fase:** 1
@@ -124,11 +124,14 @@ Siguen por definir:
 **Entidades:** paciente.
 
 **Endpoints:**
-- [ ] `GET /patients` (paginado, con búsqueda)
-- [ ] `GET /patients/:id`
-- [ ] `POST /patients`
-- [ ] `PUT /patients/:id`
-- [ ] `DELETE /patients/:id` (baja lógica)
+- [x] `GET /patients` (paginado, con búsqueda)
+- [x] `GET /patients/:id`
+- [x] `POST /patients`
+- [x] `PUT /patients/:id`
+- [x] `DELETE /patients/:id` (baja lógica)
+- [x] `POST /patients/:id/restore` (reactivar, solo `admin`)
+
+**Pendiente:** importar los 820 pacientes de la clínica; en el frontend, ocultar "Eliminar" al médico y una vista para reactivar; la última visita automática desde la historia clínica. Detalle en [`backlog.md` § `patients`](./backlog.md#patients).
 
 **Relación con otros módulos:**
 - La historia clínica edita los mismos datos del paciente (pestaña "Datos del paciente") y muestra el número de historia clínica.

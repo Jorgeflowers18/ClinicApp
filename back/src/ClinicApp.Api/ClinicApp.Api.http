@@ -257,3 +257,53 @@ Content-Type: application/json
 ### Listar ciclos de esterilización
 GET {{api}}/inventory/sterilization-cycles
 Authorization: Bearer {{token}}
+
+### ───────────── Pacientes ─────────────
+
+### Crear un paciente (el servidor asigna clinicalRecordNumber: HC-000001...)
+# @name paciente
+POST {{api}}/patients
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "firstName": "María",
+  "lastName": "Pérez",
+  "documentId": "1712345678",
+  "birthDate": "1990-05-12",
+  "gender": "femenino",
+  "maritalStatus": "casado",
+  "occupation": "Docente",
+  "company": "",
+  "nationality": "Ecuatoriana",
+  "phone": "0991234567",
+  "email": "maria@correo.com",
+  "address": "Av. Amazonas N45",
+  "city": "Quito",
+  "notes": "",
+  "notificationsEnabled": true,
+  "emergencyContactName": "Juan Pérez",
+  "emergencyContactRelationship": "Esposo",
+  "emergencyContactPhone": "0987654321",
+  "insuranceProvider": "",
+  "insurancePolicy": "",
+  "consentSigned": true,
+  "treatmentStatus": "activo",
+  "lastVisitAt": ""
+}
+
+### Buscar sin tildes (también por cédula, teléfono o HC-000001)
+GET {{api}}/patients?page=1&pageSize=10&search=perez
+Authorization: Bearer {{token}}
+
+### Ver un paciente
+GET {{api}}/patients/{{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Dar de baja (admin o recepción): desaparece de la lista, pero se conserva
+DELETE {{api}}/patients/{{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Reactivar (solo admin)
+POST {{api}}/patients/{{paciente.response.body.id}}/restore
+Authorization: Bearer {{token}}

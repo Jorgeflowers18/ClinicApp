@@ -20,7 +20,10 @@ namespace ClinicApp.Api.Data.Migrations
                 .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "unaccent");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.HasSequence<int>("patient_record_number_seq");
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Auth.AccessRequest", b =>
                 {
@@ -562,6 +565,9 @@ namespace ClinicApp.Api.Data.Migrations
                     b.HasIndex("LotId")
                         .HasDatabaseName("ix_stock_movements_lot_id");
 
+                    b.HasIndex("PatientId")
+                        .HasDatabaseName("ix_stock_movements_patient_id");
+
                     b.HasIndex("PurchaseOrderId")
                         .HasDatabaseName("ix_stock_movements_purchase_order_id");
 
@@ -622,6 +628,210 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasName("pk_suppliers");
 
                     b.ToTable("suppliers", (string)null);
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Patients.Patient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("address");
+
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date")
+                        .HasColumnName("birth_date");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Company")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("company");
+
+                    b.Property<bool>("ConsentSigned")
+                        .HasColumnType("boolean")
+                        .HasColumnName("consent_signed");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DocumentId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("document_id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("EmergencyContactName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("emergency_contact_name");
+
+                    b.Property<string>("EmergencyContactPhone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("emergency_contact_phone");
+
+                    b.Property<string>("EmergencyContactRelationship")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("emergency_contact_relationship");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("first_name");
+
+                    b.Property<string>("Gender")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("gender");
+
+                    b.Property<string>("InsurancePolicy")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("insurance_policy");
+
+                    b.Property<string>("InsuranceProvider")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("insurance_provider");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("last_name");
+
+                    b.Property<DateOnly?>("LastVisitAt")
+                        .HasColumnType("date")
+                        .HasColumnName("last_visit_at");
+
+                    b.Property<string>("MaritalStatus")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("marital_status");
+
+                    b.Property<string>("Nationality")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("nationality");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<bool>("NotificationsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("notifications_enabled");
+
+                    b.Property<string>("Occupation")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("occupation");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("phone");
+
+                    b.Property<int>("RecordNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("record_number")
+                        .HasDefaultValueSql("nextval('patient_record_number_seq')");
+
+                    b.Property<string>("TreatmentStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("treatment_status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_patients");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_patients_created_at");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_patients_created_by_user_id");
+
+                    b.HasIndex("DeletedAt")
+                        .HasDatabaseName("ix_patients_deleted_at");
+
+                    b.HasIndex("DeletedByUserId")
+                        .HasDatabaseName("ix_patients_deleted_by_user_id");
+
+                    b.HasIndex("DocumentId")
+                        .HasDatabaseName("ix_patients_document_id");
+
+                    b.HasIndex("RecordNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_patients_record_number");
+
+                    b.HasIndex("UpdatedByUserId")
+                        .HasDatabaseName("ix_patients_updated_by_user_id");
+
+                    b.ToTable("patients", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_patients_gender", "gender IN ('femenino', 'masculino', 'otro')");
+
+                            t.HasCheckConstraint("ck_patients_marital_status", "marital_status IN ('', 'soltero', 'casado', 'union_libre', 'divorciado', 'viudo')");
+
+                            t.HasCheckConstraint("ck_patients_treatment_status", "treatment_status IN ('activo', 'en seguimiento', 'pendiente', 'inactivo')");
+                        });
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.Treatment", b =>
@@ -858,11 +1068,38 @@ namespace ClinicApp.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_stock_movements_stock_lots_lot_id");
 
+                    b.HasOne("ClinicApp.Api.Modules.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_movements_patients_patient_id");
+
                     b.HasOne("ClinicApp.Api.Modules.Inventory.PurchaseOrder", null)
                         .WithMany()
                         .HasForeignKey("PurchaseOrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_stock_movements_purchase_orders_purchase_order_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Patients.Patient", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_patients_users_created_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("DeletedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_patients_users_deleted_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_patients_users_updated_by_user_id");
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.TreatmentConsumption", b =>

@@ -64,15 +64,19 @@ Implementado en `back/src/ClinicApp.Api/Modules/Auth/`. Sesión: el `accessToken
 
 ## `patients`
 
-- [ ] `GET /patients` (query: `page`, `pageSize`, `search` — nombre/cédula/teléfono).
-- [ ] `GET /patients/:id`.
-- [ ] `POST /patients`.
-- [ ] `PUT /patients/:id`.
-- [ ] `DELETE /patients/:id`.
-- [ ] **Baja lógica en `DELETE /patients/:id`:** el backlog de producto (ítem 4) pide baja lógica, no borrado físico; el paciente tiene historia clínica, citas, tratamientos y pagos que deben conservarse. Definir si `GET /patients` oculta los dados de baja y si se pueden reactivar.
-- [ ] Campo `notificationsEnabled: boolean` en el body de `POST`/`PUT` — persistirlo; los pacientes nuevos deben crearse con `true` por defecto.
-- [ ] **Datos del cliente (ítem 12):** `POST`/`PUT /patients` reciben `maritalStatus` (`"" | soltero | casado | union_libre | divorciado | viudo`), `occupation`, `company` (máx. 120), `nationality` (máx. 60), `city` (ciudad / provincia, máx. 120) y `emergencyContactRelationship` (máx. 60). Se editan desde la historia clínica (pestaña "Datos del paciente") y desde la ficha; es el mismo registro. Se quitan `medicalHistory` y `allergies`: los reemplazan los antecedentes y las alergias de la historia clínica (definir la migración de los textos existentes; el mock los convierte en "Otro" y en una fila de alergia).
-- [ ] **N.° de historia clínica:** `clinicalRecordNumber` (formato `HC-000123`, correlativo) lo asigna el servidor al crear el paciente y es de solo lectura (`PUT` lo ignora). Confirmar con la clínica si ya tiene una numeración propia que haya que respetar.
+Implementado en `back/src/ClinicApp.Api/Modules/Patients/`. Roles: los tres ven, crean y editan; dar de baja, `admin` y `recepcion`; reactivar, solo `admin`. Detalle en [`docs/endpoints-api.md` § `patients`](./docs/endpoints-api.md#7-patients).
+
+- [x] `GET /patients` (query: `page`, `pageSize`, `search`): sin los dados de baja, del más reciente al más antiguo. La búsqueda no distingue mayúsculas ni tildes (extensión `unaccent`) y busca en nombres y apellidos, cédula, teléfono y N.° de historia (`HC-000123`).
+- [x] `GET /patients/:id`: también devuelve a los dados de baja, con `deletedAt`.
+- [x] `POST /patients`: `notificationsEnabled` es `true` si no viene. Cédula de otro paciente activo: `409` con `errors.documentId`, con un candado por cédula para que dos altas simultáneas no pasen las dos.
+- [x] `PUT /patients/:id`: ignora `clinicalRecordNumber`. Solo revisa la cédula si cambió, así se pueden editar los pacientes importados con cédula repetida. `409` si está dado de baja.
+- [x] `DELETE /patients/:id`: **baja lógica** (`deleted_at`); el paciente desaparece de la lista y de la búsqueda.
+- [x] `POST /patients/:id/restore` (nuevo, solo `admin`): reactiva. `409` si otro paciente activo ya usa su cédula.
+- [x] **Datos del cliente (ítem 12):** `maritalStatus`, `occupation`, `company`, `nationality`, `city` y `emergencyContactRelationship`. `medicalHistory` y `allergies` no existen en el backend: el frontend ya los quitó y no hay datos que migrar.
+- [x] **N.° de historia clínica:** `clinicalRecordNumber` lo asigna una secuencia de PostgreSQL (`patient_record_number_seq`) y es de solo lectura.
+- [ ] **Importar los 820 pacientes** del archivo de la clínica: comando de una sola vez, que conserve las fichas como N.° de historia y siga la secuencia desde la última. Necesita las respuestas de `documentacion/decisiones-backend.md` § 5. El archivo real nunca se sube al repositorio.
+- [ ] **Frontend:** ocultar el botón "Eliminar" al médico (la API le responde `403`); una pantalla o filtro para ver y reactivar a los dados de baja; agregar `deletedAt` al tipo `Patient`.
+- [ ] **Última visita automática:** hoy `lastVisitAt` se edita a mano; calcularla desde las atenciones de la historia clínica.
 
 ## `appointments`
 
@@ -155,8 +159,8 @@ Implementado en `back/src/ClinicApp.Api/Modules/Inventory/`. Roles: los tres pue
 - [x] `POST /inventory/purchase-orders/:id/receive` — en una sola transacción, por cada línea un lote y un movimiento de entrada (`reason` "Recepción de orden de compra #<id>"); la orden pasa a `recibida` con `receivedAt`. La orden se bloquea: dos recepciones simultáneas no duplican el stock. `409` si no está `pendiente` (el mock usa `400`; el mensaje es el mismo).
 - [x] `POST /inventory/purchase-orders/:id/cancel` — `409` si no está `pendiente`.
 - [x] `GET /inventory/sterilization-cycles` — por fecha, del más reciente al más antiguo.
-- [x] `POST /inventory/sterilization-cycles` — `itemIds` solo de insumos `instrumental` (`400` si alguno no existe o es consumible; los repetidos se unen). `performedAt` en `"YYYY-MM-DD"`, no futura (se tolera un día de diferencia con UTC por la zona horaria de la clínica).
-- [ ] **Llaves foráneas pendientes:** `sterilization_cycles.responsible_professional_id` → `professionals` (cuando exista `appointments`), y `stock_movements.patient_id` / `treatment_assignment_id` → `patients` / `treatment_assignments`. Hoy son UUID sin llave foránea: el responsable de un ciclo no se valida.
+- [x] `POST /inventory/sterilization-cycles` — `itemIds` solo de insumos `instrumental` (`400` si alguno no existe o es consumible; los repetidos se unen). `performedAt` en `"YYYY-MM-DD"`, no futura según el día de la clínica (`ClinicClock`, `Clinic:TimeZone`).
+- [ ] **Llaves foráneas pendientes:** `sterilization_cycles.responsible_professional_id` → `professionals` (cuando exista `appointments`), y `stock_movements.treatment_assignment_id` → `treatment_assignments`. Hoy son UUID sin llave foránea: el responsable de un ciclo no se valida. (`stock_movements.patient_id` → `patients` ya está.)
 - [ ] **Desactivar insumos:** un insumo con historia no se puede borrar (`409`) y el frontend no tiene opción de desactivarlo. Agregar `active` al insumo y al formulario si la clínica lo necesita.
 - [ ] **Más de 100 insumos:** "Stock crítico", el formulario de órdenes de compra, el de esterilización y los de tratamientos piden `GET /inventory/items?pageSize=100`, el máximo de la API. Con más insumos faltarían en esas pantallas: agregar un filtro (`?critical=true`, `?kind=instrumental`) o una lista sin paginar para los selectores.
 

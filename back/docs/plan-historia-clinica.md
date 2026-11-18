@@ -8,7 +8,7 @@
   - **D13:** la multi-clínica es una propuesta en espera ([`plan-multiclinica.md`](./plan-multiclinica.md)). Si no se aprobó para entonces, la historia se hace para una clínica:
     - sin `institution_id`;
     - ruta de adjuntos `{patientId}/{attachmentId}.{ext}`;
-    - zona horaria en la configuración (`Clinic:TimeZone`), con el `ClinicClock` que crea [`plan-pacientes.md`](./plan-pacientes.md).
+    - zona horaria en la configuración (`Clinic:TimeZone`), con `ClinicClock` (`Common/ClinicClock.cs`, ya implementado).
 - **Detalle de endpoints:** [`backlog.md` § `clinical-history`](../backlog.md#clinical-history)
 - **Contrato del frontend:**
   - `front/src/modules/clinical-history/types/`: `clinical-history.types.ts`, `background.types.ts` y `encounter-assessment.types.ts`.
@@ -239,7 +239,7 @@ Cambio respecto a la propuesta anterior: como habrá varias clínicas, posibleme
 - **Valor:** el nombre estándar (IANA) de la zona, por ejemplo `America/Guayaquil`, `America/Bogota` o `Europe/Madrid`. Al crear una clínica sin zona se usa `Clinic:DefaultTimeZone` (`America/Guayaquil`).
 - **Cómo cambiarla:** se cambia el dato de la clínica, sin reiniciar la API. Mientras no exista la pantalla del perfil de la institución, se cambia en la base o en la semilla.
 - **Zona inválida:** se rechaza al guardarla, así nunca queda una zona que la API no entienda.
-- **`ClinicClock`** (lo crea [`plan-pacientes.md`](./plan-pacientes.md)) da "la fecha de hoy en la clínica". Esta historia lo usa para todas las reglas "no puede ser futura".
+- **`ClinicClock`** (`Common/ClinicClock.cs`, ya implementado) da "la fecha de hoy en la clínica". Esta historia lo usa para todas las reglas "no puede ser futura".
 - **Las fechas ya guardadas no cambian:**
   - Las fechas con hora están en UTC.
   - Las fechas sin hora (`date`) son el día de la clínica tal como se registró.
@@ -323,7 +323,7 @@ Cambio respecto a la propuesta anterior: como habrá varias clínicas, posibleme
 back/docs/plan-historia-clinica.md                          ← este plan (se borra al terminar)
 back/src/ClinicApp.Api/Common/
 └── JsonbConversion.cs          ← HasJsonbConversion(): guarda una clase de C# como jsonb
-                                   (ClinicClock lo crea plan-pacientes)
+                                   (ClinicClock ya existe en Common/)
 back/src/ClinicApp.Api/Modules/ClinicalHistory/
 ├── ClinicalHistoryKeys.cs      ← listas de valores permitidos (19 antecedentes, 8 alertas, tipos de examen...)
 ├── ClinicalHistoryEntities.cs  ← ClinicalRecord, ClinicalRecordVersion, ClinicalEncounter, EncounterNote, ClinicalAttachment

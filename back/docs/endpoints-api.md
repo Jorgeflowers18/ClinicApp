@@ -1,10 +1,11 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-15**: **33 endpoints implementados**:
+Estado al **2026-11-17**: **39 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 6 de `treatments`;
-- 18 de `inventory`.
+- 18 de `inventory`;
+- 6 de `patients`.
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
 
@@ -31,6 +32,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `treatments` | los tres |
 | `inventory`: leer insumos (`GET /inventory/items` y `GET /inventory/items/:id`) | los tres |
 | `inventory`: todo lo demás | `admin`, `recepcion` |
+| `patients` | los tres; dar de baja: `admin` y `recepcion`; reactivar: `admin` |
 
 ### Errores
 
@@ -49,6 +51,7 @@ Todos con formato `ProblemDetails` y título en español. El frontend (`shared/l
   ```json
   { "title": "Insumo no encontrado", "status": 404, "traceId": "00-…" }
   ```
+- **Conflicto con un campo (`409`):** cuando el choque es de un campo (cédula repetida, horario ocupado), el `409` usa el mismo formato de validación, con `errors.<campo>`, para que el formulario lo marque.
 - **Errores inesperados (`500`):** solo traen `detail` en desarrollo. En producción el detalle queda en el log; se encuentra buscando el `traceId`.
 
 ### Paginación
@@ -69,7 +72,7 @@ La respuesta tiene esta forma:
 - **Fechas con hora:** ISO 8601 en UTC (`"2026-11-15T18:02:28.123Z"`).
 - **Fechas sin hora:** `"YYYY-MM-DD"`. En los campos opcionales se acepta `""`, que es lo que manda un `<input type="date">` vacío.
 - **Dinero:** número con hasta 2 decimales.
-- **Campos opcionales vacíos:** se guardan y se devuelven como `null`.
+- **Campos opcionales vacíos:** en `treatments` e `inventory` se guardan y se devuelven como `null`; en `patients` como `""`, que es lo que espera su formulario.
 
 ### Límite de intentos
 
@@ -111,6 +114,12 @@ La respuesta tiene esta forma:
 | `POST` | `/api/inventory/purchase-orders/:id/cancel` | admin, recepcion | `200` |
 | `GET` | `/api/inventory/sterilization-cycles` | admin, recepcion | `200` lista |
 | `POST` | `/api/inventory/sterilization-cycles` | admin, recepcion | `201` |
+| `GET` | `/api/patients` | los tres | `200` paginado |
+| `GET` | `/api/patients/:id` | los tres | `200` |
+| `POST` | `/api/patients` | los tres | `201` |
+| `PUT` | `/api/patients/:id` | los tres | `200` |
+| `DELETE` | `/api/patients/:id` | admin, recepcion | `204` (baja lógica) |
+| `POST` | `/api/patients/:id/restore` | admin | `200` |
 | `GET` | `/openapi/v1.json`, `/scalar` | público, **solo en desarrollo** | Descripción OpenAPI y página de pruebas |
 
 ## 3. Salud
@@ -443,7 +452,7 @@ Errores: `404` "Orden de compra no encontrada", y `409` "Solo se pueden recibir 
 
 **Crear (`POST /api/inventory/sterilization-cycles`):** `201`. Body: `{ itemIds, performedAt, result, responsibleProfessionalId, notes }`.
 - `itemIds`: de 1 a 200; los repetidos se unen.
-- `performedAt`: `"YYYY-MM-DD"`, obligatoria y no futura. Hoy se tolera un día de diferencia con UTC; se cambiará por la fecha de Ecuador.
+- `performedAt`: `"YYYY-MM-DD"`, obligatoria y no futura según el día de hoy en la zona horaria de la clínica (`Clinic:TimeZone`).
 - `result`: `aprobado` o `fallido`.
 - `responsibleProfessionalId`: obligatorio. Todavía no se verifica contra el catálogo de profesionales.
 - `notes`: hasta 1000.
@@ -451,11 +460,68 @@ Errores: `404` "Orden de compra no encontrada", y `409` "Solo se pueden recibir 
 Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos seleccionados no existe", o "«nombre» no es instrumental esterilizable".
 
 **Pendientes de `inventory`:**
-- Llaves foráneas a profesionales, pacientes y asignaciones.
+- Llaves foráneas a profesionales y asignaciones (la de pacientes ya está).
 - Desactivar insumos en lugar de borrarlos.
 - Más de 100 insumos en los selectores y en "Stock crítico" (el frontend pide `pageSize: 100`).
 
-## 7. Estado de los módulos
+## 7. `patients`
+
+**Paciente (`Patient`)**, con la forma de `patient.types.ts`:
+
+```json
+{
+  "id": "0199…",
+  "clinicalRecordNumber": "HC-000123",
+  "firstName": "María",
+  "lastName": "Pérez",
+  "documentId": "1712345678",
+  "birthDate": "1990-05-12",
+  "gender": "femenino",
+  "maritalStatus": "",
+  "occupation": "", "company": "", "nationality": "Ecuatoriana",
+  "phone": "0991234567", "email": "", "address": "", "city": "Quito",
+  "notes": "",
+  "notificationsEnabled": true,
+  "emergencyContactName": "", "emergencyContactRelationship": "", "emergencyContactPhone": "",
+  "insuranceProvider": "", "insurancePolicy": "",
+  "consentSigned": false,
+  "treatmentStatus": "activo",
+  "lastVisitAt": "",
+  "createdAt": "2026-11-17T15:00:00Z",
+  "deletedAt": null
+}
+```
+
+- **`clinicalRecordNumber`:** lo asigna el servidor con una secuencia de PostgreSQL y nunca cambia; `PUT` lo ignora.
+- **Textos opcionales:** van como `""`, no `null`. Las fechas vacías también van como `""`.
+- **`deletedAt`:** `null` si el paciente está activo (baja lógica).
+
+**Body de `POST` y `PUT`:** los campos de `patientSchema`, sin `id`, `clinicalRecordNumber`, `createdAt` ni `deletedAt`.
+- **Obligatorios:**
+  - `firstName` y `lastName`: 2 a 80;
+  - `documentId`: 5 a 20;
+  - `birthDate`: no futura y desde 1900;
+  - `gender`: `femenino`, `masculino` u `otro`;
+  - `phone`: 7 a 30.
+- **Opcionales:**
+  - `maritalStatus`: `""` o una de 5 opciones;
+  - `email`: correo válido o `""`;
+  - `treatmentStatus`: una de 4 opciones, `activo` por defecto;
+  - `lastVisitAt`: no futura;
+  - `notificationsEnabled`: `true` si no viene;
+  - máximos de largo de `patientSchema`; `notes` hasta 2000.
+
+| Endpoint | Roles | Detalle |
+|---|---|---|
+| `GET /api/patients?page&pageSize&search` | los tres | `200` paginado, sin los dados de baja, del más reciente al más antiguo. `search` no distingue mayúsculas ni tildes y busca en nombres y apellidos (en cualquier orden), cédula, teléfono y N.° de historia (`HC-000123`). |
+| `GET /api/patients/:id` | los tres | `200` (también si está dado de baja, con `deletedAt`); `404` "Paciente no encontrado" |
+| `POST /api/patients` | los tres | `201` con `Location`; `400`; `409` "Ya existe un paciente con esta cédula" con `errors.documentId` |
+| `PUT /api/patients/:id` | los tres | `200`; `400`; `404`. `409` si la cédula **cambió** a una que ya usa otro paciente activo, o si el paciente está dado de baja ("Reactiva al paciente antes de editarlo"). |
+| `DELETE /api/patients/:id` | admin, recepcion | `204`. **Baja lógica:** el paciente deja de aparecer en la lista y en la búsqueda, pero se conserva. Repetirla responde `204`. |
+| `POST /api/patients/:id/restore` | admin | `200` con el paciente reactivado; `404`; `409` si otro paciente activo ya usa su cédula |
+
+**Cédulas repetidas:** la base no exige cédula única, porque los datos de la clínica que se importarán tienen repetidas. La regla la aplica la API, con un candado por cédula para que dos altas simultáneas no pasen las dos.
+## Estado de los módulos
 
 | Módulo | Responsable | Estado |
 |---|---|---|
@@ -464,7 +530,8 @@ Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos selecci
 | `treatments` | Jorge Flores | ✅ Catálogo e insumos. ⏳ Tratamientos realizados (necesita `patients`). |
 | `inventory` | Jorge Flores | ✅ Los 18 endpoints |
 | `clinical-history` | Jorge Flores | 📝 Plan en revisión: [`plan-historia-clinica.md`](./plan-historia-clinica.md) |
-| `patients`, `appointments`, `institution`, `notifications`, `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
+| `patients` | Jorge Flores | ✅ Los 6 endpoints, con baja lógica y N.° de historia |
+| `appointments`, `institution`, `notifications`, `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
 
 **Para conectar el frontend** (`VITE_USE_MOCK_API=false`): falta la parte de sesión del frontend, detallada en `backlog.md` § `auth`.
 - `withCredentials: true` en `shared/lib/http.ts`.

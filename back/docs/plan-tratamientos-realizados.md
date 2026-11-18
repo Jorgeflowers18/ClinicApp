@@ -3,7 +3,7 @@
 - **Responsable:** Jorge Flores
 - **Orden:** 4 de [`backlog-desgloce.md`](../backlog-desgloce.md)
 - **Estado:** en revisión. Ninguna decisión aprobada.
-- **Depende de:** [`plan-pacientes.md`](./plan-pacientes.md). Usa el catálogo de tratamientos y `StockService`, que ya existen.
+- **Depende de:** `patients` (ya implementado). Usa el catálogo de tratamientos y `StockService`, que ya existen.
 - **Detalle de endpoints:** [`backlog.md` § `treatments`](../backlog.md#treatments)
 - **Contrato del frontend:** `front/src/modules/treatments/types/treatment.types.ts` (`TreatmentAssignment`, `CreateAssignmentInput`) y `api/treatments.api.ts` (`createAssignmentMock`: idempotencia y consumo de insumos).
 

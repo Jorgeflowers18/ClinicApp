@@ -3,7 +3,7 @@
 - **Responsable:** Jorge Flores
 - **Orden:** 8 de [`backlog-desgloce.md`](../backlog-desgloce.md)
 - **Estado:** en revisión. **F1 (pagos en la etapa A) y F5 (el médico no ve montos) aprobadas** (2026-11-17). Cuotas, seguros y facturación esperan el diseño del ítem 8 en el frontend.
-- **Depende de:** [`plan-tratamientos-realizados.md`](./plan-tratamientos-realizados.md) (el costo cobrado de cada tratamiento) y [`plan-pacientes.md`](./plan-pacientes.md).
+- **Depende de:** [`plan-tratamientos-realizados.md`](./plan-tratamientos-realizados.md) (el costo cobrado de cada tratamiento) y `patients` (ya implementado).
 - **Detalle de endpoints:** [`backlog.md` § `finance`](../backlog.md#finance)
 - **Contrato del frontend:** `front/src/modules/finance/types/finance.types.ts` (`FinancialPortfolioRow`, `FinancialSummary`, `PatientFinancialSummary`). **No hay funciones `*Real`:** `finance.api.ts` llama directo a los cálculos del mock (`finance.mock-data.ts`), así que hay que crear el par Mock/Real.
 

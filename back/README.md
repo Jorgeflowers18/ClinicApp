@@ -29,6 +29,8 @@ El contrato completo que el frontend (`../front`) espera — endpoints, formato 
 
 Ver [`backlog.md`](./backlog.md) para el desglose de TODOs pendientes por módulo y [`backlog-desgloce.md`](./backlog-desgloce.md) para el responsable y el orden de trabajo de cada módulo.
 
+**Pruebas:** `dotnet test` desde `back/` (con la base de Docker levantada). Comandos y detalle en [`docs/pruebas.md`](./docs/pruebas.md).
+
 ## Resumen rápido
 
 - Autenticación con JWT de 15 minutos (`Authorization: Bearer`) y cookie `httpOnly` de refresh de 7 días para restaurar la sesión al recargar (`POST /auth/refresh`). Todos los endpoints piden sesión salvo los de inicio de sesión, recuperación de contraseña, solicitud de acceso y `/health`. Cada módulo declara sus roles (`admin`, `recepcion`, `medico`).

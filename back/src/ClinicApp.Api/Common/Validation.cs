@@ -19,6 +19,27 @@ public static class Validation
         controller.ValidationProblem(title: title, modelStateDictionary: modelState) as ObjectResult
         ?? throw new InvalidOperationException("ValidationProblem no devolvió un ObjectResult.");
 
+    /// <summary>
+    /// 409 con el mismo formato de los errores de validación, marcando el campo que choca
+    /// (por ejemplo, "documentId": "Ya existe un paciente con esta cédula"). Así el formulario
+    /// del frontend lo muestra junto al campo.
+    /// </summary>
+    public static ObjectResult FieldConflict(this ControllerBase controller, string field, string message)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError(field, message);
+        var result = controller.ValidationProblem(title: message, statusCode: StatusCodes.Status409Conflict, modelStateDictionary: modelState) as ObjectResult
+            ?? throw new InvalidOperationException("ValidationProblem no devolvió un ObjectResult.");
+        result.StatusCode = StatusCodes.Status409Conflict;
+        return result;
+    }
+
+    /// <summary>Texto opcional limpio: sin espacios al inicio ni al final, y "" en lugar de null.</summary>
+    public static string Clean(string? value) => value?.Trim() ?? "";
+
+    /// <summary>Correo opcional: "" o un correo con @ y dominio (misma regla que los proveedores).</summary>
+    public const string OptionalEmailPattern = @"^\s*([^@\s]+@[^@\s]+\.[^@\s]+)?\s*$";
+
     /// <summary>Convierte "YYYY-MM-DD" en DateOnly. Vacío o null → null.</summary>
     public static DateOnly? ParseDate(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : DateOnly.ParseExact(value.Trim(), IsoDateAttribute.Format, CultureInfo.InvariantCulture);
