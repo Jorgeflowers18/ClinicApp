@@ -1,0 +1,16 @@
+/* Opt-in form actions. Navigation, toolbar controls and dental-editor contents are outside this scope. */
+.clinic-form-actions { --content-control-height: 40px; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; min-width: 0; margin-top: 0; padding: 12px 0 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.clinic-form-actions[data-context="dialog"] { position: sticky; bottom: 0; z-index: 1; flex-shrink: 0; margin: 0; border-top: 1px solid var(--border); background: var(--popover); }
+.clinic-form-actions[data-context="sheet"] { flex-shrink: 0; margin-top: auto; padding: 16px 16px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--popover); }
+.clinic-form-actions > [data-slot="button"] { width: auto; max-width: 100%; min-height: 40px; padding: 8px 12px; font-size: 13px; line-height: 20px; }
+.clinic-form-actions > [data-slot="button"] > svg { width: 16px; height: 16px; }
+[data-slot="dialog-content"]:has([data-form-actions]) { scroll-padding-bottom: 88px; }
+/* The development-only launcher has a higher z-index than dialogs and must not cover their actions. */
+body:has([data-slot="dialog-content"][data-open], [data-slot="alert-dialog-content"][data-open]) .tsqd-parent-container { display: none; }
+@media (max-width: 1023px), (pointer: coarse) {
+  .clinic-form-actions { --content-control-height: 44px; }
+  .clinic-form-actions > [data-slot="button"] { min-height: 44px; }
+}
+@media (max-width: 479px) {
+  .clinic-form-actions[data-context="dialog"] { gap: 8px; }
+}

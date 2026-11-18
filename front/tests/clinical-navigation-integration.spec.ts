@@ -136,7 +136,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.getByRole("group", { name: "Navegación entre secciones", includeHidden: true })).toHaveCount(1)
       await expect(previous(page)).toHaveCount(1)
       await expect(next(page)).toHaveCount(1)
-      await expect(page.getByRole("complementary")).toHaveCount(width < 1024 ? 0 : 1)
+      await expect(page.getByRole("complementary")).toHaveCount(width < 768 ? 0 : 1)
       const lastSummary = page.locator('[data-slot="card"]').filter({ has: page.getByText("Sangrado al sondaje", { exact: true }) })
       const summaryBounds = await lastSummary.boundingBox()
       expect((await clinicalNavigation(page).boundingBox())!.y).toBeGreaterThanOrEqual(summaryBounds!.y + summaryBounds!.height)
@@ -157,7 +157,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "72px")
     await expect(page.locator('[data-slot="clinical-navigation-footer"]')).toHaveCount(0)
     await page.getByRole("button", { name: "Abrir menú", exact: true }).click()
-    await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "256px")
+    await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "268px")
     await expect(page.locator('[data-slot="clinical-navigation-footer"]')).toHaveCount(1)
     await clinicalNavigation(page).getByRole("button", { name: "Ver secciones", exact: true }).click()
     for (const size of [{ width: 768, height: 1024 }, { width: 1024, height: 768 }, { width: 844, height: 390 }, { width: 375, height: 420 }]) {

@@ -30,7 +30,7 @@ for (const theme of ["light", "dark"] as const) {
     await open.press("Enter")
     const menu = page.locator(".clinic-app-sidebar-panel")
     await expect(menu).toBeVisible()
-    for (const item of ["Panel", "Pacientes", "Citas", "Historial clínico", "Tratamientos", "Inventario", "Notificaciones", "Finanzas", "Reportes", "Mi perfil", "Perfil institucional"]) {
+    for (const item of ["Panel", "Pacientes", "Citas", "Historial clínico", "Tratamientos", "Inventario", "Notificaciones", "Finanzas", "Reportes"]) {
       await expect(menu.getByRole("link", { name: item, exact: true })).toBeVisible()
     }
     async function checkMark(mark: ReturnType<Page["locator"]>) {
@@ -46,7 +46,7 @@ for (const theme of ["light", "dark"] as const) {
       expect(rect!.x).toBeGreaterThanOrEqual(0)
       expect(rect!.x + rect!.width).toBeLessThanOrEqual(page.viewportSize()!.width)
     }
-    for (const width of [320, 360, 375, 390, 430, 600, 768]) {
+    for (const width of [320, 360, 375, 390, 430, 600]) {
       await page.setViewportSize({ width, height: 1000 })
       await checkMark(menu.locator('[data-slot="brand-logo"]'))
     }
@@ -55,13 +55,13 @@ for (const theme of ["light", "dark"] as const) {
     await expect(open).toBeFocused()
     for (const width of [1024, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 1000 })
-      await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "256px")
+      await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "268px")
       await checkMark(page.locator('.clinic-app-sidebar [data-slot="brand-logo"]'))
       await page.getByRole("button", { name: "Cerrar menú", exact: true }).click()
       await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "72px")
       await checkMark(page.locator('.clinic-app-sidebar [data-slot="brand-logo"]'))
       await page.getByRole("button", { name: "Abrir menú", exact: true }).click()
-      await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "256px")
+      await expect(page.locator(".clinic-app-sidebar")).toHaveCSS("width", "268px")
     }
     const selectors = [".clinic-app-header", ".clinic-app-sidebar", ".clinic-app-canvas", '[data-slot="page-header"]', '.clinic-app-sidebar [data-slot="brand-logo"]']
     const bounds = async () => page.evaluate((values) => values.map((selector) => {
@@ -85,7 +85,7 @@ for (const theme of ["light", "dark"] as const) {
     const month = await page.locator(".rbc-toolbar-label").innerText()
     await page.setViewportSize({ width: 1440, height: 1000 })
     await expect(page.locator(".rbc-month-view")).toBeVisible()
-    await expect(page.locator(".rbc-toolbar-label")).toHaveText(month)
+    await expect(page.locator(".rbc-toolbar-label")).toHaveText(month, { useInnerText: true })
     await page.getByRole("button", { name: "Día", exact: true }).click()
     await page.setViewportSize({ width: 320, height: 900 })
     await expect(page.getByLabel("Vista", { exact: true })).toContainText("Día")

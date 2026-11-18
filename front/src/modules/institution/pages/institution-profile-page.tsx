@@ -1,298 +1,136 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Building2, Camera, Clock3, MapPin, Save } from "lucide-react"
 import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { FormActions } from "@/components/ui/form-actions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { PageHeader } from "@/shared/components/page-header"
 import { InstitutionLogo } from "@/shared/components/brand-logo"
+import { InstitutionBranches } from "../components/institution-branches"
+import { readInstitutionProfile, type InstitutionBranch, type InstitutionProfile, writeInstitutionProfile } from "../types/institution.types"
+import styles from "./institution-profile-page.module.css"
 
-import { readInstitutionProfile, type InstitutionProfile, writeInstitutionProfile } from "../types/institution.types"
+const generalFields = [["name", "Nombre de la clínica"], ["legalName", "Razón social"], ["ruc", "RUC"], ["website", "Sitio web"]] as const
+const contactFields = [["phone", "Teléfono"], ["email", "Correo electrónico"]] as const
+type TextField = Exclude<keyof InstitutionProfile, "branches" | "logoImage">
 
 export function InstitutionProfilePage() {
-  const [profile, setProfile] = useState<InstitutionProfile>(readInstitutionProfile())
+  const [profile, setProfile] = useState<InstitutionProfile>(readInstitutionProfile)
+  const [savedProfile, setSavedProfile] = useState(profile)
+  const savedRef = useRef(profile)
+  const savingRef = useRef(false)
+  const [saveError, setSaveError] = useState("")
+  const dirty = (Object.keys(profile) as (keyof InstitutionProfile)[])
+    .some((key) => key !== "branches" && profile[key] !== savedProfile[key])
 
-  const handleFieldChange = (field: keyof InstitutionProfile, value: string) => {
-    setProfile((current) => ({
-      ...current,
-      [field]: value,
-    }))
+  const handleFieldChange = (field: TextField, value: string) => {
+    setProfile((current) => ({ ...current, [field]: value }))
+    setSaveError("")
   }
 
-  const handleBranchChange = (branchId: string, field: string, value: string) => {
-    setProfile((current) => ({
-      ...current,
-      branches: current.branches.map((branch) =>
-        branch.id === branchId ? { ...branch, [field]: value } : branch
-      ),
-    }))
-  }
-
-  const handleBranchCreate = () => {
-    setProfile((current) => ({
-      ...current,
-      branches: [
-        ...current.branches,
-        {
-          id: `branch-${Date.now()}`,
-          name: "Nueva sede",
-          address: "",
-          phone: "",
-          hours: "",
-          isMain: current.branches.length === 0,
-        },
-      ],
-    }))
-  }
-
-  const handleBranchDelete = (branchId: string) => {
-    setProfile((current) => ({
-      ...current,
-      branches: current.branches.filter((branch) => branch.id !== branchId),
-    }))
+  // A branch operation persists branches without saving unrelated form drafts.
+  // Update confirmed state and the list only after the existing writer succeeds.
+  const handleCommitBranches = (branches: InstitutionBranch[]) => {
+    const next = { ...savedRef.current, branches }
+    writeInstitutionProfile(next)
+    savedRef.current = next
+    setSavedProfile(next)
+    setProfile((current) => ({ ...current, branches }))
   }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-
     const reader = new FileReader()
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : null
       setProfile((current) => ({ ...current, logoImage: result }))
+      setSaveError("")
     }
     reader.readAsDataURL(file)
   }
 
   const handleSave = () => {
-    writeInstitutionProfile(profile)
-    toast.success("Perfil de la institución actualizado")
+    if (savingRef.current) return
+    savingRef.current = true
+    try {
+      const next = { ...profile, branches: savedRef.current.branches }
+      writeInstitutionProfile(next)
+      savedRef.current = next
+      setSavedProfile(next)
+      setProfile(next)
+      setSaveError("")
+      toast.success("Perfil de la institución actualizado")
+    } catch {
+      setSaveError("No se pudieron guardar los cambios en este navegador. Tus cambios siguen en el formulario. Inténtalo de nuevo.")
+    } finally { savingRef.current = false }
   }
 
+  const field = (key: TextField, label: string, type = "text") => (
+    <div className={styles.field} key={key}>
+      <label htmlFor={`institution-profile-${key}`}>{label}</label>
+      <Input id={`institution-profile-${key}`} type={type} value={profile[key]}
+        onChange={(event) => handleFieldChange(key, event.target.value)} />
+    </div>
+  )
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader
-        title="Perfil institucional"
-        description="Administra la información de tu clínica o institución"
-        actions={
-          <Button onClick={handleSave}>
-            <Save className="size-4" />
-            Guardar cambios
-          </Button>
-        }
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="size-4" />
-                Información general
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="institution-profile-name" className="text-sm font-medium">Nombre de la clínica</label>
-                  <Input
-                    id="institution-profile-name"
-                    value={profile.name}
-                    onChange={(event) => handleFieldChange("name", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="institution-profile-legalName" className="text-sm font-medium">Razón social</label>
-                  <Input
-                    id="institution-profile-legalName"
-                    value={profile.legalName}
-                    onChange={(event) => handleFieldChange("legalName", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="institution-profile-ruc" className="text-sm font-medium">RUC</label>
-                  <Input
-                    id="institution-profile-ruc"
-                    value={profile.ruc}
-                    onChange={(event) => handleFieldChange("ruc", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="institution-profile-website" className="text-sm font-medium">Sitio web</label>
-                  <Input
-                    id="institution-profile-website"
-                    value={profile.website}
-                    onChange={(event) => handleFieldChange("website", event.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="institution-profile-notes" className="text-sm font-medium">Descripción</label>
-                <Textarea
-                  id="institution-profile-notes"
-                  rows={3}
-                  value={profile.notes}
-                  onChange={(event) => handleFieldChange("notes", event.target.value)}
-                />
+    <div className={styles.page}>
+      <PageHeader title="Perfil institucional" description="Administra la información de tu clínica o institución" />
+      {saveError && <p role="alert" className={styles.error}>{saveError}</p>}
+      <div className={styles.columns}>
+        <div className={styles.details}>
+          <Card className={styles.card}>
+            <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><Building2 />Información general</CardTitle></CardHeader>
+            <CardContent className={styles.form}>
+              <div className={styles.pair}>{generalFields.map(([key, label]) => field(key, label))}</div>
+              <div className={styles.field}>
+                <label htmlFor="institution-profile-notes">Descripción</label>
+                <Textarea id="institution-profile-notes" rows={3} value={profile.notes}
+                  onChange={(event) => handleFieldChange("notes", event.target.value)} />
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="size-4" />
-                Contacto y ubicación
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="institution-profile-phone" className="text-sm font-medium">Teléfono</label>
-                  <Input
-                    id="institution-profile-phone"
-                    value={profile.phone}
-                    onChange={(event) => handleFieldChange("phone", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="institution-profile-email" className="text-sm font-medium">Correo electrónico</label>
-                  <Input
-                    id="institution-profile-email"
-                    type="email"
-                    value={profile.email}
-                    onChange={(event) => handleFieldChange("email", event.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="institution-profile-address" className="text-sm font-medium">Dirección principal</label>
-                <Input
-                  id="institution-profile-address"
-                  value={profile.address}
-                  onChange={(event) => handleFieldChange("address", event.target.value)}
-                />
-              </div>
+          <Card className={styles.card}>
+            <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><MapPin />Contacto y ubicación</CardTitle></CardHeader>
+            <CardContent className={styles.form}>
+              <div className={styles.pair}>{contactFields.map(([key, label]) => field(key, label, key === "email" ? "email" : "text"))}</div>
+              {field("address", "Dirección principal")}
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle id="institution-hours-label" className="flex items-center gap-2">
-                <Clock3 className="size-4" />
-                Horarios de atención
-              </CardTitle>
-            </CardHeader>
+          <Card className={styles.card}>
+            <CardHeader><CardTitle id="institution-hours-label" role="heading" aria-level={2} className={styles.title}><Clock3 />Horarios de atención</CardTitle></CardHeader>
             <CardContent>
-              <Textarea
-                rows={4}
-                aria-labelledby="institution-hours-label"
-                value={profile.hours}
-                onChange={(event) => handleFieldChange("hours", event.target.value)}
-              />
+              <Textarea rows={4} aria-labelledby="institution-hours-label" value={profile.hours}
+                onChange={(event) => handleFieldChange("hours", event.target.value)} />
             </CardContent>
           </Card>
         </div>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Camera className="size-4" />
-                Identidad visual
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border bg-muted/30 p-3">
-                <InstitutionLogo image={profile.logoImage} text={profile.logoText} className="size-12 text-lg" imageClassName="size-12 rounded-lg object-cover" />
-                <div className="min-w-0 flex-1 break-words">
-                  <p className="font-medium">Logo de la clínica</p>
-                  <p className="text-xs text-muted-foreground">Se usa en la interfaz y documentos.</p>
-                </div>
-                <label className="clinic-file-upload inline-flex min-h-11 cursor-pointer items-center rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-muted">
-                  Subir imagen
-                  <input type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} />
-                </label>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="institution-profile-logoText" className="text-sm font-medium">Texto del logo</label>
-                <Input
-                  id="institution-profile-logoText"
-                  value={profile.logoText}
-                  onChange={(event) => handleFieldChange("logoText", event.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <CardTitle>Sedes</CardTitle>
-              <Button type="button" variant="outline" onClick={handleBranchCreate}>
-                Crear sede
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {profile.branches.length === 0 ? (
-                <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center">
-                  <p className="mb-2 font-medium">Aún no hay sedes registradas</p>
-                  <p className="mb-4 text-sm text-muted-foreground">
-                    Crea la primera sede para comenzar a gestionar ubicaciones, horarios y contacto.
-                  </p>
-                  <Button type="button" onClick={handleBranchCreate}>Crear sede</Button>
-                </div>
-              ) : (
-                profile.branches.map((branch) => (
-                  <div key={branch.id} className="rounded-lg border bg-muted/20 p-3">
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <p className="font-medium">{branch.name || "Nueva sede"}</p>
-                      <div className="flex items-center gap-2">
-                        {branch.isMain && <Badge variant="secondary">Principal</Badge>}
-                        <Button type="button" variant="ghost" size="sm" onClick={() => handleBranchDelete(branch.id)}>
-                          Eliminar
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <label htmlFor={`branch-name-${branch.id}`} className="text-sm font-medium">Nombre de la sede</label>
-                      <Input
-                        id={`branch-name-${branch.id}`}
-                        value={branch.name}
-                        onChange={(event) => handleBranchChange(branch.id, "name", event.target.value)}
-                      />
-                      <label htmlFor={`branch-address-${branch.id}`} className="text-sm font-medium">Dirección</label>
-                      <Input
-                        id={`branch-address-${branch.id}`}
-                        value={branch.address}
-                        onChange={(event) => handleBranchChange(branch.id, "address", event.target.value)}
-                      />
-                      <label htmlFor={`branch-phone-${branch.id}`} className="text-sm font-medium">Teléfono</label>
-                      <Input
-                        id={`branch-phone-${branch.id}`}
-                        value={branch.phone}
-                        onChange={(event) => handleBranchChange(branch.id, "phone", event.target.value)}
-                      />
-                      <label htmlFor={`branch-hours-${branch.id}`} className="text-sm font-medium">Horarios</label>
-                      <Input
-                        id={`branch-hours-${branch.id}`}
-                        value={branch.hours}
-                        onChange={(event) => handleBranchChange(branch.id, "hours", event.target.value)}
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Card className={`${styles.card} ${styles.identity}`}>
+          <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><Camera />Identidad visual</CardTitle></CardHeader>
+          <CardContent className={styles.form}>
+            <div className={styles.logoPreview}>
+              <InstitutionLogo image={profile.logoImage} text={profile.logoText} className="size-20 text-2xl" imageClassName={styles.logoImage} />
+              <div><p className={styles.previewTitle}>Logo de la clínica</p><p className={styles.hint}>Vista previa de la identidad institucional.</p></div>
+            </div>
+            <label className={`clinic-file-upload ${styles.upload}`}>
+              <Camera aria-hidden="true" className="size-4" />Subir imagen
+              <input type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} />
+            </label>
+            {field("logoText", "Texto del logo")}
+            <p className={styles.hint}>Se usa en la interfaz y documentos. Pulsa Guardar cambios para conservar la imagen y el texto.</p>
+          </CardContent>
+        </Card>
       </div>
+      <InstitutionBranches branches={profile.branches} onCommit={handleCommitBranches} />
+      <FormActions>
+        {dirty && <span className={styles.pending}>Cambios sin guardar</span>}
+        <Button onClick={handleSave}><Save className="size-4" />Guardar cambios</Button>
+      </FormActions>
+      <p className={styles.storageNote}>Los cambios se guardan en este navegador.</p>
     </div>
   )
 }

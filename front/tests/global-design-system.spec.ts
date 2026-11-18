@@ -116,7 +116,7 @@ for (const theme of ["light", "dark"] as const) {
           await expect(page.locator(".clinic-app-sidebar .clinic-brand-mark")).toHaveCSS("background-color", theme === "light" ? "rgb(83, 80, 204)" : "rgb(228, 242, 34)")
           const activeLinks = page.locator('.clinic-app-sidebar .clinic-sidebar-link[aria-current="page"]')
           for (const link of await activeLinks.all()) await expect(link).toHaveCSS("color", theme === "light" ? "rgb(83, 80, 204)" : "rgb(255, 255, 255)")
-          if (width < 1024) {
+          if (width < 768) {
             await expect(page.locator(".clinic-app-sidebar")).toBeHidden()
             await expect(page.getByRole("button", { name: "Abrir menú", exact: true })).toBeVisible()
           }

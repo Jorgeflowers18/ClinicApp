@@ -1,13 +1,13 @@
 import {
-  BarChart3,
+  ChartNoAxesCombined,
   Bell,
   CalendarDays,
-  CreditCard,
-  FileText,
+  Wallet,
+  ClipboardList,
   LayoutDashboard,
   Package,
   Stethoscope,
-  Users,
+  UsersRound,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -22,12 +22,12 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { label: "Panel", to: "/", icon: LayoutDashboard },
-  { label: "Pacientes", to: "/pacientes", icon: Users },
+  { label: "Pacientes", to: "/pacientes", icon: UsersRound },
   { label: "Citas", to: "/citas", icon: CalendarDays },
   {
     label: "Historial clínico",
     to: "/historial-clinico",
-    icon: FileText,
+    icon: ClipboardList,
     roles: ["admin", "medico"],
   },
   { label: "Tratamientos", to: "/tratamientos", icon: Stethoscope },
@@ -46,13 +46,13 @@ export const navItems: NavItem[] = [
   {
     label: "Finanzas",
     to: "/finanzas",
-    icon: CreditCard,
+    icon: Wallet,
     roles: ["admin", "recepcion"],
   },
   {
     label: "Reportes",
     to: "/reportes",
-    icon: BarChart3,
+    icon: ChartNoAxesCombined,
     roles: ["admin"],
   },
 ]

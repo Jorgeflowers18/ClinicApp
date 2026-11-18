@@ -53,10 +53,6 @@
   /* Resizing and a reduced keyboard viewport must update geometry immediately. */
   transition-property: opacity, transform;
 }
-:is([data-slot="dialog-footer"], [data-slot="alert-dialog-footer"]) {
-  background: var(--muted);
-  border-color: var(--border);
-}
 [data-slot="sheet-footer"] {
   padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
 }

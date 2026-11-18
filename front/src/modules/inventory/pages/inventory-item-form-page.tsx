@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { FormActions } from "@/components/ui/form-actions"
 import { Input } from "@/components/ui/input"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -170,14 +171,14 @@ export function InventoryItemFormPage() {
           </Field>
         </FieldGroup>
 
-        <div className="flex justify-end gap-2 border-t pt-4">
+        <FormActions>
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Guardando..." : isEditMode ? "Guardar cambios" : "Crear insumo"}
           </Button>
-        </div>
+        </FormActions>
       </form>
     </div>
   )
