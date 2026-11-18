@@ -17,7 +17,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ 1 | `patients` | Hecho (falta importar los pacientes de la clínica) | 1 | Base |
 | ✅ 2 | `appointments`: profesionales y consultorios | Hecho (falta su pantalla en el frontend) | 1 | Base |
 | ✅ 3 | `appointments`: citas y bloqueos | Hecho (falta que el frontend envíe el rango del calendario) | 2 | `patients`, profesionales y consultorios |
-| **4** | `treatments`: tratamientos realizados (`treatment-assignments`) | Plan en revisión: [`docs/plan-tratamientos-realizados.md`](./docs/plan-tratamientos-realizados.md) | 2 | `patients`, `treatments`, `inventory` |
+| ✅ 4 | `treatments`: tratamientos realizados (`treatment-assignments`) | Hecho | 2 | `patients`, `treatments`, `inventory` |
 | **5** | `clinical-history` | Plan aprobado, en espera de su turno: [`docs/plan-historia-clinica.md`](./docs/plan-historia-clinica.md) | 3 | `patients`, profesionales, citas, tratamientos realizados |
 | **6** | `institution` | Plan en revisión: [`docs/plan-institucion.md`](./docs/plan-institucion.md) | 1 | Base |
 | **7** | `notifications` | Plan en revisión: [`docs/plan-notificaciones.md`](./docs/plan-notificaciones.md). Falta elegir el proveedor de envío. | 2 | Citas, `patients` |
@@ -110,7 +110,7 @@ Siguen por definir:
 
 **Pendiente:**
 - [x] Llaves foráneas del responsable de esterilización a `professionals` y de `patient_id` de los movimientos.
-- [ ] Llave foránea de `treatment_assignment_id` de los movimientos (orden 4).
+- [x] Llave foránea de `treatment_assignment_id` de los movimientos.
 - [ ] Desactivar insumos en lugar de borrarlos (requiere cambio en el frontend).
 - [ ] Selectores y "Stock crítico" con más de 100 insumos.
 
@@ -170,7 +170,7 @@ Siguen por definir:
 
 **Por definir:** pantalla para administrar profesionales y su registro profesional; relación con las sedes si son varias.
 
-## 4. `treatments`: tratamientos realizados
+## 4. `treatments`: tratamientos realizados ✅
 
 - **Responsable:** Jorge Flores
 - **Fase:** 1 (catálogo, ✅) y 2 (tratamientos realizados, orden 4)
@@ -187,10 +187,10 @@ Siguen por definir:
 - [x] `PUT /treatments/:id`
 - [x] `DELETE /treatments/:id`
 - [x] Insumos de cada tratamiento (`consumption`)
-- [ ] `409` al eliminar un tratamiento ya usado (requiere las asignaciones)
-- [ ] `GET /treatments/:id/assignments`
-- [ ] `GET /treatment-assignments?patientId=`
-- [ ] `POST /treatment-assignments`
+- [x] `409` al eliminar un tratamiento ya usado (requiere las asignaciones)
+- [x] `GET /treatments/:id/assignments`
+- [x] `GET /treatment-assignments?patientId=`
+- [x] `POST /treatment-assignments`
 
 **Relación con otros módulos:**
 - Descuenta insumos con `StockService` (ya listo) y llena `stock_movements.treatment_assignment_id`.

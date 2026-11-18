@@ -392,3 +392,29 @@ Content-Type: application/json
 ### Quitar el bloqueo
 DELETE {{api}}/schedule-blocks/{{bloqueo.response.body.id}}
 Authorization: Bearer {{token}}
+
+### ───────────── Tratamientos realizados ─────────────
+
+### Registrar un tratamiento realizado (admin o médico). Descuenta insumos por FEFO.
+### Idempotente por sourceKey: repetirlo devuelve 200 con el mismo registro, sin descontar otra vez.
+POST {{api}}/treatment-assignments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "treatmentId": "{{crear.response.body.id}}",
+  "patientId": "{{paciente.response.body.id}}",
+  "date": "2026-11-17",
+  "tooth": "26",
+  "sourceEncounterId": "0199c000-0000-7000-8000-000000000001",
+  "sourceKey": "0199c000-0000-7000-8000-000000000001:0199c000-0000-7000-8000-000000000002",
+  "price": 35
+}
+
+### Tratamientos realizados de un paciente
+GET {{api}}/treatment-assignments?patientId={{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Pacientes que recibieron un tratamiento
+GET {{api}}/treatments/{{crear.response.body.id}}/assignments
+Authorization: Bearer {{token}}

@@ -114,7 +114,7 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
         if (treatment is null) return TreatmentNotFound();
 
         // Un tratamiento que ya se usó no se borra: se perdería de dónde salieron las citas
-        // (y, más adelante, los tratamientos realizados). Se sugiere desactivarlo.
+        // y los tratamientos realizados (Finanzas cobra con ellos). Se sugiere desactivarlo.
         if (await IsInUseAsync(id, cancellationToken))
         {
             return Problem(
@@ -176,9 +176,28 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
         }
     }
 
-    /// <summary>¿Aparece en alguna cita?</summary>
-    private Task<bool> IsInUseAsync(Guid treatmentId, CancellationToken cancellationToken) =>
-        db.Appointments.AnyAsync(appointment => appointment.TreatmentId == treatmentId, cancellationToken);
+    /// <summary>
+    /// GET /api/treatments/{id}/assignments → tratamientos realizados de este tratamiento, del más reciente al
+    /// más antiguo ("Pacientes que recibieron este tratamiento").
+    /// </summary>
+    [HttpGet("{id:guid}/assignments")]
+    public async Task<ActionResult<List<TreatmentAssignmentDto>>> ListAssignments(Guid id, CancellationToken cancellationToken)
+    {
+        if (!await db.Treatments.AnyAsync(treatment => treatment.Id == id, cancellationToken)) return TreatmentNotFound();
+
+        var assignments = await db.TreatmentAssignments.AsNoTracking()
+            .Where(assignment => assignment.TreatmentId == id)
+            .OrderByDescending(assignment => assignment.StartDate)
+            .ThenByDescending(assignment => assignment.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return assignments.Select(TreatmentAssignmentDto.FromEntity).ToList();
+    }
+
+    /// <summary>¿Aparece en alguna cita o en un tratamiento realizado?</summary>
+    private async Task<bool> IsInUseAsync(Guid treatmentId, CancellationToken cancellationToken) =>
+        await db.Appointments.AnyAsync(appointment => appointment.TreatmentId == treatmentId, cancellationToken)
+        || await db.TreatmentAssignments.AnyAsync(assignment => assignment.TreatmentId == treatmentId, cancellationToken);
 
     /// <summary>404 en formato ProblemDetails: el frontend muestra el "title" como mensaje.</summary>
     private ObjectResult TreatmentNotFound() =>

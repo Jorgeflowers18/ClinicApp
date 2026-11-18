@@ -44,7 +44,7 @@ back/
     │   └── Migrations/
     └── Modules/
         ├── Auth/         ← usuarios, sesiones, recuperación de contraseña, solicitudes de acceso
-        ├── Treatments/   ← catálogo de tratamientos y sus insumos
+        ├── Treatments/   ← catálogo de tratamientos, sus insumos y los tratamientos realizados
         ├── Inventory/    ← insumos, lotes, movimientos, proveedores, órdenes, esterilización
         ├── Patients/     ← pacientes (baja lógica, N.° de historia clínica)
         └── Appointments/ ← profesionales, consultorios, citas y bloqueos de horario
@@ -107,9 +107,12 @@ erDiagram
     treatments ||--o{ appointments : ""
     professionals ||--o{ schedule_blocks : "bloqueos"
     rooms ||--o{ schedule_blocks : ""
+    treatments ||--o{ treatment_assignments : "realizados"
+    patients ||--o{ treatment_assignments : ""
+    treatment_assignments ||--o{ stock_movements : "consumo"
 ```
 
-`access_requests` no tiene relaciones. `stock_movements.treatment_assignment_id` es un UUID **sin llave foránea** todavía (ver § 10).
+`access_requests` no tiene relaciones. `treatment_assignments.source_encounter_id` es un UUID **sin llave foránea** todavía (ver § 10).
 
 ## 5. Módulo `auth`
 
@@ -188,6 +191,26 @@ Insumos que consume un tratamiento cada vez que se realiza.
 | `item_id` | `uuid` FK → `inventory_items` (restrict) | | Índice |
 | `quantity` | `integer` | | ≥ 1 (`CHECK`) |
 
+### `treatment_assignments`
+
+Tratamientos realizados a un paciente. La API los registra ya completados desde la historia clínica.
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `treatment_id` | `uuid` FK → `treatments` (restrict) | | Índice `(treatment_id, start_date)` |
+| `patient_id` | `uuid` FK → `patients` (restrict) | | Índice `(patient_id, start_date)` |
+| `total_sessions`, `completed_sessions` | `integer` | | 1 y 1 al registrar. `CHECK (0 ≤ completed ≤ total, total ≥ 1)`. |
+| `status` | `varchar(15)` | | `en_progreso`, `completado`, `suspendido` (`CHECK`) |
+| `start_date` | `date` | | Fecha de la atención; no futura |
+| `tooth` | `varchar(60)` | | Pieza o zona; `""` si no aplica |
+| `source_encounter_id` | `uuid` | sí | Atención de origen. **Sin FK** por ahora: el frontend registra el tratamiento antes de crear la atención. |
+| `source_key` | `varchar(200)` | sí | Idempotencia (atención + ítem). Único cuando no es `null`. |
+| `price` | `numeric(10,2)` | sí | Costo cobrado (`CHECK ≥ 0`). `null` en asignaciones antiguas: vale el precio del catálogo. |
+| `professional_id` | `uuid` FK → `professionals` (restrict) | sí | Profesional que lo realizó (lo llenará el registro transaccional de la atención) |
+| `created_at` | `timestamptz` | | |
+| `created_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+
 ## 7. Módulo `inventory`
 
 **Regla central:** `inventory_items.stock` es siempre igual a la suma de `stock_lots.quantity` del insumo.
@@ -232,8 +255,8 @@ Insumos que consume un tratamiento cada vez que se realiza.
 | `reason` | `varchar(300)` | | |
 | `lot_id` | `uuid` FK → `stock_lots` (restrict) | sí | Lote creado (entrada) o descontado (salida) |
 | `purchase_order_id` | `uuid` FK → `purchase_orders` (restrict) | sí | |
-| `treatment_assignment_id` | `uuid` | sí | Sin FK todavía. Lo llenará el consumo de un tratamiento realizado. |
-| `patient_id` | `uuid` | sí | Sin FK todavía |
+| `treatment_assignment_id` | `uuid` FK → `treatment_assignments` (restrict) | sí | Tratamiento realizado que consumió el insumo |
+| `patient_id` | `uuid` FK → `patients` (restrict) | sí | |
 | `created_by_user_id` | `uuid` FK → `users` (set null) | sí | Auditoría |
 | `created_at` | `timestamptz` | | |
 
@@ -398,6 +421,7 @@ Las horas van en UTC; la API convierte desde y hacia la hora de la clínica.
 | `20261118023006_CrearPacientes` | `patients`, la secuencia `patient_record_number_seq`, la extensión `unaccent` y la FK `stock_movements.patient_id` → `patients` |
 | `20261118023839_CrearProfesionalesYConsultorios` | `professionals`, `rooms` y las FK `users.professional_id` y `sterilization_cycles.responsible_professional_id`. Pasa los ciclos con responsables inexistentes a un profesional inactivo "Responsable no registrado". |
 | `20261118024431_CrearCitas` | `appointments` y `schedule_blocks` |
+| `20261118024917_CrearTratamientosRealizados` | `treatment_assignments` y la FK `stock_movements.treatment_assignment_id` |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -405,11 +429,11 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 
 | Columna | Tabla destino | Módulo |
 |---|---|---|
-| `stock_movements.treatment_assignment_id` | `treatment_assignments` | `treatments` (Jorge) |
+| `treatment_assignments.source_encounter_id` | `clinical_encounters` | `clinical-history` |
 
 **Módulos sin tablas todavía:**
 - `institution`, `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
-- Tratamientos realizados (`treatment_assignments`) y `clinical-history` (Jorge). El plan de la historia clínica está en [`plan-historia-clinica.md`](./plan-historia-clinica.md).
+- `clinical-history`. El plan de la historia clínica está en [`plan-historia-clinica.md`](./plan-historia-clinica.md).
 
 **Multi-clínica (propuesta en espera):** el sistema se venderá a varias clínicas. Cuando se apruebe, se agrega la tabla `institutions` y la columna `institution_id` en las tablas de datos, con un filtro automático para que cada clínica vea solo lo suyo. Detalle en [`plan-multiclinica.md`](./plan-multiclinica.md). Mientras tanto, los módulos se hacen para una sola clínica.
 

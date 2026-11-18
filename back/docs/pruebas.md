@@ -49,6 +49,7 @@ Todos desde la carpeta `back/`.
 | `appointments` (catálogos) | `Integration/ProfessionalsAndRoomsTests.cs` | Semilla de desarrollo y vínculo del médico, roles, desactivar, vincular usuarios sin repetir, nombre único de consultorio, responsable de esterilización existente y activo, FK que impide borrar un profesional con ciclos |
 | `appointments` (agenda) | `Unit/AppointmentRulesTests.cs` | Cambios de estado permitidos, citas editables, choque de rangos (citas pegadas), duración y lectura de ids opcionales |
 | | `Integration/AppointmentsTests.cs` | Hora de la clínica a UTC, roles, validaciones, paciente dado de baja y profesional inactivo, los 4 mensajes de choque, citas pegadas y canceladas, 10 agendados simultáneos (1 gana), edición, estados, listas por rango y paciente, bloqueos, 409 al borrar un tratamiento con citas y citas futuras del profesional |
+| `treatments` (realizados) | `Integration/TreatmentAssignmentsTests.cs` | Registro completado con descuento FEFO y movimientos con asignación y paciente, idempotencia por `sourceKey` (también 10 reintentos simultáneos), `409` con otro paciente, registro sin stock, precio del catálogo, validaciones, roles, listas por paciente y por tratamiento, `409` al borrar un tratamiento realizado |
 
 ## Problemas comunes
 

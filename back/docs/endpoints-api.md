@@ -1,9 +1,9 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **54 endpoints implementados**:
+Estado al **2026-11-17**: **57 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
-- 6 de `treatments`;
+- 9 de `treatments` (catálogo y tratamientos realizados);
 - 18 de `inventory`;
 - 6 de `patients`;
 - 7 de `professionals` y `rooms`;
@@ -31,7 +31,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 
 | Módulo | Roles |
 |---|---|
-| `treatments` | los tres |
+| `treatments` | los tres; registrar un tratamiento realizado: `admin` y `medico` |
 | `inventory`: leer insumos (`GET /inventory/items` y `GET /inventory/items/:id`) | los tres |
 | `inventory`: todo lo demás | `admin`, `recepcion` |
 | `patients` | los tres; dar de baja: `admin` y `recepcion`; reactivar: `admin` |
@@ -100,6 +100,9 @@ La respuesta tiene esta forma:
 | `POST` | `/api/treatments` | los tres | `201` |
 | `PUT` | `/api/treatments/:id` | los tres | `200` |
 | `DELETE` | `/api/treatments/:id` | los tres | `204` |
+| `GET` | `/api/treatments/:id/assignments` | los tres | `200` lista |
+| `GET` | `/api/treatment-assignments` | los tres | `200` lista |
+| `POST` | `/api/treatment-assignments` | admin, medico | `201` (o `200` si ya existía) |
 | `GET` | `/api/inventory/items` | los tres | `200` paginado |
 | `GET` | `/api/inventory/items/:id` | los tres | `200` |
 | `POST` | `/api/inventory/items` | admin, recepcion | `201` |
@@ -278,12 +281,33 @@ Si la cuenta existe y está activa:
 | `GET /api/treatments/:id` | `200`, o `404` "Tratamiento no encontrado" |
 | `POST /api/treatments` | `201` con el tratamiento y el encabezado `Location`; `400` |
 | `PUT /api/treatments/:id` | `200`; `400`, `404`. Los insumos se reemplazan por los del body. |
-| `DELETE /api/treatments/:id` | `204` (también borra sus insumos); `404`; `409` "Este tratamiento ya se usó. Desactívalo en su lugar." si aparece en una cita. |
+| `DELETE /api/treatments/:id` | `204` (también borra sus insumos); `404`; `409` "Este tratamiento ya se usó. Desactívalo en su lugar." si aparece en una cita o en un tratamiento realizado. |
 
-**Pendientes de `treatments`:**
-- `GET /treatments/:id/assignments`
-- `GET /treatment-assignments?patientId=`
-- `POST /treatment-assignments`: tratamiento realizado. Descontará insumos con `StockService`. Necesita `patients`.
+
+### Tratamientos realizados (`treatment-assignments`)
+
+**Tratamiento realizado (`TreatmentAssignment`):**
+
+```json
+{
+  "id": "0199…", "treatmentId": "0199…", "patientId": "0199…",
+  "totalSessions": 1, "completedSessions": 1, "status": "completado",
+  "startDate": "2026-11-17", "tooth": "26",
+  "sourceEncounterId": "8f1c…", "price": 35.00, "sourceKey": "8f1c…:4b2a…"
+}
+```
+
+| Endpoint | Roles | Detalle |
+|---|---|---|
+| `GET /api/treatments/:id/assignments` | los tres | `200` lista, del más reciente al más antiguo; `404` |
+| `GET /api/treatment-assignments?patientId=` | los tres | `200` lista, del más reciente al más antiguo; `400` sin `patientId` |
+| `POST /api/treatment-assignments` | admin, medico | Ver abajo |
+
+**Registrar (`POST /api/treatment-assignments`):** body `{ treatmentId, patientId, date, tooth, sourceEncounterId, sourceKey, price }` (`CreateAssignmentInput`).
+- Crea el tratamiento realizado ya `completado`, 1 de 1 sesión. `price` de 0 a 99 999 999,99; si no viene, el precio del catálogo.
+- **Descuenta los insumos** del tratamiento (`consumption`) por FEFO, con movimientos de salida que llevan `treatmentAssignmentId`, `patientId` y el motivo "Tratamiento realizado: <nombre>". **Si el stock no alcanza, se registra igual**: descuenta lo que hay y deja un aviso en el log.
+- **Idempotente por `sourceKey`:** si ya existe, `200` con el existente y sin volver a descontar. Diez reintentos simultáneos registran y descuentan una sola vez. El mismo `sourceKey` con otro paciente o tratamiento: `409` (`errors.sourceKey`).
+- `201`; `404` "Tratamiento no encontrado"; `400` tratamiento inactivo, paciente inexistente o dado de baja, fecha futura, precio fuera de rango o `sourceEncounterId` que no es UUID.
 
 ## 6. `inventory`
 
@@ -479,7 +503,7 @@ Errores: `404` "Orden de compra no encontrada", y `409` "Solo se pueden recibir 
 Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos seleccionados no existe", o "«nombre» no es instrumental esterilizable".
 
 **Pendientes de `inventory`:**
-- Llave foránea a las asignaciones (las de pacientes y profesionales ya están).
+- Las llaves foráneas de los movimientos ya están (pacientes, profesionales y tratamientos realizados).
 - Desactivar insumos en lugar de borrarlos.
 - Más de 100 insumos en los selectores y en "Stock crítico" (el frontend pide `pageSize: 100`).
 
@@ -619,7 +643,7 @@ Cuenta como ocupado toda cita **no cancelada** y todo bloqueo. Dos citas pegadas
 |---|---|---|
 | Base (errores, paginación, salud, CORS, configuración, logs) | Jorge Flores | ✅ Hecho |
 | `auth` | Jorge Flores | ✅ Endpoints hechos. Faltan el proveedor de correo, la gestión de usuarios, la revisión de solicitudes de acceso y la limpieza de tokens viejos. |
-| `treatments` | Jorge Flores | ✅ Catálogo e insumos. ⏳ Tratamientos realizados (necesita `patients`). |
+| `treatments` | Jorge Flores | ✅ Catálogo, insumos y tratamientos realizados |
 | `inventory` | Jorge Flores | ✅ Los 18 endpoints |
 | `clinical-history` | Jorge Flores | 📝 Plan en revisión: [`plan-historia-clinica.md`](./plan-historia-clinica.md) |
 | `patients` | Jorge Flores | ✅ Los 6 endpoints, con baja lógica y N.° de historia |

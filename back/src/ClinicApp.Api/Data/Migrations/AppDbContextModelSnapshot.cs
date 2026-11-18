@@ -811,6 +811,9 @@ namespace ClinicApp.Api.Data.Migrations
                     b.HasIndex("PurchaseOrderId")
                         .HasDatabaseName("ix_stock_movements_purchase_order_id");
 
+                    b.HasIndex("TreatmentAssignmentId")
+                        .HasDatabaseName("ix_stock_movements_treatment_assignment_id");
+
                     b.HasIndex("ItemId", "CreatedAt")
                         .HasDatabaseName("ix_stock_movements_item_id_created_at");
 
@@ -1121,6 +1124,101 @@ namespace ClinicApp.Api.Data.Migrations
                     b.ToTable("treatments", (string)null);
                 });
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.TreatmentAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("CompletedSessions")
+                        .HasColumnType("integer")
+                        .HasColumnName("completed_sessions");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<decimal?>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("price");
+
+                    b.Property<Guid?>("ProfessionalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("professional_id");
+
+                    b.Property<Guid?>("SourceEncounterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_encounter_id");
+
+                    b.Property<string>("SourceKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("source_key");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Tooth")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("tooth");
+
+                    b.Property<int>("TotalSessions")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_sessions");
+
+                    b.Property<Guid>("TreatmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("treatment_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_treatment_assignments");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_treatment_assignments_created_by_user_id");
+
+                    b.HasIndex("ProfessionalId")
+                        .HasDatabaseName("ix_treatment_assignments_professional_id");
+
+                    b.HasIndex("SourceKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_treatment_assignments_source_key")
+                        .HasFilter("source_key IS NOT NULL");
+
+                    b.HasIndex("PatientId", "StartDate")
+                        .HasDatabaseName("ix_treatment_assignments_patient_id_start_date");
+
+                    b.HasIndex("TreatmentId", "StartDate")
+                        .HasDatabaseName("ix_treatment_assignments_treatment_id_start_date");
+
+                    b.ToTable("treatment_assignments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_treatment_assignments_price", "price IS NULL OR price >= 0");
+
+                            t.HasCheckConstraint("ck_treatment_assignments_sessions", "total_sessions >= 1 AND completed_sessions >= 0 AND completed_sessions <= total_sessions");
+
+                            t.HasCheckConstraint("ck_treatment_assignments_status", "status IN ('en_progreso', 'completado', 'suspendido')");
+                        });
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.TreatmentConsumption", b =>
                 {
                     b.Property<Guid>("TreatmentId")
@@ -1394,6 +1492,12 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasForeignKey("PurchaseOrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_stock_movements_purchase_orders_purchase_order_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Treatments.TreatmentAssignment", null)
+                        .WithMany()
+                        .HasForeignKey("TreatmentAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_movements_treatment_assignments_treatment_assignment_");
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Patients.Patient", b =>
@@ -1415,6 +1519,35 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasForeignKey("UpdatedByUserId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_patients_users_updated_by_user_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.TreatmentAssignment", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_treatment_assignments_users_created_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_treatment_assignments_patients_patient_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Professional", null)
+                        .WithMany()
+                        .HasForeignKey("ProfessionalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_treatment_assignments_professionals_professional_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Treatments.Treatment", null)
+                        .WithMany()
+                        .HasForeignKey("TreatmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_treatment_assignments_treatments_treatment_id");
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Treatments.TreatmentConsumption", b =>

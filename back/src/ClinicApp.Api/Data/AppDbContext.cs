@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<Treatment> Treatments => Set<Treatment>();
     public DbSet<TreatmentConsumption> TreatmentConsumptions => Set<TreatmentConsumption>();
+    public DbSet<TreatmentAssignment> TreatmentAssignments => Set<TreatmentAssignment>();
 
     // auth
     public DbSet<User> Users => Set<User>();

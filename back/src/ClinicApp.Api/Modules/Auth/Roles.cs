@@ -13,5 +13,8 @@ public static class Roles
     /// <summary>Para <c>[Authorize(Roles = ...)]</c>: admin o recepción (inventario, notificaciones, finanzas).</summary>
     public const string AdminYRecepcion = $"{Admin},{Recepcion}";
 
+    /// <summary>Para <c>[Authorize(Roles = ...)]</c>: admin o médico (historia clínica y tratamientos realizados).</summary>
+    public const string AdminYMedico = $"{Admin},{Medico}";
+
     public static readonly IReadOnlyList<string> All = [Admin, Recepcion, Medico];
 }
