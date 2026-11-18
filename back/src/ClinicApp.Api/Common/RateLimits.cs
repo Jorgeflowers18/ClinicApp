@@ -12,6 +12,9 @@ public static class RateLimits
 {
     public const string Auth = "auth";
 
+    /// <summary>Lecturas públicas sin sesión (logo de la pantalla de inicio de sesión): más holgado.</summary>
+    public const string Public = "public";
+
     public static IServiceCollection AddClinicRateLimits(this IServiceCollection services) =>
         services.AddRateLimiter(options =>
         {
@@ -25,6 +28,16 @@ public static class RateLimits
                 factory: _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = 20,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                }));
+
+            // 120 por minuto por IP: cada carga de la pantalla de inicio de sesión pide el logo.
+            options.AddPolicy(Public, context => RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: $"{context.Connection.RemoteIpAddress}|{context.Request.Path}",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 120,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));

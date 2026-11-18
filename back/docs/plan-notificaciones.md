@@ -3,7 +3,7 @@
 - **Responsable:** Jorge Flores
 - **Orden:** 7 de [`backlog-desgloce.md`](../backlog-desgloce.md)
 - **Estado:** en revisión. Ninguna decisión aprobada. **Bloqueado en parte:** falta elegir el canal y el proveedor de envío (N1).
-- **Depende de:** `IAppointmentEvents` de la agenda (ya implementada), `patients` (ya implementado) y, para `[nombre de la clínica]`, [`plan-institucion.md`](./plan-institucion.md).
+- **Depende de:** `IAppointmentEvents` de la agenda (ya implementada), `patients` y, para `[nombre de la clínica]`, `institution` (ya implementados).
 - **Detalle de endpoints:** [`backlog.md` § `notifications`](../backlog.md#notifications)
 - **Contrato del frontend:** `front/src/modules/notifications/types/notification.types.ts` (`NotificationLog`, `NotificationTemplate`, `notificationVariables`) y `api/notifications.api.ts`.
 

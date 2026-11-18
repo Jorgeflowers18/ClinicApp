@@ -1,6 +1,6 @@
 # Estructura base del backend — ClinicApp
 
-Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients`, `appointments` (profesionales, consultorios, citas y bloqueos) y `clinical-history`. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
+Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients`, `appointments` (profesionales, consultorios, citas y bloqueos), `clinical-history` e `institution`. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
 
 ## 1. Tecnología
 
@@ -49,7 +49,8 @@ back/
         ├── Inventory/    ← insumos, lotes, movimientos, proveedores, órdenes, esterilización
         ├── Patients/     ← pacientes (baja lógica, N.° de historia clínica)
         ├── Appointments/ ← profesionales, consultorios, citas y bloqueos de horario
-        └── ClinicalHistory/ ← historia, versiones, atenciones, notas y adjuntos
+        ├── ClinicalHistory/ ← historia, versiones, atenciones, notas y adjuntos
+        └── Institution/  ← perfil de la clínica y sus sedes
 ```
 
 **Patrón de cada módulo:**
@@ -119,9 +120,10 @@ erDiagram
     appointments ||--o| clinical_encounters : ""
     clinical_encounters ||--o{ encounter_notes : "notas"
     patients ||--o{ clinical_attachments : "adjuntos"
+    institutions ||--o{ institution_branches : "sedes"
 ```
 
-`access_requests` no tiene relaciones. `treatment_assignments.source_encounter_id` es un UUID **sin llave foránea** todavía (ver § 11).
+`access_requests` no tiene relaciones. `treatment_assignments.source_encounter_id` es un UUID **sin llave foránea** todavía (ver § 12).
 
 ## 5. Módulo `auth`
 
@@ -497,7 +499,36 @@ Las secciones anidadas del formulario van en columnas `jsonb` (una por sección)
 
 **Archivos:** en `Attachments:RootPath` (producción: `/var/lib/clinicapp/attachments`, incluida en los respaldos; desarrollo: `App_Data/attachments`, ignorada por git). La tarea `AttachmentCleanupService` corre cada hora.
 
-## 11. Migraciones aplicadas
+## 11. Módulo `institution`
+
+### `institutions` (una sola fila por ahora)
+
+Si se aprueba la multi-clínica (`plan-multiclinica.md`, M1), esta misma tabla tendrá una fila por clínica.
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | Fijo (`00000000-0000-7000-8000-0000000000c1`) |
+| `name` | `varchar(160)` | | Nombre comercial |
+| `legal_name` | `varchar(200)` | | Razón social |
+| `ruc` | `varchar(13)` | | 13 dígitos o `''` (`CHECK`) |
+| `phone`, `email`, `address`, `website` | `varchar(30)`, `(254)`, `(250)`, `(200)` | | |
+| `logo_text` | `varchar(10)` | | Iniciales que se muestran sin imagen |
+| `logo_image` | `text` | sí | Data URL PNG, JPG o WebP de hasta ~500 KB |
+| `notes`, `hours` | `varchar(1000)`, `varchar(500)` | | |
+| `updated_at` | `timestamptz` | | |
+| `updated_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+
+### `institution_branches`
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `institution_id` | `uuid` FK → `institutions` (cascade) | | PK compuesta `(institution_id, id)` |
+| `id` | `varchar(60)` | | El que genera el frontend (`branch-1731…`) |
+| `position` | `integer` | | Orden en la pantalla |
+| `name`, `address`, `phone`, `hours` | `varchar(120)`, `(250)`, `(30)`, `(500)` | | |
+| `is_main` | `boolean` | | Índice único parcial `WHERE is_main`: como máximo una principal |
+
+## 12. Migraciones aplicadas
 
 | Migración | Crea |
 |---|---|
@@ -509,6 +540,7 @@ Las secciones anidadas del formulario van en columnas `jsonb` (una por sección)
 | `20261118024431_CrearCitas` | `appointments` y `schedule_blocks` |
 | `20261118024917_CrearTratamientosRealizados` | `treatment_assignments` y la FK `stock_movements.treatment_assignment_id` |
 | `20261118025957_CrearHistoriaClinica` | Las 5 tablas de la historia clínica (26 columnas `jsonb`) |
+| `20261118030811_CrearInstitucion` | `institutions` e `institution_branches` |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -519,11 +551,11 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 | `treatment_assignments.source_encounter_id` | `clinical_encounters` | `clinical-history` |
 
 **Módulos sin tablas todavía:**
-- `institution`, `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
+- `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
 
 **Multi-clínica (propuesta en espera):** el sistema se venderá a varias clínicas. Cuando se apruebe, se agrega la tabla `institutions` y la columna `institution_id` en las tablas de datos, con un filtro automático para que cada clínica vea solo lo suyo. Detalle en [`plan-multiclinica.md`](./plan-multiclinica.md). Mientras tanto, los módulos se hacen para una sola clínica.
 
-## 12. Configuración
+## 13. Configuración
 
 `appsettings.json` solo tiene valores no secretos. Los secretos y lo propio de cada entorno van en variables de entorno, con `__` en lugar de `:` (`Auth:SigningKey` → `Auth__SigningKey`). Si `ASPNETCORE_ENVIRONMENT` no está definida, .NET asume `Production`.
 
@@ -536,6 +568,7 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 | `Auth:FrontendBaseUrl` | Igual que la anterior | URL del frontend, para armar el enlace de recuperación de contraseña |
 | `Cors:AllowedOrigins` | `appsettings*.json` | Orígenes del frontend (con cookies: `AllowCredentials`) |
 | `Seed:AdminEmail`, `Seed:AdminPassword`, `Seed:AdminName` | Variable de entorno, solo la primera vez | Administrador inicial |
+| `Seed:InstitutionName` | Variable de entorno, solo la primera vez | Nombre inicial del perfil de la institución |
 | `ASPNETCORE_URLS`, `AllowedHosts` | Variable de entorno en producción | `http://127.0.0.1:5000`, el dominio |
 | `Clinic:TimeZone` | `appsettings.json`; en producción, variable `Clinic__TimeZone` | Zona horaria IANA de la clínica (`America/Guayaquil`). Define "hoy" para las fechas que no pueden ser futuras. Un nombre inválido detiene el arranque. |
 | `Attachments:RootPath` | `appsettings.json` (vacío = `App_Data/attachments`); en producción, `Attachments__RootPath=/var/lib/clinicapp/attachments` | Carpeta de los adjuntos. **Debe estar en los respaldos.** |

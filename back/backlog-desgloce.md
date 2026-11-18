@@ -19,7 +19,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ 3 | `appointments`: citas y bloqueos | Hecho (falta que el frontend envíe el rango del calendario) | 2 | `patients`, profesionales y consultorios |
 | ✅ 4 | `treatments`: tratamientos realizados (`treatment-assignments`) | Hecho | 2 | `patients`, `treatments`, `inventory` |
 | ✅ 5 | `clinical-history` | Hecho (falta el registro transaccional de la atención) | 3 | `patients`, profesionales, citas, tratamientos realizados |
-| **6** | `institution` | Plan en revisión: [`docs/plan-institucion.md`](./docs/plan-institucion.md) | 1 | Base |
+| ✅ 6 | `institution` | Hecho (falta su `institution.api.ts` en el frontend) | 1 | Base |
 | **7** | `notifications` | Plan en revisión: [`docs/plan-notificaciones.md`](./docs/plan-notificaciones.md). Falta elegir el proveedor de envío. | 2 | Citas, `patients` |
 | **8** | `finance` | Plan en revisión: [`docs/plan-finanzas.md`](./docs/plan-finanzas.md). Pagos aprobados; cuotas, seguros y factura esperan el ítem 8. | 4 | Tratamientos realizados, `patients` |
 | **9** | `reports` | Plan en revisión: [`docs/plan-reportes.md`](./docs/plan-reportes.md) | 4 | Todos los anteriores |
@@ -224,7 +224,7 @@ Siguen por definir:
 
 **Por definir:** texto legal del consentimiento y su versionado; firmas; importación de las historias registradas en modo demostración.
 
-## 6. `institution`
+## 6. `institution` ✅
 
 - **Responsable:** Jorge Flores
 - **Fase:** 1
@@ -235,10 +235,10 @@ Siguen por definir:
 **Entidades:** perfil de la institución, sede.
 
 **Endpoints:**
-- [ ] `GET /institution/profile` (público o con variante pública para el logo del inicio de sesión) (propuesta)
-- [ ] `PUT /institution/profile` (solo `admin`) (propuesta)
+- [x] `GET /institution/profile` y `GET /institution/public` (sin sesión, para el logo del inicio de sesión)
+- [x] `PUT /institution/profile` (solo `admin`)
 
-**Relación con otros módulos:** si se aprueba la multi-clínica, el perfil va en la tabla `institutions` ([`docs/plan-multiclinica.md`](./docs/plan-multiclinica.md), M1).
+**Relación con otros módulos:** el perfil ya está en la tabla `institutions` (una fila), lista para la multi-clínica ([`docs/plan-multiclinica.md`](./docs/plan-multiclinica.md), M1). Las notificaciones usan su nombre.
 
 **Por definir:** si el grupo maneja una o varias sedes (ítem 2 del backlog de producto); cómo se sube el logo.
 

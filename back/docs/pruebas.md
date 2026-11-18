@@ -52,6 +52,7 @@ Todos desde la carpeta `back/`.
 | `treatments` (realizados) | `Integration/TreatmentAssignmentsTests.cs` | Registro completado con descuento FEFO y movimientos con asignación y paciente, idempotencia por `sourceKey` (también 10 reintentos simultáneos), `409` con otro paciente, registro sin stock, precio del catálogo, validaciones, roles, listas por paciente y por tratamiento, `409` al borrar un tratamiento realizado |
 | `clinical-history` | `Unit/ClinicalHistoryRulesTests.cs` | Reglas de las secciones (niega antecedentes, detalle obligatorio, consentimiento, hallazgos, PA, intervalo, interconsulta, alertas, ids de lista), tipo de archivo por los primeros bytes y limpieza del nombre |
 | | `Integration/ClinicalHistoryTests.cs` | Roles, historia vacía, revisiones y versiones, guardados simultáneos, validación por campo, referencias inválidas, `references` y 409 al borrar un tratamiento del plan, atención idempotente, una cita por atención, validación de la atención, orden y notas con autor, lista con búsqueda sin tildes, los 4 formatos de adjunto, rechazos, vínculo y quitado, limpieza de huérfanos y protocolo de conservación (simulación y real) |
+| `institution` | `Integration/InstitutionTests.cs` | Perfil creado al arrancar, roles, sedes (reordenar, quitar, cambiar la principal), validación de RUC, correo, sitio web y logo (sin SVG), dos principales, endpoint público sin sesión y sin datos internos |
 
 ## Problemas comunes
 

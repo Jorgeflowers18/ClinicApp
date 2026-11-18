@@ -896,6 +896,151 @@ namespace ClinicApp.Api.Data.Migrations
                     b.ToTable("encounter_notes", (string)null);
                 });
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.Institution.InstitutionBranch", b =>
+                {
+                    b.Property<Guid>("InstitutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("institution_id");
+
+                    b.Property<string>("Id")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("address");
+
+                    b.Property<string>("Hours")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("hours");
+
+                    b.Property<bool>("IsMain")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_main");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("phone");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.HasKey("InstitutionId", "Id")
+                        .HasName("pk_institution_branches");
+
+                    b.HasIndex("InstitutionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_institution_branches_main")
+                        .HasFilter("is_main");
+
+                    b.ToTable("institution_branches", (string)null);
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Institution.InstitutionProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("address");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Hours")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("hours");
+
+                    b.Property<string>("LegalName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("legal_name");
+
+                    b.Property<string>("LogoImage")
+                        .HasColumnType("text")
+                        .HasColumnName("logo_image");
+
+                    b.Property<string>("LogoText")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("logo_text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("Ruc")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("ruc");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<string>("Website")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("website");
+
+                    b.HasKey("Id")
+                        .HasName("pk_institutions");
+
+                    b.HasIndex("UpdatedByUserId")
+                        .HasDatabaseName("ix_institutions_updated_by_user_id");
+
+                    b.ToTable("institutions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_institutions_ruc", "ruc = '' OR ruc ~ '^[0-9]{13}$'");
+                        });
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.InventoryItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1905,6 +2050,25 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasConstraintName("fk_encounter_notes_clinical_encounters_encounter_id");
                 });
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.Institution.InstitutionBranch", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Institution.InstitutionProfile", null)
+                        .WithMany("Branches")
+                        .HasForeignKey("InstitutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_institution_branches_institutions_institution_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Institution.InstitutionProfile", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_institutions_users_updated_by_user_id");
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.PurchaseOrder", b =>
                 {
                     b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
@@ -2099,6 +2263,11 @@ namespace ClinicApp.Api.Data.Migrations
             modelBuilder.Entity("ClinicApp.Api.Modules.ClinicalHistory.ClinicalEncounter", b =>
                 {
                     b.Navigation("Addenda");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Institution.InstitutionProfile", b =>
+                {
+                    b.Navigation("Branches");
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.PurchaseOrder", b =>

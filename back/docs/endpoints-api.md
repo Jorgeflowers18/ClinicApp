@@ -1,6 +1,6 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **64 endpoints implementados**:
+Estado al **2026-11-17**: **67 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 9 de `treatments` (catálogo y tratamientos realizados);
@@ -8,7 +8,8 @@ Estado al **2026-11-17**: **64 endpoints implementados**:
 - 6 de `patients`;
 - 7 de `professionals` y `rooms`;
 - 8 de `appointments` y `schedule-blocks`;
-- 7 de `clinical-history`.
+- 7 de `clinical-history`;
+- 3 de `institution`.
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
 
@@ -39,6 +40,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `professionals`, `rooms` | leer: los tres; crear y editar: `admin` |
 | `appointments`, `schedule-blocks` | los tres |
 | `clinical-history` | `admin`, `medico` |
+| `institution` | perfil público: sin sesión; leer: los tres; guardar: `admin` |
 
 ### Errores
 
@@ -82,7 +84,7 @@ La respuesta tiene esta forma:
 
 ### Límite de intentos
 
-`login`, `password-recovery`, `password-reset` y `access-requests` aceptan **20 peticiones por minuto por IP**, contadas por endpoint. Al pasarse, responden `429` "Demasiados intentos. Espera un minuto e inténtalo de nuevo", con el encabezado `Retry-After`.
+`login`, `password-recovery`, `password-reset` y `access-requests` aceptan **20 peticiones por minuto por IP**, contadas por endpoint. `GET /institution/public` acepta 120. Al pasarse, responden `429` "Demasiados intentos. Espera un minuto e inténtalo de nuevo", con el encabezado `Retry-After`.
 
 ## 2. Índice
 
@@ -151,6 +153,9 @@ La respuesta tiene esta forma:
 | `POST` | `/api/clinical-history/encounters/:encounterId/notes` | admin, medico | `201` |
 | `POST` | `/api/clinical-history/attachments` | admin, medico | `201` |
 | `GET` | `/api/clinical-history/attachments/:attachmentId/file` | admin, medico | `200` archivo |
+| `GET` | `/api/institution/public` | público | `200` |
+| `GET` | `/api/institution/profile` | los tres | `200` |
+| `PUT` | `/api/institution/profile` | admin | `200` |
 | `GET` | `/openapi/v1.json`, `/scalar` | público, **solo en desarrollo** | Descripción OpenAPI y página de pruebas |
 
 ## 3. Salud
@@ -688,6 +693,39 @@ Solo `admin` y `medico` (`403` para `recepcion`). Contrato: `front/src/modules/c
 
 **Adjuntos:** se reconocen por los primeros bytes (no por la extensión). Se guardan en `{Attachments:RootPath}/{patientId}/{id}.{ext}`; lo guardado en una historia se conserva siempre, y los subidos que nunca se guardaron se borran a las 24 h.
 
+## 11. `institution`
+
+Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/institution/types/institution.types.ts` (`InstitutionProfile`).
+
+```json
+{
+  "name": "Clínica Sonrisas", "legalName": "Sonrisas S.A.", "ruc": "1798765432001",
+  "phone": "+593 98 123 4567", "email": "contacto@sonrisas.ec", "address": "Av. Amazonas N45-120, Quito",
+  "website": "https://sonrisas.ec", "logoText": "CS", "logoImage": "data:image/png;base64,…",
+  "notes": "", "hours": "Lunes a viernes: 08:00 - 18:00",
+  "branches": [ { "id": "branch-1731…", "name": "Matriz", "address": "", "phone": "", "hours": "", "isMain": true } ],
+  "updatedAt": "2026-11-17T20:00:00Z"
+}
+```
+
+| Endpoint | Roles | Detalle |
+|---|---|---|
+| `GET /api/institution/public` | **público** | `200` `{ name, logoText, logoImage }` para la pantalla de inicio de sesión. Límite: 120 por minuto por IP. |
+| `GET /api/institution/profile` | los tres | `200` el perfil completo, con las sedes en orden |
+| `PUT /api/institution/profile` | admin | `200`. Reemplaza el perfil completo: las sedes con un `id` existente se actualizan, las nuevas se crean y las que no vienen se borran. |
+
+**Validación del `PUT`:**
+- `name`: 2 a 160.
+- `ruc`: 13 dígitos o vacío (no se verifica el dígito del SRI).
+- `email`: correo válido o vacío.
+- `website`: `http(s)://…` o vacío.
+- `logoText`: hasta 10.
+- `logoImage`: data URL PNG, JPG o WebP de hasta ~500 KB, o `null`. SVG no se acepta.
+- `notes`: hasta 1000; `hours`: hasta 500.
+- Hasta 20 sedes, con `id` (el que genera el frontend, hasta 60 caracteres, sin repetir), `name` de 2 a 120 y como máximo una principal (`errors.branches`).
+
+El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los valores iniciales del frontend (nombre configurable con `Seed__InstitutionName`).
+
 ## Estado de los módulos
 
 | Módulo | Responsable | Estado |
@@ -700,7 +738,8 @@ Solo `admin` y `medico` (`403` para `recepcion`). Contrato: `front/src/modules/c
 | `patients` | Jorge Flores | ✅ Los 6 endpoints, con baja lógica y N.° de historia |
 | `appointments`: profesionales y consultorios | Jorge Flores | ✅ Los 7 endpoints |
 | `appointments`: citas y bloqueos | Jorge Flores | ✅ Los 8 endpoints, con choques, candados y hora de la clínica |
-| `institution`, `notifications`, `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
+| `institution` | Jorge Flores | ✅ Los 3 endpoints (falta su `institution.api.ts` en el frontend) |
+| `notifications`, `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
 
 **Para conectar el frontend** (`VITE_USE_MOCK_API=false`): falta la parte de sesión del frontend, detallada en `backlog.md` § `auth`.
 - `withCredentials: true` en `shared/lib/http.ts`.

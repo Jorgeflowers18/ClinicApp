@@ -215,11 +215,13 @@ Cartera y resúmenes financieros por tratamiento y por paciente. **El frontend n
 
 ## `institution`
 
-Perfil de la institución (`/perfil-institucion`). **El frontend no tiene archivo `institution.api.ts`:** lee y guarda el perfil en `localStorage` (`institution.types.ts` → `readInstitutionProfile` / `writeInstitutionProfile`). Los endpoints de abajo son una propuesta; al implementarlos hay que crear el par Mock/Real.
+Implementado en `back/src/ClinicApp.Api/Modules/Institution/`. Perfil de la institución (`/perfil-institucion`) en la tabla `institutions` (una fila) y sus sedes en `institution_branches`. Detalle en [`docs/endpoints-api.md`](./docs/endpoints-api.md).
 
-- [ ] `GET /institution/profile` — `InstitutionProfile` (`name`, `legalName`, `ruc`, `phone`, `email`, `address`, `website`, `logoText`, `logoImage`, `notes`, `hours`, `branches[]` con `id`, `name`, `address`, `phone`, `hours`, `isMain`). **Debe ser público (sin token) o tener una variante pública** con nombre y logo: la pantalla de inicio de sesión muestra el logo de la institución (`auth-layout.tsx`).
-- [ ] `PUT /institution/profile` — solo `admin`. Validar el RUC (13 dígitos) y que haya como máximo una sede principal (`isMain`).
-- [ ] **Logo:** hoy `logoImage` es una imagen en base64 dentro del perfil. Definir si se sube como archivo aparte (por ejemplo, `POST /institution/logo`) con límite de tamaño y formato.
+- [x] `GET /institution/profile` (los tres roles) — `InstitutionProfile` completo, con sus sedes en orden.
+- [x] `GET /institution/public` (**sin sesión**) — `{ name, logoText, logoImage }` para la pantalla de inicio de sesión.
+- [x] `PUT /institution/profile` — solo `admin`. Reemplaza el perfil completo y sincroniza las sedes por `id`. Valida el RUC (13 dígitos o vacío), el correo, el sitio web, el logo (data URL PNG/JPG/WebP de hasta ~500 KB, sin SVG) y como máximo una sede principal.
+- [x] **Logo:** se guarda como data URL dentro del perfil (igual que la foto de "Mi perfil"); el contrato del frontend no cambia. Si llega a pesar demasiado, pasar a un archivo aparte (`POST /institution/logo`).
+- [ ] **Frontend:** crear `institution.api.ts` con el par Mock/Real (hoy el perfil vive en `localStorage`) y que `auth-layout.tsx` lea `GET /institution/public`.
 - [ ] **Sedes:** el backlog de producto (ítem 2) tiene pendiente definir si el grupo maneja una o varias sedes. Si son varias, las citas, consultorios y profesionales podrían tener que vincularse a una sede; es un cambio de modelo, no solo de endpoint.
 
 ---

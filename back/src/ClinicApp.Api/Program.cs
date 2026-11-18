@@ -3,6 +3,7 @@ using ClinicApp.Api.Data;
 using ClinicApp.Api.Modules.Appointments;
 using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.ClinicalHistory;
+using ClinicApp.Api.Modules.Institution;
 using ClinicApp.Api.Modules.Inventory;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -154,6 +155,7 @@ app.MapControllers();
 
 await app.SeedUsersAsync();
 await app.SeedCatalogsAsync();
+await app.SeedInstitutionAsync();
 
 app.Run();
 

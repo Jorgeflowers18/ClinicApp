@@ -2,6 +2,7 @@ using ClinicApp.Api.Common;
 using ClinicApp.Api.Modules.Appointments;
 using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.ClinicalHistory;
+using ClinicApp.Api.Modules.Institution;
 using ClinicApp.Api.Modules.Inventory;
 using ClinicApp.Api.Modules.Patients;
 using ClinicApp.Api.Modules.Treatments;
@@ -50,6 +51,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ClinicalEncounter> ClinicalEncounters => Set<ClinicalEncounter>();
     public DbSet<EncounterNote> EncounterNotes => Set<EncounterNote>();
     public DbSet<ClinicalAttachment> ClinicalAttachments => Set<ClinicalAttachment>();
+
+    // institution
+    public DbSet<InstitutionProfile> Institutions => Set<InstitutionProfile>();
+    public DbSet<InstitutionBranch> InstitutionBranches => Set<InstitutionBranch>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

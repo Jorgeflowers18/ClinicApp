@@ -497,3 +497,34 @@ Content-Type: application/json
 ### Lista global de atenciones (busca sin tildes en motivo, diagnósticos y nombre o cédula del paciente)
 GET {{api}}/clinical-history/encounters?page=1&pageSize=10&search=caries
 Authorization: Bearer {{token}}
+
+### ───────────── Institución ─────────────
+
+### Nombre y logo para la pantalla de inicio de sesión (sin sesión)
+GET {{api}}/institution/public
+
+### Perfil completo con sus sedes
+GET {{api}}/institution/profile
+Authorization: Bearer {{token}}
+
+### Guardar el perfil (solo admin). Las sedes se sincronizan por id; como máximo una principal.
+PUT {{api}}/institution/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "ClinicApp Odontología",
+  "legalName": "Grupo Odontológico ClinicApp S.A.",
+  "ruc": "1798765432001",
+  "phone": "+593 98 123 4567",
+  "email": "contacto@clinicapp.com",
+  "address": "Av. Amazonas N45-120, Quito",
+  "website": "https://clinicapp.com",
+  "logoText": "CA",
+  "logoImage": null,
+  "notes": "",
+  "hours": "Lunes a viernes: 08:00 - 18:00",
+  "branches": [
+    { "id": "branch-1", "name": "Matriz", "address": "Quito", "phone": "", "hours": "", "isMain": true }
+  ]
+}

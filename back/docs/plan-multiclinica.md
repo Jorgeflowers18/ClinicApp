@@ -4,6 +4,7 @@
 - **Estado:** **propuesta en espera** (2026-11-16). Se anotan aquí las ideas y decisiones para retomarlas después; por ahora el backend sigue para una sola clínica.
   - Aprobadas: M1, M3 (provisional) y M4 a M8.
   - Pendiente: M2, rediseñada como "una persona, varias clínicas". Sus preguntas abiertas están en § 2.1.
+- **Ya existe (2026-11-17):** la tabla `institutions`, con el perfil de la clínica en una sola fila, y sus sedes (`institution_branches`); las creó el módulo `institution`. Al retomar este plan solo hay que agregarle `slug`, `time_zone` y `active` (§ 4), y la columna `institution_id` en las demás tablas.
 - **Por qué:** el sistema se venderá a varias clínicas. Cada una tendrá su propio personal y sus propios datos, y **ninguna puede ver los datos de otra**.
 - **Cuándo se retoma:** cuando se decida. Cuantos más módulos existan, más tablas recibe `institution_id` en la migración (M8). Aun así, el paso es el mismo para todas: agregar la columna, asignar "Clínica demo" a lo existente y volverla obligatoria.
 
