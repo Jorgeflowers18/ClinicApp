@@ -194,13 +194,15 @@ Todos restringidos al rol `admin`. Query `from`/`to` en `YYYY-MM-DD`, **inclusiv
 
 ## `notifications`
 
-- [ ] `GET /notifications` (query: `page`, `pageSize`, `search` — nombre o identificación del paciente, requiere JOIN con `patients` —, `dateFrom`, `dateTo`) — reporte de notificaciones enviadas.
-- [ ] `GET /notifications?appointmentId=:id` — notificaciones asociadas a una cita puntual (usado para mostrar "cliente notificado" en el detalle de la cita).
-- [ ] `GET /notifications/template` — plantilla predeterminada de notificación (mensaje con variables sin reemplazar, ej. `[nombre del cliente]`, `[fecha de la cita]`, `[hora de la cita]`, `[profesional]`, `[nombre de la clínica]`; ver `notification.types.ts` para la lista completa de tokens).
-- [ ] `PUT /notifications/template` — actualiza el mensaje (body: `{ message: string }`).
-- [ ] **Disparo automático de notificaciones** — el backend debe generar un `NotificationLog` (tipo `confirmacion_cita`) al crear una cita y uno (tipo `cancelacion_cita`) al cancelarla, reemplazando las variables de la plantilla con los datos reales, **solo si** `patient.notificationsEnabled` es `true`. En el frontend esto hoy está simulado en el propio mock (`notificationsApi.logAppointmentEvent`); no expone ni debe exponer un endpoint propio — es un efecto secundario de `POST /appointments` y `PATCH /appointments/:id/status`, no una llamada aparte del frontend.
-- [ ] **Recordatorios (`recordatorio_cita`)** — requieren un scheduler/cron real (disparo por tiempo antes de la cita, no por una acción de usuario). No hay forma de simular esto desde el frontend; queda enteramente del lado del backend/infraestructura.
-- [ ] Definir el canal real de envío (hoy el modelo soporta `email`/`sms` pero no hay integración con ningún proveedor).
+Implementado en `back/src/ClinicApp.Api/Modules/Notifications/`. Detalle en [`docs/endpoints-api.md`](./docs/endpoints-api.md).
+
+- [x] `GET /notifications` (query: `page`, `pageSize`, `search` — nombre o cédula del paciente —, `dateFrom`, `dateTo`) — reporte paginado, solo `admin` y `recepcion`. Fechas inclusivas en hora de la clínica.
+- [x] `GET /notifications?appointmentId=:id` — notificaciones de una cita, sin paginar. **Abierto a los tres roles**, porque el detalle de la cita lo ven todos.
+- [x] `GET /notifications/template` y `PUT /notifications/template` (body: `{ message }`, 10 a 1000) — `admin` y `recepcion`. La migración crea la plantilla predeterminada del mock.
+- [x] **Disparo automático:** crear una cita guarda una `confirmacion_cita` pendiente y cancelarla, una `cancelacion_cita` (se descarta la confirmación si no salió). Es un efecto de `POST /appointments` y `PATCH /appointments/:id/status`, en la misma transacción (`IAppointmentEvents` → `AppointmentNotifications`), solo si `patient.notificationsEnabled`. El mensaje se arma con la plantilla y la hora de la clínica.
+- [x] **Recordatorios (`recordatorio_cita`):** `NotificationDispatcher` (tarea en segundo plano) crea uno por cita programada o confirmada que empieza en las próximas 24 h, y envía las pendientes cada 10 s con hasta 3 intentos.
+- [ ] **Canal y proveedor de envío:** por definir con la clínica (solo el 4 % de los pacientes tiene correo y el 92 % tiene celular: SMS o WhatsApp). Al elegirlo, implementar `INotificationSender` y su valor en `Notifications:Provider`. **Hasta entonces, en producción no se registran notificaciones.**
+- [ ] **Frontend:** el editor de la plantilla debería avisar que un SMS admite 160 caracteres.
 
 ## `finance`
 

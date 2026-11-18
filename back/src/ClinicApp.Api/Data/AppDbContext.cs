@@ -4,6 +4,7 @@ using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.ClinicalHistory;
 using ClinicApp.Api.Modules.Institution;
 using ClinicApp.Api.Modules.Inventory;
+using ClinicApp.Api.Modules.Notifications;
 using ClinicApp.Api.Modules.Patients;
 using ClinicApp.Api.Modules.Treatments;
 using Microsoft.EntityFrameworkCore;
@@ -55,6 +56,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // institution
     public DbSet<InstitutionProfile> Institutions => Set<InstitutionProfile>();
     public DbSet<InstitutionBranch> InstitutionBranches => Set<InstitutionBranch>();
+
+    // notifications
+    public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
+    public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

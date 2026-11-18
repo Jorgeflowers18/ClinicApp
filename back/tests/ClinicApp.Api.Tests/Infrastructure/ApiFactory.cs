@@ -40,7 +40,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
         builder.UseSetting("Attachments:RootPath", AttachmentsRoot);
         builder.UseSetting("Notifications:Provider", "log");
-        builder.UseSetting("Notifications:DispatchIntervalSeconds", "1");
+        // El envío automático no corre solo durante las pruebas: cada prueba llama a RunOnceAsync cuando lo necesita.
+        builder.UseSetting("Notifications:DispatchIntervalSeconds", "3600");
         builder.UseSetting("Logging:LogLevel:Default", "Warning");
     }
 

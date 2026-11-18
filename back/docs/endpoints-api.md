@@ -1,6 +1,6 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **67 endpoints implementados**:
+Estado al **2026-11-17**: **70 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 9 de `treatments` (catálogo y tratamientos realizados);
@@ -9,7 +9,8 @@ Estado al **2026-11-17**: **67 endpoints implementados**:
 - 7 de `professionals` y `rooms`;
 - 8 de `appointments` y `schedule-blocks`;
 - 7 de `clinical-history`;
-- 3 de `institution`.
+- 3 de `institution`;
+- 3 de `notifications`.
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
 
@@ -41,6 +42,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `appointments`, `schedule-blocks` | los tres |
 | `clinical-history` | `admin`, `medico` |
 | `institution` | perfil público: sin sesión; leer: los tres; guardar: `admin` |
+| `notifications` | `admin`, `recepcion`; las de una cita (`?appointmentId=`): los tres |
 
 ### Errores
 
@@ -156,6 +158,9 @@ La respuesta tiene esta forma:
 | `GET` | `/api/institution/public` | público | `200` |
 | `GET` | `/api/institution/profile` | los tres | `200` |
 | `PUT` | `/api/institution/profile` | admin | `200` |
+| `GET` | `/api/notifications` | admin, recepcion (con `?appointmentId=`: los tres) | `200` paginado o lista |
+| `GET` | `/api/notifications/template` | admin, recepcion | `200` |
+| `PUT` | `/api/notifications/template` | admin, recepcion | `200` |
 | `GET` | `/openapi/v1.json`, `/scalar` | público, **solo en desarrollo** | Descripción OpenAPI y página de pruebas |
 
 ## 3. Salud
@@ -726,6 +731,28 @@ Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/in
 
 El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los valores iniciales del frontend (nombre configurable con `Seed__InstitutionName`).
 
+## 12. `notifications`
+
+**Notificación (`NotificationLog`):** `{ id, patientId, appointmentId, type, channel, status, sentAt }`.
+- `type`: `confirmacion_cita`, `cancelacion_cita` o `recordatorio_cita`.
+- `channel`: `sms` o `email`.
+- `status`: `enviada` o `fallida`.
+
+| Endpoint | Roles | Detalle |
+|---|---|---|
+| `GET /api/notifications?appointmentId=` | los tres | `200` lista sin paginar de las notificaciones de una cita ("cliente notificado" en el detalle de la cita, que ven todos los roles) |
+| `GET /api/notifications?page&pageSize&search&dateFrom&dateTo` | admin, recepcion | `200` paginado, del envío más reciente al más antiguo. `search`: nombre o cédula del paciente, sin tildes. Fechas `YYYY-MM-DD` inclusivas, en hora de la clínica. `400` con una fecha inválida. |
+| `GET /api/notifications/template` | admin, recepcion | `200` `{ id, message, updatedAt }` |
+| `PUT /api/notifications/template` | admin, recepcion | Body `{ message }` (10 a 1000). `200`; `400`. |
+
+**Envío automático** (no hay endpoint para dispararlo):
+- **Al crear una cita** se guarda una `confirmacion_cita` pendiente, en la misma transacción de la cita. **Al cancelarla**, una `cancelacion_cita`, y se descarta la confirmación si todavía no salió.
+- **Recordatorio:** una tarea en segundo plano crea un `recordatorio_cita` para cada cita programada o confirmada que empieza dentro de 24 h (`Notifications:ReminderHoursBefore`). Uno solo por cita.
+- **Solo si** el paciente tiene `notificationsEnabled`. Canal: el celular si lo tiene; si no, el correo; sin ninguno, no se notifica.
+- **La misma tarea envía las pendientes** cada 10 s (`Notifications:DispatchIntervalSeconds`). La cita nunca espera al proveedor. Si el envío falla, se reintenta; al tercer intento queda `fallida`. Las pendientes no salen en la API.
+- **Mensaje:** la plantilla con sus variables reemplazadas (`[nombre del cliente]`, `[nombre de la clínica]`, `[fecha de la cita]` como "12 de septiembre", `[hora de la cita]` como "10:00 am", `[profesional]`). Se guarda ya armado.
+- **Proveedor (`Notifications:Provider`):** por elegir con la clínica. `log` (en desarrollo) solo escribe el mensaje en el log. **Vacío (producción, por ahora): no se registra ninguna notificación**, para no mostrar "cliente notificado" cuando nadie le envió nada.
+
 ## Estado de los módulos
 
 | Módulo | Responsable | Estado |
@@ -739,7 +766,8 @@ El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los v
 | `appointments`: profesionales y consultorios | Jorge Flores | ✅ Los 7 endpoints |
 | `appointments`: citas y bloqueos | Jorge Flores | ✅ Los 8 endpoints, con choques, candados y hora de la clínica |
 | `institution` | Jorge Flores | ✅ Los 3 endpoints (falta su `institution.api.ts` en el frontend) |
-| `notifications`, `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
+| `notifications` | Jorge Flores | ✅ Los 3 endpoints y el envío automático. ⏳ Falta elegir el proveedor de envío. |
+| `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
 
 **Para conectar el frontend** (`VITE_USE_MOCK_API=false`): falta la parte de sesión del frontend, detallada en `backlog.md` § `auth`.
 - `withCredentials: true` en `shared/lib/http.ts`.

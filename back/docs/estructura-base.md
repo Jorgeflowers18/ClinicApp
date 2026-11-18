@@ -1,6 +1,6 @@
 # Estructura base del backend — ClinicApp
 
-Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients`, `appointments` (profesionales, consultorios, citas y bloqueos), `clinical-history` e `institution`. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
+Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients`, `appointments` (profesionales, consultorios, citas y bloqueos), `clinical-history`, `institution` y `notifications`. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
 
 ## 1. Tecnología
 
@@ -50,7 +50,8 @@ back/
         ├── Patients/     ← pacientes (baja lógica, N.° de historia clínica)
         ├── Appointments/ ← profesionales, consultorios, citas y bloqueos de horario
         ├── ClinicalHistory/ ← historia, versiones, atenciones, notas y adjuntos
-        └── Institution/  ← perfil de la clínica y sus sedes
+        ├── Institution/  ← perfil de la clínica y sus sedes
+        └── Notifications/ ← plantilla, registro y envío automático de avisos de citas
 ```
 
 **Patrón de cada módulo:**
@@ -121,9 +122,11 @@ erDiagram
     clinical_encounters ||--o{ encounter_notes : "notas"
     patients ||--o{ clinical_attachments : "adjuntos"
     institutions ||--o{ institution_branches : "sedes"
+    patients ||--o{ notification_logs : "notificaciones"
+    appointments ||--o{ notification_logs : ""
 ```
 
-`access_requests` no tiene relaciones. `treatment_assignments.source_encounter_id` es un UUID **sin llave foránea** todavía (ver § 12).
+`access_requests` no tiene relaciones. `treatment_assignments.source_encounter_id` es un UUID **sin llave foránea** todavía (ver § 13).
 
 ## 5. Módulo `auth`
 
@@ -528,7 +531,37 @@ Si se aprueba la multi-clínica (`plan-multiclinica.md`, M1), esta misma tabla t
 | `name`, `address`, `phone`, `hours` | `varchar(120)`, `(250)`, `(30)`, `(500)` | | |
 | `is_main` | `boolean` | | Índice único parcial `WHERE is_main`: como máximo una principal |
 
-## 12. Migraciones aplicadas
+## 12. Módulo `notifications`
+
+### `notification_templates` (una fila)
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | Fijo. La migración inserta la plantilla predeterminada del mock. |
+| `message` | `varchar(1000)` | | 10 a 1000, con variables como `[nombre del cliente]` |
+| `updated_at` | `timestamptz` | | |
+| `updated_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+
+### `notification_logs`
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `patient_id` | `uuid` FK → `patients` (restrict) | | |
+| `appointment_id` | `uuid` FK → `appointments` (restrict) | sí | Único `(appointment_id, type)`: el mismo aviso no se repite para una cita |
+| `type` | `varchar(25)` | | `recordatorio_cita`, `confirmacion_cita`, `cancelacion_cita` (`CHECK`) |
+| `channel` | `varchar(10)` | | `email`, `sms`, `whatsapp` (`CHECK`) |
+| `status` | `varchar(10)` | | `pendiente` (interno), `enviada`, `fallida` (`CHECK`). Índice `(status, created_at)`. |
+| `recipient` | `varchar(254)` | | Teléfono o correo usado. No se expone. |
+| `message` | `varchar(1200)` | | Mensaje ya armado. No se expone. |
+| `error` | `varchar(500)` | sí | Motivo de la última falla |
+| `attempts` | `integer` | | Al tercer intento fallido, `fallida` |
+| `created_at` | `timestamptz` | | |
+| `sent_at` | `timestamptz` | sí | Índice (orden y filtro del reporte) |
+
+**Envío:** la notificación se guarda `pendiente` junto con la cita (patrón *outbox*) y la envía la tarea `NotificationDispatcher` a través de `INotificationSender`. El proveedor real todavía no está elegido.
+
+## 13. Migraciones aplicadas
 
 | Migración | Crea |
 |---|---|
@@ -541,6 +574,7 @@ Si se aprueba la multi-clínica (`plan-multiclinica.md`, M1), esta misma tabla t
 | `20261118024917_CrearTratamientosRealizados` | `treatment_assignments` y la FK `stock_movements.treatment_assignment_id` |
 | `20261118025957_CrearHistoriaClinica` | Las 5 tablas de la historia clínica (26 columnas `jsonb`) |
 | `20261118030811_CrearInstitucion` | `institutions` e `institution_branches` |
+| `20261118031243_CrearNotificaciones` | `notification_templates` (con la plantilla predeterminada) y `notification_logs` |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -551,11 +585,11 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 | `treatment_assignments.source_encounter_id` | `clinical_encounters` | `clinical-history` |
 
 **Módulos sin tablas todavía:**
-- `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
+- `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
 
 **Multi-clínica (propuesta en espera):** el sistema se venderá a varias clínicas. Cuando se apruebe, se agrega la tabla `institutions` y la columna `institution_id` en las tablas de datos, con un filtro automático para que cada clínica vea solo lo suyo. Detalle en [`plan-multiclinica.md`](./plan-multiclinica.md). Mientras tanto, los módulos se hacen para una sola clínica.
 
-## 13. Configuración
+## 14. Configuración
 
 `appsettings.json` solo tiene valores no secretos. Los secretos y lo propio de cada entorno van en variables de entorno, con `__` en lugar de `:` (`Auth:SigningKey` → `Auth__SigningKey`). Si `ASPNETCORE_ENVIRONMENT` no está definida, .NET asume `Production`.
 
@@ -574,5 +608,7 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 | `Attachments:RootPath` | `appsettings.json` (vacío = `App_Data/attachments`); en producción, `Attachments__RootPath=/var/lib/clinicapp/attachments` | Carpeta de los adjuntos. **Debe estar en los respaldos.** |
 | `Attachments:OrphanHours`, `Attachments:CleanupIntervalMinutes` | `appsettings.json` | 24 y 60: los adjuntos nunca guardados se borran a las 24 h; la tarea corre cada hora |
 | `Attachments:Retention:RemovedDays`, `Attachments:Retention:DryRun` | `appsettings.json` | Vacío y `true`: el protocolo de conservación está apagado. Ver `backlog.md` § `clinical-history`. |
+| `Notifications:Provider` | Desarrollo: `log`. Producción: vacío hasta elegir proveedor (`Notifications__Provider`). | `log` escribe el mensaje en el log; vacío no registra notificaciones. Un valor desconocido detiene el arranque. |
+| `Notifications:ReminderHoursBefore`, `Notifications:DispatchIntervalSeconds` | `appsettings.json` | 24 y 10 |
 
 Los logs de consola incluyen el `TraceId` de cada petición (formato `simple` con scopes), el mismo que devuelven las respuestas de error.

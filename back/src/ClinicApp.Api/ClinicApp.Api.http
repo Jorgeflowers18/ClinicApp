@@ -528,3 +528,24 @@ Content-Type: application/json
     { "id": "branch-1", "name": "Matriz", "address": "Quito", "phone": "", "hours": "", "isMain": true }
   ]
 }
+
+### ───────────── Notificaciones (admin o recepción) ─────────────
+
+### Reporte de notificaciones enviadas (búsqueda por nombre o cédula; fechas de la clínica, inclusivas)
+GET {{api}}/notifications?page=1&pageSize=10&dateFrom=2026-11-01&dateTo=2026-11-30
+Authorization: Bearer {{token}}
+
+### Notificaciones de una cita (los tres roles)
+GET {{api}}/notifications?appointmentId={{cita.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Plantilla del mensaje
+GET {{api}}/notifications/template
+Authorization: Bearer {{token}}
+
+### Guardar la plantilla (variables: [nombre del cliente], [nombre de la clínica], [fecha de la cita], [hora de la cita], [profesional])
+PUT {{api}}/notifications/template
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "message": "Hola [nombre del cliente], tu cita en [nombre de la clínica] es el [fecha de la cita] a las [hora de la cita] con [profesional]." }

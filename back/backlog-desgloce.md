@@ -20,7 +20,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ 4 | `treatments`: tratamientos realizados (`treatment-assignments`) | Hecho | 2 | `patients`, `treatments`, `inventory` |
 | ✅ 5 | `clinical-history` | Hecho (falta el registro transaccional de la atención) | 3 | `patients`, profesionales, citas, tratamientos realizados |
 | ✅ 6 | `institution` | Hecho (falta su `institution.api.ts` en el frontend) | 1 | Base |
-| **7** | `notifications` | Plan en revisión: [`docs/plan-notificaciones.md`](./docs/plan-notificaciones.md). Falta elegir el proveedor de envío. | 2 | Citas, `patients` |
+| ✅ 7 | `notifications` | Hecho (falta elegir el proveedor de envío) | 2 | Citas, `patients` |
 | **8** | `finance` | Plan en revisión: [`docs/plan-finanzas.md`](./docs/plan-finanzas.md). Pagos aprobados; cuotas, seguros y factura esperan el ítem 8. | 4 | Tratamientos realizados, `patients` |
 | **9** | `reports` | Plan en revisión: [`docs/plan-reportes.md`](./docs/plan-reportes.md) | 4 | Todos los anteriores |
 
@@ -242,7 +242,7 @@ Siguen por definir:
 
 **Por definir:** si el grupo maneja una o varias sedes (ítem 2 del backlog de producto); cómo se sube el logo.
 
-## 7. `notifications`
+## 7. `notifications` ✅
 
 - **Responsable:** Jorge Flores
 - **Fase:** 2
@@ -253,11 +253,11 @@ Siguen por definir:
 **Entidades:** registro de notificación, plantilla.
 
 **Endpoints:**
-- [ ] `GET /notifications` (paginado, con filtro `appointmentId`)
-- [ ] `GET /notifications/template`
-- [ ] `PUT /notifications/template`
-- [ ] Envío automático de confirmación y cancelación de cita
-- [ ] Recordatorios programados (requieren una tarea periódica en el servidor)
+- [x] `GET /notifications` (paginado, con filtro `appointmentId`)
+- [x] `GET /notifications/template`
+- [x] `PUT /notifications/template`
+- [x] Envío automático de confirmación y cancelación de cita (con el proveedor `log` mientras no se elija uno)
+- [x] Recordatorios programados (tarea en segundo plano)
 
 **Relación con otros módulos:** el mismo proveedor de correo sirve para la recuperación de contraseña de `auth`.
 

@@ -90,7 +90,7 @@ public class AvailabilityService(AppDbContext db)
 /// <summary>
 /// Lo que pasa después de crear o cancelar una cita. Se llama dentro de la misma transacción, antes de
 /// guardar, así lo que agregue (por ejemplo, la notificación pendiente) se guarda junto con la cita.
-/// El módulo de notificaciones lo implementa; hasta entonces no hace nada.
+/// Lo implementa el módulo de notificaciones (AppointmentNotifications).
 /// </summary>
 public interface IAppointmentEvents
 {
@@ -99,10 +99,3 @@ public interface IAppointmentEvents
     Task AppointmentCancelledAsync(Appointment appointment, CancellationToken cancellationToken);
 }
 
-/// <summary>Sin efecto (hasta que exista el módulo de notificaciones).</summary>
-public sealed class NoAppointmentEvents : IAppointmentEvents
-{
-    public Task AppointmentCreatedAsync(Appointment appointment, CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task AppointmentCancelledAsync(Appointment appointment, CancellationToken cancellationToken) => Task.CompletedTask;
-}

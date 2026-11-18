@@ -5,6 +5,7 @@ using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.ClinicalHistory;
 using ClinicApp.Api.Modules.Institution;
 using ClinicApp.Api.Modules.Inventory;
+using ClinicApp.Api.Modules.Notifications;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -100,9 +101,25 @@ builder.Services.AddSingleton<ClinicClock>();
 // Scoped = una por petición, igual que el AppDbContext que usa.
 builder.Services.AddScoped<StockService>();
 
-// Agenda: candados y choques de horario. IAppointmentEvents lo reemplaza el módulo de notificaciones.
+// Agenda: candados y choques de horario. Crear o cancelar una cita deja su notificación pendiente.
 builder.Services.AddScoped<AvailabilityService>();
-builder.Services.AddScoped<IAppointmentEvents, NoAppointmentEvents>();
+builder.Services.AddScoped<IAppointmentEvents, AppointmentNotifications>();
+
+// Notificaciones: el proveedor de envío (Notifications:Provider) está por elegir; "log" solo escribe en el log.
+// Sin proveedor no se registran notificaciones. La tarea en segundo plano envía las pendientes y los recordatorios.
+var notificationSettings = new NotificationSettings(builder.Configuration);
+builder.Services.AddSingleton(notificationSettings);
+switch (notificationSettings.Provider)
+{
+    case "" or "log":
+        builder.Services.AddSingleton<INotificationSender, LogNotificationSender>();
+        break;
+    default:
+        throw new InvalidOperationException($"Notifications:Provider \"{notificationSettings.Provider}\" no existe. Valores: \"log\" o vacío.");
+}
+builder.Services.AddScoped<NotificationComposer>();
+builder.Services.AddSingleton<NotificationDispatcher>();
+builder.Services.AddHostedService(services => services.GetRequiredService<NotificationDispatcher>());
 
 // Historia clínica: archivos en disco (Attachments:RootPath), nombres del catálogo para mostrar e imprimir,
 // y la tarea que borra los adjuntos nunca guardados (y el protocolo de conservación, apagado por defecto).

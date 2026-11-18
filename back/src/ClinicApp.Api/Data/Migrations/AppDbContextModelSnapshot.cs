@@ -1454,6 +1454,133 @@ namespace ClinicApp.Api.Data.Migrations
                     b.ToTable("suppliers", (string)null);
                 });
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.Notifications.NotificationLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AppointmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("appointment_id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("channel");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("error");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1200)
+                        .HasColumnType("character varying(1200)")
+                        .HasColumnName("message");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("recipient");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notification_logs");
+
+                    b.HasIndex("PatientId")
+                        .HasDatabaseName("ix_notification_logs_patient_id");
+
+                    b.HasIndex("SentAt")
+                        .HasDatabaseName("ix_notification_logs_sent_at");
+
+                    b.HasIndex("AppointmentId", "Type")
+                        .IsUnique()
+                        .HasDatabaseName("ix_notification_logs_appointment_id_type")
+                        .HasFilter("appointment_id IS NOT NULL");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_notification_logs_status_created_at");
+
+                    b.ToTable("notification_logs", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_notification_logs_channel", "channel IN ('email', 'sms', 'whatsapp')");
+
+                            t.HasCheckConstraint("ck_notification_logs_status", "status IN ('pendiente', 'enviada', 'fallida')");
+
+                            t.HasCheckConstraint("ck_notification_logs_type", "type IN ('recordatorio_cita', 'confirmacion_cita', 'cancelacion_cita')");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Notifications.NotificationTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("message");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notification_templates");
+
+                    b.HasIndex("UpdatedByUserId")
+                        .HasDatabaseName("ix_notification_templates_updated_by_user_id");
+
+                    b.ToTable("notification_templates", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-7000-8000-0000000000d1"),
+                            Message = "Hola [nombre del cliente], te escribimos desde [nombre de la clínica] para recordarte tu cita del [fecha de la cita] a las [hora de la cita] con [profesional]. Si necesitas reprogramar, contáctanos con anticipación. ¡Te esperamos!",
+                            UpdatedAt = new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Patients.Patient", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2191,6 +2318,31 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasForeignKey("TreatmentAssignmentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_stock_movements_treatment_assignments_treatment_assignment_");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Notifications.NotificationLog", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_notification_logs_appointments_appointment_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_notification_logs_patients_patient_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Notifications.NotificationTemplate", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_notification_templates_users_updated_by_user_id");
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Patients.Patient", b =>

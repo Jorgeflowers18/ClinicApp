@@ -26,6 +26,7 @@ Al arrancar en desarrollo con la tabla `users` vacía, la API crea las cuentas d
 | `Seed__AdminEmail`, `Seed__AdminPassword` | Administrador inicial (solo la primera vez; mínimo 12 caracteres) |
 | `Attachments__RootPath` | Carpeta de los adjuntos de la historia clínica, fuera de la carpeta de la app (por ejemplo `/var/lib/clinicapp/attachments`). **Debe estar en el respaldo diario**, junto con la base. |
 | `Clinic__TimeZone` | Zona horaria IANA de la clínica (por defecto `America/Guayaquil`) |
+| `Notifications__Provider` | Proveedor de envío de notificaciones. Vacío por ahora (no se registran notificaciones) hasta elegir el proveedor con la clínica. |
 
 El contrato completo que el frontend (`../front`) espera — endpoints, formato de error de validación (400), y notas de autenticación — está documentado en [`../documentacion/arquitectura-frontend.md`](../documentacion/arquitectura-frontend.md), sección "Endpoints que el backend .NET debe exponer".
 

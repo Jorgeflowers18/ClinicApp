@@ -53,6 +53,8 @@ Todos desde la carpeta `back/`.
 | `clinical-history` | `Unit/ClinicalHistoryRulesTests.cs` | Reglas de las secciones (niega antecedentes, detalle obligatorio, consentimiento, hallazgos, PA, intervalo, interconsulta, alertas, ids de lista), tipo de archivo por los primeros bytes y limpieza del nombre |
 | | `Integration/ClinicalHistoryTests.cs` | Roles, historia vacía, revisiones y versiones, guardados simultáneos, validación por campo, referencias inválidas, `references` y 409 al borrar un tratamiento del plan, atención idempotente, una cita por atención, validación de la atención, orden y notas con autor, lista con búsqueda sin tildes, los 4 formatos de adjunto, rechazos, vínculo y quitado, limpieza de huérfanos y protocolo de conservación (simulación y real) |
 | `institution` | `Integration/InstitutionTests.cs` | Perfil creado al arrancar, roles, sedes (reordenar, quitar, cambiar la principal), validación de RUC, correo, sitio web y logo (sin SVG), dos principales, endpoint público sin sesión y sin datos internos |
+| `notifications` | `Unit/NotificationRulesTests.cs` | Formato de hora (12 h) y fecha en español, reemplazo de todas las variables de la plantilla |
+| | `Integration/NotificationsTests.cs` | Confirmación pendiente al agendar y enviada después, paciente sin notificaciones, cancelación que descarta la confirmación, proveedor caído (3 intentos y `fallida`), un solo recordatorio, sin proveedor no se registra nada, reporte con búsqueda y fechas, roles y plantilla |
 
 ## Problemas comunes
 
@@ -61,3 +63,5 @@ Todos desde la carpeta `back/`.
 | `Failed to connect to 127.0.0.1:5433` | La base no está levantada: `docker compose up -d` |
 | `database "clinicapp_test" is being accessed by other users` | Quedó otra ejecución abierta. Ciérrala y vuelve a ejecutar. |
 | Error de compilación por un archivo en uso | La API está corriendo (`dotnet run`) y bloquea los archivos. Detenla antes de ejecutar las pruebas. |
+
+**Tareas en segundo plano:** en las pruebas, el envío automático de notificaciones no corre solo (`Notifications:DispatchIntervalSeconds` = 3600). Las pruebas llaman a `NotificationDispatcher.RunOnceAsync` y `AttachmentCleanupService.RunOnceAsync` cuando lo necesitan, para que el resultado no dependa del tiempo.
