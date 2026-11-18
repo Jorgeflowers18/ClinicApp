@@ -16,7 +16,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ | `inventory` | Hecho | 1 y 2 | Base |
 | ✅ 1 | `patients` | Hecho (falta importar los pacientes de la clínica) | 1 | Base |
 | ✅ 2 | `appointments`: profesionales y consultorios | Hecho (falta su pantalla en el frontend) | 1 | Base |
-| **3** | `appointments`: citas y bloqueos | Plan en revisión: [`docs/plan-citas.md`](./docs/plan-citas.md) | 2 | `patients`, profesionales y consultorios |
+| ✅ 3 | `appointments`: citas y bloqueos | Hecho (falta que el frontend envíe el rango del calendario) | 2 | `patients`, profesionales y consultorios |
 | **4** | `treatments`: tratamientos realizados (`treatment-assignments`) | Plan en revisión: [`docs/plan-tratamientos-realizados.md`](./docs/plan-tratamientos-realizados.md) | 2 | `patients`, `treatments`, `inventory` |
 | **5** | `clinical-history` | Plan aprobado, en espera de su turno: [`docs/plan-historia-clinica.md`](./docs/plan-historia-clinica.md) | 3 | `patients`, profesionales, citas, tratamientos realizados |
 | **6** | `institution` | Plan en revisión: [`docs/plan-institucion.md`](./docs/plan-institucion.md) | 1 | Base |
@@ -141,7 +141,7 @@ Siguen por definir:
 
 **Por definir:** si la clínica tiene una numeración propia de historias clínicas; cómo se ven y reactivan los pacientes dados de baja; la importación de los 820 pacientes actuales.
 
-## 2 y 3. `appointments`
+## 2 y 3. `appointments` ✅
 
 - **Responsable:** Jorge Flores
 - **Fase:** 1 (profesionales y consultorios, orden 2) y 2 (citas y bloqueos, orden 3)
@@ -154,14 +154,14 @@ Siguen por definir:
 **Endpoints:**
 - [x] `GET /professionals` (y `POST`/`PUT` para `admin`)
 - [x] `GET /rooms` (y `POST`/`PUT` para `admin`)
-- [ ] `GET /appointments` (con rango de fechas y filtro `patientId`)
-- [ ] `GET /appointments/:id`
-- [ ] `POST /appointments`
-- [ ] `PUT /appointments/:id`
-- [ ] `PATCH /appointments/:id/status`
-- [ ] `GET /schedule-blocks`
-- [ ] `POST /schedule-blocks`
-- [ ] `DELETE /schedule-blocks/:id`
+- [x] `GET /appointments` (con rango de fechas y filtro `patientId`)
+- [x] `GET /appointments/:id`
+- [x] `POST /appointments`
+- [x] `PUT /appointments/:id`
+- [x] `PATCH /appointments/:id/status`
+- [x] `GET /schedule-blocks`
+- [x] `POST /schedule-blocks`
+- [x] `DELETE /schedule-blocks/:id`
 
 **Relación con otros módulos:**
 - Registrar una atención vinculada a una cita la pasa a `completada` (historia clínica).

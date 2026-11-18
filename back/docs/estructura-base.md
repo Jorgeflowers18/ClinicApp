@@ -1,6 +1,6 @@
 # Estructura base del backend — ClinicApp
 
-Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients` y los catálogos de `appointments` (profesionales y consultorios). Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
+Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients` y `appointments` (profesionales, consultorios, citas y bloqueos). Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
 
 ## 1. Tecnología
 
@@ -47,7 +47,7 @@ back/
         ├── Treatments/   ← catálogo de tratamientos y sus insumos
         ├── Inventory/    ← insumos, lotes, movimientos, proveedores, órdenes, esterilización
         ├── Patients/     ← pacientes (baja lógica, N.° de historia clínica)
-        └── Appointments/ ← profesionales y consultorios
+        └── Appointments/ ← profesionales, consultorios, citas y bloqueos de horario
 ```
 
 **Patrón de cada módulo:**
@@ -101,6 +101,12 @@ erDiagram
     users ||--o{ patients : "registró"
     professionals ||--o| users : "usuario"
     professionals ||--o{ sterilization_cycles : "responsable"
+    patients ||--o{ appointments : "citas"
+    professionals ||--o{ appointments : ""
+    rooms ||--o{ appointments : ""
+    treatments ||--o{ appointments : ""
+    professionals ||--o{ schedule_blocks : "bloqueos"
+    rooms ||--o{ schedule_blocks : ""
 ```
 
 `access_requests` no tiene relaciones. `stock_movements.treatment_assignment_id` es un UUID **sin llave foránea** todavía (ver § 10).
@@ -325,7 +331,7 @@ Baja lógica: un paciente nunca se borra, porque tiene citas, tratamientos, hist
 
 ## 9. Módulo `appointments`
 
-Catálogos de la agenda. No se borran: se desactivan (`active = false`).
+Agenda: catálogos (que no se borran, se desactivan con `active = false`), citas y bloqueos de horario.
 
 ### `professionals`
 
@@ -349,6 +355,39 @@ El usuario vinculado está en `users.professional_id` (único).
 | `active` | `boolean` | | |
 | `created_at` | `timestamptz` | | |
 
+### `appointments`
+
+Las horas van en UTC; la API convierte desde y hacia la hora de la clínica.
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `patient_id` | `uuid` FK → `patients` (restrict) | | Índice `(patient_id, start)` |
+| `professional_id` | `uuid` FK → `professionals` (restrict) | | Índice `(professional_id, start)` |
+| `treatment_id` | `uuid` FK → `treatments` (restrict) | sí | |
+| `room_id` | `uuid` FK → `rooms` (restrict) | sí | Índice `(room_id, start)` |
+| `start`, `end` | `timestamptz` | | `CHECK (end > start)`. Índice `start`. |
+| `status` | `varchar(15)` | | `programada`, `confirmada`, `cancelada`, `completada`, `no_asistio` (`CHECK`) |
+| `notes` | `varchar(1000)` | sí | |
+| `created_at`, `updated_at` | `timestamptz` | `updated_at` sí | |
+| `created_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+| `status_changed_at` | `timestamptz` | sí | Último cambio de estado |
+| `status_changed_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+
+### `schedule_blocks`
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `professional_id` | `uuid` FK → `professionals` (restrict) | sí | |
+| `room_id` | `uuid` FK → `rooms` (restrict) | sí | `CHECK`: al menos uno de los dos |
+| `start`, `end` | `timestamptz` | | `CHECK (end > start)`. Índice `start`. |
+| `reason` | `varchar(300)` | | |
+| `created_at` | `timestamptz` | | |
+| `created_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+
+**Sin choques de horario:** lo garantiza la API (`AvailabilityService`), no la base, porque el choque puede ser con otra tabla (un bloqueo). Para que dos peticiones simultáneas no pasen las dos, toma un candado de PostgreSQL (`pg_advisory_xact_lock`) por profesional y por consultorio durante la transacción.
+
 ## 10. Migraciones aplicadas
 
 | Migración | Crea |
@@ -358,6 +397,7 @@ El usuario vinculado está en `users.professional_id` (único).
 | `20261115180228_CrearInventario` | Las 8 tablas de inventario y `treatment_consumptions` |
 | `20261118023006_CrearPacientes` | `patients`, la secuencia `patient_record_number_seq`, la extensión `unaccent` y la FK `stock_movements.patient_id` → `patients` |
 | `20261118023839_CrearProfesionalesYConsultorios` | `professionals`, `rooms` y las FK `users.professional_id` y `sterilization_cycles.responsible_professional_id`. Pasa los ciclos con responsables inexistentes a un profesional inactivo "Responsable no registrado". |
+| `20261118024431_CrearCitas` | `appointments` y `schedule_blocks` |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -368,7 +408,7 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 | `stock_movements.treatment_assignment_id` | `treatment_assignments` | `treatments` (Jorge) |
 
 **Módulos sin tablas todavía:**
-- Citas y bloqueos de `appointments`, `institution`, `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
+- `institution`, `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
 - Tratamientos realizados (`treatment_assignments`) y `clinical-history` (Jorge). El plan de la historia clínica está en [`plan-historia-clinica.md`](./plan-historia-clinica.md).
 
 **Multi-clínica (propuesta en espera):** el sistema se venderá a varias clínicas. Cuando se apruebe, se agrega la tabla `institutions` y la columna `institution_id` en las tablas de datos, con un filtro automático para que cada clínica vea solo lo suyo. Detalle en [`plan-multiclinica.md`](./plan-multiclinica.md). Mientras tanto, los módulos se hacen para una sola clínica.

@@ -39,6 +39,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // appointments
     public DbSet<Professional> Professionals => Set<Professional>();
     public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<ScheduleBlock> ScheduleBlocks => Set<ScheduleBlock>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

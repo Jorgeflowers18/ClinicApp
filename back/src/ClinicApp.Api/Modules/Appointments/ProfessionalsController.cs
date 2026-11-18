@@ -125,9 +125,16 @@ public class ProfessionalsController(AppDbContext db, ClinicClock clock) : Contr
             .Where(user => user.ProfessionalId != null)
             .ToDictionaryAsync(user => user.ProfessionalId!.Value, user => (Guid?)user.Id, cancellationToken);
 
-    /// <summary>Citas no canceladas que empiezan desde ahora. Se completa con el módulo de citas.</summary>
-    private static Task<int> CountFutureAppointmentsAsync(Guid professionalId, CancellationToken cancellationToken) =>
-        Task.FromResult(0);
+    /// <summary>Citas programadas o confirmadas que empiezan desde ahora.</summary>
+    private Task<int> CountFutureAppointmentsAsync(Guid professionalId, CancellationToken cancellationToken)
+    {
+        var now = clock.UtcNow;
+        return db.Appointments.CountAsync(appointment =>
+            appointment.ProfessionalId == professionalId
+            && appointment.Start >= now
+            && (appointment.Status == AppointmentStatuses.Programada || appointment.Status == AppointmentStatuses.Confirmada),
+            cancellationToken);
+    }
 
     private ObjectResult ProfessionalNotFound() =>
         Problem(statusCode: StatusCodes.Status404NotFound, title: "Profesional no encontrado");

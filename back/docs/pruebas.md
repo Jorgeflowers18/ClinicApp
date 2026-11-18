@@ -47,6 +47,8 @@ Todos desde la carpeta `back/`.
 | | `Integration/PatientsTests.cs` | Roles, validación de cada campo, cédula repetida (también con altas simultáneas), búsqueda sin tildes, orden y paginación, baja lógica y reactivación |
 | `inventory` | `Integration/SterilizationTests.cs` | "No futura" según el día de la clínica |
 | `appointments` (catálogos) | `Integration/ProfessionalsAndRoomsTests.cs` | Semilla de desarrollo y vínculo del médico, roles, desactivar, vincular usuarios sin repetir, nombre único de consultorio, responsable de esterilización existente y activo, FK que impide borrar un profesional con ciclos |
+| `appointments` (agenda) | `Unit/AppointmentRulesTests.cs` | Cambios de estado permitidos, citas editables, choque de rangos (citas pegadas), duración y lectura de ids opcionales |
+| | `Integration/AppointmentsTests.cs` | Hora de la clínica a UTC, roles, validaciones, paciente dado de baja y profesional inactivo, los 4 mensajes de choque, citas pegadas y canceladas, 10 agendados simultáneos (1 gana), edición, estados, listas por rango y paciente, bloqueos, 409 al borrar un tratamiento con citas y citas futuras del profesional |
 
 ## Problemas comunes
 

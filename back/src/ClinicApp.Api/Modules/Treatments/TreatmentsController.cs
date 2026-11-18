@@ -113,8 +113,15 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
         var treatment = await db.Treatments.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (treatment is null) return TreatmentNotFound();
 
-        // Pendiente: cuando existan los tratamientos realizados (asignaciones), responder 409
-        // si el tratamiento ya se usó, y sugerir desactivarlo en lugar de borrarlo.
+        // Un tratamiento que ya se usó no se borra: se perdería de dónde salieron las citas
+        // (y, más adelante, los tratamientos realizados). Se sugiere desactivarlo.
+        if (await IsInUseAsync(id, cancellationToken))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Este tratamiento ya se usó. Desactívalo en su lugar.");
+        }
+
         db.Treatments.Remove(treatment);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -168,6 +175,10 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
                 treatment.Consumption.Add(new TreatmentConsumption { TreatmentId = treatment.Id, ItemId = itemId, Quantity = quantity });
         }
     }
+
+    /// <summary>¿Aparece en alguna cita?</summary>
+    private Task<bool> IsInUseAsync(Guid treatmentId, CancellationToken cancellationToken) =>
+        db.Appointments.AnyAsync(appointment => appointment.TreatmentId == treatmentId, cancellationToken);
 
     /// <summary>404 en formato ProblemDetails: el frontend muestra el "title" como mensaje.</summary>
     private ObjectResult TreatmentNotFound() =>

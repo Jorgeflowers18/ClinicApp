@@ -1,12 +1,13 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **46 endpoints implementados**:
+Estado al **2026-11-17**: **54 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 6 de `treatments`;
 - 18 de `inventory`;
 - 6 de `patients`;
-- 7 de `professionals` y `rooms`.
+- 7 de `professionals` y `rooms`;
+- 8 de `appointments` y `schedule-blocks`.
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
 
@@ -35,6 +36,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `inventory`: todo lo demás | `admin`, `recepcion` |
 | `patients` | los tres; dar de baja: `admin` y `recepcion`; reactivar: `admin` |
 | `professionals`, `rooms` | leer: los tres; crear y editar: `admin` |
+| `appointments`, `schedule-blocks` | los tres |
 
 ### Errores
 
@@ -129,6 +131,14 @@ La respuesta tiene esta forma:
 | `GET` | `/api/rooms` | los tres | `200` lista |
 | `POST` | `/api/rooms` | admin | `201` |
 | `PUT` | `/api/rooms/:id` | admin | `200` |
+| `GET` | `/api/appointments` | los tres | `200` lista |
+| `GET` | `/api/appointments/:id` | los tres | `200` |
+| `POST` | `/api/appointments` | los tres | `201` |
+| `PUT` | `/api/appointments/:id` | los tres | `200` |
+| `PATCH` | `/api/appointments/:id/status` | los tres | `200` |
+| `GET` | `/api/schedule-blocks` | los tres | `200` lista |
+| `POST` | `/api/schedule-blocks` | los tres | `201` |
+| `DELETE` | `/api/schedule-blocks/:id` | los tres | `204` |
 | `GET` | `/openapi/v1.json`, `/scalar` | público, **solo en desarrollo** | Descripción OpenAPI y página de pruebas |
 
 ## 3. Salud
@@ -268,7 +278,7 @@ Si la cuenta existe y está activa:
 | `GET /api/treatments/:id` | `200`, o `404` "Tratamiento no encontrado" |
 | `POST /api/treatments` | `201` con el tratamiento y el encabezado `Location`; `400` |
 | `PUT /api/treatments/:id` | `200`; `400`, `404`. Los insumos se reemplazan por los del body. |
-| `DELETE /api/treatments/:id` | `204` (también borra sus insumos); `404`. **Pendiente:** responder `409` si el tratamiento ya se realizó, cuando existan las asignaciones. |
+| `DELETE /api/treatments/:id` | `204` (también borra sus insumos); `404`; `409` "Este tratamiento ya se usó. Desactívalo en su lugar." si aparece en una cita. |
 
 **Pendientes de `treatments`:**
 - `GET /treatments/:id/assignments`
@@ -556,6 +566,53 @@ Catálogos de la agenda. **No se borran:** se desactivan (`active: false`), porq
 
 **En desarrollo,** si las tablas están vacías, se crean los 3 profesionales y los 3 consultorios del modo mock, y `medico@clinica.com` queda vinculado a la Dra. Carla Ríos.
 
+## 9. `appointments` y `schedule-blocks`
+
+**Hora de la clínica:** el frontend envía `date` (`"YYYY-MM-DD"`) y `startTime`/`endTime` (`"HH:mm"`) tal como los escribe el usuario. La API los convierte a UTC con la zona de la clínica (`Clinic:TimeZone`) y devuelve `start`/`end` en ISO UTC. Ejemplo: 09:00 en Ecuador → `"…T14:00:00Z"`.
+
+**Cita (`Appointment`):**
+
+```json
+{
+  "id": "0199…", "patientId": "0199…", "professionalId": "0199…",
+  "treatmentId": null, "roomId": "0199…",
+  "start": "2026-12-01T14:00:00Z", "end": "2026-12-01T14:30:00Z",
+  "status": "programada", "notes": "Control", "createdAt": "2026-11-17T20:00:00Z"
+}
+```
+
+**Body de `POST` y `PUT`** (`appointmentSchema`): `{ patientId, professionalId, treatmentId?, roomId?, date, startTime, endTime, notes? }`.
+- `treatmentId` y `roomId` aceptan `""` o `null` cuando no se eligen.
+- El paciente debe existir y estar activo; el profesional, el consultorio y el tratamiento deben existir y estar activos. Al editar, solo se revisa lo que cambió.
+- La hora de fin debe ser posterior a la de inicio, con una duración de 5 minutos a 12 horas. Se permiten citas en el pasado, para registrar tarde.
+- `notes`: hasta 1000.
+
+**Choques (`409` con `errors.startTime`).** Se revisan en este orden, con los mensajes del mock:
+1. "El profesional ya tiene una cita agendada en ese horario"
+2. "El consultorio ya está ocupado en ese horario"
+3. "El profesional tiene un bloqueo de horario en ese rango"
+4. "El consultorio tiene un bloqueo de horario en ese rango"
+
+Cuenta como ocupado toda cita **no cancelada** y todo bloqueo. Dos citas pegadas (una termina a las 10:00 y otra empieza a las 10:00) no chocan. Si dos personas agendan a la vez el mismo horario, un candado de PostgreSQL por profesional y por consultorio hace que una reciba `201` y la otra `409`.
+
+| Endpoint | Detalle |
+|---|---|
+| `GET /api/appointments?from&to&patientId&professionalId` | `200` lista sin paginar, por inicio. `from`/`to` son fechas de la clínica, inclusivas (las dos o ninguna); **sin rango devuelve todas**. Con `patientId`, de la más reciente a la más antigua. `400` si `from > to`. |
+| `GET /api/appointments/:id` | `200`; `404` "Cita no encontrada" |
+| `POST /api/appointments` | `201` (`programada`); `400`; `409` choque |
+| `PUT /api/appointments/:id` | `200`; `400`; `404`; `409` choque (sin contar la propia cita) o "Solo se pueden editar citas programadas o confirmadas" |
+| `PATCH /api/appointments/:id/status` | Body `{ status }`. `200`; `400` estado desconocido; `404`; `409` cambio no permitido. Repetir el mismo estado responde `200` sin cambios. |
+
+**Cambios de estado permitidos** (los botones del detalle de la cita): `programada → confirmada`; `programada` o `confirmada` → `completada`, `no_asistio` o `cancelada`. `cancelada`, `completada` y `no_asistio` son finales.
+
+**Bloqueo (`ScheduleBlock`):** `{ id, professionalId, roomId, start, end, reason, createdAt }`. Body de `POST` (`scheduleBlockSchema`): `{ professionalId?, roomId?, date, startTime, endTime, reason (3-300) }`, con al menos un profesional o un consultorio (`errors.roomId`).
+
+| Endpoint | Detalle |
+|---|---|
+| `GET /api/schedule-blocks?from&to` | `200` lista por inicio. Con rango, los que se cruzan con esos días; sin rango, todos. |
+| `POST /api/schedule-blocks` | `201`; `400`; `409` si cae sobre una cita no cancelada ("El profesional tiene una cita agendada en ese horario" / "El consultorio tiene una cita agendada en ese horario"). Los bloqueos sí pueden superponerse entre sí. |
+| `DELETE /api/schedule-blocks/:id` | `204`; `404` "Bloqueo no encontrado" |
+
 ## Estado de los módulos
 
 | Módulo | Responsable | Estado |
@@ -567,7 +624,8 @@ Catálogos de la agenda. **No se borran:** se desactivan (`active: false`), porq
 | `clinical-history` | Jorge Flores | 📝 Plan en revisión: [`plan-historia-clinica.md`](./plan-historia-clinica.md) |
 | `patients` | Jorge Flores | ✅ Los 6 endpoints, con baja lógica y N.° de historia |
 | `appointments`: profesionales y consultorios | Jorge Flores | ✅ Los 7 endpoints |
-| `appointments`: citas y bloqueos, `institution`, `notifications`, `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
+| `appointments`: citas y bloqueos | Jorge Flores | ✅ Los 8 endpoints, con choques, candados y hora de la clínica |
+| `institution`, `notifications`, `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
 
 **Para conectar el frontend** (`VITE_USE_MOCK_API=false`): falta la parte de sesión del frontend, detallada en `backlog.md` § `auth`.
 - `withCredentials: true` en `shared/lib/http.ts`.

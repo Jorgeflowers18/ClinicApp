@@ -339,3 +339,56 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "name": "Consultorio 4" }
+
+### ───────────── Agenda ─────────────
+
+### Agendar una cita: fecha y horas en hora de la clínica (409 si choca con otra cita o un bloqueo)
+# @name cita
+POST {{api}}/appointments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "patientId": "{{paciente.response.body.id}}",
+  "professionalId": "{{profesional.response.body.id}}",
+  "treatmentId": "",
+  "roomId": "",
+  "date": "2026-12-01",
+  "startTime": "09:00",
+  "endTime": "09:30",
+  "notes": "Control"
+}
+
+### Citas de un rango (fechas de la clínica, inclusivas)
+GET {{api}}/appointments?from=2026-12-01&to=2026-12-31
+Authorization: Bearer {{token}}
+
+### Citas de un paciente (de la más reciente a la más antigua)
+GET {{api}}/appointments?patientId={{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Confirmar la cita
+PATCH {{api}}/appointments/{{cita.response.body.id}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "confirmada" }
+
+### Bloquear el horario de un profesional (409 si hay una cita en ese rango)
+# @name bloqueo
+POST {{api}}/schedule-blocks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "professionalId": "{{profesional.response.body.id}}",
+  "roomId": "",
+  "date": "2026-12-01",
+  "startTime": "13:00",
+  "endTime": "14:00",
+  "reason": "Almuerzo"
+}
+
+### Quitar el bloqueo
+DELETE {{api}}/schedule-blocks/{{bloqueo.response.body.id}}
+Authorization: Bearer {{token}}

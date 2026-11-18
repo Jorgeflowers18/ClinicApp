@@ -98,6 +98,10 @@ builder.Services.AddSingleton<ClinicClock>();
 // Scoped = una por petición, igual que el AppDbContext que usa.
 builder.Services.AddScoped<StockService>();
 
+// Agenda: candados y choques de horario. IAppointmentEvents lo reemplaza el módulo de notificaciones.
+builder.Services.AddScoped<AvailabilityService>();
+builder.Services.AddScoped<IAppointmentEvents, NoAppointmentEvents>();
+
 // En producción la API está detrás de nginx, que atiende el HTTPS y le pasa la petición por HTTP.
 // nginx avisa en encabezados cuál era el esquema original (https) y la IP del cliente.
 // Solo se confía en esos encabezados si vienen de la misma máquina (127.0.0.1), que es donde está nginx.

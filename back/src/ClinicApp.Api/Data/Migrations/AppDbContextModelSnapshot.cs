@@ -25,6 +25,100 @@ namespace ClinicApp.Api.Data.Migrations
 
             modelBuilder.HasSequence<int>("patient_record_number_seq");
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.Appointments.Appointment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime>("End")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<Guid>("ProfessionalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("professional_id");
+
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_id");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("StatusChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("status_changed_at");
+
+                    b.Property<Guid?>("StatusChangedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("status_changed_by_user_id");
+
+                    b.Property<Guid?>("TreatmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("treatment_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_appointments");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_appointments_created_by_user_id");
+
+                    b.HasIndex("Start")
+                        .HasDatabaseName("ix_appointments_start");
+
+                    b.HasIndex("StatusChangedByUserId")
+                        .HasDatabaseName("ix_appointments_status_changed_by_user_id");
+
+                    b.HasIndex("TreatmentId")
+                        .HasDatabaseName("ix_appointments_treatment_id");
+
+                    b.HasIndex("PatientId", "Start")
+                        .HasDatabaseName("ix_appointments_patient_id_start");
+
+                    b.HasIndex("ProfessionalId", "Start")
+                        .HasDatabaseName("ix_appointments_professional_id_start");
+
+                    b.HasIndex("RoomId", "Start")
+                        .HasDatabaseName("ix_appointments_room_id_start");
+
+                    b.ToTable("appointments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_appointments_range", "\"end\" > start");
+
+                            t.HasCheckConstraint("ck_appointments_status", "status IN ('programada', 'confirmada', 'cancelada', 'completada', 'no_asistio')");
+                        });
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Appointments.Professional", b =>
                 {
                     b.Property<Guid>("Id")
@@ -101,6 +195,66 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasFilter("active");
 
                     b.ToTable("rooms", (string)null);
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Appointments.ScheduleBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime>("End")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end");
+
+                    b.Property<Guid?>("ProfessionalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("professional_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_id");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start");
+
+                    b.HasKey("Id")
+                        .HasName("pk_schedule_blocks");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_schedule_blocks_created_by_user_id");
+
+                    b.HasIndex("ProfessionalId")
+                        .HasDatabaseName("ix_schedule_blocks_professional_id");
+
+                    b.HasIndex("RoomId")
+                        .HasDatabaseName("ix_schedule_blocks_room_id");
+
+                    b.HasIndex("Start")
+                        .HasDatabaseName("ix_schedule_blocks_start");
+
+                    b.ToTable("schedule_blocks", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_schedule_blocks_range", "\"end\" > start");
+
+                            t.HasCheckConstraint("ck_schedule_blocks_target", "professional_id IS NOT NULL OR room_id IS NOT NULL");
+                        });
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Auth.AccessRequest", b =>
@@ -991,6 +1145,68 @@ namespace ClinicApp.Api.Data.Migrations
                         {
                             t.HasCheckConstraint("ck_treatment_consumptions_quantity", "quantity >= 1");
                         });
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Appointments.Appointment", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_appointments_users_created_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_appointments_patients_patient_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Professional", null)
+                        .WithMany()
+                        .HasForeignKey("ProfessionalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_appointments_professionals_professional_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_appointments_rooms_room_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("StatusChangedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_appointments_users_status_changed_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Treatments.Treatment", null)
+                        .WithMany()
+                        .HasForeignKey("TreatmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_appointments_treatments_treatment_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Appointments.ScheduleBlock", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_schedule_blocks_users_created_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Professional", null)
+                        .WithMany()
+                        .HasForeignKey("ProfessionalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_schedule_blocks_professionals_professional_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_schedule_blocks_rooms_room_id");
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Auth.PasswordResetToken", b =>

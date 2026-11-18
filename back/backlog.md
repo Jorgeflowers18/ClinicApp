@@ -81,19 +81,23 @@ Implementado en `back/src/ClinicApp.Api/Modules/Patients/`. Roles: los tres ven,
 
 ## `appointments`
 
-- [ ] `GET /appointments` (idealmente con filtro de rango de fechas).
-- [ ] `GET /appointments?patientId=` — citas de un paciente, de la más reciente a la más antigua (pestaña "Citas" de la historia clínica y opciones de cita al registrar una atención). Hoy el mock filtra la lista completa.
-- [ ] `GET /appointments/:id`.
-- [ ] `POST /appointments` — debe validar disponibilidad de **profesional y consultorio** (rechazar con `409` si hay choque de horario con otra cita no cancelada o con un bloqueo de horario activo) y disparar automáticamente la notificación de confirmación (ver módulo `notifications`).
-- [ ] `PUT /appointments/:id` — misma validación de disponibilidad que `POST`, excluyendo la propia cita.
-- [ ] `PATCH /appointments/:id/status` — acepta `programada | confirmada | cancelada | completada | no_asistio`; al pasar a `cancelada` debe disparar automáticamente la notificación de cancelación (ver módulo `notifications`).
+Implementado en `back/src/ClinicApp.Api/Modules/Appointments/`. Roles: los tres (los catálogos se editan solo con `admin`). Detalle en [`docs/endpoints-api.md`](./docs/endpoints-api.md).
+
+- [x] `GET /appointments` — acepta `from`/`to` (fechas de la clínica, inclusivas), `patientId` y `professionalId`. Sin rango devuelve todas.
+- [x] `GET /appointments?patientId=` — de la más reciente a la más antigua.
+- [x] `GET /appointments/:id`.
+- [x] `POST /appointments` — el frontend envía `date` + `startTime` + `endTime` en hora de la clínica y la API los convierte a UTC. Valida disponibilidad de profesional y consultorio (`409` con `errors.startTime` y los 4 mensajes del mock), con un candado por profesional y consultorio para que dos agendados simultáneos no pasen los dos. Paciente activo; profesional, consultorio y tratamiento existentes y activos.
+- [x] `PUT /appointments/:id` — misma validación, excluyendo la propia cita. Solo citas `programada` o `confirmada` (`409` si no).
+- [x] `PATCH /appointments/:id/status` — cambios permitidos: `programada → confirmada`; `programada`/`confirmada` → `completada`, `no_asistio` o `cancelada` (`409` en los demás). Crear y cancelar llaman a `IAppointmentEvents`, que implementará `notifications`.
 - [x] `GET /professionals` — catálogo de profesionales (`id, name, specialty, registrationNumber`, más `active` y `userId`). Devuelve también los inactivos. `registrationNumber` es el registro profesional de la declaración de veracidad de la historia clínica. `POST`/`PUT /professionals` (solo `admin`) crean, editan, desactivan y vinculan el usuario; `PUT` devuelve `futureAppointments`.
 - [ ] **Frontend:** pantalla para administrar profesionales y consultorios, y mostrar solo los activos en los selectores (la API devuelve también los inactivos, con `active: false`).
 - [x] `GET /rooms` — catálogo de consultorios (`id, name`, más `active`). `POST`/`PUT /rooms` solo para `admin`; nombre único entre los activos. Si se definen varias sedes, los consultorios podrían vincularse a una.
-- [ ] `GET /schedule-blocks` — bloqueos de horario vigentes (`id, professionalId?, roomId?, start, end, reason, createdAt`; al menos uno de `professionalId`/`roomId` presente).
-- [ ] `POST /schedule-blocks` — debe validar que el rango no se solape con una cita ya agendada (no cancelada) para el mismo profesional o consultorio; los bloqueos sí pueden solaparse entre sí.
-- [ ] `DELETE /schedule-blocks/:id`.
-- [ ] Registrar una atención clínica vinculada a una cita la pasa a `completada` (hoy el frontend llama a `PATCH /appointments/:id/status` tras guardar la atención; ver `clinical-history`). Solo desde `programada` o `confirmada`: una cita `cancelada` o `no_asistio` no cambia.
+- [x] `GET /schedule-blocks` — con `from`/`to` opcionales.
+- [x] `POST /schedule-blocks` — `409` si se solapa con una cita no cancelada del mismo profesional o consultorio; los bloqueos sí pueden superponerse entre sí.
+- [x] `DELETE /schedule-blocks/:id`.
+- [x] `DELETE /treatments/:id` responde `409` si el tratamiento aparece en una cita.
+- [ ] Registrar una atención clínica vinculada a una cita la pasa a `completada` (lo hará la historia clínica, con la misma regla de estados).
+- [ ] **Frontend:** enviar `from`/`to` con el rango visible del calendario (hoy pide todas) y dejar de convertir la hora a UTC en el navegador: el mock lo hacía con la hora del equipo, que falla si el navegador está en otra zona.
 - [ ] Bloqueos son puntuales únicamente (sin recurrencia) — si el negocio pide recurrencia (ej. "todos los lunes de 13:00 a 14:00"), es un cambio de modelo, no solo de endpoint.
 
 ## `clinical-history`
@@ -132,7 +136,7 @@ Historia clínica odontológica única por paciente: un **registro editable** (`
 - [x] `PUT /treatments/:id`.
 - [x] `DELETE /treatments/:id`.
 - [x] **Insumos del tratamiento (`consumption`):** se guardan en `POST`/`PUT` (tabla `treatment_consumptions`) y se devuelven en todas las lecturas. `400` por línea (`errors["consumption[1].itemId"]`) si un insumo no existe o está repetido. Si el body no trae `consumption`, se toma como lista vacía.
-- [ ] **`DELETE /treatments/:id` de un tratamiento ya usado:** responder `409` si tiene tratamientos realizados (asignaciones) y sugerir desactivarlo.
+- [ ] **`DELETE /treatments/:id` de un tratamiento ya usado:** ya responde `409` si aparece en una cita; falta lo mismo cuando tenga tratamientos realizados (asignaciones).
 - [ ] `GET /treatments/:id/assignments`.
 - [ ] `GET /treatment-assignments?patientId=` — asignaciones de un paciente, de la más reciente a la más antigua. Lo usa la pestaña "Tratamientos" de la historia clínica para mostrar el progreso de las asignaciones antiguas con varias sesiones.
 - [ ] `POST /treatment-assignments` (body: `treatmentId`, `patientId`, `date`, `tooth`, `sourceEncounterId`, `sourceKey`, `price`) — registra un tratamiento **realizado** en una atención: crea la asignación ya `completado` con 1 de 1 sesión y descuenta stock de inventario por cada línea de `Treatment.consumption` (ver `inventory.registerConsumption`). **Idempotente por `sourceKey`** (atención + tratamiento de esa atención): si ya existe, devuelve la existente sin descontar de nuevo (el registro de la atención puede reintentarse). `404` si el tratamiento no existe y `400` si está inactivo. No valida deuda del paciente. Reemplaza a `POST /treatment-assignments/:id/advance-session`, que el frontend ya no usa (se quitó "+ Sesión").
