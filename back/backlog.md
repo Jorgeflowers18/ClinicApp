@@ -39,7 +39,8 @@ Implementado en `back/src/ClinicApp.Api/Modules/Auth/`. Sesión: el `accessToken
 - [x] `POST /auth/logout` — invalida el token de refresh y borra la cookie (`204`).
 - [x] `GET /auth/me` — usuario de la sesión (`AuthUser`). `401` si el usuario ya no existe o fue desactivado.
 - [x] Roles soportados: `admin`, `recepcion`, `medico` (restricción `ck_users_role` en la tabla `users`).
-- [ ] Vincular usuario y profesional: `user.professionalId` ya viaja en `/auth/login`, `/auth/refresh` y `/auth/me` (hoy siempre `null`). Falta la llave foránea y una forma de asignarlo cuando exista el catálogo de profesionales (`appointments`). La historia clínica lo usa como profesional por defecto de una atención nueva; hoy el frontend lo deduce comparando el nombre del usuario con `GET /professionals` (`clinical-history/hooks/use-default-professional.ts`).
+- [x] Vincular usuario y profesional: `users.professional_id` → `professionals` (único). Lo asigna el admin con `PUT /professionals/:id` (campo `userId`) y viaja en `/auth/login`, `/auth/refresh` y `/auth/me`. En desarrollo, `medico@clinica.com` queda vinculado a la Dra. Carla Ríos.
+- [ ] **Frontend:** usar `user.professionalId` como profesional por defecto de una atención nueva, en lugar de comparar nombres (`clinical-history/hooks/use-default-professional.ts`).
 
 **Endpoints sin función `*Real` en el frontend** (implementados en la API; falta agregar su función `*Real` en `auth.api.ts`, ver "Pendiente en el frontend" abajo):
 
@@ -86,8 +87,9 @@ Implementado en `back/src/ClinicApp.Api/Modules/Patients/`. Roles: los tres ven,
 - [ ] `POST /appointments` — debe validar disponibilidad de **profesional y consultorio** (rechazar con `409` si hay choque de horario con otra cita no cancelada o con un bloqueo de horario activo) y disparar automáticamente la notificación de confirmación (ver módulo `notifications`).
 - [ ] `PUT /appointments/:id` — misma validación de disponibilidad que `POST`, excluyendo la propia cita.
 - [ ] `PATCH /appointments/:id/status` — acepta `programada | confirmada | cancelada | completada | no_asistio`; al pasar a `cancelada` debe disparar automáticamente la notificación de cancelación (ver módulo `notifications`).
-- [ ] `GET /professionals` — catálogo de profesionales (`id, name, specialty, registrationNumber`). `registrationNumber` es el registro profesional que se muestra en la declaración de veracidad de la historia clínica (vacío si no se registró). Hoy no hay pantalla para administrarlo.
-- [ ] `GET /rooms` — catálogo de consultorios (`id, name`). Hoy es un catálogo plano en el frontend (sin alta/edición desde la UI); si el negocio necesita administrarlo, coordinar con el módulo institucional/sedes antes de exponer un CRUD completo aquí.
+- [x] `GET /professionals` — catálogo de profesionales (`id, name, specialty, registrationNumber`, más `active` y `userId`). Devuelve también los inactivos. `registrationNumber` es el registro profesional de la declaración de veracidad de la historia clínica. `POST`/`PUT /professionals` (solo `admin`) crean, editan, desactivan y vinculan el usuario; `PUT` devuelve `futureAppointments`.
+- [ ] **Frontend:** pantalla para administrar profesionales y consultorios, y mostrar solo los activos en los selectores (la API devuelve también los inactivos, con `active: false`).
+- [x] `GET /rooms` — catálogo de consultorios (`id, name`, más `active`). `POST`/`PUT /rooms` solo para `admin`; nombre único entre los activos. Si se definen varias sedes, los consultorios podrían vincularse a una.
 - [ ] `GET /schedule-blocks` — bloqueos de horario vigentes (`id, professionalId?, roomId?, start, end, reason, createdAt`; al menos uno de `professionalId`/`roomId` presente).
 - [ ] `POST /schedule-blocks` — debe validar que el rango no se solape con una cita ya agendada (no cancelada) para el mismo profesional o consultorio; los bloqueos sí pueden solaparse entre sí.
 - [ ] `DELETE /schedule-blocks/:id`.
@@ -160,7 +162,8 @@ Implementado en `back/src/ClinicApp.Api/Modules/Inventory/`. Roles: los tres pue
 - [x] `POST /inventory/purchase-orders/:id/cancel` — `409` si no está `pendiente`.
 - [x] `GET /inventory/sterilization-cycles` — por fecha, del más reciente al más antiguo.
 - [x] `POST /inventory/sterilization-cycles` — `itemIds` solo de insumos `instrumental` (`400` si alguno no existe o es consumible; los repetidos se unen). `performedAt` en `"YYYY-MM-DD"`, no futura según el día de la clínica (`ClinicClock`, `Clinic:TimeZone`).
-- [ ] **Llaves foráneas pendientes:** `sterilization_cycles.responsible_professional_id` → `professionals` (cuando exista `appointments`), y `stock_movements.treatment_assignment_id` → `treatment_assignments`. Hoy son UUID sin llave foránea: el responsable de un ciclo no se valida. (`stock_movements.patient_id` → `patients` ya está.)
+- [x] **Llaves foráneas:** `sterilization_cycles.responsible_professional_id` → `professionals` (se valida que exista y esté activo; la migración pasó los ciclos con responsables inexistentes a un profesional inactivo "Responsable no registrado") y `stock_movements.patient_id` → `patients`.
+- [ ] `stock_movements.treatment_assignment_id` → `treatment_assignments` (con los tratamientos realizados).
 - [ ] **Desactivar insumos:** un insumo con historia no se puede borrar (`409`) y el frontend no tiene opción de desactivarlo. Agregar `active` al insumo y al formulario si la clínica lo necesita.
 - [ ] **Más de 100 insumos:** "Stock crítico", el formulario de órdenes de compra, el de esterilización y los de tratamientos piden `GET /inventory/items?pageSize=100`, el máximo de la API. Con más insumos faltarían en esas pantallas: agregar un filtro (`?critical=true`, `?kind=instrumental`) o una lista sin paginar para los selectores.
 

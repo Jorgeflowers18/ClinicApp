@@ -1,4 +1,5 @@
 using ClinicApp.Api.Common;
+using ClinicApp.Api.Modules.Appointments;
 using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.Inventory;
 using ClinicApp.Api.Modules.Patients;
@@ -34,6 +35,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     // patients
     public DbSet<Patient> Patients => Set<Patient>();
+
+    // appointments
+    public DbSet<Professional> Professionals => Set<Professional>();
+    public DbSet<Room> Rooms => Set<Room>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

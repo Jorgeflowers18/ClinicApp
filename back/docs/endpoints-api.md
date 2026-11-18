@@ -1,11 +1,12 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **39 endpoints implementados**:
+Estado al **2026-11-17**: **46 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 6 de `treatments`;
 - 18 de `inventory`;
-- 6 de `patients`.
+- 6 de `patients`;
+- 7 de `professionals` y `rooms`.
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
 
@@ -33,6 +34,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `inventory`: leer insumos (`GET /inventory/items` y `GET /inventory/items/:id`) | los tres |
 | `inventory`: todo lo demás | `admin`, `recepcion` |
 | `patients` | los tres; dar de baja: `admin` y `recepcion`; reactivar: `admin` |
+| `professionals`, `rooms` | leer: los tres; crear y editar: `admin` |
 
 ### Errores
 
@@ -120,6 +122,13 @@ La respuesta tiene esta forma:
 | `PUT` | `/api/patients/:id` | los tres | `200` |
 | `DELETE` | `/api/patients/:id` | admin, recepcion | `204` (baja lógica) |
 | `POST` | `/api/patients/:id/restore` | admin | `200` |
+| `GET` | `/api/professionals` | los tres | `200` lista |
+| `GET` | `/api/professionals/:id` | los tres | `200` |
+| `POST` | `/api/professionals` | admin | `201` |
+| `PUT` | `/api/professionals/:id` | admin | `200` |
+| `GET` | `/api/rooms` | los tres | `200` lista |
+| `POST` | `/api/rooms` | admin | `201` |
+| `PUT` | `/api/rooms/:id` | admin | `200` |
 | `GET` | `/openapi/v1.json`, `/scalar` | público, **solo en desarrollo** | Descripción OpenAPI y página de pruebas |
 
 ## 3. Salud
@@ -138,7 +147,7 @@ Público. Responde `Healthy` (`200`) si la API llega a la base de datos, o `Unhe
   "name": "Ana Morales",
   "email": "admin@clinica.com",
   "role": "admin",
-  "professionalId": null,
+  "professionalId": "0199…",
   "profile": {
     "fullName": "Ana Morales",
     "title": "Directora clínica",
@@ -150,7 +159,7 @@ Público. Responde `Healthy` (`200`) si la API llega a la base de datos, o `Unhe
 }
 ```
 
-`profile` es `null` hasta que el usuario completa "Mi perfil". `professionalId` es siempre `null` por ahora: falta el catálogo de profesionales.
+`profile` es `null` hasta que el usuario completa "Mi perfil". `professionalId` es el profesional vinculado al usuario (lo asigna el admin con `PUT /api/professionals/:id`, campo `userId`), o `null`.
 
 ### `POST /api/auth/login` — público
 
@@ -454,13 +463,13 @@ Errores: `404` "Orden de compra no encontrada", y `409` "Solo se pueden recibir 
 - `itemIds`: de 1 a 200; los repetidos se unen.
 - `performedAt`: `"YYYY-MM-DD"`, obligatoria y no futura según el día de hoy en la zona horaria de la clínica (`Clinic:TimeZone`).
 - `result`: `aprobado` o `fallido`.
-- `responsibleProfessionalId`: obligatorio. Todavía no se verifica contra el catálogo de profesionales.
+- `responsibleProfessionalId`: obligatorio; debe ser un profesional existente y activo (`400` en `errors.responsibleProfessionalId`).
 - `notes`: hasta 1000.
 
 Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos seleccionados no existe", o "«nombre» no es instrumental esterilizable".
 
 **Pendientes de `inventory`:**
-- Llaves foráneas a profesionales y asignaciones (la de pacientes ya está).
+- Llave foránea a las asignaciones (las de pacientes y profesionales ya están).
 - Desactivar insumos en lugar de borrarlos.
 - Más de 100 insumos en los selectores y en "Stock crítico" (el frontend pide `pageSize: 100`).
 
@@ -521,6 +530,32 @@ Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos selecci
 | `POST /api/patients/:id/restore` | admin | `200` con el paciente reactivado; `404`; `409` si otro paciente activo ya usa su cédula |
 
 **Cédulas repetidas:** la base no exige cédula única, porque los datos de la clínica que se importarán tienen repetidas. La regla la aplica la API, con un candado por cédula para que dos altas simultáneas no pasen las dos.
+## 8. `professionals` y `rooms`
+
+Catálogos de la agenda. **No se borran:** se desactivan (`active: false`), porque tienen citas, atenciones y ciclos que deben seguir mostrando su nombre. Las listas devuelven también los inactivos; el frontend debe ofrecer solo los activos en los selectores.
+
+**Profesional (`Professional`):**
+
+```json
+{ "id": "0199…", "name": "Dra. Carla Ríos", "specialty": "Odontología general", "registrationNumber": "MSP-17-04581", "active": true, "userId": "0199…" }
+```
+
+- `userId`: el usuario de la app vinculado (o `null`). Es el `professionalId` que devuelve `/auth/me`.
+
+**Consultorio (`Room`):** `{ "id": "0199…", "name": "Consultorio 1", "active": true }`.
+
+| Endpoint | Roles | Detalle |
+|---|---|---|
+| `GET /api/professionals` | los tres | `200` lista completa, sin paginar, por nombre |
+| `GET /api/professionals/:id` | los tres | `200`; `404` "Profesional no encontrado" |
+| `POST /api/professionals` | admin | `201`. Body: `{ name (3-120), specialty (2-80), registrationNumber? (≤40), active? (true), userId? }` |
+| `PUT /api/professionals/:id` | admin | `200` con `futureAppointments`: cuántas citas no canceladas tiene desde ahora, para avisar al desactivarlo. `400` (`errors.userId` "El usuario no existe"); `404`; `409` "Ese usuario ya está vinculado a otro profesional". `userId: null` desvincula. |
+| `GET /api/rooms` | los tres | `200` lista completa, por nombre |
+| `POST /api/rooms` | admin | `201`. Body: `{ name (2-60), active? }`. `409` "Ya existe un consultorio activo con ese nombre" (`errors.name`, sin distinguir mayúsculas). |
+| `PUT /api/rooms/:id` | admin | `200`; `400`, `404`, `409` |
+
+**En desarrollo,** si las tablas están vacías, se crean los 3 profesionales y los 3 consultorios del modo mock, y `medico@clinica.com` queda vinculado a la Dra. Carla Ríos.
+
 ## Estado de los módulos
 
 | Módulo | Responsable | Estado |
@@ -531,7 +566,8 @@ Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos selecci
 | `inventory` | Jorge Flores | ✅ Los 18 endpoints |
 | `clinical-history` | Jorge Flores | 📝 Plan en revisión: [`plan-historia-clinica.md`](./plan-historia-clinica.md) |
 | `patients` | Jorge Flores | ✅ Los 6 endpoints, con baja lógica y N.° de historia |
-| `appointments`, `institution`, `notifications`, `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
+| `appointments`: profesionales y consultorios | Jorge Flores | ✅ Los 7 endpoints |
+| `appointments`: citas y bloqueos, `institution`, `notifications`, `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
 
 **Para conectar el frontend** (`VITE_USE_MOCK_API=false`): falta la parte de sesión del frontend, detallada en `backlog.md` § `auth`.
 - `withCredentials: true` en `shared/lib/http.ts`.

@@ -54,6 +54,19 @@ public class SterilizationCyclesController(AppDbContext db, ClinicClock clock) :
             ModelState.AddModelError("itemIds", $"«{item.Name}» no es instrumental esterilizable");
         }
 
+        var responsibleActive = await db.Professionals
+            .Where(professional => professional.Id == request.ResponsibleProfessionalId)
+            .Select(professional => (bool?)professional.Active)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (responsibleActive is null)
+        {
+            ModelState.AddModelError("responsibleProfessionalId", "El responsable no existe");
+        }
+        else if (responsibleActive == false)
+        {
+            ModelState.AddModelError("responsibleProfessionalId", "El responsable está inactivo");
+        }
+
         if (!ModelState.IsValid) return this.ValidationError(ModelState);
 
         var cycle = new SterilizationCycle

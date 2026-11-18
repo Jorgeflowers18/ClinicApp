@@ -3,7 +3,7 @@
 - **Responsable:** Jorge Flores
 - **Orden:** 3 de [`backlog-desgloce.md`](../backlog-desgloce.md)
 - **Estado:** en revisión. Ninguna decisión aprobada.
-- **Depende de:** `patients` y `ClinicClock` (ya implementados) y [`plan-profesionales-consultorios.md`](./plan-profesionales-consultorios.md).
+- **Depende de:** `patients` y `ClinicClock` (ya implementados) y los catálogos de profesionales y consultorios (ya implementados).
 - **Detalle de endpoints:** [`backlog.md` § `appointments`](../backlog.md#appointments)
 - **Contrato del frontend:** `front/src/modules/appointments/types/appointment.types.ts` (`appointmentSchema`, `Appointment`, `scheduleBlockSchema`, `ScheduleBlock`) y `api/appointments.api.ts` (`findAppointmentConflict` y `findScheduleBlockConflict` describen los choques).
 

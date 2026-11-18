@@ -1,3 +1,4 @@
+using ClinicApp.Api.Modules.Appointments;
 using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.Patients;
 using Microsoft.EntityFrameworkCore;
@@ -134,6 +135,7 @@ public class SterilizationCycleConfiguration : IEntityTypeConfiguration<Steriliz
         builder.Property(cycle => cycle.Notes).HasMaxLength(1000);
 
         builder.HasOne<User>().WithMany().HasForeignKey(cycle => cycle.CreatedByUserId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<Professional>().WithMany().HasForeignKey(cycle => cycle.ResponsibleProfessionalId).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(cycle => cycle.Items).WithOne().HasForeignKey(item => item.CycleId).OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(cycle => cycle.PerformedAt);

@@ -47,10 +47,14 @@ public static class TestData
         return (await client.PostJson("/api/patients", body, HttpStatusCode.Created))!;
     }
 
-    /// <summary>
-    /// Un profesional para usar en las pruebas. Hasta que exista el catálogo de profesionales, cualquier id sirve.
-    /// </summary>
-    public static Task<Guid> ProfessionalIdAsync(this HttpClient client) => Task.FromResult(Guid.NewGuid());
+    /// <summary>Crea un profesional activo (el cliente debe ser admin) y devuelve su id.</summary>
+    public static async Task<Guid> ProfessionalIdAsync(this HttpClient admin) =>
+        (await admin.PostJson("/api/professionals", new { name = $"Dr. Prueba {Next()}", specialty = "Odontología general", registrationNumber = "MSP-1" },
+            HttpStatusCode.Created)).Id();
+
+    /// <summary>Crea un consultorio activo (el cliente debe ser admin) y devuelve su id.</summary>
+    public static async Task<Guid> RoomIdAsync(this HttpClient admin) =>
+        (await admin.PostJson("/api/rooms", new { name = $"Consultorio {Next()}" }, HttpStatusCode.Created)).Id();
 
     /// <summary>Fecha "YYYY-MM-DD".</summary>
     public static string Iso(this DateOnly date) => date.ToString("yyyy-MM-dd");

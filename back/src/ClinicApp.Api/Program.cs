@@ -1,5 +1,6 @@
 using ClinicApp.Api.Common;
 using ClinicApp.Api.Data;
+using ClinicApp.Api.Modules.Appointments;
 using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.Inventory;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -140,6 +141,7 @@ app.MapHealthChecks("/api/health").AllowAnonymous();
 app.MapControllers();
 
 await app.SeedUsersAsync();
+await app.SeedCatalogsAsync();
 
 app.Run();
 

@@ -307,3 +307,35 @@ Authorization: Bearer {{token}}
 ### Reactivar (solo admin)
 POST {{api}}/patients/{{paciente.response.body.id}}/restore
 Authorization: Bearer {{token}}
+
+### ───────────── Profesionales y consultorios ─────────────
+
+### Listar profesionales (también los inactivos, con active: false)
+GET {{api}}/professionals
+Authorization: Bearer {{token}}
+
+### Crear un profesional (solo admin)
+# @name profesional
+POST {{api}}/professionals
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Dra. Lucía Andrade", "specialty": "Periodoncia", "registrationNumber": "MSP-17-05555" }
+
+### Editar, desactivar o vincular un usuario (userId: null desvincula). Devuelve futureAppointments.
+PUT {{api}}/professionals/{{profesional.response.body.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Dra. Lucía Andrade", "specialty": "Periodoncia", "registrationNumber": "MSP-17-05555", "active": true, "userId": null }
+
+### Listar consultorios
+GET {{api}}/rooms
+Authorization: Bearer {{token}}
+
+### Crear un consultorio (solo admin; nombre único entre los activos)
+POST {{api}}/rooms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Consultorio 4" }

@@ -1,6 +1,6 @@
 # Estructura base del backend — ClinicApp
 
-Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory` y `patients`. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
+Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients` y los catálogos de `appointments` (profesionales y consultorios). Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
 
 ## 1. Tecnología
 
@@ -46,7 +46,8 @@ back/
         ├── Auth/         ← usuarios, sesiones, recuperación de contraseña, solicitudes de acceso
         ├── Treatments/   ← catálogo de tratamientos y sus insumos
         ├── Inventory/    ← insumos, lotes, movimientos, proveedores, órdenes, esterilización
-        └── Patients/     ← pacientes (baja lógica, N.° de historia clínica)
+        ├── Patients/     ← pacientes (baja lógica, N.° de historia clínica)
+        └── Appointments/ ← profesionales y consultorios
 ```
 
 **Patrón de cada módulo:**
@@ -98,9 +99,11 @@ erDiagram
     users ||--o{ sterilization_cycles : "registró"
     patients ||--o{ stock_movements : "consumo"
     users ||--o{ patients : "registró"
+    professionals ||--o| users : "usuario"
+    professionals ||--o{ sterilization_cycles : "responsable"
 ```
 
-`access_requests` no tiene relaciones. `users.professional_id`, `sterilization_cycles.responsible_professional_id` y `stock_movements.treatment_assignment_id` son UUID **sin llave foránea** todavía (ver § 9).
+`access_requests` no tiene relaciones. `stock_movements.treatment_assignment_id` es un UUID **sin llave foránea** todavía (ver § 10).
 
 ## 5. Módulo `auth`
 
@@ -113,7 +116,7 @@ erDiagram
 | `name` | `varchar(120)` | | Nombre que se muestra |
 | `password_hash` | `varchar(200)` | | PBKDF2. Se vuelve a calcular al iniciar sesión si el algoritmo se actualiza. |
 | `role` | `varchar(20)` | | `admin`, `recepcion` o `medico` (`ck_users_role`) |
-| `professional_id` | `uuid` | sí | Profesional vinculado. Sin FK hasta que exista `professionals`. |
+| `professional_id` | `uuid` FK → `professionals` (set null) | sí | Profesional vinculado. Único cuando no es `null`: un profesional tiene como máximo un usuario. |
 | `active` | `boolean` | | Una cuenta desactivada no puede iniciar sesión (`403`) |
 | `profile` | `jsonb` | sí | "Mi perfil": `{ fullName, title, specialty, bio, avatarColor, avatarImage }`. `avatarImage` es una data URL de hasta ~300 KB. |
 | `created_at` | `timestamptz` | | |
@@ -272,7 +275,7 @@ Insumos que consume un tratamiento cada vez que se realiza.
 | `id` | `uuid` PK | | |
 | `performed_at` | `date` | | No futura. Índice. |
 | `result` | `varchar(20)` | | `aprobado` o `fallido` (`CHECK`) |
-| `responsible_professional_id` | `uuid` | | Sin FK hasta que exista `professionals` |
+| `responsible_professional_id` | `uuid` FK → `professionals` (restrict) | | Profesional existente y activo (lo valida la API) |
 | `notes` | `varchar(1000)` | sí | |
 | `created_by_user_id` | `uuid` FK → `users` (set null) | sí | |
 | `created_at` | `timestamptz` | | |
@@ -320,7 +323,33 @@ Baja lógica: un paciente nunca se borra, porque tiene citas, tratamientos, hist
 
 **Búsqueda sin tildes:** la extensión `unaccent` de PostgreSQL (`TextSearch.Unaccent` en el código) permite que "perez" encuentre "Pérez".
 
-## 9. Migraciones aplicadas
+## 9. Módulo `appointments`
+
+Catálogos de la agenda. No se borran: se desactivan (`active = false`).
+
+### `professionals`
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `name` | `varchar(120)` | | 3 a 120, con el título ("Dra. Carla Ríos"). Índice. |
+| `specialty` | `varchar(80)` | | 2 a 80 |
+| `registration_number` | `varchar(40)` | | Registro MSP / Senescyt; `""` si no se registró |
+| `active` | `boolean` | | |
+| `created_at` | `timestamptz` | | |
+
+El usuario vinculado está en `users.professional_id` (único).
+
+### `rooms`
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `name` | `varchar(60)` | | 2 a 60. Índice único entre los activos (`WHERE active`). |
+| `active` | `boolean` | | |
+| `created_at` | `timestamptz` | | |
+
+## 10. Migraciones aplicadas
 
 | Migración | Crea |
 |---|---|
@@ -328,6 +357,7 @@ Baja lógica: un paciente nunca se borra, porque tiene citas, tratamientos, hist
 | `20261115051345_CrearUsuariosYSesiones` | `users`, `refresh_tokens`, `password_reset_tokens`, `access_requests` |
 | `20261115180228_CrearInventario` | Las 8 tablas de inventario y `treatment_consumptions` |
 | `20261118023006_CrearPacientes` | `patients`, la secuencia `patient_record_number_seq`, la extensión `unaccent` y la FK `stock_movements.patient_id` → `patients` |
+| `20261118023839_CrearProfesionalesYConsultorios` | `professionals`, `rooms` y las FK `users.professional_id` y `sterilization_cycles.responsible_professional_id`. Pasa los ciclos con responsables inexistentes a un profesional inactivo "Responsable no registrado". |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -335,17 +365,15 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 
 | Columna | Tabla destino | Módulo |
 |---|---|---|
-| `users.professional_id` | `professionals` | `appointments` |
-| `sterilization_cycles.responsible_professional_id` | `professionals` | `appointments` |
 | `stock_movements.treatment_assignment_id` | `treatment_assignments` | `treatments` (Jorge) |
 
 **Módulos sin tablas todavía:**
-- `appointments`, `institution`, `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
+- Citas y bloqueos de `appointments`, `institution`, `notifications`, `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
 - Tratamientos realizados (`treatment_assignments`) y `clinical-history` (Jorge). El plan de la historia clínica está en [`plan-historia-clinica.md`](./plan-historia-clinica.md).
 
 **Multi-clínica (propuesta en espera):** el sistema se venderá a varias clínicas. Cuando se apruebe, se agrega la tabla `institutions` y la columna `institution_id` en las tablas de datos, con un filtro automático para que cada clínica vea solo lo suyo. Detalle en [`plan-multiclinica.md`](./plan-multiclinica.md). Mientras tanto, los módulos se hacen para una sola clínica.
 
-## 10. Configuración
+## 11. Configuración
 
 `appsettings.json` solo tiene valores no secretos. Los secretos y lo propio de cada entorno van en variables de entorno, con `__` en lugar de `:` (`Auth:SigningKey` → `Auth__SigningKey`). Si `ASPNETCORE_ENVIRONMENT` no está definida, .NET asume `Production`.
 

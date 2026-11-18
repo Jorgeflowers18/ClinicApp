@@ -15,7 +15,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ | `treatments`: catálogo con sus insumos | Hecho | 1 | Base, `inventory` |
 | ✅ | `inventory` | Hecho | 1 y 2 | Base |
 | ✅ 1 | `patients` | Hecho (falta importar los pacientes de la clínica) | 1 | Base |
-| **2** | `appointments`: profesionales y consultorios | Plan en revisión: [`docs/plan-profesionales-consultorios.md`](./docs/plan-profesionales-consultorios.md) | 1 | Base |
+| ✅ 2 | `appointments`: profesionales y consultorios | Hecho (falta su pantalla en el frontend) | 1 | Base |
 | **3** | `appointments`: citas y bloqueos | Plan en revisión: [`docs/plan-citas.md`](./docs/plan-citas.md) | 2 | `patients`, profesionales y consultorios |
 | **4** | `treatments`: tratamientos realizados (`treatment-assignments`) | Plan en revisión: [`docs/plan-tratamientos-realizados.md`](./docs/plan-tratamientos-realizados.md) | 2 | `patients`, `treatments`, `inventory` |
 | **5** | `clinical-history` | Plan aprobado, en espera de su turno: [`docs/plan-historia-clinica.md`](./docs/plan-historia-clinica.md) | 3 | `patients`, profesionales, citas, tratamientos realizados |
@@ -109,7 +109,8 @@ Siguen por definir:
 **Hecho además:** `StockService` (entradas y salidas FEFO con bloqueo de fila), listo para que `POST /treatment-assignments` descuente insumos sin fallar por falta de stock.
 
 **Pendiente:**
-- [ ] Llaves foráneas del responsable de esterilización a `professionals` (orden 2), de `patient_id` (orden 1) y de `treatment_assignment_id` (orden 4) de los movimientos.
+- [x] Llaves foráneas del responsable de esterilización a `professionals` y de `patient_id` de los movimientos.
+- [ ] Llave foránea de `treatment_assignment_id` de los movimientos (orden 4).
 - [ ] Desactivar insumos en lugar de borrarlos (requiere cambio en el frontend).
 - [ ] Selectores y "Stock crítico" con más de 100 insumos.
 
@@ -151,8 +152,8 @@ Siguen por definir:
 **Entidades:** cita, profesional, consultorio, bloqueo de horario.
 
 **Endpoints:**
-- [ ] `GET /professionals`
-- [ ] `GET /rooms`
+- [x] `GET /professionals` (y `POST`/`PUT` para `admin`)
+- [x] `GET /rooms` (y `POST`/`PUT` para `admin`)
 - [ ] `GET /appointments` (con rango de fechas y filtro `patientId`)
 - [ ] `GET /appointments/:id`
 - [ ] `POST /appointments`

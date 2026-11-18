@@ -46,6 +46,7 @@ Todos desde la carpeta `back/`.
 | `patients` | `Unit/PatientRulesTests.cs` | Formato y búsqueda del N.° de historia, fechas, limpieza de textos y escape de comodines |
 | | `Integration/PatientsTests.cs` | Roles, validación de cada campo, cédula repetida (también con altas simultáneas), búsqueda sin tildes, orden y paginación, baja lógica y reactivación |
 | `inventory` | `Integration/SterilizationTests.cs` | "No futura" según el día de la clínica |
+| `appointments` (catálogos) | `Integration/ProfessionalsAndRoomsTests.cs` | Semilla de desarrollo y vínculo del médico, roles, desactivar, vincular usuarios sin repetir, nombre único de consultorio, responsable de esterilización existente y activo, FK que impide borrar un profesional con ciclos |
 
 ## Problemas comunes
 

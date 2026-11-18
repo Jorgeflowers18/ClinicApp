@@ -1,3 +1,4 @@
+using ClinicApp.Api.Modules.Appointments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,6 +17,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Name).HasMaxLength(120);
         builder.Property(u => u.PasswordHash).HasMaxLength(200);
         builder.Property(u => u.Role).HasMaxLength(20);
+
+        // Profesional vinculado: un profesional tiene como máximo un usuario.
+        builder.HasOne<Professional>().WithMany().HasForeignKey(u => u.ProfessionalId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(u => u.ProfessionalId).IsUnique().HasFilter("professional_id IS NOT NULL");
 
         // El perfil va en una columna jsonb: se lee y se guarda siempre junto con el usuario.
         builder.OwnsOne(u => u.Profile, profile => profile.ToJson());

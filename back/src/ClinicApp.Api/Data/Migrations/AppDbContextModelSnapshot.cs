@@ -25,6 +25,84 @@ namespace ClinicApp.Api.Data.Migrations
 
             modelBuilder.HasSequence<int>("patient_record_number_seq");
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.Appointments.Professional", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("active");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("RegistrationNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("registration_number");
+
+                    b.Property<string>("Specialty")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("specialty");
+
+                    b.HasKey("Id")
+                        .HasName("pk_professionals");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_professionals_name");
+
+                    b.ToTable("professionals", (string)null);
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Appointments.Room", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("active");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rooms");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_rooms_name_active")
+                        .HasFilter("active");
+
+                    b.ToTable("rooms", (string)null);
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Auth.AccessRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -216,6 +294,11 @@ namespace ClinicApp.Api.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasDatabaseName("ix_users_email");
+
+                    b.HasIndex("ProfessionalId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_professional_id")
+                        .HasFilter("professional_id IS NOT NULL");
 
                     b.ToTable("users", null, t =>
                         {
@@ -437,6 +520,9 @@ namespace ClinicApp.Api.Data.Migrations
 
                     b.HasIndex("PerformedAt")
                         .HasDatabaseName("ix_sterilization_cycles_performed_at");
+
+                    b.HasIndex("ResponsibleProfessionalId")
+                        .HasDatabaseName("ix_sterilization_cycles_responsible_professional_id");
 
                     b.ToTable("sterilization_cycles", null, t =>
                         {
@@ -933,6 +1019,12 @@ namespace ClinicApp.Api.Data.Migrations
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Auth.User", b =>
                 {
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Professional", null)
+                        .WithMany()
+                        .HasForeignKey("ProfessionalId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_users_professionals_professional_id");
+
                     b.OwnsOne("ClinicApp.Api.Modules.Auth.UserProfile", "Profile", b1 =>
                         {
                             b1.Property<Guid>("UserId");
@@ -1010,6 +1102,13 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_sterilization_cycles_users_created_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Appointments.Professional", null)
+                        .WithMany()
+                        .HasForeignKey("ResponsibleProfessionalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sterilization_cycles_professionals_responsible_professional");
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Inventory.SterilizationCycleItem", b =>
