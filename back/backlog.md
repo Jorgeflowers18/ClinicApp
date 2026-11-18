@@ -135,7 +135,7 @@ Historia clínica odontológica única por paciente: un **registro editable** (`
 
 ## `inventory`
 
-Implementado en `back/src/ClinicApp.Api/Modules/Inventory/` (plan: [`docs/plan-inventario.md`](./docs/plan-inventario.md)). Roles: los tres pueden leer `GET /inventory/items` y `GET /inventory/items/:id` (los formularios de tratamientos, que usa el médico, cargan la lista); el resto es solo para `admin` y `recepcion`. Cada entrada y salida pasa por `StockService`, que bloquea la fila del insumo (`SELECT … FOR UPDATE`) dentro de una transacción y mantiene `stock = Σ lotes`: dos salidas simultáneas no pueden dejar el stock negativo. Movimientos, órdenes y ciclos guardan el usuario que los registró (`created_by_user_id`, no se expone).
+Implementado en `back/src/ClinicApp.Api/Modules/Inventory/`. Roles: los tres pueden leer `GET /inventory/items` y `GET /inventory/items/:id` (los formularios de tratamientos, que usa el médico, cargan la lista); el resto es solo para `admin` y `recepcion`. Cada entrada y salida pasa por `StockService`, que bloquea la fila del insumo (`SELECT … FOR UPDATE`) dentro de una transacción y mantiene `stock = Σ lotes`: dos salidas simultáneas no pueden dejar el stock negativo. Movimientos, órdenes y ciclos guardan el usuario que los registró (`created_by_user_id`, no se expone).
 
 - [x] `GET /inventory/items` — paginado, ordenado por nombre; `search` busca en nombre, categoría y proveedor.
 - [x] `GET /inventory/items/:id`.
@@ -190,8 +190,8 @@ Cartera y resúmenes financieros por tratamiento y por paciente. **El frontend n
 - [ ] `GET /finance/treatments/:treatmentId/summary?patientId=` — `FinancialSummary` de un tratamiento (opcionalmente de un paciente): valor total, pagado, saldo pendiente y vencido, cobertura del seguro, responsabilidad del paciente, próximo vencimiento, pagos, cuotas, seguro y factura. Lo usa el detalle del tratamiento.
 - [ ] `GET /finance/patients/:patientId/summary` — `PatientFinancialSummary` (tratamientos, total pagado, pendiente, vencido, próximo vencimiento, cantidad de pagos). Lo usa la ficha del paciente.
 - [ ] Calcular los montos con el costo cobrado de cada asignación (`price`; ver `treatments`), no con el precio del catálogo.
-- [ ] **Conflicto de rol:** `/finanzas` es solo para `admin` y `recepcion`, pero la ficha del paciente y el detalle del tratamiento (visibles para los tres roles) muestran los resúmenes financieros. Definir si el médico puede verlos o si el frontend debe ocultarlos para ese rol.
-- [ ] **Pagos, cuotas, seguros y facturación (ítem 8 del backlog de producto):** el modelo ya existe en el frontend (`FinancialPayment`, `Installment`, `InsuranceCoverage`, `Invoice` con clave de acceso, XML y RIDE, para la facturación electrónica del SRI), pero no hay pantallas para registrarlos; hoy son datos de ejemplo. No crear sus endpoints de escritura hasta diseñar el ítem 8 en el frontend.
+- [ ] **Rol del médico (decidido):** el médico **no** ve montos. Los resúmenes financieros responden `403` para `medico`, y el frontend debe ocultar esos bloques en la ficha del paciente y en el detalle del tratamiento para ese rol (cambio pendiente).
+- [ ] **Pagos (decidido, etapa A):** tabla `financial_payments` y endpoints para registrar y anular pagos de los pacientes (`POST /finance/payments`, `POST /finance/payments/:id/void`), para que la cartera descuente lo pagado. Ver `docs/plan-finanzas.md`. **Cuotas, seguros y facturación electrónica (SRI)** (ítem 8): el modelo existe en el frontend (`Installment`, `InsuranceCoverage`, `Invoice`), pero sus endpoints esperan el diseño del ítem 8. El cobro a las clínicas por usar ClinicApp es otra cosa y no se crea por ahora.
 
 ## `institution`
 

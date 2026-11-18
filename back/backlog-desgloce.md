@@ -1,29 +1,40 @@
 # Desglose del backend por módulo — ClinicApp
 
-Reparto del trabajo de la API .NET entre **Jorge Flores** y **Josue Cevallos**, por módulo y en orden de implementación. El detalle de cada endpoint (contrato, validaciones y casos de error) está en [`backlog.md`](./backlog.md); este archivo dice **quién** hace cada módulo, **en qué orden** y **qué tiene que coordinarse** entre ambos.
+Trabajo de la API .NET por módulo y en orden de implementación. El detalle de cada endpoint (contrato, validaciones y casos de error) está en [`backlog.md`](./backlog.md). Este archivo dice **en qué orden** se hace cada módulo y **de qué depende**.
 
-El frontend ya está aprobado por la clienta. Cada módulo se da por terminado cuando su pantalla funciona con `VITE_USE_MOCK_API=false` contra la API real.
+- **Responsable de todo el backend:** **Jorge Flores**. Desde el 2026-11-16 también le corresponden los módulos que antes estaban asignados a Josue Cevallos (`patients`, `appointments`, `institution`, `notifications`, `finance` y `reports`).
+- **Criterio de terminado:** el frontend ya está aprobado por la clienta. Cada módulo se da por terminado cuando su pantalla funciona con `VITE_USE_MOCK_API=false` contra la API real.
 
 ---
 
 ## Resumen
 
-| # | Módulo | Responsable | Fase | Depende de |
+| Orden | Módulo | Estado | Fase | Depende de |
 |---|---|---|---|---|
-| 1 | Base del proyecto y `auth` | Jorge Flores | 0 | — |
-| 2 | `patients` | Josue Cevallos | 1 | Base |
-| 3 | `appointments` (citas, profesionales, consultorios, bloqueos) | Josue Cevallos | 1 y 2 | Base, `patients` |
-| 4 | `institution` | Josue Cevallos | 1 | Base |
-| 5 | `treatments` (catálogo y tratamientos realizados) | Jorge Flores | 1 y 2 | Base, `patients`, `inventory` |
-| 6 | `inventory` | Jorge Flores | 1 y 2 | Base, `appointments` (profesionales) |
-| 7 | `notifications` | Josue Cevallos | 2 | `appointments`, `patients` |
-| 8 | `clinical-history` | Jorge Flores | 3 | `patients`, `appointments`, `treatments` |
-| 9 | `finance` | Josue Cevallos | 4 | `treatments`, `patients` |
-| 10 | `reports` | Josue Cevallos | 4 | Todos los anteriores |
+| ✅ | Base del proyecto y `auth` | Hecho (falta conectar el frontend y desplegar) | 0 | — |
+| ✅ | `treatments`: catálogo con sus insumos | Hecho | 1 | Base, `inventory` |
+| ✅ | `inventory` | Hecho | 1 y 2 | Base |
+| **1** | `patients` | Plan en revisión: [`docs/plan-pacientes.md`](./docs/plan-pacientes.md) | 1 | Base |
+| **2** | `appointments`: profesionales y consultorios | Plan en revisión: [`docs/plan-profesionales-consultorios.md`](./docs/plan-profesionales-consultorios.md) | 1 | Base |
+| **3** | `appointments`: citas y bloqueos | Plan en revisión: [`docs/plan-citas.md`](./docs/plan-citas.md) | 2 | `patients`, profesionales y consultorios |
+| **4** | `treatments`: tratamientos realizados (`treatment-assignments`) | Plan en revisión: [`docs/plan-tratamientos-realizados.md`](./docs/plan-tratamientos-realizados.md) | 2 | `patients`, `treatments`, `inventory` |
+| **5** | `clinical-history` | Plan aprobado, en espera de su turno: [`docs/plan-historia-clinica.md`](./docs/plan-historia-clinica.md) | 3 | `patients`, profesionales, citas, tratamientos realizados |
+| **6** | `institution` | Plan en revisión: [`docs/plan-institucion.md`](./docs/plan-institucion.md) | 1 | Base |
+| **7** | `notifications` | Plan en revisión: [`docs/plan-notificaciones.md`](./docs/plan-notificaciones.md). Falta elegir el proveedor de envío. | 2 | Citas, `patients` |
+| **8** | `finance` | Plan en revisión: [`docs/plan-finanzas.md`](./docs/plan-finanzas.md). Pagos aprobados; cuotas, seguros y factura esperan el ítem 8. | 4 | Tratamientos realizados, `patients` |
+| **9** | `reports` | Plan en revisión: [`docs/plan-reportes.md`](./docs/plan-reportes.md) | 4 | Todos los anteriores |
 
-**Criterio del reparto:**
-- **Josue Cevallos** ya es responsable en el backlog de producto de pacientes (ítem 4), perfil de la institución (ítem 2) y cobranza (ítem 8). Toma además citas y notificaciones, que dependen una de la otra, y reportes, que agregan datos de todos los módulos.
-- **Jorge Flores** hizo el frontend de la historia clínica. Toma la base del proyecto y la historia clínica, junto con tratamientos e inventario, que están unidos: registrar un tratamiento realizado en una atención descuenta insumos del inventario.
+**Por qué este orden:**
+- **`patients` primero.** Casi todo apunta al paciente: citas, tratamientos realizados, historia clínica, finanzas y los movimientos de inventario. Sin esta tabla, esos módulos guardan un `patient_id` sin llave foránea que después hay que migrar.
+- **Profesionales y consultorios después.** Son catálogos pequeños, y de ellos dependen las citas, la historia clínica (profesional de la atención y registro profesional), los ciclos de esterilización y el `professionalId` del usuario.
+- **Citas y tratamientos realizados antes de la historia clínica.** Así la historia clínica se hace una sola vez y completa:
+  - con llaves foráneas reales (D1 del plan);
+  - con el registro de la atención en una sola transacción (D2): tratamientos realizados, atención y cita completada.
+- **`institution` en cualquier momento.** No depende de nada ni nadie depende de él, salvo el logo de la pantalla de inicio de sesión.
+- **`notifications`** espera la decisión del proveedor de correo o SMS.
+- **`finance` y `reports` al final,** porque calculan sobre los datos de los demás módulos.
+
+**Multi-clínica:** es una propuesta en espera, [`docs/plan-multiclinica.md`](./docs/plan-multiclinica.md). Mientras no se apruebe, los módulos se hacen para una sola clínica.
 
 ## Fases
 
@@ -34,8 +45,6 @@ El frontend ya está aprobado por la clienta. Cada módulo se da por terminado c
 | **2. Operación** | Citas y bloqueos, notificaciones, tratamientos realizados, movimientos, lotes, órdenes de compra y esterilización | La agenda y el inventario funcionan con la API. |
 | **3. Historia clínica** | Historia editable, atenciones, notas, adjuntos y exámenes solicitados | La historia clínica funciona con la API. |
 | **4. Finanzas y reportes** | Cartera, resúmenes financieros y reportes | El Inicio, Finanzas y Reportes funcionan con la API. |
-
-Las fases 1 y 2 pueden avanzar en paralelo entre ambos responsables en cuanto la fase 0 esté lista.
 
 ## Decisiones técnicas
 
@@ -52,7 +61,7 @@ Siguen por definir:
 
 ---
 
-## 1. Base del proyecto y `auth`
+## Base del proyecto y `auth` ✅
 
 - **Responsable:** Jorge Flores
 - **Fase:** 0
@@ -75,21 +84,38 @@ Siguen por definir:
 - [x] `POST /auth/password-recovery` y `POST /auth/password-reset` (falta el proveedor de correo)
 - [x] `POST /auth/access-requests`
 
-**Hecho además:** proyecto, base de datos y migraciones, CORS, errores `400` y `ProblemDetails`, paginación, usuarios iniciales por semilla, límite de intentos por IP, autorización por rol (aplicada en `treatments`), chequeo de salud y configuración de producción por variables de entorno.
+**Hecho además:** proyecto, base de datos y migraciones, CORS, errores `400` y `ProblemDetails`, paginación, usuarios iniciales por semilla, límite de intentos por IP, autorización por rol, chequeo de salud y configuración de producción por variables de entorno.
 
 **Pendiente:**
 - [ ] Conectar el frontend (`withCredentials`, restaurar la sesión al cargar, renovar ante un `401`, funciones `*Real`, pantalla `/restablecer-contrasena`): lista en [`backlog.md` § `auth`](./backlog.md#auth).
-- [ ] `professionalId`: llave foránea cuando exista el catálogo de profesionales.
-- [ ] Proveedor de correo para la recuperación de contraseña.
+- [ ] `professionalId`: llave foránea cuando exista el catálogo de profesionales (orden 2).
+- [ ] Proveedor de correo para la recuperación de contraseña (el mismo de `notifications`).
 - [ ] Despliegue en el Droplet (nginx, servicio `systemd`, migraciones y respaldos): `tutorial/fase-0.md` § 5.9.
-
-**Coordinar con Josue Cevallos:** el `professionalId` del usuario apunta al catálogo de profesionales de `appointments`.
 
 **Por definir:** pantalla de gestión de usuarios; quién revisa las solicitudes de acceso.
 
-## 2. `patients`
+## `inventory` ✅
 
-- **Responsable:** Josue Cevallos
+- **Responsable:** Jorge Flores
+- **Fase:** 1 (insumos y proveedores) y 2 (movimientos, lotes, órdenes y esterilización)
+- **Detalle:** [`backlog.md` § `inventory`](./backlog.md#inventory)
+
+**Alcance:** insumos consumibles e instrumental, stock por lotes con salida FEFO (primero en vencer, primero en salir), movimientos manuales, proveedores, órdenes de compra y ciclos de esterilización. El consumo automático de un tratamiento realizado nunca falla por falta de stock.
+
+**Entidades:** insumo, movimiento de stock, lote, proveedor, orden de compra (con líneas), ciclo de esterilización.
+
+**Endpoints:** los 18 de [`backlog.md` § `inventory`](./backlog.md#inventory) están hechos (insumos, movimientos, lotes, proveedores, órdenes de compra y ciclos de esterilización).
+
+**Hecho además:** `StockService` (entradas y salidas FEFO con bloqueo de fila), listo para que `POST /treatment-assignments` descuente insumos sin fallar por falta de stock.
+
+**Pendiente:**
+- [ ] Llaves foráneas del responsable de esterilización a `professionals` (orden 2), de `patient_id` (orden 1) y de `treatment_assignment_id` (orden 4) de los movimientos.
+- [ ] Desactivar insumos en lugar de borrarlos (requiere cambio en el frontend).
+- [ ] Selectores y "Stock crítico" con más de 100 insumos.
+
+## 1. `patients`
+
+- **Responsable:** Jorge Flores
 - **Fase:** 1
 - **Detalle:** [`backlog.md` § `patients`](./backlog.md#patients)
 
@@ -104,14 +130,17 @@ Siguen por definir:
 - [ ] `PUT /patients/:id`
 - [ ] `DELETE /patients/:id` (baja lógica)
 
-**Coordinar con Jorge Flores:** la historia clínica edita los mismos datos del paciente (pestaña "Datos del paciente") y muestra el número de historia clínica. Los antiguos `medicalHistory` y `allergies` pasan a la historia clínica.
+**Relación con otros módulos:**
+- La historia clínica edita los mismos datos del paciente (pestaña "Datos del paciente") y muestra el número de historia clínica.
+- Los antiguos `medicalHistory` y `allergies` pasan a la historia clínica.
+- Al crearlo se agrega la llave foránea de `stock_movements.patient_id`.
 
-**Por definir:** si la clínica tiene una numeración propia de historias clínicas; cómo se ven y reactivan los pacientes dados de baja.
+**Por definir:** si la clínica tiene una numeración propia de historias clínicas; cómo se ven y reactivan los pacientes dados de baja; la importación de los 820 pacientes actuales.
 
-## 3. `appointments`
+## 2 y 3. `appointments`
 
-- **Responsable:** Josue Cevallos
-- **Fase:** 1 (profesionales y consultorios) y 2 (citas y bloqueos)
+- **Responsable:** Jorge Flores
+- **Fase:** 1 (profesionales y consultorios, orden 2) y 2 (citas y bloqueos, orden 3)
 - **Detalle:** [`backlog.md` § `appointments`](./backlog.md#appointments)
 
 **Alcance:** agenda con validación de disponibilidad de profesional y consultorio (`409` ante choques), estados de la cita, bloqueos de horario puntuales, y catálogos de profesionales (con registro profesional) y consultorios.
@@ -119,43 +148,28 @@ Siguen por definir:
 **Entidades:** cita, profesional, consultorio, bloqueo de horario.
 
 **Endpoints:**
+- [ ] `GET /professionals`
+- [ ] `GET /rooms`
 - [ ] `GET /appointments` (con rango de fechas y filtro `patientId`)
 - [ ] `GET /appointments/:id`
 - [ ] `POST /appointments`
 - [ ] `PUT /appointments/:id`
 - [ ] `PATCH /appointments/:id/status`
-- [ ] `GET /professionals`
-- [ ] `GET /rooms`
 - [ ] `GET /schedule-blocks`
 - [ ] `POST /schedule-blocks`
 - [ ] `DELETE /schedule-blocks/:id`
 
-**Coordinar con Jorge Flores:**
-- Registrar una atención vinculada a una cita la pasa a `completada`.
-- El catálogo de profesionales lo usan la historia clínica (registro profesional en la declaración de veracidad) y los ciclos de esterilización de inventario.
+**Relación con otros módulos:**
+- Registrar una atención vinculada a una cita la pasa a `completada` (historia clínica).
+- El catálogo de profesionales lo usan la historia clínica (registro profesional en la declaración de veracidad), los ciclos de esterilización y el `professionalId` del usuario: al crearlo se agregan esas llaves foráneas.
+- Crear o cancelar una cita dispara la notificación (`notifications`).
 
 **Por definir:** pantalla para administrar profesionales y su registro profesional; relación con las sedes si son varias.
 
-## 4. `institution`
-
-- **Responsable:** Josue Cevallos
-- **Fase:** 1
-- **Detalle:** [`backlog.md` § `institution`](./backlog.md#institution)
-
-**Alcance:** perfil de la clínica con sus sedes. Es un módulo nuevo en el backend: el frontend hoy lo guarda en el navegador y hay que agregarle su archivo `institution.api.ts`.
-
-**Entidades:** perfil de la institución, sede.
-
-**Endpoints:**
-- [ ] `GET /institution/profile` (público o con variante pública para el logo del inicio de sesión) (propuesta)
-- [ ] `PUT /institution/profile` (solo `admin`) (propuesta)
-
-**Por definir:** si el grupo maneja una o varias sedes (ítem 2 del backlog de producto); cómo se sube el logo.
-
-## 5. `treatments`
+## 4. `treatments`: tratamientos realizados
 
 - **Responsable:** Jorge Flores
-- **Fase:** 1 (catálogo) y 2 (tratamientos realizados)
+- **Fase:** 1 (catálogo, ✅) y 2 (tratamientos realizados, orden 4)
 - **Detalle:** [`backlog.md` § `treatments`](./backlog.md#treatments)
 
 **Alcance:** catálogo de tratamientos con su consumo de insumos, y tratamientos realizados en una atención (asignación `completado` con pieza, atención de origen y costo cobrado). El registro es idempotente por `sourceKey` y descuenta insumos del inventario.
@@ -174,73 +188,15 @@ Siguen por definir:
 - [ ] `GET /treatment-assignments?patientId=`
 - [ ] `POST /treatment-assignments`
 
-**Coordinar con Josue Cevallos:** Finanzas y Reportes calculan los montos con el costo cobrado (`price`) de cada asignación.
+**Relación con otros módulos:**
+- Descuenta insumos con `StockService` (ya listo) y llena `stock_movements.treatment_assignment_id`.
+- Finanzas y Reportes calculan los montos con el costo cobrado (`price`) de cada asignación.
 
-## 6. `inventory`
-
-- **Responsable:** Jorge Flores
-- **Fase:** 1 (insumos y proveedores) y 2 (movimientos, lotes, órdenes y esterilización)
-- **Detalle:** [`backlog.md` § `inventory`](./backlog.md#inventory)
-
-**Alcance:** insumos consumibles e instrumental, stock por lotes con salida FEFO (primero en vencer, primero en salir), movimientos manuales, proveedores, órdenes de compra y ciclos de esterilización. El consumo automático de un tratamiento realizado nunca falla por falta de stock.
-
-**Entidades:** insumo, movimiento de stock, lote, proveedor, orden de compra (con líneas), ciclo de esterilización.
-
-**Endpoints:**
-- [x] `GET /inventory/items`
-- [x] `GET /inventory/items/:id`
-- [x] `POST /inventory/items`
-- [x] `PUT /inventory/items/:id`
-- [x] `DELETE /inventory/items/:id`
-- [x] `GET /inventory/items/:id/movements`
-- [x] `POST /inventory/items/:id/movements`
-- [x] `GET /inventory/items/:id/lots`
-- [x] `GET /inventory/suppliers`
-- [x] `POST /inventory/suppliers`
-- [x] `PUT /inventory/suppliers/:id`
-- [x] `DELETE /inventory/suppliers/:id`
-- [x] `GET /inventory/purchase-orders`
-- [x] `POST /inventory/purchase-orders`
-- [x] `POST /inventory/purchase-orders/:id/receive`
-- [x] `POST /inventory/purchase-orders/:id/cancel`
-- [x] `GET /inventory/sterilization-cycles`
-- [x] `POST /inventory/sterilization-cycles`
-
-**Hecho además:** `StockService` (entradas y salidas FEFO con bloqueo de fila), listo para que `POST /treatment-assignments` descuente insumos sin fallar por falta de stock.
-
-**Pendiente:**
-- [ ] Llave foránea del responsable de esterilización a `professionals` (cuando exista `appointments`) y de `patient_id` / `treatment_assignment_id` de los movimientos.
-- [ ] Desactivar insumos en lugar de borrarlos (requiere cambio en el frontend).
-- [ ] Selectores y "Stock crítico" con más de 100 insumos.
-
-**Coordinar con Josue Cevallos:** el responsable de un ciclo de esterilización es un profesional del catálogo de `appointments`; el reporte de inventario usa los movimientos y las órdenes de compra.
-
-## 7. `notifications`
-
-- **Responsable:** Josue Cevallos
-- **Fase:** 2
-- **Detalle:** [`backlog.md` § `notifications`](./backlog.md#notifications)
-
-**Alcance:** plantilla de mensaje, registro de notificaciones enviadas y envío automático al crear o cancelar una cita (solo si el paciente tiene las notificaciones activas). No hay un endpoint para disparar el envío: es un efecto de `POST /appointments` y `PATCH /appointments/:id/status`.
-
-**Entidades:** registro de notificación, plantilla.
-
-**Endpoints:**
-- [ ] `GET /notifications` (paginado, con filtro `appointmentId`)
-- [ ] `GET /notifications/template`
-- [ ] `PUT /notifications/template`
-- [ ] Envío automático de confirmación y cancelación de cita
-- [ ] Recordatorios programados (requieren una tarea periódica en el servidor)
-
-**Coordinar con Jorge Flores:** el mismo proveedor de correo sirve para la recuperación de contraseña de `auth`.
-
-**Por definir:** canal de envío (correo o SMS) y proveedor.
-
-## 8. `clinical-history`
+## 5. `clinical-history`
 
 - **Responsable:** Jorge Flores
 - **Fase:** 3
-- **Detalle:** [`backlog.md` § `clinical-history`](./backlog.md#clinical-history)
+- **Detalle:** [`backlog.md` § `clinical-history`](./backlog.md#clinical-history). Plan de implementación en [`docs/plan-historia-clinica.md`](./docs/plan-historia-clinica.md).
 
 **Alcance:**
 - Historia editable por paciente con concurrencia optimista (`revision`): odontograma, antecedentes, alergias y medicación, hábitos, plan por fases, consentimiento, declaración de veracidad, adjuntos y exámenes solicitados.
@@ -260,13 +216,52 @@ Siguen por definir:
 - [ ] `POST /clinical-history/attachments`
 - [ ] `GET /clinical-history/attachments/:attachmentId/file`
 
-**Coordinar con Josue Cevallos:** datos del paciente (`patients`) y paso de la cita a `completada` (`appointments`).
+**Relación con otros módulos:** datos del paciente (`patients`), profesional de la atención, paso de la cita a `completada` (`appointments`) y tratamientos realizados.
 
 **Por definir:** texto legal del consentimiento y su versionado; firmas; importación de las historias registradas en modo demostración.
 
-## 9. `finance`
+## 6. `institution`
 
-- **Responsable:** Josue Cevallos
+- **Responsable:** Jorge Flores
+- **Fase:** 1
+- **Detalle:** [`backlog.md` § `institution`](./backlog.md#institution)
+
+**Alcance:** perfil de la clínica con sus sedes. Es un módulo nuevo en el backend: el frontend hoy lo guarda en el navegador y hay que agregarle su archivo `institution.api.ts`.
+
+**Entidades:** perfil de la institución, sede.
+
+**Endpoints:**
+- [ ] `GET /institution/profile` (público o con variante pública para el logo del inicio de sesión) (propuesta)
+- [ ] `PUT /institution/profile` (solo `admin`) (propuesta)
+
+**Relación con otros módulos:** si se aprueba la multi-clínica, el perfil va en la tabla `institutions` ([`docs/plan-multiclinica.md`](./docs/plan-multiclinica.md), M1).
+
+**Por definir:** si el grupo maneja una o varias sedes (ítem 2 del backlog de producto); cómo se sube el logo.
+
+## 7. `notifications`
+
+- **Responsable:** Jorge Flores
+- **Fase:** 2
+- **Detalle:** [`backlog.md` § `notifications`](./backlog.md#notifications)
+
+**Alcance:** plantilla de mensaje, registro de notificaciones enviadas y envío automático al crear o cancelar una cita (solo si el paciente tiene las notificaciones activas). No hay un endpoint para disparar el envío: es un efecto de `POST /appointments` y `PATCH /appointments/:id/status`.
+
+**Entidades:** registro de notificación, plantilla.
+
+**Endpoints:**
+- [ ] `GET /notifications` (paginado, con filtro `appointmentId`)
+- [ ] `GET /notifications/template`
+- [ ] `PUT /notifications/template`
+- [ ] Envío automático de confirmación y cancelación de cita
+- [ ] Recordatorios programados (requieren una tarea periódica en el servidor)
+
+**Relación con otros módulos:** el mismo proveedor de correo sirve para la recuperación de contraseña de `auth`.
+
+**Por definir:** canal de envío (correo o SMS) y proveedor.
+
+## 8. `finance`
+
+- **Responsable:** Jorge Flores
 - **Fase:** 4
 - **Detalle:** [`backlog.md` § `finance`](./backlog.md#finance)
 
@@ -277,15 +272,15 @@ Siguen por definir:
 - [ ] `GET /finance/treatments/:treatmentId/summary` (propuesta)
 - [ ] `GET /finance/patients/:patientId/summary` (propuesta)
 
-**Coordinar con Jorge Flores:** el costo cobrado (`price`) se guarda en las asignaciones de `treatments`.
+**Relación con otros módulos:** el costo cobrado (`price`) se guarda en las asignaciones de `treatments`.
 
 **Por definir:**
-- Si el médico puede ver los resúmenes financieros en la ficha del paciente y en el detalle del tratamiento.
-- Pagos, cuotas, seguros y facturación electrónica (ítem 8): primero se diseñan en el frontend; sus endpoints de escritura quedan para después.
+- ~~Si el médico puede ver los resúmenes financieros~~ **Decidido:** el médico no ve montos.
+- Pagos: se crean en la etapa A (aprobado). Cuotas, seguros y facturación electrónica (ítem 8): primero se diseñan en el frontend. El cobro a las clínicas por usar ClinicApp no se crea por ahora.
 
-## 10. `reports`
+## 9. `reports`
 
-- **Responsable:** Josue Cevallos
+- **Responsable:** Jorge Flores
 - **Fase:** 4
 - **Detalle:** [`backlog.md` § `reports`](./backlog.md#reports)
 
@@ -298,6 +293,6 @@ Siguen por definir:
 - [ ] `GET /reports/treatments`
 - [ ] `GET /reports/inventory`
 
-**Coordinar con Jorge Flores:** el reporte de tratamientos e inventario usa las asignaciones, los movimientos y las órdenes de compra.
+**Relación con otros módulos:** el reporte de tratamientos e inventario usa las asignaciones, los movimientos y las órdenes de compra.
 
 **Por definir:** el Inicio lo ven los tres roles y usa `GET /reports/summary` y `GET /reports/agenda`; decidir si se abren esos dos endpoints a todos los roles o se crea `GET /dashboard/summary`.
