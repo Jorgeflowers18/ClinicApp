@@ -896,6 +896,103 @@ namespace ClinicApp.Api.Data.Migrations
                     b.ToTable("encounter_notes", (string)null);
                 });
 
+            modelBuilder.Entity("ClinicApp.Api.Modules.Finance.FinancialPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("method");
+
+                    b.Property<string>("Observations")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("observations");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference");
+
+                    b.Property<Guid?>("RegisteredByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("registered_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TreatmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("treatment_id");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("void_reason");
+
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("voided_at");
+
+                    b.Property<Guid?>("VoidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voided_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_financial_payments");
+
+                    b.HasIndex("Date")
+                        .HasDatabaseName("ix_financial_payments_date");
+
+                    b.HasIndex("RegisteredByUserId")
+                        .HasDatabaseName("ix_financial_payments_registered_by_user_id");
+
+                    b.HasIndex("TreatmentId")
+                        .HasDatabaseName("ix_financial_payments_treatment_id");
+
+                    b.HasIndex("VoidedByUserId")
+                        .HasDatabaseName("ix_financial_payments_voided_by_user_id");
+
+                    b.HasIndex("PatientId", "TreatmentId")
+                        .HasDatabaseName("ix_financial_payments_patient_id_treatment_id");
+
+                    b.ToTable("financial_payments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_financial_payments_amount", "amount > 0");
+
+                            t.HasCheckConstraint("ck_financial_payments_method", "method IN ('efectivo', 'transferencia', 'tarjeta_debito', 'tarjeta_credito', 'deposito', 'cheque', 'otros')");
+
+                            t.HasCheckConstraint("ck_financial_payments_status", "status IN ('registrado', 'anulado', 'reversado')");
+                        });
+                });
+
             modelBuilder.Entity("ClinicApp.Api.Modules.Institution.InstitutionBranch", b =>
                 {
                     b.Property<Guid>("InstitutionId")
@@ -2175,6 +2272,35 @@ namespace ClinicApp.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_encounter_notes_clinical_encounters_encounter_id");
+                });
+
+            modelBuilder.Entity("ClinicApp.Api.Modules.Finance.FinancialPayment", b =>
+                {
+                    b.HasOne("ClinicApp.Api.Modules.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_financial_payments_patients_patient_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("RegisteredByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_financial_payments_users_registered_by_user_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Treatments.Treatment", null)
+                        .WithMany()
+                        .HasForeignKey("TreatmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_financial_payments_treatments_treatment_id");
+
+                    b.HasOne("ClinicApp.Api.Modules.Auth.User", null)
+                        .WithMany()
+                        .HasForeignKey("VoidedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_financial_payments_users_voided_by_user_id");
                 });
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Institution.InstitutionBranch", b =>

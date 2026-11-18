@@ -3,6 +3,7 @@ using ClinicApp.Api.Data;
 using ClinicApp.Api.Modules.Appointments;
 using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.ClinicalHistory;
+using ClinicApp.Api.Modules.Finance;
 using ClinicApp.Api.Modules.Institution;
 using ClinicApp.Api.Modules.Inventory;
 using ClinicApp.Api.Modules.Notifications;
@@ -120,6 +121,9 @@ switch (notificationSettings.Provider)
 builder.Services.AddScoped<NotificationComposer>();
 builder.Services.AddSingleton<NotificationDispatcher>();
 builder.Services.AddHostedService(services => services.GetRequiredService<NotificationDispatcher>());
+
+// Finanzas: totales de la cartera calculados en la base.
+builder.Services.AddScoped<FinanceCalculator>();
 
 // Historia clínica: archivos en disco (Attachments:RootPath), nombres del catálogo para mostrar e imprimir,
 // y la tarea que borra los adjuntos nunca guardados (y el protocolo de conservación, apagado por defecto).

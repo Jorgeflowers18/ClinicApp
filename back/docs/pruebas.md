@@ -55,6 +55,7 @@ Todos desde la carpeta `back/`.
 | `institution` | `Integration/InstitutionTests.cs` | Perfil creado al arrancar, roles, sedes (reordenar, quitar, cambiar la principal), validación de RUC, correo, sitio web y logo (sin SVG), dos principales, endpoint público sin sesión y sin datos internos |
 | `notifications` | `Unit/NotificationRulesTests.cs` | Formato de hora (12 h) y fecha en español, reemplazo de todas las variables de la plantilla |
 | | `Integration/NotificationsTests.cs` | Confirmación pendiente al agendar y enviada después, paciente sin notificaciones, cancelación que descarta la confirmación, proveedor caído (3 intentos y `fallida`), un solo recordatorio, sin proveedor no se registra nada, reporte con búsqueda y fechas, roles y plantilla |
+| `finance` | `Integration/FinanceTests.cs` | Suma de todas las asignaciones, pago parcial y completo, anulación (sin motivo, dos veces), saldo excedido, tratamiento no realizado, fecha futura, pagos simultáneos que no superan el saldo, redondeo (3 × 33,33), resúmenes de tratamiento y de paciente, 400 con varios pacientes, médico sin acceso y estado de la fila |
 
 ## Problemas comunes
 

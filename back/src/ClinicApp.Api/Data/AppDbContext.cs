@@ -2,6 +2,7 @@ using ClinicApp.Api.Common;
 using ClinicApp.Api.Modules.Appointments;
 using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.ClinicalHistory;
+using ClinicApp.Api.Modules.Finance;
 using ClinicApp.Api.Modules.Institution;
 using ClinicApp.Api.Modules.Inventory;
 using ClinicApp.Api.Modules.Notifications;
@@ -60,6 +61,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // notifications
     public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
+
+    // finance
+    public DbSet<FinancialPayment> FinancialPayments => Set<FinancialPayment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

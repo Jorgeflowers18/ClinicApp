@@ -1,6 +1,6 @@
 # Estructura base del backend — ClinicApp
 
-Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients`, `appointments` (profesionales, consultorios, citas y bloqueos), `clinical-history`, `institution` y `notifications`. Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
+Estado al **2026-11-17**: base del proyecto, `auth`, catálogo de `treatments` (con sus insumos), `inventory`, `patients`, `appointments` (profesionales, consultorios, citas y bloqueos), `clinical-history`, `institution`, `notifications` y `finance` (etapa A). Este documento describe **cómo está armada la API y qué guarda la base de datos**. Los endpoints están en [`endpoints-api.md`](./endpoints-api.md), y lo pendiente por módulo en [`../backlog.md`](../backlog.md).
 
 ## 1. Tecnología
 
@@ -51,7 +51,8 @@ back/
         ├── Appointments/ ← profesionales, consultorios, citas y bloqueos de horario
         ├── ClinicalHistory/ ← historia, versiones, atenciones, notas y adjuntos
         ├── Institution/  ← perfil de la clínica y sus sedes
-        └── Notifications/ ← plantilla, registro y envío automático de avisos de citas
+        ├── Notifications/ ← plantilla, registro y envío automático de avisos de citas
+        └── Finance/      ← pagos de los pacientes, cartera y resúmenes
 ```
 
 **Patrón de cada módulo:**
@@ -124,9 +125,11 @@ erDiagram
     institutions ||--o{ institution_branches : "sedes"
     patients ||--o{ notification_logs : "notificaciones"
     appointments ||--o{ notification_logs : ""
+    patients ||--o{ financial_payments : "pagos"
+    treatments ||--o{ financial_payments : ""
 ```
 
-`access_requests` no tiene relaciones. `treatment_assignments.source_encounter_id` es un UUID **sin llave foránea** todavía (ver § 13).
+`access_requests` no tiene relaciones. `treatment_assignments.source_encounter_id` es un UUID **sin llave foránea** todavía (ver § 14).
 
 ## 5. Módulo `auth`
 
@@ -561,7 +564,29 @@ Si se aprueba la multi-clínica (`plan-multiclinica.md`, M1), esta misma tabla t
 
 **Envío:** la notificación se guarda `pendiente` junto con la cita (patrón *outbox*) y la envía la tarea `NotificationDispatcher` a través de `INotificationSender`. El proveedor real todavía no está elegido.
 
-## 13. Migraciones aplicadas
+## 13. Módulo `finance`
+
+### `financial_payments`
+
+Pagos de los pacientes por sus tratamientos. Un pago no se borra: se anula, con motivo.
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `patient_id` | `uuid` FK → `patients` (restrict) | | Índice `(patient_id, treatment_id)` |
+| `treatment_id` | `uuid` FK → `treatments` (restrict) | | El paciente debe tener ese tratamiento realizado (lo valida la API) |
+| `date` | `date` | | No futura. Índice. |
+| `amount` | `numeric(10,2)` | | `CHECK (amount > 0)`; no puede superar el saldo pendiente (lo valida la API) |
+| `method` | `varchar(20)` | | 7 métodos (`CHECK`) |
+| `reference`, `observations` | `varchar(100)`, `varchar(500)` | | |
+| `status` | `varchar(10)` | | `registrado`, `anulado`, `reversado` (`CHECK`) |
+| `void_reason` | `varchar(300)` | sí | Obligatorio al anular |
+| `registered_by_user_id`, `voided_by_user_id` | `uuid` FK → `users` (set null) | sí | |
+| `created_at`, `voided_at` | `timestamptz` | `voided_at` sí | |
+
+**La cartera no tiene tabla propia:** se calcula al leer, agrupando `treatment_assignments.price` y `financial_payments.amount` por paciente + tratamiento (`FinanceCalculator`). Cuotas, seguros y factura electrónica (etapa B) tendrán sus tablas cuando se diseñe el ítem 8.
+
+## 14. Migraciones aplicadas
 
 | Migración | Crea |
 |---|---|
@@ -575,6 +600,7 @@ Si se aprueba la multi-clínica (`plan-multiclinica.md`, M1), esta misma tabla t
 | `20261118025957_CrearHistoriaClinica` | Las 5 tablas de la historia clínica (26 columnas `jsonb`) |
 | `20261118030811_CrearInstitucion` | `institutions` e `institution_branches` |
 | `20261118031243_CrearNotificaciones` | `notification_templates` (con la plantilla predeterminada) y `notification_logs` |
+| `20261118031703_CrearPagos` | `financial_payments` |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -585,11 +611,11 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 | `treatment_assignments.source_encounter_id` | `clinical_encounters` | `clinical-history` |
 
 **Módulos sin tablas todavía:**
-- `finance` y `reports`. Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
+- `reports` (no necesita tablas: calcula sobre las demás). Todo el backend pendiente es de Jorge Flores; el orden está en [`backlog-desgloce.md`](../backlog-desgloce.md).
 
 **Multi-clínica (propuesta en espera):** el sistema se venderá a varias clínicas. Cuando se apruebe, se agrega la tabla `institutions` y la columna `institution_id` en las tablas de datos, con un filtro automático para que cada clínica vea solo lo suyo. Detalle en [`plan-multiclinica.md`](./plan-multiclinica.md). Mientras tanto, los módulos se hacen para una sola clínica.
 
-## 14. Configuración
+## 15. Configuración
 
 `appsettings.json` solo tiene valores no secretos. Los secretos y lo propio de cada entorno van en variables de entorno, con `__` en lugar de `:` (`Auth:SigningKey` → `Auth__SigningKey`). Si `ASPNETCORE_ENVIRONMENT` no está definida, .NET asume `Production`.
 

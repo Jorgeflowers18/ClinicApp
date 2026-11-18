@@ -549,3 +549,40 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "message": "Hola [nombre del cliente], tu cita en [nombre de la clínica] es el [fecha de la cita] a las [hora de la cita] con [profesional]." }
+
+### ───────────── Finanzas (admin o recepción) ─────────────
+
+### Cartera: una fila por paciente + tratamiento
+GET {{api}}/finance/portfolio
+Authorization: Bearer {{token}}
+
+### Registrar un pago (409 si supera el saldo pendiente)
+# @name pago
+POST {{api}}/finance/payments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "patientId": "{{paciente.response.body.id}}",
+  "treatmentId": "{{crear.response.body.id}}",
+  "date": "2026-11-17",
+  "amount": 20,
+  "method": "transferencia",
+  "reference": "TRX-001",
+  "observations": ""
+}
+
+### Anular el pago (con motivo; nunca se borra)
+POST {{api}}/finance/payments/{{pago.response.body.id}}/void
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "reason": "Transferencia rechazada por el banco" }
+
+### Resumen de un tratamiento de un paciente
+GET {{api}}/finance/treatments/{{crear.response.body.id}}/summary?patientId={{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Resumen de un paciente
+GET {{api}}/finance/patients/{{paciente.response.body.id}}/summary
+Authorization: Bearer {{token}}

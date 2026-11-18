@@ -206,14 +206,20 @@ Implementado en `back/src/ClinicApp.Api/Modules/Notifications/`. Detalle en [`do
 
 ## `finance`
 
-Cartera y resúmenes financieros por tratamiento y por paciente. **El frontend no tiene funciones `*Real` ni `TODO` en este módulo:** `finance.api.ts` llama directamente a los cálculos del mock (`finance.mock-data.ts`). Los endpoints de abajo son una propuesta; al implementarlos hay que agregar el par Mock/Real en `finance.api.ts`. Las formas de respuesta están en `front/src/modules/finance/types/finance.types.ts`.
+Implementado (etapa A) en `back/src/ClinicApp.Api/Modules/Finance/`. Solo `admin` y `recepcion`. Detalle en [`docs/endpoints-api.md`](./docs/endpoints-api.md).
 
-- [ ] `GET /finance/portfolio` — cartera activa (`FinancialPortfolioRow[]`): una fila por paciente + tratamiento con `total`, `paid`, `pending`, `overdue`, `nextDueDate`, `daysLate` y `status` (`al_dia | parcial | vencida`). Pantalla "Finanzas" (`/finanzas`).
-- [ ] `GET /finance/treatments/:treatmentId/summary?patientId=` — `FinancialSummary` de un tratamiento (opcionalmente de un paciente): valor total, pagado, saldo pendiente y vencido, cobertura del seguro, responsabilidad del paciente, próximo vencimiento, pagos, cuotas, seguro y factura. Lo usa el detalle del tratamiento.
-- [ ] `GET /finance/patients/:patientId/summary` — `PatientFinancialSummary` (tratamientos, total pagado, pendiente, vencido, próximo vencimiento, cantidad de pagos). Lo usa la ficha del paciente.
-- [ ] Calcular los montos con el costo cobrado de cada asignación (`price`; ver `treatments`), no con el precio del catálogo.
-- [ ] **Rol del médico (decidido):** el médico **no** ve montos. Los resúmenes financieros responden `403` para `medico`, y el frontend debe ocultar esos bloques en la ficha del paciente y en el detalle del tratamiento para ese rol (cambio pendiente).
-- [ ] **Pagos (decidido, etapa A):** tabla `financial_payments` y endpoints para registrar y anular pagos de los pacientes (`POST /finance/payments`, `POST /finance/payments/:id/void`), para que la cartera descuente lo pagado. Ver `docs/plan-finanzas.md`. **Cuotas, seguros y facturación electrónica (SRI)** (ítem 8): el modelo existe en el frontend (`Installment`, `InsuranceCoverage`, `Invoice`), pero sus endpoints esperan el diseño del ítem 8. El cobro a las clínicas por usar ClinicApp es otra cosa y no se crea por ahora.
+- [x] `GET /finance/portfolio` — cartera (`FinancialPortfolioRow[]`): una fila por paciente + tratamiento, sumando el costo cobrado de **todas** sus asignaciones (el mock tomaba solo la más reciente) menos los pagos registrados. Incluye las que están al día, de la mayor deuda a la menor.
+- [x] `GET /finance/treatments/:treatmentId/summary?patientId=` — `FinancialSummary` con los pagos. Sin `patientId`, si lo recibió un solo paciente se usa ese; si fueron varios, `400`.
+- [x] `GET /finance/patients/:patientId/summary` — `PatientFinancialSummary`.
+- [x] Los montos se calculan con el costo cobrado de cada asignación (`price`), no con el precio del catálogo (salvo en las antiguas sin `price`).
+- [x] **Rol del médico (decidido):** el médico **no** ve montos: los endpoints de finanzas le responden `403`.
+- [x] **Pagos (decidido, etapa A):** tabla `financial_payments`, `POST /finance/payments` (el paciente debe tener el tratamiento realizado; `409` si supera el saldo, con candado para pagos simultáneos) y `POST /finance/payments/:id/void` (anular con motivo; nunca se borra).
+- [ ] **Frontend:**
+  - crear el par Mock/Real en `finance.api.ts` (hoy llama directo al mock);
+  - una pantalla para registrar y anular pagos;
+  - ocultar al médico los resúmenes financieros de la ficha del paciente y del detalle del tratamiento.
+- [ ] **Etapa B — cuotas, seguros y facturación electrónica del SRI (ítem 8 del backlog de producto):** el modelo existe en el frontend (`Installment`, `InsuranceCoverage`, `Invoice` con clave de acceso, XML y RIDE), pero sus endpoints esperan el diseño del ítem 8. Con las cuotas se calcularán el saldo vencido, el próximo vencimiento y los días de atraso (hoy 0 y `null`).
+- [ ] **Cobro a las clínicas por usar ClinicApp** (suscripción): distinto de estos pagos; no se crea por ahora (ver `docs/plan-multiclinica.md`).
 
 ## `institution`
 

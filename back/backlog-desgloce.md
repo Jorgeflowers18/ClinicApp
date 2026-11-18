@@ -21,7 +21,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ 5 | `clinical-history` | Hecho (falta el registro transaccional de la atención) | 3 | `patients`, profesionales, citas, tratamientos realizados |
 | ✅ 6 | `institution` | Hecho (falta su `institution.api.ts` en el frontend) | 1 | Base |
 | ✅ 7 | `notifications` | Hecho (falta elegir el proveedor de envío) | 2 | Citas, `patients` |
-| **8** | `finance` | Plan en revisión: [`docs/plan-finanzas.md`](./docs/plan-finanzas.md). Pagos aprobados; cuotas, seguros y factura esperan el ítem 8. | 4 | Tratamientos realizados, `patients` |
+| ✅ 8 | `finance` | Etapa A hecha (pagos, cartera y resúmenes); la etapa B espera el ítem 8 | 4 | Tratamientos realizados, `patients` |
 | **9** | `reports` | Plan en revisión: [`docs/plan-reportes.md`](./docs/plan-reportes.md) | 4 | Todos los anteriores |
 
 **Por qué este orden:**
@@ -263,7 +263,7 @@ Siguen por definir:
 
 **Por definir:** canal de envío (correo o SMS) y proveedor.
 
-## 8. `finance`
+## 8. `finance` ✅ (etapa A)
 
 - **Responsable:** Jorge Flores
 - **Fase:** 4
@@ -272,9 +272,10 @@ Siguen por definir:
 **Alcance:** cartera activa y resúmenes financieros por tratamiento y por paciente, calculados con el costo cobrado de cada tratamiento realizado. El frontend aún no tiene funciones `*Real` en este módulo: hay que agregarlas.
 
 **Endpoints:**
-- [ ] `GET /finance/portfolio` (propuesta)
-- [ ] `GET /finance/treatments/:treatmentId/summary` (propuesta)
-- [ ] `GET /finance/patients/:patientId/summary` (propuesta)
+- [x] `GET /finance/portfolio`
+- [x] `GET /finance/treatments/:treatmentId/summary`
+- [x] `GET /finance/patients/:patientId/summary`
+- [x] `POST /finance/payments` y `POST /finance/payments/:id/void`
 
 **Relación con otros módulos:** el costo cobrado (`price`) se guarda en las asignaciones de `treatments`.
 

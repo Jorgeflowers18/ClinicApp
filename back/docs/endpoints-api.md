@@ -1,6 +1,6 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **70 endpoints implementados**:
+Estado al **2026-11-17**: **75 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 9 de `treatments` (catálogo y tratamientos realizados);
@@ -10,7 +10,8 @@ Estado al **2026-11-17**: **70 endpoints implementados**:
 - 8 de `appointments` y `schedule-blocks`;
 - 7 de `clinical-history`;
 - 3 de `institution`;
-- 3 de `notifications`.
+- 3 de `notifications`;
+- 5 de `finance`.
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
 
@@ -43,6 +44,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `clinical-history` | `admin`, `medico` |
 | `institution` | perfil público: sin sesión; leer: los tres; guardar: `admin` |
 | `notifications` | `admin`, `recepcion`; las de una cita (`?appointmentId=`): los tres |
+| `finance` | `admin`, `recepcion` (el médico no ve montos) |
 
 ### Errores
 
@@ -161,6 +163,11 @@ La respuesta tiene esta forma:
 | `GET` | `/api/notifications` | admin, recepcion (con `?appointmentId=`: los tres) | `200` paginado o lista |
 | `GET` | `/api/notifications/template` | admin, recepcion | `200` |
 | `PUT` | `/api/notifications/template` | admin, recepcion | `200` |
+| `GET` | `/api/finance/portfolio` | admin, recepcion | `200` lista |
+| `GET` | `/api/finance/treatments/:treatmentId/summary` | admin, recepcion | `200` |
+| `GET` | `/api/finance/patients/:patientId/summary` | admin, recepcion | `200` |
+| `POST` | `/api/finance/payments` | admin, recepcion | `201` |
+| `POST` | `/api/finance/payments/:id/void` | admin, recepcion | `200` |
 | `GET` | `/openapi/v1.json`, `/scalar` | público, **solo en desarrollo** | Descripción OpenAPI y página de pruebas |
 
 ## 3. Salud
@@ -753,6 +760,31 @@ El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los v
 - **Mensaje:** la plantilla con sus variables reemplazadas (`[nombre del cliente]`, `[nombre de la clínica]`, `[fecha de la cita]` como "12 de septiembre", `[hora de la cita]` como "10:00 am", `[profesional]`). Se guarda ya armado.
 - **Proveedor (`Notifications:Provider`):** por elegir con la clínica. `log` (en desarrollo) solo escribe el mensaje en el log. **Vacío (producción, por ahora): no se registra ninguna notificación**, para no mostrar "cliente notificado" cuando nadie le envió nada.
 
+## 13. `finance`
+
+Solo `admin` y `recepcion`: **el médico no ve montos** (`403`). Contrato: `front/src/modules/finance/types/finance.types.ts`. Son los pagos de los **pacientes a la clínica**; el cobro a las clínicas por usar ClinicApp no existe todavía.
+
+**Cálculo**, por paciente + tratamiento, agrupado en PostgreSQL:
+- `total` = Σ costo cobrado (`price`) de **todos** sus tratamientos realizados; el precio del catálogo si falta.
+- `paid` = Σ pagos `registrado` (los anulados no cuentan).
+- `pending` = máx(total − paid, 0).
+- `overdue` = 0, `nextDueDate` = `null` y `daysLate` = 0 hasta que existan las cuotas (etapa B).
+- `status`: `al_dia` sin saldo; `vencida` con saldo vencido; `parcial` en los demás casos.
+
+| Endpoint | Detalle |
+|---|---|
+| `GET /api/finance/portfolio` | `200` `FinancialPortfolioRow[]`: una fila por paciente + tratamiento, también las que están al día, de la mayor deuda a la menor |
+| `GET /api/finance/treatments/:treatmentId/summary?patientId=` | `200` `FinancialSummary` con los pagos; `installments: []`, `insurance: null`, `invoice: null` hasta la etapa B. Sin `patientId`: si lo recibió un solo paciente se usa ese; si fueron varios, `400` (`errors.patientId`). `404` tratamiento o paciente. |
+| `GET /api/finance/patients/:patientId/summary` | `200` `PatientFinancialSummary` (`totalTreatments` = tratamientos realizados, `totalPaid`, `totalPending`, `totalOverdue`, `nextDueDate`, `paymentCount`); `404` |
+| `POST /api/finance/payments` | Ver abajo |
+| `POST /api/finance/payments/:id/void` | Body `{ reason }` (3 a 300). `200` con el pago `anulado`; `400`; `404`; `409` "El pago ya está anulado". Un pago nunca se borra. |
+
+**Registrar un pago (`POST /api/finance/payments`):** body `{ patientId, treatmentId, date, amount, method, reference, observations }`.
+- `date` no futura; `amount` de 0,01 a 99 999 999,99; `method`: `efectivo`, `transferencia`, `tarjeta_debito`, `tarjeta_credito`, `deposito`, `cheque` u `otros`; `reference` hasta 100 y `observations` hasta 500.
+- El paciente debe tener ese tratamiento realizado (`400` en `errors.treatmentId`).
+- No puede superar el saldo pendiente: `409` "El pago supera el saldo pendiente (N)" con `errors.amount`. Dos pagos simultáneos no pasan los dos el control (candado por paciente + tratamiento).
+- Respuesta `201` `FinancialPayment`: `{ id, patientId, treatmentId, date, amount, method, reference, registeredBy, observations, status, voidReason }`. `registeredBy` es el nombre del usuario.
+
 ## Estado de los módulos
 
 | Módulo | Responsable | Estado |
@@ -767,7 +799,8 @@ El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los v
 | `appointments`: citas y bloqueos | Jorge Flores | ✅ Los 8 endpoints, con choques, candados y hora de la clínica |
 | `institution` | Jorge Flores | ✅ Los 3 endpoints (falta su `institution.api.ts` en el frontend) |
 | `notifications` | Jorge Flores | ✅ Los 3 endpoints y el envío automático. ⏳ Falta elegir el proveedor de envío. |
-| `finance`, `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
+| `finance` | Jorge Flores | ✅ Etapa A: cartera, resúmenes y pagos. ⏳ Etapa B (cuotas, seguros y factura) espera el ítem 8. |
+| `reports` | Jorge Flores | ⏳ Sin empezar en el backend |
 
 **Para conectar el frontend** (`VITE_USE_MOCK_API=false`): falta la parte de sesión del frontend, detallada en `backlog.md` § `auth`.
 - `withCredentials: true` en `shared/lib/http.ts`.
