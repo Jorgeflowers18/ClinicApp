@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 import { logoutFromHeader, navigateUserMenu, openUserMenu } from "./helpers/app-navigation"
 
@@ -7,7 +8,7 @@ test.use({ timezoneId: "America/Guayaquil" })
 
 async function login(page: Page, theme: "light" | "dark", role = "admin") {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill(`${role}@clinica.com`)
   await page.locator("#password").fill(`${role}123`)
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -123,7 +124,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(control).toHaveAttribute("aria-checked", String(theme === "light"))
     const other = await context.newPage()
     await other.goto("/login")
-    await other.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+    await setAccessTheme(other, theme === "light" ? "light" : "dark")
     await expect(control).toHaveAttribute("aria-checked", String(theme === "dark"))
     await expect.poll(() => page.locator("html").evaluate((node) => node.classList.contains("dark"))).toBe(theme === "dark")
     await other.close()

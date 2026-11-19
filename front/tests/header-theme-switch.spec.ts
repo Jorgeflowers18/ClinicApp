@@ -1,8 +1,9 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 async function login(page: Page, theme: "light" | "dark") {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -17,11 +18,11 @@ const offset = (page: Page) => control(page).evaluate((node) => {
   return Math.round(thumb.getBoundingClientRect().left - node.getBoundingClientRect().left)
 })
 
-async function expectTheme(page: Page, dark: boolean) {
+async function expectTheme(page: Page, dark: boolean, allowDefault = false) {
   await expect(control(page)).toHaveAttribute("aria-checked", String(dark))
   await expect.poll(() => page.locator("html").evaluate((node) => node.classList.contains("dark"))).toBe(dark)
   await expect.poll(() => offset(page)).toBe(dark ? 34 : 6)
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("theme"))).toBe(dark ? "dark" : "light")
+  await expect.poll(() => page.evaluate((allowDefault) => localStorage.getItem("theme") ?? (allowDefault ? "light" : null), allowDefault)).toBe(dark ? "dark" : "light")
   await expect(thumb(page)).toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
   await expect(thumb(page)).toHaveCSS("background-image", "none")
   await expect(thumb(page)).toHaveCSS("box-shadow", "none")
@@ -35,7 +36,7 @@ for (const theme of ["light", "dark"] as const) {
     const dark = theme === "dark"
     const bell = page.getByRole("button", { name: /^Notificaciones:/ })
     const originalCount = await bell.getAttribute("aria-label")
-    await expectTheme(page, dark)
+    await expectTheme(page, dark, true)
     const row = control(page).locator("..")
     await expect(row.locator(".lucide-sun")).toHaveCSS("opacity", dark ? "0" : "1")
     await expect(row.locator(".lucide-moon")).toHaveCSS("opacity", dark ? "1" : "0")

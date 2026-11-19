@@ -1,8 +1,5 @@
 .controls { display: grid; min-width: 0; gap: 12px; }
-.preview { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.preview > div { min-width: 0; }
-.logo { --institution-logo-size: 64px; --institution-logo-font-size: 23px; }
-.name { font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; margin-bottom: 3px; }
+.preview { display: grid; gap: 8px; min-width: 0; }
 .hint, .feedback, .error { font-size: 12px; line-height: 1.5; color: var(--muted-foreground); }
 .error { color: var(--destructive); }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

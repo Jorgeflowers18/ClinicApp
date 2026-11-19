@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 import { initialInstitutionProfile } from "../src/modules/institution/types/institution.types"
 
@@ -18,7 +19,7 @@ async function enter(page: Page, theme: "light" | "dark", logoImage: string | nu
     }
   })
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com"); await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
   await page.getByRole("button", { name: "Continuar", exact: true }).click()
@@ -33,9 +34,9 @@ for (const theme of ["light", "dark"] as const) {
     await enter(page, theme)
     const avatar = page.locator('[data-user-avatar="header"]')
     const personalBefore = await avatar.innerHTML()
-    await expect(brand(page).locator("[data-institution-initials]")).toHaveText("CN")
+    await expect(brand(page).locator("[data-institution-initials]")).toHaveText("CD")
     await expect(brand(page)).toContainText(original.name)
-    const name = page.getByLabel("Nombre de la clínica", { exact: true })
+    const name = page.getByLabel("Nombre de la clínica o institución", { exact: true })
     await name.fill("OdontoSur")
     await expect(page.locator("main [data-institution-initials]")).toHaveText("OD")
     await expect(brand(page)).toContainText(original.name)
@@ -59,7 +60,7 @@ for (const theme of ["light", "dark"] as const) {
     expect((await stored(page)).branches).toHaveLength(1)
     expect((await stored(page)).logoText).toBe("OTRO")
     for (const [name, initials] of [["  Clínica   Álamo  ", "CÁ"], ["B", "BB"], ["Dental", "DE"]]) {
-      await page.getByLabel("Nombre de la clínica", { exact: true }).fill(name!)
+      await page.getByLabel("Nombre de la clínica o institución", { exact: true }).fill(name!)
       await page.getByRole("button", { name: "Guardar cambios", exact: true }).click()
       await expect(brand(page).locator("[data-institution-initials]")).toHaveText(initials!)
     }
@@ -102,14 +103,14 @@ for (const theme of ["light", "dark"] as const) {
     await expect(preview).toHaveAttribute("src", src("#bb3322"))
     await expect(sidebarImage).toHaveAttribute("src", src("#bb3322"))
     await page.getByRole("button", { name: "Quitar imagen institucional", exact: true }).click()
-    await expect(page.locator("main [data-institution-initials]")).toHaveText("CN")
+    await expect(page.locator("main [data-institution-initials]")).toHaveText("CD")
     await expect(sidebarImage).toHaveAttribute("src", src("#bb3322"))
     await page.getByRole("button", { name: "Guardar cambios", exact: true }).click()
-    await expect(brand(page).locator("[data-institution-initials]")).toHaveText("CN")
+    await expect(brand(page).locator("[data-institution-initials]")).toHaveText("CD")
     expect((await stored(page)).logoImage).toBeNull()
     expect(await page.locator('[data-user-avatar="header"]').innerHTML()).toBe(personalBefore)
     await page.reload()
-    await expect(brand(page).locator("[data-institution-initials]")).toHaveText("CN")
+    await expect(brand(page).locator("[data-institution-initials]")).toHaveText("CD")
   })
 
   test(`slow or failed image reads cannot overwrite the latest choice in ${theme}`, async ({ page }) => {
@@ -150,14 +151,14 @@ for (const theme of ["light", "dark"] as const) {
     await expect(brand(page).getByRole("img")).toHaveAttribute("src", value.logoImage)
     await other.evaluate((storageKey) => localStorage.removeItem(storageKey), key)
     await expect(brand(page)).toContainText(initialInstitutionProfile.name)
-    await expect(brand(page).locator("[data-institution-initials]")).toHaveText("CO")
+    await expect(brand(page).locator("[data-institution-initials]")).toHaveText("CA")
     await other.close()
   })
 
   test(`required name and optional email errors preserve all saved institution data in ${theme}`, async ({ page }) => {
     await enter(page, theme)
     const before = await stored(page)
-    const name = page.getByLabel("Nombre de la clínica", { exact: true })
+    const name = page.getByLabel("Nombre de la clínica o institución", { exact: true })
     await name.fill("   ")
     await page.getByRole("button", { name: "Guardar cambios", exact: true }).click()
     await expect(name).toBeFocused(); await expect(name).toHaveAttribute("aria-invalid", "true")
@@ -198,7 +199,7 @@ for (const theme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Abrir menú", exact: true }).click()
         const mobile = page.locator("#mobile-sidebar [data-institution-brand]")
         await expect(mobile).toContainText(original.name)
-        await expect(mobile.locator("[data-institution-initials]")).toHaveText("CN")
+        await expect(mobile.locator("[data-institution-initials]")).toHaveText("CD")
         await expect(mobile.locator("[data-institution-initials]")).toHaveCSS("background-color", theme === "light" ? "rgb(83, 80, 204)" : "rgb(228, 242, 34)")
         await page.getByRole("button", { name: "Cerrar menú", exact: true }).click()
       }

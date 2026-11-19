@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { institutionInitials } from "@/modules/institution/lib/institution-initials"
 
 import styles from "./brand-logo.module.css"
 
@@ -11,16 +12,17 @@ export function BrandLogo({ className }: { className?: string }) {
   )
 }
 
-/** Uploaded images and custom initials keep the clinic's own identity. */
-export function InstitutionLogo({ image, text, className, imageClassName }: {
+/** All institutional initials share the same generator as the Sidebar and preview. */
+export function InstitutionLogo({ image, name, className, imageClassName }: {
   image: string | null
-  text: string
+  name: string
   className?: string
   imageClassName?: string
 }) {
   if (image) {
     return <img src={image} alt="Logo de la clínica" className={imageClassName ?? className} />
   }
-  if (!text || text === "CA") return <BrandLogo className={className} />
+  const text = institutionInitials(name)
+  if (text === "CA") return <BrandLogo className={className} />
   return <span className={cn("clinic-institution-mark", styles.institutionMark, className)} aria-hidden="true">{text}</span>
 }

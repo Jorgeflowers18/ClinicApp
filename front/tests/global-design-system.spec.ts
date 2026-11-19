@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 const widths = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440, 1920]
@@ -15,7 +16,7 @@ const modules = [
 
 async function login(page: Page, theme: "light" | "dark") {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "dark" ? "Tema oscuro" : "Tema claro", exact: true }).click()
+  await setAccessTheme(page, theme === "dark" ? "dark" : "light")
   await expect(page.locator(".auth-brand-mark")).toHaveCSS("background-color", theme === "light" ? "rgb(83, 80, 204)" : "rgb(228, 242, 34)")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")

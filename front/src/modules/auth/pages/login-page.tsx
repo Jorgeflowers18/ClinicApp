@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { Link, Navigate, useLocation } from "react-router-dom"
@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { ApiError } from "@/shared/types/common"
 import { getErrorMessage } from "@/shared/lib/error-message"
 
 import { useLogin } from "../api/auth.queries"
-import { AuthLayout } from "../components/auth-layout"
+import { AuthLayout, AuthNotice, AuthRememberHelp } from "../components/auth-layout"
 import { useAuthStore } from "../store/auth-store"
 import { loginSchema, type LoginFormValues } from "../types/auth.types"
 
@@ -20,6 +21,7 @@ export function LoginPage() {
   const location = useLocation()
   const login = useLogin()
   const [showPassword, setShowPassword] = useState(false)
+  const submitting = useRef(false)
 
   const {
     register,
@@ -29,6 +31,9 @@ export function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   })
+  const errorMessage = login.error instanceof ApiError && login.error.status >= 400 && login.error.status < 500
+    ? getErrorMessage(login.error)
+    : "No se pudo iniciar sesión. Inténtalo de nuevo."
 
   if (user) {
     const redirectTo = (location.state as { from?: string } | null)?.from ?? "/"
@@ -37,12 +42,14 @@ export function LoginPage() {
   }
 
   function onSubmit(values: LoginFormValues) {
-    login.mutate(values)
+    if (submitting.current || login.isPending) return
+    submitting.current = true
+    login.mutate(values, { onSettled: () => { submitting.current = false } })
   }
 
   return (
-    <AuthLayout title="Iniciar sesión" description="Accede a tu espacio de gestión clínica.">
-      <form className="auth-form" noValidate onSubmit={handleSubmit(onSubmit)} aria-describedby="auth-description" aria-busy={login.isPending}>
+    <AuthLayout title="Iniciar sesión" description="Accede a tu cuenta para continuar.">
+      <form className="auth-form" noValidate onSubmit={(event) => { void handleSubmit(onSubmit)(event) }} aria-describedby="auth-description" aria-busy={login.isPending}>
         <FieldGroup>
           <Field data-invalid={!!errors.email}>
             <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
@@ -50,7 +57,7 @@ export function LoginPage() {
               id="email"
               type="email"
               autoComplete="email"
-              placeholder="tu@clinica.com"
+              placeholder="nombre@correo.com"
               required
               aria-invalid={!!errors.email}
               aria-describedby={errors.email ? "email-error" : undefined}
@@ -91,13 +98,13 @@ export function LoginPage() {
           <div className="auth-remember">
             <Checkbox id="remember" disabled checked={false} aria-describedby="remember-status" />
             <FieldLabel htmlFor="remember">Recordarme</FieldLabel>
+            <AuthRememberHelp />
           </div>
           <Link className="auth-link" to="/recuperar-contrasena" state={location.state}>¿Olvidaste tu contraseña?</Link>
         </div>
-        <p id="remember-status" className="auth-remember-help">Recordarme aún no está disponible.</p>
 
         {login.isError && (
-          <p role="alert" className="text-sm text-destructive">{getErrorMessage(login.error)}</p>
+          <AuthNotice error>{errorMessage}</AuthNotice>
         )}
 
         <Button type="submit" className="auth-submit" disabled={login.isPending}>

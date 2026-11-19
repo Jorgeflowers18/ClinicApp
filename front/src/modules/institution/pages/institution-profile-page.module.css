@@ -8,12 +8,16 @@
 .title > svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--muted-foreground); }
 .pair { display: grid; min-width: 0; gap: 14px 16px; }
 .field { display: grid; gap: 6px; min-width: 0; align-content: start; }
-.field > label { font-size: 13px; line-height: 18px; font-weight: 600; }
+.fieldLabel { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 24px; }
+.fieldLabel > label, .field > label { font-size: 13px; line-height: 18px; font-weight: 600; }
+.fieldLabel > label[data-required="true"]::after { content: " *"; color: var(--destructive); }
+.helpTrigger { width: 24px; height: 24px; min-height: 24px; padding: 0; flex-shrink: 0; color: var(--muted-foreground); }
+.helpTrigger > svg { width: 14px; height: 14px; }
+.helpPopup { max-width: min(20rem, calc(100vw - 24px)); }
 .field > input, .field > textarea { min-width: 0; width: 100%; }
 .field > input { min-height: 40px; }
 .form textarea { min-height: 84px; }
 .hint, .pending, .summaryHint { color: var(--muted-foreground); font-size: 12px; line-height: 1.5; }
-.alternative { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
 .summaryHint { margin-bottom: 12px; }
 .summary { display: grid; gap: 12px; }
 .summary > div { min-width: 0; }
@@ -22,14 +26,19 @@
 .summary dd > span { display: block; }
 .actions { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .actions > div { min-width: 0; }
-.actions > button { min-height: 40px; font-size: 13px; }
+.buttons { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.buttons > button { min-height: 40px; font-size: 13px; }
 .actions svg { width: 16px; height: 16px; }
 .pending { margin-top: 2px; color: var(--foreground); }
-.field > label:has(+ input[required])::after { content: " *"; color: var(--destructive); }
 .fieldError { color: var(--destructive); }
 .fieldError { font-size: 12px; line-height: 18px; }
 .error { color: var(--destructive); border: 1px solid var(--destructive); border-radius: var(--radius-control); padding: 12px; font-size: 13px; line-height: 20px; }
-@container institution (min-width: 480px) { .pair { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container institution (min-width: 480px) {
+  .pair { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto auto auto; row-gap: 0; }
+  .pair > .field { grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
+  .pair > .field > .fieldLabel { margin-bottom: 6px; }
+  .pair > .field > .fieldError { margin-top: 6px; }
+}
 @container institution (min-width: 860px) { .columns { grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr); } }
-@container institution (max-width: 399px) { .actions > button { width: 100%; } }
-@media (max-width: 1023px), (pointer: coarse) { .field > input, .actions > button { min-height: 44px; } }
+@container institution (max-width: 399px) { .buttons { width: 100%; } .buttons > button { flex: 1; } }
+@media (max-width: 1023px), (pointer: coarse) { .field > input, .buttons > button { min-height: 44px; } }

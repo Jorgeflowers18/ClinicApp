@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { logoutFromHeader, navigateUserMenu, openUserMenu } from "./helpers/app-navigation"
 import { expect, test, type Locator, type Page } from "@playwright/test"
 
@@ -14,7 +15,7 @@ async function expectLogo(logo: Locator, theme: "light" | "dark") {
 
 async function enter(page: Page, theme: "light" | "dark", role = "admin") {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill(`${role}@clinica.com`)
   await page.locator("#password").fill(`${role}123`)
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -28,7 +29,7 @@ async function session(page: Page) {
 for (const theme of ["light", "dark"] as const) {
   test(`adaptive logos and initial setup preserve the existing redirect and draft in ${theme}`, async ({ page }, testInfo) => {
     await page.goto("/login")
-    await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+    await setAccessTheme(page, theme === "light" ? "light" : "dark")
     for (const path of ["/login", "/recuperar-contrasena", "/solicitar-acceso"]) {
       await page.goto(path)
       await expectLogo(page.locator('[data-slot="brand-logo"]'), theme)
@@ -132,18 +133,16 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: "Continuar", exact: true }).click()
     await page.goto("/perfil-institucion")
     await expect(page.locator(".clinic-app-header")).toBeVisible()
-    await expect(page.locator("main [data-institution-initials]")).toHaveText("CO")
+    await expect(page.locator("main [data-institution-initials]")).toHaveText("CA")
     await expect(page.locator("main [data-institution-initials]")).toHaveCSS("background-color", theme === "light" ? "rgb(83, 80, 204)" : "rgb(228, 242, 34)")
-    const text = page.getByLabel("Texto del logo", { exact: true })
-    await text.fill("CD")
-    await expect(page.locator("main [data-institution-initials]")).toHaveText("CO")
-    await page.getByLabel("Nombre de la clínica", { exact: true }).fill("Clínica de prueba")
+    await expect(page.locator("#institution-profile-logoText")).toHaveCount(0)
+    await page.getByLabel("Nombre de la clínica o institución", { exact: true }).fill("Clínica de prueba")
     await page.getByRole("button", { name: "Crear sede", exact: true }).first().click()
     await page.getByLabel("Nombre de la sede", { exact: true }).fill("Sede Centro")
     await page.getByRole("button", { name: "Guardar sede", exact: true }).click()
     await page.getByRole("button", { name: "Guardar cambios", exact: true }).click()
     await page.reload()
-    await expect(page.getByLabel("Nombre de la clínica", { exact: true })).toHaveValue("Clínica de prueba")
+    await expect(page.getByLabel("Nombre de la clínica o institución", { exact: true })).toHaveValue("Clínica de prueba")
     await expect(page.getByRole("cell", { name: "Sede Centro", exact: true })).toBeVisible()
     await page.locator('input[type="file"]').setInputFiles({ name: "clinic.png", mimeType: "image/png", buffer: Buffer.from(photo, "base64") })
     await page.getByRole("button", { name: "Guardar cambios", exact: true }).click()

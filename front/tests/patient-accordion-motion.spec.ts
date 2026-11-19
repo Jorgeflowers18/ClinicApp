@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 test.use({ reducedMotion: "no-preference", timezoneId: "America/Guayaquil" })
@@ -5,7 +6,7 @@ const dialog = (page: Page) => page.getByRole("dialog", { name: /^(Nuevo|Editar)
 const trigger = (page: Page, key: string) => page.locator(`#patient-section-${key} [data-patient-section-trigger]`)
 async function login(page: Page, theme: string) {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()

@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 import type { InstitutionBranch, InstitutionProfile } from "../src/modules/institution/types/institution.types"
 
@@ -5,7 +6,7 @@ const storageKey = "clinicapp.institution-profile"
 const widths = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440, 1920]
 const photo = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII="
 const initial: InstitutionProfile = {
-  name: "Clínica de origen", legalName: "Grupo Dental S.A.", ruc: "1798765432001", phone: "+593 98 123 4567",
+  name: "Clínica de origen", subtitle: "", legalName: "Grupo Dental S.A.", ruc: "1798765432001", phone: "+593 98 123 4567",
   email: "contacto@clinica.test", address: "Av. Amazonas, Quito", website: "https://clinica.test", logoText: "CA", logoImage: null,
   notes: "Atención odontológica integral.", hours: "Lunes a viernes: 08:00 - 18:00\nSábados: 08:00 - 13:00", branches: [],
 }
@@ -26,7 +27,7 @@ async function enter(page: Page, theme: "light" | "dark", locations = branches(2
     }
   })
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -56,8 +57,8 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.locator(`#institution-profile-${key}`)).toHaveValue(initial[key])
     }
     await expect(page.getByLabel("Horarios de atención", { exact: true })).toHaveValue(initial.hours)
-    const next = { ...initial, name: "Clínica Renovada", legalName: "Nueva Razón S.A.", ruc: "RUC libre como antes", website: "https://nueva.test", notes: "Descripción editada", phone: "0987654321", email: "nueva@clinica.test", address: "Calle Nueva 123", hours: "Atención con cita previa\nSábados: 09:00 - 12:00", logoText: "CD", logoImage: `data:image/png;base64,${photo}`, branches: branches(2) }
-    for (const key of ["name", "legalName", "ruc", "website", "notes", "phone", "email", "address", "logoText"] as const) {
+    const next = { ...initial, name: "Clínica Renovada", legalName: "Nueva Razón S.A.", ruc: "RUC libre como antes", website: "https://nueva.test", notes: "Descripción editada", phone: "0987654321", email: "nueva@clinica.test", address: "Calle Nueva 123", hours: "Atención con cita previa\nSábados: 09:00 - 12:00", logoImage: `data:image/png;base64,${photo}`, branches: branches(2) }
+    for (const key of ["name", "legalName", "ruc", "website", "notes", "phone", "email", "address"] as const) {
       await page.locator(`#institution-profile-${key}`).fill(next[key])
     }
     await page.getByLabel("Horarios de atención", { exact: true }).fill(next.hours)

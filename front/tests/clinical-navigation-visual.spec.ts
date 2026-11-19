@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 import { clinicalNavigation } from "./helpers/clinical-navigation"
 
@@ -7,7 +8,7 @@ const next = (page: Page) => page.getByRole("button", { name: "Siguiente", exact
 
 async function login(page: Page, theme: "light" | "dark") {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "dark" ? "Tema oscuro" : "Tema claro", exact: true }).click()
+  await setAccessTheme(page, theme === "dark" ? "dark" : "light")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()

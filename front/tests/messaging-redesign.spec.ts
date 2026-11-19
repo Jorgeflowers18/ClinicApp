@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 import { settleCalendarLayout } from "./helpers/calendar-layout"
 import { openUserMenu } from "./helpers/app-navigation"
@@ -9,7 +10,7 @@ const center=(p:Page)=>p.getByRole("dialog",{name:"Notificaciones",exact:true})
 async function login(page:Page,theme:string,role="admin"){
   await page.addInitScript(()=>{window.messagingModule=path=>{const resource=performance.getEntriesByType("resource").findLast(entry=>new URL(entry.name).pathname===path);return import(/* @vite-ignore */ resource?.name??path)}})
   await page.clock.install({time:new Date("2026-11-19T12:00:00Z")})
-  await page.goto("/login");await page.getByRole("button",{name:theme==="light"?"Tema claro":"Tema oscuro",exact:true}).click()
+  await page.goto("/login");await setAccessTheme(page, theme==="light"?"light":"dark")
   await page.locator("#email").fill(role+"@clinica.com");await page.locator("#password").fill(role+"123")
   await page.getByRole("button",{name:"Ingresar",exact:true}).click();await page.getByRole("button",{name:"Continuar",exact:true}).click()
   await expect(page).toHaveURL(/\/$/);await expect(bell(page)).toHaveAttribute("aria-label",/\d+ sin leer/)

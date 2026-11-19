@@ -1,10 +1,11 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 test.use({ timezoneId: "America/Guayaquil" })
 const widths = [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]
 async function login(page: Page, theme: string, role = "admin") {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill(`${role}@clinica.com`)
   await page.locator("#password").fill(`${role}123`)
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()

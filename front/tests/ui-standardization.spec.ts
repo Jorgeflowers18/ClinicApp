@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 import { settleCalendarLayout } from "./helpers/calendar-layout"
 
@@ -6,7 +7,7 @@ const widths = [320,360,375,390,430,768,1024,1280,1440,1920]
 const routes = ["/pacientes","/tratamientos","/inventario","/historial-clinico","/finanzas","/reportes","/notificaciones"]
 const reset = (page: Page) => page.getByRole("button", { name: "Restablecer filtros", exact: true })
 async function login(page: Page, theme: string) {
-  await page.goto("/login"); await page.getByRole("button",{name:theme==="light"?"Tema claro":"Tema oscuro",exact:true}).click()
+  await page.goto("/login"); await setAccessTheme(page, theme==="light"?"light":"dark")
   await page.locator("#email").fill("admin@clinica.com"); await page.locator("#password").fill("admin123")
   await page.getByRole("button",{name:"Ingresar",exact:true}).click();await page.getByRole("button",{name:"Continuar",exact:true}).click();await expect(page).toHaveURL(/\/$/)
 }

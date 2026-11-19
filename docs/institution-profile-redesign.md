@@ -22,11 +22,11 @@ Se reutilizaron los componentes UI y los tokens existentes. No se cambió el sis
 
 El registro local existente continúa siendo la fuente de verdad. El escritor publica un evento local únicamente después de que localStorage.setItem termina correctamente. Un hook con useSyncExternalStore escucha ese evento y los eventos nativos de almacenamiento de otras pestañas.
 
-El Sidebar de escritorio, su estado contraído y el menú móvil muestran el logo institucional y el nombre confirmado. Si no hay imagen, se muestran exactamente dos iniciales del nombre: primera y última palabra; si solo hay una palabra, sus dos primeras letras. Un nombre de una sola letra repite esa letra. Se conserva el subtítulo Odontología porque el modelo actual no dispone de otra categoría.
+El Sidebar de escritorio, su estado contraído y el menú móvil muestran el logo institucional y el nombre confirmado. Si no hay imagen, se muestran exactamente dos iniciales mediante la función institucional compartida: primera y segunda palabra; si solo hay una palabra, sus dos primeras letras. Un nombre de una sola letra repite esa letra y la marca ClinicApp conserva CA. El subtítulo institucional es un texto libre opcional del registro local; las configuraciones anteriores sin ese campo se leen con subtítulo vacío. La vista previa comparte la misma presentación que el Sidebar y cambia con el borrador, mientras el menú refleja exclusivamente los datos confirmados. El tooltip permite consultar el nombre y subtítulo completos, incluso con el menú contraído.
 
 Los cambios del formulario se muestran como vista previa y no alteran el Sidebar antes de guardar. Un fallo de almacenamiento conserva el registro confirmado, la marca y el borrador pendiente. La identidad vuelve a leerse al recargar. El avatar y el nombre del usuario en el Header continúan siendo personales.
 
-El campo Texto del logo se conserva porque AuthLayout lo utiliza en las pantallas de acceso. Su ayuda explica esa función y aclara que el Sidebar deriva sus iniciales del nombre institucional.
+El antiguo campo Texto del logo ya no aparece en la interfaz. La propiedad logoText se conserva únicamente para compatibilidad con registros almacenados. AuthLayout utiliza ahora el nombre institucional y la misma función de iniciales que el Sidebar y la vista previa.
 
 ## Logo
 

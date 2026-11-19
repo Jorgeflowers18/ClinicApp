@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { InstitutionMark } from "./institution-brand"
+import { InstitutionIdentity } from "./institution-brand"
 import styles from "./institution-logo-controls.module.css"
 
-export function InstitutionLogoControls({ name, image, savedImage, onChange, onReadingChange }: {
-  name: string; image: string | null; savedImage: string | null; onChange: (image: string | null) => void; onReadingChange: (reading: boolean) => void
+export function InstitutionLogoControls({ name, subtitle, image, savedImage, onChange, onReadingChange }: {
+  name: string; subtitle: string; image: string | null; savedImage: string | null; onChange: (image: string | null) => void; onReadingChange: (reading: boolean) => void
 }) {
   const input = useRef<HTMLInputElement>(null)
   const reader = useRef<FileReader | null>(null)
@@ -49,12 +49,11 @@ export function InstitutionLogoControls({ name, image, savedImage, onChange, onR
   }
 
   return <div className={styles.controls} aria-busy={reading}>
-    <div className={styles.preview}>
-      <InstitutionMark name={name} image={image} className={styles.logo} />
-      <div><p className={styles.name}>{name || "Nombre de la clínica"}</p><p className={styles.hint}>{image ? "Logo institucional" : "Iniciales automáticas del nombre"}</p></div>
+    <div className={styles.preview} data-institution-preview>
+      <InstitutionIdentity name={name} subtitle={subtitle} image={image} />
     </div>
     <div className={styles.actions}>
-      <Button type="button" variant="outline" onClick={() => input.current?.click()}><ImagePlus aria-hidden="true" />{image ? "Reemplazar imagen" : "Subir imagen"}</Button>
+      <Button type="button" variant="outline" onClick={() => input.current?.click()}><ImagePlus aria-hidden="true" />{image ? "Reemplazar imagen" : "Subir logo"}</Button>
       {image && <Button type="button" variant="ghost" aria-label="Quitar imagen institucional" onClick={() => {
         version.current++; reader.current?.abort(); finish(); setError(""); onChange(null)
         setStatus("Se mostrarán las iniciales al guardar los cambios.")
@@ -63,7 +62,7 @@ export function InstitutionLogoControls({ name, image, savedImage, onChange, onR
     </div>
     {reading && <p className={styles.feedback} role="status"><LoaderCircle className="animate-spin" aria-hidden="true" />Leyendo imagen…</p>}
     {error && <p role="alert" className={styles.error}>{error}</p>}
-    {!reading && status && <p role="status" className={styles.hint}>{image !== savedImage ? status : image ? "Logo institucional guardado." : "Se utilizan las iniciales del nombre."}</p>}
-    <p className={styles.hint}>El logo o las dos iniciales identificarán a la institución en el menú lateral después de guardar.</p>
+    {!reading && status && (image !== savedImage || image) && <p role="status" className={styles.hint}>{image !== savedImage ? status : "Logo institucional guardado."}</p>}
+    {!image && <p className={styles.hint}>Iniciales generadas automáticamente</p>}
   </div>
 }

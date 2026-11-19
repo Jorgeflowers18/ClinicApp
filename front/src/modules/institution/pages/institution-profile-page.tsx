@@ -1,18 +1,19 @@
 import { useRef, useState, type FormEvent } from "react"
-import { Building2, Camera, Clock3, FileText, MapPin, Save } from "lucide-react"
+import { Building2, Camera, Clock3, FileText, Info, LoaderCircle, MapPin, Save } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { PageHeader } from "@/shared/components/page-header"
 import { InstitutionBranches } from "../components/institution-branches"
 import { InstitutionLogoControls } from "../components/institution-logo-controls"
 import { readInstitutionProfile, type InstitutionBranch, type InstitutionProfile, writeInstitutionProfile } from "../types/institution.types"
 import styles from "./institution-profile-page.module.css"
 
-type TextField = Exclude<keyof InstitutionProfile, "branches" | "logoImage">
+type TextField = Exclude<keyof InstitutionProfile, "branches" | "logoImage" | "logoText">
 type FieldErrors = Partial<Record<"name" | "email", string>>
 
 export function InstitutionProfilePage() {
@@ -20,6 +21,8 @@ export function InstitutionProfilePage() {
   const [savedProfile, setSavedProfile] = useState(profile)
   const savedRef = useRef(profile)
   const savingRef = useRef(false)
+  const [saving, setSaving] = useState(false)
+  const [previewVersion, setPreviewVersion] = useState(0)
   const [saveError, setSaveError] = useState("")
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [readingImage, setReadingImage] = useState(false)
@@ -46,7 +49,7 @@ export function InstitutionProfilePage() {
     if (savingRef.current || readingImage) return
     const email = event.currentTarget.elements.namedItem("email") as HTMLInputElement
     const errors: FieldErrors = {}
-    if (!profile.name.trim()) errors.name = "Introduce el nombre de la clínica."
+    if (!profile.name.trim()) errors.name = "Introduce el nombre de la clínica o institución."
     if (email.validity.typeMismatch) errors.email = "Introduce un correo electrónico válido."
     setFieldErrors(errors)
     if (Object.keys(errors).length) {
@@ -54,6 +57,7 @@ export function InstitutionProfilePage() {
       return
     }
     savingRef.current = true
+    setSaving(true)
     try {
       const next = { ...profile, branches: savedRef.current.branches }
       writeInstitutionProfile(next)
@@ -64,13 +68,24 @@ export function InstitutionProfilePage() {
       toast.success("Perfil de la institución actualizado")
     } catch {
       setSaveError("No se pudieron guardar los cambios en este navegador. Tus cambios siguen en el formulario. Inténtalo de nuevo.")
-    } finally { savingRef.current = false }
+    } finally { savingRef.current = false; setSaving(false) }
+  }
+
+  const handleCancel = () => {
+    const confirmed = readInstitutionProfile()
+    savedRef.current = confirmed
+    setProfile(confirmed); setSavedProfile(confirmed)
+    setFieldErrors({}); setSaveError(""); setSaved(false)
+    setPreviewVersion((value) => value + 1)
   }
 
   const field = (key: TextField, label: string, placeholder: string, type = "text") => {
     const error = fieldErrors[key as keyof FieldErrors]
     return <div className={styles.field} key={key}>
-      <label htmlFor={"institution-profile-" + key}>{label}</label>
+      <div className={styles.fieldLabel}>
+        <label htmlFor={"institution-profile-" + key} data-required={key === "name"}>{label}</label>
+        {key === "subtitle" && <InstitutionSubtitleHelp />}
+      </div>
       <Input id={"institution-profile-" + key} name={key} type={type} value={profile[key]} placeholder={placeholder} required={key === "name"}
         aria-invalid={!!error} aria-describedby={error ? "institution-error-" + key : undefined}
         onChange={(event) => handleFieldChange(key, event.target.value)} />
@@ -79,21 +94,24 @@ export function InstitutionProfilePage() {
   }
 
   return <div className={styles.page}>
-    <PageHeader title="Perfil institucional" description="Administra la información y la identidad de tu clínica." />
+    <PageHeader title="Perfil institucional" description="Administra la información y la identidad de tu institución." />
     <form id="institution-profile-form" className={styles.columns} noValidate onSubmit={handleSave}>
       <div className={styles.details}>
         <Card className={styles.card}>
           <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><Building2 aria-hidden="true" />Información general</CardTitle></CardHeader>
           <CardContent className={styles.form}>
             <div className={styles.pair}>
-              {field("name", "Nombre de la clínica", "Nombre comercial de la clínica")}
+              {field("name", "Nombre de la clínica o institución", "Nombre comercial de la institución")}
+              {field("subtitle", "Subtítulo institucional", "Ej. Laboratorio odontológico")}
+            </div>
+            <div className={styles.pair}>
               {field("legalName", "Razón social", "Razón social de la institución")}
               {field("ruc", "RUC", "Número de identificación tributaria")}
-              {field("website", "Sitio web", "https://tuclinica.com")}
             </div>
+            {field("website", "Sitio web", "https://tuinstitucion.com")}
             <div className={styles.field}>
               <label htmlFor="institution-profile-notes">Descripción</label>
-              <Textarea id="institution-profile-notes" rows={3} value={profile.notes} placeholder="Describe los servicios y el enfoque de tu clínica."
+              <Textarea id="institution-profile-notes" rows={3} value={profile.notes} placeholder="Describe los servicios y el enfoque de tu institución."
                 onChange={(event) => handleFieldChange("notes", event.target.value)} />
             </div>
           </CardContent>
@@ -122,13 +140,9 @@ export function InstitutionProfilePage() {
         <Card className={styles.card}>
           <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><Camera aria-hidden="true" />Identidad visual</CardTitle></CardHeader>
           <CardContent className={styles.form}>
-            <InstitutionLogoControls name={profile.name} image={profile.logoImage} savedImage={savedProfile.logoImage} onReadingChange={setReadingImage} onChange={(logoImage) => {
+            <InstitutionLogoControls key={previewVersion} name={profile.name} subtitle={profile.subtitle} image={profile.logoImage} savedImage={savedProfile.logoImage} onReadingChange={setReadingImage} onChange={(logoImage) => {
               setProfile((current) => ({ ...current, logoImage })); setSaveError(""); setSaved(false)
             }} />
-            <div className={styles.alternative}>
-              {field("logoText", "Texto del logo", "CA")}
-              <p className={styles.hint}>Texto alternativo de la marca en las pantallas de acceso. El menú lateral utiliza las iniciales del nombre institucional.</p>
-            </div>
           </CardContent>
         </Card>
         <Card className={styles.card}>
@@ -151,7 +165,22 @@ export function InstitutionProfilePage() {
       <div><p className={styles.hint}>Los cambios se guardan en este navegador.</p>
         {dirty ? <p className={styles.pending} role="status">Cambios sin guardar</p> : saved && <p className={styles.hint} role="status">Cambios guardados</p>}
       </div>
-      <Button type="submit" form="institution-profile-form" disabled={readingImage}><Save aria-hidden="true" />Guardar cambios</Button>
+      <div className={styles.buttons}>
+        <Button type="button" variant="outline" disabled={!dirty || readingImage || saving} onClick={handleCancel}>Cancelar</Button>
+        <Button type="submit" form="institution-profile-form" disabled={readingImage || saving} aria-busy={saving}>
+          {saving ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Save aria-hidden="true" />}Guardar cambios
+        </Button>
+      </div>
     </div>
   </div>
+}
+
+function InstitutionSubtitleHelp() {
+  const [open, setOpen] = useState(false)
+  return <Tooltip open={open} onOpenChange={setOpen}>
+    <TooltipTrigger closeOnClick={false} onClick={() => setOpen(true)} render={
+      <Button type="button" variant="ghost" size="icon" className={styles.helpTrigger} aria-label="Información del subtítulo institucional" aria-expanded={open} />
+    }><Info aria-hidden="true" /></TooltipTrigger>
+    <TooltipContent side="top" className={styles.helpPopup}>Este texto aparecerá debajo del nombre institucional en el menú lateral</TooltipContent>
+  </Tooltip>
 }
