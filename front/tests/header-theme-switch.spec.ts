@@ -7,7 +7,7 @@ async function login(page: Page, theme: "light" | "dark") {
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
   await page.getByRole("button", { name: "Continuar", exact: true }).click()
-  await expect(page.getByRole("button", { name: /^Alertas globales: \d+ sin leer/ })).toBeVisible()
+  await expect(page.getByRole("button", { name: /^Notificaciones: \d+ sin leer/ })).toBeVisible()
 }
 
 const control = (page: Page) => page.getByRole("switch", { name: "Modo oscuro", exact: true })
@@ -33,7 +33,7 @@ for (const theme of ["light", "dark"] as const) {
   test(`hollow selector, exposed icon and smooth reversible movement in ${theme}`, async ({ page }) => {
     await login(page, theme)
     const dark = theme === "dark"
-    const bell = page.getByRole("button", { name: /^Alertas globales:/ })
+    const bell = page.getByRole("button", { name: /^Notificaciones:/ })
     const originalCount = await bell.getAttribute("aria-label")
     await expectTheme(page, dark)
     const row = control(page).locator("..")
@@ -104,7 +104,7 @@ for (const theme of ["light", "dark"] as const) {
     expect(await thumb(page).evaluate((node) => node.getAnimations().length)).toBe(0)
     await expect(bell).toHaveAttribute("aria-label", originalCount!)
     await bell.click()
-    await expect(page.getByRole("dialog", { name: "Alertas globales", exact: true })).toBeVisible()
+    await expect(page.getByRole("dialog", { name: "Notificaciones", exact: true })).toBeVisible()
   })
 
   test(`reduced motion changes the real theme immediately in ${theme}`, async ({ page }) => {

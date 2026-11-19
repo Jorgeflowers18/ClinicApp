@@ -22,7 +22,8 @@ export type InstitutionProfile = {
   branches: InstitutionBranch[]
 }
 
-const INSTITUTION_PROFILE_STORAGE_KEY = "clinicapp.institution-profile"
+export const INSTITUTION_PROFILE_STORAGE_KEY = "clinicapp.institution-profile"
+export const INSTITUTION_PROFILE_CHANGED = "clinicapp:institution-profile-changed"
 
 export const initialInstitutionProfile: InstitutionProfile = {
   name: "ClinicApp Odontología",
@@ -68,4 +69,6 @@ export function writeInstitutionProfile(profile: InstitutionProfile) {
   }
 
   window.localStorage.setItem(INSTITUTION_PROFILE_STORAGE_KEY, JSON.stringify(profile))
+  // Publish only confirmed writes; failed storage must never change the Sidebar.
+  window.dispatchEvent(new Event(INSTITUTION_PROFILE_CHANGED))
 }

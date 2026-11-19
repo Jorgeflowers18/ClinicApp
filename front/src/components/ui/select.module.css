@@ -1,0 +1,6 @@
+.value { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.popup { width: max(var(--anchor-width), 16rem); min-width: 0; max-width: min(calc(100vw - 24px), var(--available-width, 100vw)); max-height: min(360px, var(--available-height)); padding: 4px; overscroll-behavior: contain; animation-duration: 150ms; }
+.popup :global([data-slot="select-item"]) { padding-inline: 10px 32px; }
+.menu { max-width: min(calc(100vw - 24px), var(--available-width, 100vw)); overscroll-behavior: contain; animation-duration: 150ms; }
+.menu :global([data-slot="dropdown-menu-item"]) { white-space: normal; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .popup, .menu { animation-duration: 0ms; transition: none; } }

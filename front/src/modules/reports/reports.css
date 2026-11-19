@@ -1,0 +1,67 @@
+.reports-module { container: reports-content / inline-size; min-width: 0; }
+.reports-module [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"][data-active] { color: var(--primary); }
+.report-period { min-width: 0; }
+.report-period-main { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px; }
+.report-preset { display: grid; gap: 6px; flex: 0 1 210px; min-width: 0; }
+.report-preset [data-slot="select-trigger"] { width: 100%; }
+.report-period-range { min-width: 0; display: grid; gap: 6px; }
+.report-period-range > span { font-size: 12px; color: var(--muted-foreground); }
+.report-period-range p { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.report-period-range svg { width: 16px; height: 16px; color: var(--muted-foreground); flex-shrink: 0; }
+.report-custom-dates { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows 200ms ease, opacity 160ms ease, visibility 200ms; }
+.report-custom-dates > div { overflow: hidden; min-height: 0; display: flex; flex-wrap: wrap; gap: 12px; }
+.report-custom-dates > div > div { display: grid; gap: 6px; min-width: 0; flex: 0 1 200px; padding-top: 12px; }
+.report-custom-dates input { width: 100%; min-width: 0; }
+.report-period[data-custom="true"] .report-custom-dates { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
+.reports-module .report-demo { padding: 10px 12px; font-size: 12px; }
+.reports-module .report-demo [data-slot="alert-title"] { font-size: 12px; }
+.reports-module .report-demo [data-slot="alert-description"] { font-size: 12px; line-height: 1.5; }
+.reports-kpis { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.reports-module .clinic-kpi-card > [data-slot="card-content"] { min-height: 92px; padding: 12px 14px; align-items: center; }
+.reports-module .clinic-kpi-label { font-size: 13px; line-height: 1.4; }
+.reports-module .clinic-kpi-copy > .clinic-kpi-label { display: flex; align-items: center; min-height: 28px; }
+.reports-module .clinic-kpi-copy > div:first-child { min-height: 28px; }
+.reports-module .clinic-kpi-copy button[data-slot="button"] { min-width: 28px; min-height: 28px; }
+.reports-module .clinic-kpi-value { margin-top: 4px; font-size: 26px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.reports-module .clinic-kpi-card[data-icon-tone="success"] .clinic-kpi-value { color: var(--success); }
+.reports-module .clinic-kpi-card[data-icon-tone="destructive"] .clinic-kpi-value { color: var(--destructive); }
+.reports-module :is(.report-table-card, .report-chart-card) { min-width: 0; gap: 12px; padding-block: 16px; }
+.reports-module :is(.report-table-card, .report-chart-card) > [data-slot="card-header"] { padding-inline: 16px; gap: 6px; align-items: start; }
+.reports-module :is(.report-table-card, .report-chart-card) [data-slot="card-title"] { font-size: 15px; line-height: 1.4; }
+.reports-module .report-table-card [data-slot="card-description"] { font-size: 12px; line-height: 1.5; }
+.reports-module :is(.report-table-card, .report-chart-card) > [data-slot="card-content"] { padding-inline: 16px; }
+.reports-module .report-chart { height: 256px; min-width: 0; }
+.reports-module .report-chart[data-empty="true"] { height: auto; min-height: 100px; display: grid; align-items: center; }
+.report-chart-empty { padding: 16px 0; font-size: 13px; color: var(--muted-foreground); text-align: center; }
+.reports-module .recharts-cartesian-axis-tick text { font-size: 11px; fill: var(--muted-foreground); }
+.reports-module .recharts-legend-item-text { color: var(--muted-foreground) !important; }
+.reports-module .report-table-card table { width: 100%; table-layout: auto; }
+.reports-module .report-table-card :is(th, td) { padding: 10px 8px; font-size: 13px; }
+.reports-module .report-table-card :is(th, td).text-right { width: 1%; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.reports-module .report-table-card td:not(.text-right) { white-space: normal; overflow-wrap: anywhere; min-width: 110px; }
+.reports-module .report-table-card th:not(.text-right) { white-space: nowrap; }
+.reports-module .report-table-card td .inventory-stock-state { white-space: nowrap; }
+.report-agenda-tables { display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; align-items: start; }
+.report-sessions { display: grid; gap: 5px; justify-items: end; }
+.report-session-track { width: 64px; height: 3px; overflow: hidden; border-radius: 3px; background: var(--secondary); }
+.report-session-track > span { height: 100%; display: block; background: var(--success); }
+@container reports-content (min-width: 62rem) { .reports-kpis { grid-template-columns: repeat(4,minmax(0,1fr)); } .report-agenda-tables { grid-template-columns: minmax(0,1fr) minmax(0,1.5fr); } }
+@container reports-content (max-width: 34rem) {
+  .reports-module .clinic-kpi-card > [data-slot="card-content"] { display: block; position: relative; min-height: 104px; }
+  .reports-module .clinic-kpi-copy > .clinic-kpi-label, .reports-module .clinic-kpi-copy > div:first-child { min-height: 44px; }
+  .reports-module .clinic-kpi-copy button { min-width: 44px; min-height: 44px; }
+  .reports-module .clinic-summary-icon { position: absolute; right: 12px; bottom: 12px; width: 24px; height: 24px; }
+  .reports-module .clinic-summary-icon svg { width: 16px; height: 16px; }
+  .reports-module .clinic-kpi-value { font-size: 22px; }
+  .reports-module .report-table-card [data-slot="card-header"]:has([data-slot="card-action"]) { display: flex; flex-wrap: wrap; }
+  .reports-module .report-table-card [data-slot="card-action"] { width: 100%; }
+  .reports-module .report-chart { height: 240px; }
+  .report-period-range { flex-basis: 100%; }
+  .report-custom-dates > div > div { flex: 1 1 140px; }
+}
+@container reports-content (max-width: 18rem) { .reports-kpis { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 1023px), (pointer: coarse) {
+  .reports-module .clinic-kpi-copy > .clinic-kpi-label, .reports-module .clinic-kpi-copy > div:first-child { min-height: 44px; }
+  .reports-module .clinic-kpi-copy button[data-slot="button"] { min-width: 44px; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .report-custom-dates { transition: none; } }

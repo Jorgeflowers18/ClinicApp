@@ -10,31 +10,33 @@ import { useProductivityReport } from "../api/reports.queries"
 import { formatPeriodLabel } from "../lib/period"
 import type { ReportPeriod } from "../types/report.types"
 import { ReportTableCard } from "./report-table-card"
+import { ReportError } from "./report-error"
 
 interface ProductivityReportTabProps {
   period: ReportPeriod
 }
 
 export function ProductivityReportTab({ period }: ProductivityReportTabProps) {
-  const { data, isLoading } = useProductivityReport(period)
+  const { data, isLoading: initialLoading, isPlaceholderData, isError } = useProductivityReport(period)
+  const isLoading = initialLoading || isPlaceholderData
   const rows = data?.byProfessional ?? []
   const isEmpty = rows.every((row) => row.scheduled === 0)
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="report-chart-card">
         <CardHeader>
           <CardTitle>Citas completadas por profesional</CardTitle>
         </CardHeader>
-        <CardContent className="h-72">
-          {isLoading ? (
+        <CardContent className="report-chart" data-empty={!isLoading && (isError || isEmpty) || undefined}>
+          {isError ? <ReportError /> : isLoading ? (
             <Skeleton className="h-full w-full" />
-          ) : (
+          ) : isEmpty ? <p className="report-chart-empty">Sin citas asignadas a profesionales en el periodo seleccionado.</p> : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rows}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} className="text-xs" />
-                <YAxis tickLine={false} axisLine={false} className="text-xs" allowDecimals={false} />
+              <BarChart data={rows} layout="vertical" accessibilityLayer margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border" />
+                <XAxis type="number" tickLine={false} axisLine={false} className="text-xs" allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} className="text-xs" width={120} interval={0} />
                 <Tooltip
                   cursor={{ fill: "var(--muted)" }}
                   contentStyle={{
@@ -45,7 +47,7 @@ export function ProductivityReportTab({ period }: ProductivityReportTabProps) {
                     color: "var(--popover-foreground)",
                   }}
                 />
-                <Bar dataKey="completed" name="Completadas" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="completed" name="Completadas" fill="var(--success)" radius={[0, 4, 4, 0]} maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -54,6 +56,7 @@ export function ProductivityReportTab({ period }: ProductivityReportTabProps) {
 
       <ReportTableCard
         title="Productividad por profesional"
+        isError={isError}
         description="Las sesiones de tratamiento no se atribuyen por profesional: las asignaciones no registran quién las atiende."
         isLoading={isLoading}
         isEmpty={isEmpty}

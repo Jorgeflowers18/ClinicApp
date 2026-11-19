@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
@@ -102,10 +103,13 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
   const editorField = (key: keyof BranchDraft, label: string) => editor && (
     <div className={styles.field}>
       <label htmlFor={`sede-${key}`}>{label}</label>
-      <Input id={`sede-${key}`} value={editor.draft[key]} onChange={(event) => {
+      {key === "hours" ? <Textarea id={`sede-${key}`} rows={2} placeholder="Días y horarios de atención" value={editor.draft[key]} onChange={(event) => {
         setEditor({ ...editor, draft: { ...editor.draft, [key]: event.target.value } })
         setError("")
-      }} />
+      }} /> : <Input id={`sede-${key}`} type={key === "phone" ? "tel" : "text"} placeholder={key === "name" ? "Nombre de esta ubicación" : key === "address" ? "Calle, número y ciudad" : "Teléfono de contacto"} value={editor.draft[key]} onChange={(event) => {
+        setEditor({ ...editor, draft: { ...editor.draft, [key]: event.target.value } })
+        setError("")
+      }} />}
     </div>
   )
 
@@ -160,12 +164,12 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
         </CardContent>
       </Card>
 
-      <Sheet open={editor !== null} onOpenChange={(open) => { if (!open) { setEditor(null); setError("") } }}>
-        <SheetContent side="right" className={styles.editor} finalFocus={returnFocus}>
-          <SheetHeader className={styles.editorHeader}>
-            <SheetTitle>{editor?.original ? "Editar sede" : "Nueva sede"}</SheetTitle>
-            <SheetDescription>{editor?.original ? "Actualiza los datos de esta ubicación de la institución." : "Registra una nueva ubicación de la institución."}</SheetDescription>
-          </SheetHeader>
+      <Dialog open={editor !== null} onOpenChange={(open) => { if (!open) { setEditor(null); setError("") } }}>
+        <DialogContent variant="medium" className={styles.editor} finalFocus={returnFocus}>
+          <DialogHeader className={styles.editorHeader}>
+            <DialogTitle>{editor?.original ? "Editar sede" : "Nueva sede"}</DialogTitle>
+            <DialogDescription>{editor?.original ? "Actualiza los datos de esta ubicación de la institución." : "Registra una nueva ubicación de la institución."}</DialogDescription>
+          </DialogHeader>
           {editor && <form className={styles.editorForm} noValidate onSubmit={saveBranch}>
             <div className={styles.editorBody}>
               <fieldset className={styles.group}>
@@ -178,13 +182,13 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
               </fieldset>
               {error && <p role="alert" className={styles.error}>{error}</p>}
             </div>
-            <SheetFooter className={styles.editorFooter}>
+            <div className={styles.editorFooter} data-institution-editor-actions>
               <Button type="button" variant="outline" onClick={() => { setEditor(null); setError("") }}>Cancelar</Button>
               <Button type="submit">Guardar sede</Button>
-            </SheetFooter>
+            </div>
           </form>}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleting !== null} onOpenChange={(open) => { if (!open) { setDeleting(null); setError("") } }}>
         <AlertDialogContent finalFocus={returnFocus} className={styles.confirm}>

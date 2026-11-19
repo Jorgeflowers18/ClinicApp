@@ -238,7 +238,7 @@ export function RegisterEncounterForm({ patient, history, appointmentId }: Regis
         }} onOpenChangeComplete={open => {
           if (!open && finishingExit.current) navigate(clinicalHistoryPath(patient.id))
         }}>
-          <DialogContent className="clinic-encounter-dialog" showCloseButton={false} initialFocus={modalHeading}>
+          <DialogContent variant="complex" className="clinic-encounter-dialog" showCloseButton={false} initialFocus={modalHeading}>
             <DialogHeader className="clinic-encounter-modal-heading">
               <div>
                 <DialogTitle ref={modalHeading} tabIndex={-1}>Registrar atención</DialogTitle>

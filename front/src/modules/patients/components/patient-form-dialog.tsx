@@ -25,7 +25,7 @@ export function PatientFormDialog({ mode, patient, initialSection, returnFocus, 
   return <Dialog open disablePointerDismissal={submitting} onOpenChange={(open, details) => {
     if (!open) { details.cancel(); requestClose() }
   }}>
-    <DialogContent className="patient-edit-dialog" showCloseButton={false} initialFocus={heading}
+    <DialogContent variant="complex" className="patient-edit-dialog" showCloseButton={false} initialFocus={heading}
       finalFocus={() => returnFocus?.isConnected ? returnFocus : true}>
       <DialogHeader className="patient-edit-heading"><div>
         <DialogTitle ref={heading} tabIndex={-1}>{mode === "create" ? "Nuevo paciente" : "Editar paciente"}</DialogTitle>

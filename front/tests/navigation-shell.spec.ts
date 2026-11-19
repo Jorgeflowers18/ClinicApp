@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 import { logoutFromHeader, navigateUserMenu, openUserMenu } from "./helpers/app-navigation"
 
 const widths = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440, 1920]
-const allLinks = ["Panel", "Pacientes", "Citas", "Historial clínico", "Tratamientos", "Inventario", "Finanzas", "Reportes", "Notificaciones"]
+const allLinks = ["Panel", "Pacientes", "Citas", "Historial clínico", "Tratamientos", "Inventario", "Finanzas", "Reportes", "Mensajería"]
 test.use({ timezoneId: "America/Guayaquil" })
 
 async function login(page: Page, theme: "light" | "dark", role = "admin") {
@@ -14,8 +14,8 @@ async function login(page: Page, theme: "light" | "dark", role = "admin") {
   await page.getByRole("button", { name: "Continuar", exact: true }).click()
   await expect(page.locator(".clinic-app-header")).toBeVisible()
 }
-const bell = (page: Page) => page.getByRole("button", { name: /^Alertas globales:/ })
-const panel = (page: Page) => page.getByRole("dialog", { name: "Alertas globales", exact: true })
+const bell = (page: Page) => page.getByRole("button", { name: /^Notificaciones:/ })
+const panel = (page: Page) => page.getByRole("dialog", { name: "Notificaciones", exact: true })
 
 async function seedAlertSources(page: Page, expectedUnread = 6) {
   await expect(bell(page)).toHaveAttribute("aria-label", /\d+ sin leer/)
@@ -39,8 +39,8 @@ async function seedAlertSources(page: Page, expectedUnread = 6) {
     mockNotifications.splice(0, mockNotifications.length, log, { ...log, id: "fixture-sent", status: "enviada" })
   })
   await bell(page).click()
-  await panel(page).getByRole("button", { name: "Actualizar alertas", exact: true }).click()
-  await expect(bell(page)).toHaveAttribute("aria-label", `Alertas globales: ${expectedUnread} sin leer${expectedUnread ? ", hay alertas importantes" : ""}`)
+  await panel(page).getByRole("button", { name: "Actualizar notificaciones", exact: true }).click()
+  await expect(bell(page)).toHaveAttribute("aria-label", `Notificaciones: ${expectedUnread} sin leer${expectedUnread ? ", hay notificaciones importantes" : ""}`)
 }
 
 for (const theme of ["light", "dark"] as const) {
@@ -166,24 +166,24 @@ for (const theme of ["light", "dark"] as const) {
     await expect(center.locator('[data-alert-kind="delivery"]')).toHaveCount(1)
     await center.getByRole("button", { name: "Importantes", exact: true }).click()
     await expect(center.locator("[data-alert-kind]")).toHaveCount(3)
-    await center.getByLabel("Tipo de alerta", { exact: true }).selectOption("inventory")
+    await center.getByLabel("Tipo de notificación", { exact: true }).click(); await page.getByRole("option", { name: "Inventario", exact: true }).click()
     await expect(center.locator("[data-alert-kind]")).toHaveCount(2)
-    await center.getByLabel("Tipo de alerta", { exact: true }).selectOption("all")
+    await center.getByLabel("Tipo de notificación", { exact: true }).click(); await page.getByRole("option", { name: "Todos los tipos", exact: true }).click()
     await center.getByRole("button", { name: "No leídas", exact: true }).click()
     await center.getByRole("button", { name: /^Marcar como leída:/ }).first().click()
     await expect(bell(page)).toHaveAttribute("aria-label", /5 sin leer/)
     await center.getByRole("button", { name: "Marcar todas como leídas", exact: true }).click()
-    await expect(bell(page)).toHaveAttribute("aria-label", "Alertas globales: 0 sin leer")
-    await expect(center.getByText("No hay alertas sin leer", { exact: true })).toBeVisible()
+    await expect(bell(page)).toHaveAttribute("aria-label", "Notificaciones: 0 sin leer")
+    await expect(center.getByText("No tienes notificaciones sin leer", { exact: true })).toBeVisible()
     await center.getByRole("button", { name: "Todas", exact: true }).click()
     await expect(center.locator('[data-alert-read="true"]')).toHaveCount(6)
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem("clinicapp.global-alert-reads.usr_1")!).length)).toBe(6)
     await page.reload()
     await seedAlertSources(page, 0)
-    await expect(bell(page)).toHaveAttribute("aria-label", "Alertas globales: 0 sin leer")
-    await panel(page).getByRole("link", { name: "Historial de envíos", exact: true }).click()
+    await expect(bell(page)).toHaveAttribute("aria-label", "Notificaciones: 0 sin leer")
+    await panel(page).getByRole("link", { name: "Ir a Mensajería", exact: true }).click()
     await expect(page).toHaveURL(/\/notificaciones$/)
-    await expect(page.getByRole("button", { name: /Guardar plantilla/ })).toBeVisible()
+    await page.getByRole("tab", { name: "Plantillas de mensajes", exact: true }).click(); await expect(page.getByRole("button", { name: /Guardar plantilla/ })).toBeVisible()
   })
 
   test(`read-write failures keep the real unread count and allow retry in ${theme}`, async ({ page }) => {
@@ -201,7 +201,7 @@ for (const theme of ["light", "dark"] as const) {
     expect(await page.evaluate(() => localStorage.getItem("clinicapp.global-alert-reads.usr_1"))).toBeNull()
     await page.evaluate(() => (window as unknown as { restoreReads: () => void }).restoreReads())
     await panel(page).getByRole("button", { name: "Marcar todas como leídas", exact: true }).click()
-    await expect(bell(page)).toHaveAttribute("aria-label", "Alertas globales: 0 sin leer")
+    await expect(bell(page)).toHaveAttribute("aria-label", "Notificaciones: 0 sin leer")
   })
 
   test(`unavailable alert sources never report a false zero and recover in ${theme}`, async ({ page }) => {
@@ -215,12 +215,12 @@ for (const theme of ["light", "dark"] as const) {
       inventoryApi.list = async () => { throw new Error("Source unavailable") }
     })
     await bell(page).click()
-    await panel(page).getByRole("button", { name: "Actualizar alertas", exact: true }).click()
-    await expect(bell(page)).toHaveAttribute("aria-label", "Alertas globales: consulta incompleta")
-    await expect(panel(page).getByRole("alert")).toContainText("No se pudieron consultar todas las alertas")
+    await panel(page).getByRole("button", { name: "Actualizar notificaciones", exact: true }).click()
+    await expect(bell(page)).toHaveAttribute("aria-label", "Notificaciones: consulta incompleta")
+    await expect(panel(page).getByRole("alert")).toContainText("No se pudieron consultar todas las notificaciones")
     await expect(panel(page).getByRole("button", { name: "Marcar todas como leídas", exact: true })).toBeDisabled()
     await page.evaluate(() => (window as unknown as { restoreAlertSource: () => void }).restoreAlertSource())
-    await panel(page).getByRole("button", { name: "Actualizar alertas", exact: true }).click()
+    await panel(page).getByRole("button", { name: "Actualizar notificaciones", exact: true }).click()
     await expect(bell(page)).toHaveAttribute("aria-label", /\d+ sin leer/)
     await expect(panel(page).getByRole("alert")).toHaveCount(0)
   })
@@ -229,14 +229,14 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/login")
     await page.evaluate(() => localStorage.setItem("clinicapp.global-alert-reads.usr_1", "{broken"))
     await login(page, theme)
-    await expect(bell(page)).toHaveAttribute("aria-label", "Alertas globales: consulta incompleta")
+    await expect(bell(page)).toHaveAttribute("aria-label", "Notificaciones: consulta incompleta")
     await bell(page).click()
     await expect(panel(page).getByRole("alert")).toContainText("No se pudo recuperar el estado de lectura")
     await page.evaluate(() => localStorage.setItem("clinicapp.global-alert-reads.usr_1", "[]"))
     await panel(page).getByRole("button", { name: "Reintentar lectura", exact: true }).click()
     await expect(bell(page)).toHaveAttribute("aria-label", /[1-9]\d* sin leer/)
     await panel(page).getByRole("button", { name: "Marcar todas como leídas", exact: true }).click()
-    await expect(bell(page)).toHaveAttribute("aria-label", "Alertas globales: 0 sin leer")
+    await expect(bell(page)).toHaveAttribute("aria-label", "Notificaciones: 0 sin leer")
     await page.keyboard.press("Escape")
     await logoutFromHeader(page)
     await expect(page).toHaveURL(/\/login$/)
@@ -256,10 +256,10 @@ for (const role of ["admin", "recepcion", "medico"]) {
     await page.keyboard.press("Escape")
     await expect(bell(page)).toHaveAttribute("aria-label", /\d+ sin leer/)
     await bell(page).click()
-    await expect(panel(page).getByRole("link", { name: "Historial de envíos", exact: true })).toHaveCount(role === "medico" ? 0 : 1)
+    await expect(panel(page).getByRole("link", { name: "Ir a Mensajería", exact: true })).toHaveCount(role === "medico" ? 0 : 1)
     if (role === "medico") {
-      await expect(panel(page).getByLabel("Tipo de alerta")).not.toContainText("Inventario")
-      await expect(panel(page).getByLabel("Tipo de alerta")).not.toContainText("Fallos de envío")
+      await panel(page).getByLabel("Tipo de notificación").click(); await expect(page.getByRole("option", {name:"Inventario",exact:true})).toHaveCount(0)
+      await expect(page.getByRole("option", {name:"Mensajería",exact:true})).toHaveCount(0); await page.keyboard.press("Escape")
     }
     await page.goto("/perfil-institucion")
     await expect(page).toHaveURL(role === "admin" ? /\/perfil-institucion$/ : /\/403$/)

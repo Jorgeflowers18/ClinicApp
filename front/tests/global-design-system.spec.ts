@@ -9,7 +9,7 @@ const modules = [
   ["Tratamientos", "/tratamientos"], ["Formulario de tratamiento", "/tratamientos/nuevo"],
   ["Detalle de tratamiento", "/tratamientos/trt_1"], ["Inventario", "/inventario"],
   ["Formulario de insumo", "/inventario/nuevo"], ["Detalle de insumo", "/inventario/inv_1"],
-  ["Notificaciones", "/notificaciones"], ["Finanzas", "/finanzas"], ["Reportes", "/reportes"],
+  ["Mensajería", "/notificaciones"], ["Finanzas", "/finanzas"], ["Reportes", "/reportes"],
   ["Perfil de usuario", "/perfil-usuario"], ["Perfil institucional", "/perfil-institucion"],
 ] as const
 

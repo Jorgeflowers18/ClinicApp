@@ -14,11 +14,13 @@ import type { PageQuery, Paginated, Role } from "@/shared/types/common"
 import { notificationsApi } from "../api/notifications.api"
 import { notificationsKeys } from "../api/notifications.queries"
 import type { NotificationLog } from "../types/notification.types"
+import { notificationTypeLabels } from "../types/notification.types"
+import { inventoryUnit } from "@/modules/inventory/lib/inventory-display"
 
 // Presentation data only: API models and delivery status remain untouched.
 export type GlobalAlert = {
   id: string; kind: "inventory" | "appointment" | "birthday" | "delivery"
-  title: string; detail: string; to: string; important: boolean
+  title: string; detail: string; meta?: string; to: string; important: boolean
 }
 
 export async function collectAlertPages<T extends { id: string }>(fetchPage: (query: PageQuery) => Promise<Paginated<T>>, signal: AbortSignal): Promise<T[]> {
@@ -42,23 +44,26 @@ export function buildGlobalAlerts({ patients, appointments, inventory, deliverie
   const alerts: GlobalAlert[] = []
   for (const item of inventory) if (item.stock <= item.minStock) alerts.push({
     id: `inventory:${item.id}:${day}:${item.stock}:${item.minStock}`, kind: "inventory", important: true,
-    title: `${item.stock === 0 ? "Sin existencias" : "Stock bajo"}: ${item.name}`,
-    detail: `${item.stock} ${item.unit} disponibles · Mínimo ${item.minStock}`,
+    title: item.stock === 0 ? "Sin existencias de insumos" : "Stock bajo de insumos",
+    detail: item.name,
+    meta: `${item.stock} ${inventoryUnit(item.unit, item.stock)} disponibles · Mínimo: ${item.minStock} ${inventoryUnit(item.unit, item.minStock)}`,
     to: `/inventario/${encodeURIComponent(item.id)}`,
   })
   for (const log of deliveries) if (log.status === "fallida") alerts.push({
     id: `delivery:${log.id}:${log.sentAt}`, kind: "delivery", important: true,
-    title: "Envío de notificación fallido",
+    title: "Mensaje no enviado",
     detail: `${names.get(log.patientId) || "Paciente no disponible"} · ${log.channel === "sms" ? "SMS" : "Correo"}`,
-    to: "/notificaciones",
+    meta: notificationTypeLabels[log.type],
+    to: `/notificaciones?envio=${encodeURIComponent(log.id)}`,
   })
   for (const appointment of [...appointments].sort((a, b) => a.start.localeCompare(b.start))) {
     const start = parseISO(appointment.start)
     if (!isValid(start) || !isSameDay(start, now) || !["programada", "confirmada"].includes(appointment.status)) continue
     alerts.push({
       id: `appointment:${appointment.id}:${appointment.start}:${appointment.status}`, kind: "appointment", important: false,
-      title: `Cita de hoy · ${format(start, "HH:mm")}`,
-      detail: `${names.get(appointment.patientId) || "Paciente no disponible"} · ${appointment.status === "confirmada" ? "Confirmada" : "Programada"}`,
+      title: `${start.getTime() > now.getTime() ? "Próxima cita" : "Cita de hoy"} · ${format(start, "HH:mm")}`,
+      detail: names.get(appointment.patientId) || "Paciente no disponible",
+      meta: `${appointment.status === "confirmada" ? "Confirmada" : "Programada"}${start.getTime() > now.getTime() ? ` · En ${Math.ceil((start.getTime() - now.getTime()) / 60000)} min` : ""}`,
       to: "/citas",
     })
   }
@@ -66,7 +71,7 @@ export function buildGlobalAlerts({ patients, appointments, inventory, deliverie
     const birth = parseISO(patient.birthDate)
     if (isValid(birth) && format(birth, "MM-dd") === format(now, "MM-dd")) alerts.push({
       id: `birthday:${patient.id}:${day}`, kind: "birthday", important: false,
-      title: `Cumpleaños de ${names.get(patient.id)}`, detail: "Cumple años hoy",
+      title: "Cumpleaños de paciente", detail: names.get(patient.id) || "Paciente no disponible", meta: "Cumple años hoy",
       to: `/pacientes/${encodeURIComponent(patient.id)}`,
     })
   }

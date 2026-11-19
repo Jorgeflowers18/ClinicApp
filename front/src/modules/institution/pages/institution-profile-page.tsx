@@ -1,21 +1,19 @@
-import { useRef, useState } from "react"
-import { Building2, Camera, Clock3, MapPin, Save } from "lucide-react"
+import { useRef, useState, type FormEvent } from "react"
+import { Building2, Camera, Clock3, FileText, MapPin, Save } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { FormActions } from "@/components/ui/form-actions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { PageHeader } from "@/shared/components/page-header"
-import { InstitutionLogo } from "@/shared/components/brand-logo"
 import { InstitutionBranches } from "../components/institution-branches"
+import { InstitutionLogoControls } from "../components/institution-logo-controls"
 import { readInstitutionProfile, type InstitutionBranch, type InstitutionProfile, writeInstitutionProfile } from "../types/institution.types"
 import styles from "./institution-profile-page.module.css"
 
-const generalFields = [["name", "Nombre de la clínica"], ["legalName", "Razón social"], ["ruc", "RUC"], ["website", "Sitio web"]] as const
-const contactFields = [["phone", "Teléfono"], ["email", "Correo electrónico"]] as const
 type TextField = Exclude<keyof InstitutionProfile, "branches" | "logoImage">
+type FieldErrors = Partial<Record<"name" | "email", string>>
 
 export function InstitutionProfilePage() {
   const [profile, setProfile] = useState<InstitutionProfile>(readInstitutionProfile)
@@ -23,16 +21,18 @@ export function InstitutionProfilePage() {
   const savedRef = useRef(profile)
   const savingRef = useRef(false)
   const [saveError, setSaveError] = useState("")
-  const dirty = (Object.keys(profile) as (keyof InstitutionProfile)[])
-    .some((key) => key !== "branches" && profile[key] !== savedProfile[key])
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [readingImage, setReadingImage] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const dirty = (Object.keys(profile) as (keyof InstitutionProfile)[]).some((key) => key !== "branches" && profile[key] !== savedProfile[key])
 
-  const handleFieldChange = (field: TextField, value: string) => {
-    setProfile((current) => ({ ...current, [field]: value }))
-    setSaveError("")
+  const handleFieldChange = (key: TextField, value: string) => {
+    setProfile((current) => ({ ...current, [key]: value }))
+    setFieldErrors((current) => ({ ...current, [key]: undefined }))
+    setSaveError(""); setSaved(false)
   }
 
-  // A branch operation persists branches without saving unrelated form drafts.
-  // Update confirmed state and the list only after the existing writer succeeds.
+  // Sede operations persist only confirmed institutional fields, preserving the main draft.
   const handleCommitBranches = (branches: InstitutionBranch[]) => {
     const next = { ...savedRef.current, branches }
     writeInstitutionProfile(next)
@@ -41,20 +41,18 @@ export function InstitutionProfilePage() {
     setProfile((current) => ({ ...current, branches }))
   }
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : null
-      setProfile((current) => ({ ...current, logoImage: result }))
-      setSaveError("")
+  const handleSave = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (savingRef.current || readingImage) return
+    const email = event.currentTarget.elements.namedItem("email") as HTMLInputElement
+    const errors: FieldErrors = {}
+    if (!profile.name.trim()) errors.name = "Introduce el nombre de la clínica."
+    if (email.validity.typeMismatch) errors.email = "Introduce un correo electrónico válido."
+    setFieldErrors(errors)
+    if (Object.keys(errors).length) {
+      event.currentTarget.querySelector<HTMLInputElement>('[name="' + (errors.name ? "name" : "email") + '"]')?.focus()
+      return
     }
-    reader.readAsDataURL(file)
-  }
-
-  const handleSave = () => {
-    if (savingRef.current) return
     savingRef.current = true
     try {
       const next = { ...profile, branches: savedRef.current.branches }
@@ -62,75 +60,98 @@ export function InstitutionProfilePage() {
       savedRef.current = next
       setSavedProfile(next)
       setProfile(next)
-      setSaveError("")
+      setSaveError(""); setSaved(true)
       toast.success("Perfil de la institución actualizado")
     } catch {
       setSaveError("No se pudieron guardar los cambios en este navegador. Tus cambios siguen en el formulario. Inténtalo de nuevo.")
     } finally { savingRef.current = false }
   }
 
-  const field = (key: TextField, label: string, type = "text") => (
-    <div className={styles.field} key={key}>
-      <label htmlFor={`institution-profile-${key}`}>{label}</label>
-      <Input id={`institution-profile-${key}`} type={type} value={profile[key]}
+  const field = (key: TextField, label: string, placeholder: string, type = "text") => {
+    const error = fieldErrors[key as keyof FieldErrors]
+    return <div className={styles.field} key={key}>
+      <label htmlFor={"institution-profile-" + key}>{label}</label>
+      <Input id={"institution-profile-" + key} name={key} type={type} value={profile[key]} placeholder={placeholder} required={key === "name"}
+        aria-invalid={!!error} aria-describedby={error ? "institution-error-" + key : undefined}
         onChange={(event) => handleFieldChange(key, event.target.value)} />
+      {error && <p id={"institution-error-" + key} className={styles.fieldError} role="alert">{error}</p>}
     </div>
-  )
+  }
 
-  return (
-    <div className={styles.page}>
-      <PageHeader title="Perfil institucional" description="Administra la información de tu clínica o institución" />
-      {saveError && <p role="alert" className={styles.error}>{saveError}</p>}
-      <div className={styles.columns}>
-        <div className={styles.details}>
-          <Card className={styles.card}>
-            <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><Building2 />Información general</CardTitle></CardHeader>
-            <CardContent className={styles.form}>
-              <div className={styles.pair}>{generalFields.map(([key, label]) => field(key, label))}</div>
-              <div className={styles.field}>
-                <label htmlFor="institution-profile-notes">Descripción</label>
-                <Textarea id="institution-profile-notes" rows={3} value={profile.notes}
-                  onChange={(event) => handleFieldChange("notes", event.target.value)} />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className={styles.card}>
-            <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><MapPin />Contacto y ubicación</CardTitle></CardHeader>
-            <CardContent className={styles.form}>
-              <div className={styles.pair}>{contactFields.map(([key, label]) => field(key, label, key === "email" ? "email" : "text"))}</div>
-              {field("address", "Dirección principal")}
-            </CardContent>
-          </Card>
-          <Card className={styles.card}>
-            <CardHeader><CardTitle id="institution-hours-label" role="heading" aria-level={2} className={styles.title}><Clock3 />Horarios de atención</CardTitle></CardHeader>
-            <CardContent>
-              <Textarea rows={4} aria-labelledby="institution-hours-label" value={profile.hours}
-                onChange={(event) => handleFieldChange("hours", event.target.value)} />
-            </CardContent>
-          </Card>
-        </div>
-        <Card className={`${styles.card} ${styles.identity}`}>
-          <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><Camera />Identidad visual</CardTitle></CardHeader>
+  return <div className={styles.page}>
+    <PageHeader title="Perfil institucional" description="Administra la información y la identidad de tu clínica." />
+    <form id="institution-profile-form" className={styles.columns} noValidate onSubmit={handleSave}>
+      <div className={styles.details}>
+        <Card className={styles.card}>
+          <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><Building2 aria-hidden="true" />Información general</CardTitle></CardHeader>
           <CardContent className={styles.form}>
-            <div className={styles.logoPreview}>
-              <InstitutionLogo image={profile.logoImage} text={profile.logoText} className="size-20 text-2xl" imageClassName={styles.logoImage} />
-              <div><p className={styles.previewTitle}>Logo de la clínica</p><p className={styles.hint}>Vista previa de la identidad institucional.</p></div>
+            <div className={styles.pair}>
+              {field("name", "Nombre de la clínica", "Nombre comercial de la clínica")}
+              {field("legalName", "Razón social", "Razón social de la institución")}
+              {field("ruc", "RUC", "Número de identificación tributaria")}
+              {field("website", "Sitio web", "https://tuclinica.com")}
             </div>
-            <label className={`clinic-file-upload ${styles.upload}`}>
-              <Camera aria-hidden="true" className="size-4" />Subir imagen
-              <input type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} />
-            </label>
-            {field("logoText", "Texto del logo")}
-            <p className={styles.hint}>Se usa en la interfaz y documentos. Pulsa Guardar cambios para conservar la imagen y el texto.</p>
+            <div className={styles.field}>
+              <label htmlFor="institution-profile-notes">Descripción</label>
+              <Textarea id="institution-profile-notes" rows={3} value={profile.notes} placeholder="Describe los servicios y el enfoque de tu clínica."
+                onChange={(event) => handleFieldChange("notes", event.target.value)} />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={styles.card}>
+          <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><MapPin aria-hidden="true" />Contacto y ubicación</CardTitle></CardHeader>
+          <CardContent className={styles.form}>
+            <div className={styles.pair}>
+              {field("phone", "Teléfono", "+593 98 123 4567", "tel")}
+              {field("email", "Correo electrónico", "contacto@tuclinica.com", "email")}
+            </div>
+            {field("address", "Dirección principal", "Calle, número y ciudad")}
+          </CardContent>
+        </Card>
+        <Card className={styles.card}>
+          <CardHeader><CardTitle id="institution-hours-label" role="heading" aria-level={2} className={styles.title}><Clock3 aria-hidden="true" />Horarios de atención</CardTitle></CardHeader>
+          <CardContent className={styles.form}>
+            <Textarea rows={3} aria-labelledby="institution-hours-label" aria-describedby="institution-hours-hint" value={profile.hours}
+              placeholder={"Lunes a viernes: 08:00 - 18:00\nSábados: 08:00 - 13:00"}
+              onChange={(event) => handleFieldChange("hours", event.target.value)} />
+            <p id="institution-hours-hint" className={styles.hint}>Organiza los días y horarios en líneas separadas.</p>
           </CardContent>
         </Card>
       </div>
-      <InstitutionBranches branches={profile.branches} onCommit={handleCommitBranches} />
-      <FormActions>
-        {dirty && <span className={styles.pending}>Cambios sin guardar</span>}
-        <Button onClick={handleSave}><Save className="size-4" />Guardar cambios</Button>
-      </FormActions>
-      <p className={styles.storageNote}>Los cambios se guardan en este navegador.</p>
+      <div className={styles.details}>
+        <Card className={styles.card}>
+          <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><Camera aria-hidden="true" />Identidad visual</CardTitle></CardHeader>
+          <CardContent className={styles.form}>
+            <InstitutionLogoControls name={profile.name} image={profile.logoImage} savedImage={savedProfile.logoImage} onReadingChange={setReadingImage} onChange={(logoImage) => {
+              setProfile((current) => ({ ...current, logoImage })); setSaveError(""); setSaved(false)
+            }} />
+            <div className={styles.alternative}>
+              {field("logoText", "Texto del logo", "CA")}
+              <p className={styles.hint}>Texto alternativo de la marca en las pantallas de acceso. El menú lateral utiliza las iniciales del nombre institucional.</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={styles.card}>
+          <CardHeader><CardTitle role="heading" aria-level={2} className={styles.title}><FileText aria-hidden="true" />Resumen institucional</CardTitle></CardHeader>
+          <CardContent>
+            <p className={styles.summaryHint}>Vista previa de los datos del formulario.</p>
+            <dl className={styles.summary}>
+              <div><dt>Nombre comercial</dt><dd>{profile.name || "Sin nombre"}</dd></div>
+              <div><dt>Razón social</dt><dd>{profile.legalName || "Sin registrar"}</dd></div>
+              <div><dt>Contacto principal</dt><dd>{profile.phone || "Sin teléfono"}<span>{profile.email || "Sin correo"}</span></dd></div>
+              <div><dt>Sitio web</dt><dd>{profile.website || "Sin registrar"}</dd></div>
+            </dl>
+          </CardContent>
+        </Card>
+      </div>
+    </form>
+    <InstitutionBranches branches={profile.branches} onCommit={handleCommitBranches} />
+    {saveError && <p role="alert" className={styles.error}>{saveError}</p>}
+    <div className={styles.actions}>
+      <div><p className={styles.hint}>Los cambios se guardan en este navegador.</p>
+        {dirty ? <p className={styles.pending} role="status">Cambios sin guardar</p> : saved && <p className={styles.hint} role="status">Cambios guardados</p>}
+      </div>
+      <Button type="submit" form="institution-profile-form" disabled={readingImage}><Save aria-hidden="true" />Guardar cambios</Button>
     </div>
-  )
+  </div>
 }

@@ -25,7 +25,7 @@ export function ScheduleFormDialog({ open, onOpenChange, title, description, dir
   return <Dialog open={open} disablePointerDismissal={busy} onOpenChange={(next, details) => {
     if (!next) { details.cancel(); requestClose() }
   }}>
-    <DialogContent className="clinic-schedule-dialog" showCloseButton={false} initialFocus={heading}>
+    <DialogContent variant="wide" className="clinic-schedule-dialog" showCloseButton={false} initialFocus={heading}>
       <DialogHeader className="clinic-schedule-heading"><div>
         <DialogTitle ref={heading} tabIndex={-1}>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>

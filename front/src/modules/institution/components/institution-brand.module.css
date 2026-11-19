@@ -1,0 +1,6 @@
+.mark, .image { width: var(--institution-logo-size, 36px); height: var(--institution-logo-size, 36px); flex-shrink: 0; border-radius: var(--radius-card); }
+.mark { display: inline-flex; align-items: center; justify-content: center; background: var(--brand-logo-background); color: var(--brand-logo-foreground); font-size: var(--institution-logo-font-size, 14px); font-weight: 600; letter-spacing: -0.04em; }
+.image { object-fit: contain; }
+.brand { min-width: 0; }
+.label { min-width: 0; }
+.name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: 14px; font-weight: 600; line-height: 1.25; }

@@ -47,7 +47,7 @@ for (const theme of ["light", "dark"]) {
       await expect(rows).toHaveCount(1)
       await expect(rows.first()).toContainText("María González")
     }
-    await page.getByRole("button", { name: "Limpiar", exact: true }).click()
+    await page.getByRole("button", { name: "Restablecer filtros", exact: true }).click()
     await choose(page, "patient-status-filter", "Activo")
     await expect(rows).toHaveCount(2)
     await page.getByRole("button", { name: "Filtros avanzados", exact: true }).click()
@@ -57,7 +57,7 @@ for (const theme of ["light", "dark"]) {
     await expect(rows).toHaveCount(1)
     await expect(rows).toContainText("Valentina Suárez")
     await expect(page.getByRole("group", { name: "Resumen de pacientes", exact: true }).locator("strong")).toHaveText(["5", "2", "1", "1"])
-    await page.getByRole("button", { name: "Limpiar", exact: true }).click()
+    await page.getByRole("button", { name: "Restablecer filtros", exact: true }).click()
     await expect(rows).toHaveCount(5)
     await page.evaluate(async () => {
       const path = "/src/modules/patients/api/patients.mock-data.ts", client = "/src/shared/lib/query-client.ts"

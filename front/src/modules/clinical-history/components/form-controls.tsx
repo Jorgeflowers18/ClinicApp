@@ -4,6 +4,7 @@ import { Controller, get, useFormContext } from "react-hook-form"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { NumericInput } from "@/components/ui/numeric-input"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import "./clinical-controls.css"
@@ -216,9 +217,9 @@ export function NumberField({
         control={control}
         name={name}
         render={({ field }) => (
-          <Input
+          <NumericInput
             id={id}
-            type="number"
+            suffix={unit}
             inputMode="decimal"
             step={step}
             min={min}

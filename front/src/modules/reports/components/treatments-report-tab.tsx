@@ -12,13 +12,15 @@ interface TreatmentsReportTabProps {
 }
 
 export function TreatmentsReportTab({ period }: TreatmentsReportTabProps) {
-  const { data, isLoading } = useTreatmentsReport(period)
+  const { data, isLoading: initialLoading, isPlaceholderData, isError } = useTreatmentsReport(period)
+  const isLoading = initialLoading || isPlaceholderData
   const rows = data?.byTreatment ?? []
 
   return (
     <ReportTableCard
       title="Tratamientos"
-      description="*Ingreso estimado = suma del costo cobrado en las asignaciones completadas del periodo (precio del catálogo en las anteriores). No existe módulo de facturación (ítem 8 del backlog)."
+      description="*Ingreso estimado: costo registrado de las asignaciones completadas en el periodo; en registros anteriores se utiliza el precio del catálogo. Es una estimación, no una confirmación de cobro o facturación."
+      isError={isError}
       isLoading={isLoading}
       isEmpty={rows.length === 0}
       onExport={() =>
@@ -55,7 +57,8 @@ export function TreatmentsReportTab({ period }: TreatmentsReportTabProps) {
               <TableCell className="text-right">{row.activeAssignments}</TableCell>
               <TableCell className="text-right">{row.completedAssignments}</TableCell>
               <TableCell className="text-right text-muted-foreground">
-                {row.sessionsDone} / {row.sessionsPlanned}
+                <span className="report-sessions"><span aria-label={`${row.sessionsDone} sesiones realizadas de ${row.sessionsPlanned} planificadas`}>{row.sessionsDone} / {row.sessionsPlanned}</span>
+                {row.sessionsPlanned > 0 && row.sessionsDone >= 0 && row.sessionsDone <= row.sessionsPlanned && <span className="report-session-track" aria-hidden="true"><span style={{ width: `${row.sessionsDone / row.sessionsPlanned * 100}%` }} /></span>}</span>
               </TableCell>
               <TableCell className="text-right font-medium">{formatCurrency(row.estimatedRevenue)}</TableCell>
             </TableRow>

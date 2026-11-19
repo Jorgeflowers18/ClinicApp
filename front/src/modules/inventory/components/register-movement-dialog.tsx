@@ -1,143 +1,25 @@
+import { useForm, FormProvider, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, useForm } from "react-hook-form"
-import { toast } from "sonner"
-
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { getErrorMessage } from "@/shared/lib/error-message"
-
 import { useRegisterMovement } from "../api/inventory.queries"
 import { movementSchema, type MovementFormValues } from "../types/inventory.types"
+import { useInventorySubmit } from "../hooks/use-inventory-submit"
+import { InventoryDialog } from "./inventory-dialog"
+import { InventoryField, InventoryFormError } from "./inventory-form-fields"
+import { inventoryUnit } from "../lib/inventory-display"
 
-interface RegisterMovementDialogProps {
-  itemId: string
-  itemName: string
-  currentStock: number
-  unit: string
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export function RegisterMovementDialog({
-  itemId,
-  itemName,
-  currentStock,
-  unit,
-  open,
-  onOpenChange,
-}: RegisterMovementDialogProps) {
-  const registerMovement = useRegisterMovement(itemId)
-
-  const {
-    register,
-    control,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<MovementFormValues>({
-    resolver: zodResolver(movementSchema),
-    defaultValues: { type: "entrada", quantity: 1, reason: "", expirationDate: "" },
-  })
-
-  const type = watch("type")
-
-  async function onSubmit(values: MovementFormValues) {
-    try {
-      await registerMovement.mutateAsync(values)
-      toast.success("Movimiento registrado")
-      reset({ type: "entrada", quantity: 1, reason: "", expirationDate: "" })
-      onOpenChange(false)
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Registrar movimiento</DialogTitle>
-          <DialogDescription>
-            {itemName} · Stock actual: {currentStock} {unit}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <FieldGroup>
-            <Field data-invalid={!!errors.type}>
-              <FieldLabel htmlFor="type">Tipo de movimiento</FieldLabel>
-              <Controller
-                control={control}
-                name="type"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="type" className="w-full">
-                      <SelectValue placeholder="Selecciona..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="entrada">Entrada</SelectItem>
-                      <SelectItem value="salida">Salida</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <FieldError errors={errors.type ? [errors.type] : undefined} />
-            </Field>
-
-            <Field data-invalid={!!errors.quantity}>
-              <FieldLabel htmlFor="quantity">Cantidad</FieldLabel>
-              <Input id="quantity" type="number" min={1} aria-invalid={!!errors.quantity} {...register("quantity")} />
-              <FieldError errors={errors.quantity ? [errors.quantity] : undefined} />
-            </Field>
-
-            {type === "entrada" && (
-              <Field data-invalid={!!errors.expirationDate}>
-                <FieldLabel htmlFor="expirationDate">Fecha de vencimiento (opcional)</FieldLabel>
-                <Input
-                  id="expirationDate"
-                  type="date"
-                  aria-invalid={!!errors.expirationDate}
-                  {...register("expirationDate")}
-                />
-                <FieldError errors={errors.expirationDate ? [errors.expirationDate] : undefined} />
-              </Field>
-            )}
-
-            <Field data-invalid={!!errors.reason}>
-              <FieldLabel htmlFor="reason">Motivo</FieldLabel>
-              <Textarea
-                id="reason"
-                rows={2}
-                placeholder="Ej. Compra a proveedor, uso en tratamiento..."
-                aria-invalid={!!errors.reason}
-                {...register("reason")}
-              />
-              <FieldError errors={errors.reason ? [errors.reason] : undefined} />
-            </Field>
-          </FieldGroup>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Registrar"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
+interface Props { itemId: string; itemName: string; currentStock: number; unit: string; open: boolean; onOpenChange: (open: boolean) => void }
+export function RegisterMovementDialog(props: Props) { return props.open ? <MovementEditor key={props.itemId} {...props} /> : null }
+function MovementEditor({ itemId, itemName, currentStock, unit, onOpenChange }: Props) {
+  const mutation = useRegisterMovement(itemId)
+  const form = useForm<MovementFormValues>({ resolver: zodResolver(movementSchema), defaultValues: { type: "entrada", quantity: 1, reason: "", expirationDate: "" } })
+  const type = useWatch({ control: form.control, name: "type" })
+  const save = useInventorySubmit(form, values => mutation.mutateAsync(values), "Movimiento registrado")
+  const { isDirty, isSubmitting } = form.formState
+  return <InventoryDialog size="movement" title="Registrar movimiento" description={`${itemName} · Stock actual: ${currentStock} ${inventoryUnit(unit, currentStock)}`} dirty={isDirty} pending={isSubmitting} onClose={() => onOpenChange(false)}>
+    {({ close, cancel }) => <FormProvider {...form}><form className="inventory-editor" noValidate onSubmit={event => void form.handleSubmit(values => save(values, close))(event)}><InventoryFormError /><fieldset disabled={isSubmitting} className="inventory-form-group">
+      <div className="inventory-form-grid"><InventoryField name="type" label="Tipo de movimiento" options={[{ value: "entrada", label: "Entrada" }, { value: "salida", label: "Salida" }]} /><InventoryField name="quantity" label="Cantidad" type="number" min={1} /></div>
+      {type === "entrada" && <InventoryField name="expirationDate" label="Fecha de vencimiento (opcional)" type="date" />}<InventoryField name="reason" label="Motivo" type="textarea" placeholder="Ej. Compra a proveedor, uso en tratamiento..." />
+    </fieldset><div className="inventory-form-actions"><Button type="button" variant="outline" disabled={isSubmitting} onClick={cancel}>Cancelar</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Guardando..." : "Registrar"}</Button></div></form></FormProvider>}
+  </InventoryDialog>
 }

@@ -30,7 +30,7 @@ for (const theme of ["light", "dark"] as const) {
     await open.press("Enter")
     const menu = page.locator(".clinic-app-sidebar-panel")
     await expect(menu).toBeVisible()
-    for (const item of ["Panel", "Pacientes", "Citas", "Historial clínico", "Tratamientos", "Inventario", "Notificaciones", "Finanzas", "Reportes"]) {
+    for (const item of ["Panel", "Pacientes", "Citas", "Historial clínico", "Tratamientos", "Inventario", "Mensajería", "Finanzas", "Reportes"]) {
       await expect(menu.getByRole("link", { name: item, exact: true })).toBeVisible()
     }
     async function checkMark(mark: ReturnType<Page["locator"]>) {

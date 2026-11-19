@@ -9,7 +9,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { GlobalNotificationCenter } from "@/modules/notifications/components/global-notification-center"
-import { BrandLogo } from "@/shared/components/brand-logo"
+import { MessagingDraftProvider } from "@/modules/notifications/components/messaging-draft-provider"
+import { InstitutionSidebarBrand } from "@/modules/institution/components/institution-brand"
 import { navItems, type NavItem } from "../nav-config"
 import { HeaderThemeSwitch } from "./header-theme-switch"
 import { HeaderUserMenu } from "./header-user-menu"
@@ -66,7 +67,7 @@ export function AppLayout() {
   </Button>
 
   return (
-    <div className={cn("clinic-app-shell", isAdminVisualRoute && "clinic-admin-shell", isClinicalRoute && "clinic-clinical-shell", isPilotRoute && "clinic-pilot-shell")}
+    <MessagingDraftProvider><div className={cn("clinic-app-shell", isAdminVisualRoute && "clinic-admin-shell", isClinicalRoute && "clinic-clinical-shell", isPilotRoute && "clinic-pilot-shell")}
       data-sidebar-expanded={!isMobileViewport && isSidebarExpanded} data-mobile-navigation-open={isMobileViewport && isSidebarExpanded}>
       <aside id="desktop-sidebar" className={cn("clinic-app-sidebar", isAdminVisualRoute && "clinic-admin-sidebar")}>
         <SidebarContent visibleItems={visibleItems} isCollapsed={!isSidebarExpanded} />
@@ -103,7 +104,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
-    </div>
+    </div></MessagingDraftProvider>
   )
 }
 
@@ -112,10 +113,7 @@ function SidebarContent({ visibleItems, isCollapsed, onNavigate }: {
 }) {
   return (
     <div className="clinic-sidebar-content" data-collapsed={isCollapsed}>
-      <div className="clinic-sidebar-brand">
-        <BrandLogo />
-        {!isCollapsed && <span>ClinicApp<span className="clinic-sidebar-brand-subtitle">Odontología</span></span>}
-      </div>
+      <InstitutionSidebarBrand collapsed={isCollapsed} />
       <nav aria-label="Navegación principal" className="clinic-sidebar-navigation">
         {navigationGroups.map((group) => {
           const items = group.paths.flatMap((path) => visibleItems.filter((item) => item.to === path))

@@ -1,6 +1,5 @@
 import { useState } from "react"
-import { RotateCcw } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ResetFiltersButton } from "@/shared/components/reset-filters-button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -22,7 +21,9 @@ function CalendarFilterSelect({ id, label, value, options, onChange, className =
     <Label htmlFor={id}>{label}</Label>
     <Select items={{ [value]: selectedLabel, ...Object.fromEntries(options.map(option => [option.value, option.label])) }} value={value} onValueChange={next => { if (next !== null) onChange(next) }} onOpenChange={setOpen}>
       <Tooltip disabled={open}>
-        <TooltipTrigger id={id} data-slot="select-trigger" render={<SelectTrigger id={id} className="clinic-calendar-filter-trigger"><SelectValue /></SelectTrigger>} />
+        <TooltipTrigger render={<span className="min-w-0" />}>
+          <SelectTrigger id={id} title={selectedLabel} className="clinic-calendar-filter-trigger"><SelectValue /></SelectTrigger>
+        </TooltipTrigger>
         <TooltipContent className="clinic-calendar-filter-tooltip">{selectedLabel}</TooltipContent>
       </Tooltip>
       <SelectContent className="clinic-calendar-professional-options" align="start" side="bottom" alignItemWithTrigger={false}>
@@ -61,8 +62,7 @@ export function CalendarProfessionalFilters({ professionals, professional, speci
         options={[{ value: ALL_CALENDAR_PROFESSIONALS, label: "Todos los profesionales" }, ...availableProfessionals.map(item => ({ value: item.id, label: item.name, description: item.specialty?.trim() || undefined }))]} />
       {specialties.length > 0 && <CalendarFilterSelect id="specialtyFilter" label="Especialidad" value={specialty} onChange={requestSpecialty} className="clinic-calendar-specialty-filter"
         options={[{ value: ALL_CALENDAR_SPECIALTIES, label: "Todas las especialidades" }, ...specialties.map(value => ({ value, label: value }))]} />}
-      <Tooltip disabled={!active}><TooltipTrigger data-slot="button" render={<Button type="button" variant="ghost" size="icon" className="clinic-calendar-clear" aria-label="Limpiar filtros" disabled={!active} onClick={onClear}><RotateCcw aria-hidden="true" /></Button>} />
-        <TooltipContent>Limpiar filtros</TooltipContent></Tooltip>
+      <ResetFiltersButton disabled={!active} onReset={onClear} className="clinic-calendar-clear" />
     </div>
     <ConfirmDialog open={pendingSpecialty !== null} onOpenChange={open => { if (!open) setPendingSpecialty(null) }}
       title="Cambiar filtro de especialidad"

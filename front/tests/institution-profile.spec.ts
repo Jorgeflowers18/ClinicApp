@@ -215,9 +215,11 @@ for (const theme of ["light", "dark"] as const) {
       const dialog = page.getByRole("dialog", { name: "Nueva sede", exact: true })
       await expect(dialog).toHaveCount(1)
       await expect(dialog.getByLabel("Nombre de la sede", { exact: true })).toBeFocused()
-      await expect.poll(async () => Math.round((await dialog.boundingBox())!.x)).toBe(width < 600 ? 0 : width - 480)
+      const expectedWidth = width < 600 ? width - 24 : Math.min(600, width - 32)
+      await expect.poll(async () => Math.round((await dialog.boundingBox())!.width)).toBe(expectedWidth)
       const rect = (await dialog.boundingBox())!
-      expect(Math.round(rect.width)).toBe(width < 600 ? width : 480)
+      expect(Math.round(rect.x)).toBe(Math.round((width - expectedWidth) / 2))
+      expect(rect.height).toBeLessThan(850)
       const save = dialog.getByRole("button", { name: "Guardar sede", exact: true })
       await page.mouse.move(0, 0)
       const saveRect = (await save.boundingBox())!
@@ -250,10 +252,10 @@ for (const theme of ["light", "dark"] as const) {
     await page.setViewportSize({ width: 320, height: 480 })
     await page.getByRole("button", { name: "Crear sede", exact: true }).click()
     const dialog = page.getByRole("dialog", { name: "Nueva sede", exact: true })
-    await expect.poll(async () => Math.round((await dialog.boundingBox())!.x)).toBe(0)
+    await expect.poll(async () => Math.round((await dialog.boundingBox())!.x)).toBe(12)
     await dialog.getByLabel("Horarios", { exact: true }).fill("Atención matutina")
     const field = (await dialog.getByLabel("Horarios", { exact: true }).boundingBox())!
-    const footer = (await dialog.locator('[data-slot="sheet-footer"]').boundingBox())!
+    const footer = (await dialog.locator('[data-institution-editor-actions]').boundingBox())!
     expect(field.y + field.height).toBeLessThanOrEqual(footer.y + 1)
     expect(footer.y + footer.height).toBeLessThanOrEqual(480)
     await dialog.getByRole("button", { name: "Guardar sede", exact: true }).click()
