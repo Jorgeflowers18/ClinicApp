@@ -3,22 +3,20 @@ import { useSearchParams } from "react-router-dom"
 import { Calendar, dateFnsLocalizer, type SlotInfo, type View } from "react-big-calendar"
 import { addDays, format, getDay, isSameDay, parse, startOfDay, startOfWeek } from "date-fns"
 import { es } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Plus, Slash } from "lucide-react"
+import { Plus, Slash } from "lucide-react"
 import { toast } from "sonner"
 
 import "react-big-calendar/lib/css/react-big-calendar.css"
 import "../appointments-calendar.css"
+import "../calendar-event-colors.css"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { PageHeader } from "@/shared/components/page-header"
-import { ResponsiveFilterBar } from "@/shared/components/responsive-filter-bar"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { usePatientsList } from "@/modules/patients/api/patients.queries"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
@@ -32,7 +30,8 @@ import {
 } from "../api/appointments.queries"
 import { AppointmentDetailDialog } from "../components/appointment-detail-dialog"
 import { AppointmentsToolbar } from "../components/appointments-toolbar"
-import { CalendarDateNavigator } from "../components/calendar-date-navigator"
+import { CalendarProfessionalFilters, ALL_CALENDAR_PROFESSIONALS, ALL_CALENDAR_SPECIALTIES } from "../components/calendar-professional-filters"
+import { calendarEventClass, calendarStateClass } from "../components/calendar-event-presentation"
 import { CalendarMonthContent, MonthDateHeader, MonthEvent, type CalendarEvent } from "../components/calendar-month-content"
 import { CalendarEventLegend, DayDateHeader, TimeEvent, TimeEventWrapper, WeekDateHeader } from "../components/calendar-time-content"
 import { AppointmentFormDialog } from "../components/appointment-form-dialog"
@@ -48,7 +47,7 @@ const localizer = dateFnsLocalizer({
   locales,
 })
 
-const ALL_PROFESSIONALS = "all"
+const ALL_PROFESSIONALS = ALL_CALENDAR_PROFESSIONALS
 const calendarComponents = {
   toolbar: AppointmentsToolbar,
   month: { dateHeader: MonthDateHeader, event: MonthEvent },
@@ -60,16 +59,14 @@ export function AppointmentsCalendarPage() {
   const [searchParams] = useSearchParams()
   const patientFilter = searchParams.get("pacienteId")
   const [professionalFilter, setProfessionalFilter] = useState<string>(ALL_PROFESSIONALS)
+  const [specialtyFilter, setSpecialtyFilter] = useState<string>(ALL_CALENDAR_SPECIALTIES)
+  const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null)
 
   const { data: appointments, isLoading, isError, error } = useAppointmentsList()
   const { data: scheduleBlocks } = useScheduleBlocksList()
   const { data: professionals } = useProfessionals()
-  const professionalItems = {
-    [ALL_PROFESSIONALS]: "Todos los profesionales",
-    ...Object.fromEntries((professionals ?? []).map((professional) => [professional.id, professional.name])),
-  }
   const { data: rooms } = useRooms()
-  const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
+  const { data: patientsPage, isLoading: patientsLoading } = usePatientsList({ page: 1, pageSize: 100 })
   const { data: treatments } = useActiveTreatments()
   const deleteScheduleBlock = useDeleteScheduleBlock()
 
@@ -107,7 +104,8 @@ export function AppointmentsCalendarPage() {
 
   const events = useMemo<CalendarEvent[]>(() => {
     const matchesProfessional = (professionalId?: string) =>
-      professionalFilter === ALL_PROFESSIONALS || professionalId === professionalFilter
+      (professionalFilter === ALL_PROFESSIONALS || professionalId === professionalFilter)
+      && (specialtyFilter === ALL_CALENDAR_SPECIALTIES || !professionalId || professionals?.some(item => item.id === professionalId && item.specialty?.trim() === specialtyFilter))
 
     const appointmentEvents: CalendarEvent[] = (appointments ?? [])
       .filter((appointment) => !patientFilter || appointment.patientId === patientFilter)
@@ -134,7 +132,7 @@ export function AppointmentsCalendarPage() {
 
     return [...appointmentEvents, ...blockEvents]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appointments, scheduleBlocks, patientFilter, professionalFilter, patientsPage])
+  }, [appointments, scheduleBlocks, patientFilter, professionalFilter, patientsPage, professionals, specialtyFilter])
   const dayEvents = events
     .filter((event) => isSameDay(event.start, date))
     .sort((left, right) => left.start.getTime() - right.start.getTime())
@@ -159,7 +157,8 @@ export function AppointmentsCalendarPage() {
         type="button"
         onClick={() => handleSelectEvent(event)}
         data-calendar-event-state={isBlock ? "block" : event.resource.status}
-        className="clinic-agenda-event block w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        data-event-id={event.id}
+        className={`clinic-agenda-event ${calendarStateClass(isBlock ? "block" : event.resource.status)} block w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
       >
         <Card className="transition-colors hover:bg-muted/30">
           <CardContent className="flex min-w-0 items-start gap-3 py-4">
@@ -233,7 +232,7 @@ export function AppointmentsCalendarPage() {
   }
 
   return (
-    <div className="flex h-full flex-col space-y-4">
+    <div className="clinic-appointments-page">
       <PageHeader
         title="Citas"
         description="Calendario de citas de la clínica."
@@ -263,55 +262,7 @@ export function AppointmentsCalendarPage() {
         }
       />
 
-      <ResponsiveFilterBar
-        desktopFilters={
-          <div className="min-w-0 space-y-1">
-            <Label htmlFor="professionalFilter">Profesional</Label>
-            <Select
-              items={professionalItems}
-              value={professionalFilter}
-              onValueChange={(value) => setProfessionalFilter(value ?? ALL_PROFESSIONALS)}
-            >
-              <SelectTrigger id="professionalFilter" className="w-full sm:w-64">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_PROFESSIONALS}>Todos los profesionales</SelectItem>
-                {professionals?.map((professional) => (
-                  <SelectItem key={professional.id} value={professional.id}>
-                    {professional.name} · {professional.specialty}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        }
-        panelTitle="Filtros de citas"
-        activeFilterCount={Number(professionalFilter !== ALL_PROFESSIONALS)}
-        onClear={() => setProfessionalFilter(ALL_PROFESSIONALS)}
-      >
-        <div className="space-y-2">
-          <Label htmlFor="professionalFilterMobile">Profesional</Label>
-          <Select
-            items={professionalItems}
-            value={professionalFilter}
-            onValueChange={(value) => setProfessionalFilter(value ?? ALL_PROFESSIONALS)}
-          >
-            <SelectTrigger id="professionalFilterMobile" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_PROFESSIONALS}>Todos los profesionales</SelectItem>
-              {professionals?.map((professional) => (
-                <SelectItem key={professional.id} value={professional.id}>
-                  {professional.name} · {professional.specialty}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </ResponsiveFilterBar>
-
+      <div className="clinic-calendar-workspace">
       {isError && (
         <Alert variant="destructive">
           <AlertTitle>No se pudieron cargar las citas</AlertTitle>
@@ -319,61 +270,17 @@ export function AppointmentsCalendarPage() {
         </Alert>
       )}
 
-      {isLoading ? (
-        <Skeleton className="h-[600px] w-full" />
+      {isLoading || patientsLoading ? (
+        <Skeleton className="min-h-0 w-full flex-1" />
       ) : (
-        <CalendarMonthContent date={date} events={events} treatments={treatments} goToToday={goToToday}>
+        <CalendarMonthContent date={date} events={events} treatments={treatments} goToToday={goToToday} toolbarHost={toolbarHost}
+          filters={<CalendarProfessionalFilters professionals={professionals ?? []} professional={professionalFilter} specialty={specialtyFilter}
+            onProfessionalChange={setProfessionalFilter} onSpecialtyChange={setSpecialtyFilter}
+            onClear={() => { setProfessionalFilter(ALL_PROFESSIONALS); setSpecialtyFilter(ALL_CALENDAR_SPECIALTIES) }} />}>
         <div className="clinic-appointments-calendar @container min-h-0 min-w-0 flex-1">
-          <div className="mb-4 flex min-w-0 items-center gap-3 @xl:hidden">
-            <Label htmlFor="compact-calendar-view">Vista</Label>
-            <Select items={{ month: "Mes", week: "Semana", day: "Día" }} value={view} onValueChange={(nextView) => {
-              if (nextView === "month" || nextView === "week" || nextView === "day") setView(nextView)
-            }}>
-              <SelectTrigger id="compact-calendar-view" className="min-w-0 flex-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="month">Mes</SelectItem>
-                <SelectItem value="week">Semana</SelectItem>
-                <SelectItem value="day">Día</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {view !== "month" && <section className="space-y-4 @xl:hidden" aria-label={mobileAgendaView === "day" ? "Agenda diaria" : "Agenda semanal"}>
-            <div className="flex min-w-0 items-center justify-between gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label={mobileAgendaView === "day" ? "Día anterior" : "Semana anterior"}
-                onClick={() => setDate((current) => addDays(current, mobileAgendaView === "day" ? -1 : -7))}
-              >
-                <ChevronLeft />
-              </Button>
-              <div className="min-w-0 flex-1">
-                <CalendarDateNavigator date={date} onSelect={setDate} className="w-full" />
-                <p className="clinic-calendar-period" aria-label="Periodo visible">{mobileAgendaView === "day"
-                  ? format(date, "d MMM yyyy", { locale: es })
-                  : `${format(weekDays[0], weekDays[0].getFullYear() !== weekDays[6].getFullYear() ? "d MMM yyyy" : "d MMM", { locale: es })} – ${format(weekDays[6], "d MMM yyyy", { locale: es })}`}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label={mobileAgendaView === "day" ? "Día siguiente" : "Semana siguiente"}
-                onClick={() => setDate((current) => addDays(current, mobileAgendaView === "day" ? 1 : 7))}
-              >
-                <ChevronRight />
-              </Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <Button variant="ghost" size="sm" onClick={goToToday}>
-                Hoy
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setView(mobileAgendaView === "day" ? "week" : "day")}
-              >
-                Ver {mobileAgendaView === "day" ? "semana" : "día"}
-              </Button>
-            </div>
+          <div className="clinic-calendar-toolbar-host" ref={setToolbarHost} />
+          {view !== "month" && <section className="clinic-compact-calendar flex @xl:hidden" aria-label={mobileAgendaView === "day" ? "Agenda diaria" : "Agenda semanal"}>
+            <div className="clinic-compact-agenda">
             {mobileAgendaView === "day" && dayEvents.length === 0 ? (
               <Card>
                 <CardContent className="py-10 text-center text-sm text-muted-foreground">
@@ -405,16 +312,17 @@ export function AppointmentsCalendarPage() {
                 })}
               </div>
             )}
+            </div>
           </section>}
 
           <div
-            className={`clinic-calendar-frame ${view === "month" ? "block" : "hidden"} max-w-full overflow-x-auto rounded-xl border bg-card p-3 @xl:block`}
+            className={`clinic-calendar-frame ${view === "month" ? "block" : "hidden"} max-w-full overflow-x-auto @xl:block`}
             data-calendar-view={view}
             role="region"
             aria-label="Calendario de citas, desplazable horizontalmente"
             tabIndex={0}
           >
-            <div className="min-w-[560px] xl:min-w-0">
+            <div className="clinic-calendar-native min-w-[560px] xl:min-w-0">
               <Calendar
             localizer={localizer}
             culture="es"
@@ -431,23 +339,7 @@ export function AppointmentsCalendarPage() {
             dayPropGetter={(day) => isSameDay(day, date) ? { className: "clinic-calendar-selected-day" } : {}}
             onSelectSlot={handleSelectSlot}
             onSelectEvent={handleSelectEvent}
-            style={view === "month" ? undefined : { height: "clamp(600px, 72dvh, 760px)" }}
-            eventPropGetter={(event: CalendarEvent) => {
-              if (event.kind === "block") {
-                return { className: "rbc-event-block" }
-              }
-              const status = event.resource.status
-              return {
-                className:
-                  status === "cancelada"
-                    ? "rbc-event-cancelled"
-                    : status === "completada"
-                      ? "rbc-event-completed"
-                      : status === "no_asistio"
-                        ? "rbc-event-no-show"
-                        : undefined,
-              }
-            }}
+            eventPropGetter={(event: CalendarEvent) => ({ className: calendarEventClass(event.kind === "block" ? "block" : event.resource.status) })}
             messages={{
               next: "Sig.",
               previous: "Ant.",
@@ -466,6 +358,7 @@ export function AppointmentsCalendarPage() {
         </div>
         </CalendarMonthContent>
       )}
+      </div>
 
       <AppointmentFormDialog
         open={formOpen}

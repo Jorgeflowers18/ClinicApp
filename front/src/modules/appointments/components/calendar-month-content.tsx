@@ -5,13 +5,14 @@ import type { DateHeaderProps, EventProps } from "react-big-calendar"
 
 import type { Appointment, ScheduleBlock } from "../types/appointment.types"
 import { CalendarPresentationContext, useAppointmentsCalendar } from "./calendar-presentation-context"
+import { calendarStateClass } from "./calendar-event-presentation"
 
 export type CalendarEvent =
   | { kind: "appointment"; id: string; title: string; start: Date; end: Date; resource: Appointment }
   | { kind: "block"; id: string; title: string; start: Date; end: Date; resource: ScheduleBlock }
 
 /** Presentation derived from the page's date and already filtered events. */
-export function CalendarMonthContent({ date, events, treatments, goToToday, children }: { date: Date; events: CalendarEvent[]; treatments?: ReadonlyArray<{ id: string; name: string }>; goToToday: () => void; children: ReactNode }) {
+export function CalendarMonthContent({ date, events, treatments, goToToday, toolbarHost, filters, children }: { date: Date; events: CalendarEvent[]; treatments?: ReadonlyArray<{ id: string; name: string }>; goToToday: () => void; toolbarHost: HTMLElement | null; filters: ReactNode; children: ReactNode }) {
   const treatmentNames = useMemo(() => new Map(treatments?.map(({ id, name }) => [id, name])), [treatments])
   const value = useMemo(() => {
     const counts = new Map<string, number>()
@@ -20,8 +21,8 @@ export function CalendarMonthContent({ date, events, treatments, goToToday, chil
       const key = format(event.start, "yyyy-MM-dd")
       counts.set(key, (counts.get(key) ?? 0) + 1)
     }
-    return { date, counts, treatmentNames, goToToday }
-  }, [date, events, treatmentNames, goToToday])
+    return { date, counts, treatmentNames, goToToday, toolbarHost, filters }
+  }, [date, events, treatmentNames, goToToday, toolbarHost, filters])
 
   return <CalendarPresentationContext.Provider value={value}>{children}</CalendarPresentationContext.Provider>
 }
@@ -57,7 +58,7 @@ export function MonthDateHeader({ date, label, onDrillDown }: DateHeaderProps) {
 export function MonthEvent({ event, title }: EventProps<CalendarEvent>) {
   const time = `${format(event.start, "HH:mm")}–${format(event.end, "HH:mm")}`
   return (
-    <button type="button" className="clinic-month-event" data-event-id={event.id} aria-label={`${time} ${title}`} title={`${time} ${title}`}>
+    <button type="button" className={`clinic-month-event ${calendarStateClass(event.kind === "block" ? "block" : event.resource.status)}`} data-event-id={event.id} aria-label={`${time} ${title}`} title={`${time} ${title}`}>
       <time dateTime={event.start.toISOString()}>{format(event.start, "HH:mm")}</time>
       <span>{title}</span>
     </button>

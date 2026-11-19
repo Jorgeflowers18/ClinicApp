@@ -81,6 +81,7 @@ for (const theme of ["light", "dark"]) {
       await expect(appointment.getByLabel("Notas", { exact: true })).toHaveValue("Borrador conservado")
     }
     await appointment.getByRole("button", { name: "Cancelar", exact: true }).click()
+    await page.getByRole("button", { name: "Descartar cambios", exact: true }).click()
     await expect(appointment).not.toBeVisible()
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto("/perfil-institucion")

@@ -56,7 +56,7 @@ export function StepReason({ appointmentOptions }: StepReasonProps) {
 
   return (
     <FieldGroup>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="clinic-encounter-reason-grid">
         <Field data-invalid={!!errors.appointmentId}>
           <FieldLabel htmlFor="encounter-appointment">Cita</FieldLabel>
           <Controller

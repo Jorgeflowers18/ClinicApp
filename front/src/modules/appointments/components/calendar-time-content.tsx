@@ -1,12 +1,13 @@
 import { cloneElement, isValidElement, type HTMLAttributes, type ReactNode } from "react"
 import { differenceInMinutes, format, isSameDay } from "date-fns"
 import { es } from "date-fns/locale"
-import { CalendarDays, LockKeyhole, UserRound } from "lucide-react"
+import { CalendarDays } from "lucide-react"
 import type { EventProps, HeaderProps } from "react-big-calendar"
 
 import { appointmentStatusLabels } from "../types/appointment.types"
 import type { CalendarEvent } from "./calendar-month-content"
 import { useAppointmentsCalendar } from "./calendar-presentation-context"
+import { calendarStateClass, calendarStateIcons } from "./calendar-event-presentation"
 
 /** The native content button is the single focus target; keep RBC's geometry and handlers. */
 export function TimeEventWrapper({ children }: { children?: ReactNode }) {
@@ -42,10 +43,11 @@ export function TimeEvent({ event }: EventProps<CalendarEvent>) {
   const status = event.kind === "block" ? "Bloqueado" : appointmentStatusLabels[event.resource.status]
   const patient = event.kind === "block" ? event.resource.reason : event.title.endsWith(` · ${status}`) ? event.title.slice(0, -status.length - 3) : event.title
   const treatment = event.kind === "appointment" && event.resource.treatmentId ? treatmentNames.get(event.resource.treatmentId) : undefined
-  const Icon = event.kind === "block" ? LockKeyhole : UserRound
+  const state = event.kind === "block" ? "block" : event.resource.status
+  const Icon = calendarStateIcons[state]
 
   return (
-    <button type="button" className="clinic-time-event" data-event-id={event.id} data-compact={duration <= 30 || undefined} data-tiny={duration <= 15 || undefined} aria-label={`${format(event.start, "HH:mm")}–${format(event.end, "HH:mm")} ${event.title}${treatment ? ` · ${treatment}` : ""}`}>
+    <button type="button" className={`clinic-time-event ${calendarStateClass(state)}`} data-event-id={event.id} data-compact={duration <= 30 || undefined} data-tiny={duration <= 15 || undefined} aria-label={`${format(event.start, "HH:mm")}–${format(event.end, "HH:mm")} ${event.title}${treatment ? ` · ${treatment}` : ""}`}>
       <time className="clinic-time-event-time" dateTime={event.start.toISOString()}>{format(event.start, "HH:mm")} – {format(event.end, "HH:mm")}</time>
       <span className="clinic-time-event-heading">
         <Icon aria-hidden="true" />
@@ -60,11 +62,11 @@ export function TimeEvent({ event }: EventProps<CalendarEvent>) {
 export function CalendarEventLegend() {
   return (
     <ul className="clinic-calendar-legend" aria-label="Estados de citas y bloqueos">
-      <li><span data-state="scheduled" aria-hidden="true" />Programada / Confirmada</li>
-      <li><span data-state="completed" aria-hidden="true" />Completada</li>
-      <li><span data-state="cancelled" aria-hidden="true" />Cancelada</li>
-      <li><span data-state="no-show" aria-hidden="true" />No asistió</li>
-      <li><span data-state="block" aria-hidden="true" />Bloqueado</li>
+      <li title="Cita agendada"><span data-state="scheduled" className={calendarStateClass("programada")} aria-hidden="true" />Programada / Confirmada</li>
+      <li title="Atención realizada"><span data-state="completed" className={calendarStateClass("completada")} aria-hidden="true" />Completada</li>
+      <li title="Cita cancelada"><span data-state="cancelled" className={calendarStateClass("cancelada")} aria-hidden="true" />Cancelada</li>
+      <li title="Ausencia del paciente"><span data-state="no-show" className={calendarStateClass("no_asistio")} aria-hidden="true" />No asistió</li>
+      <li title="Horario no disponible"><span data-state="block" className={calendarStateClass("block")} aria-hidden="true" />Bloqueado</li>
     </ul>
   )
 }

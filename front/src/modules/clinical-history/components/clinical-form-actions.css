@@ -1,0 +1,12 @@
+.clinic-clinical-actions { position: static; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.clinic-clinical-actions-leading { min-width: 0; }
+.clinic-clinical-actions-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; }
+.clinic-clinical-actions [data-slot="button"] { min-height: 40px; }
+.clinic-clinical-actions .clinic-clinical-next { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--card)); }
+.clinic-clinical-actions .clinic-clinical-next:hover { background: color-mix(in srgb, var(--primary) 15%, var(--card)); }
+@media (max-width: 1023px) { .clinic-clinical-actions [data-slot="button"] { min-height: 44px; } }
+@media (max-width: 479px) {
+  .clinic-clinical-actions-leading { width: 100%; }
+  .clinic-clinical-actions-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .clinic-clinical-actions-buttons > :last-child { grid-column: 1 / -1; }
+}

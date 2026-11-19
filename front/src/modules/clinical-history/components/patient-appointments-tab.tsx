@@ -54,7 +54,7 @@ export function PatientAppointmentsTab({
         {isLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : !appointments?.length ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+          <div className="clinic-clinical-empty">
             El paciente no tiene citas registradas.
           </div>
         ) : (

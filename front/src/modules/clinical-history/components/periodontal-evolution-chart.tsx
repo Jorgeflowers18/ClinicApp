@@ -1,6 +1,7 @@
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import type { EvolutionPoint } from "../lib/chart-indicators"
+import { evolutionPocketReading } from "./periodontal-indicator-presentation"
 
 const tooltipStyle = {
   backgroundColor: "var(--popover)",
@@ -57,7 +58,7 @@ export function PeriodontalEvolutionChart({ data }: { data: EvolutionPoint[] }) 
               <YAxis tickLine={false} axisLine={false} className="text-xs" allowDecimals={false} />
               <Tooltip cursor={{ fill: "var(--muted)" }} contentStyle={tooltipStyle} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="sitesWithPocket" name="Sitios con bolsa ≥ 4 mm" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey={evolutionPocketReading} name="Sitios con bolsa ≥ 4 mm" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="teethWithMobility" name="Piezas con movilidad" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="teethWithCaries" name="Piezas con caries" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
             </BarChart>

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
+import { settleCalendarLayout } from "./helpers/calendar-layout"
 
 test.use({ timezoneId: "America/Guayaquil" })
 test.describe.configure({ mode: "parallel" })
@@ -30,13 +31,13 @@ for (const theme of ["light", "dark"] as const) {
     await popupOf(page).getByRole("button", { name: "Mes anterior", exact: true }).click()
     await expect(popupOf(page).getByLabel("Año", { exact: true })).toHaveValue("2026")
     await popupOf(page).locator('button[data-day="31/12/2026"]').click()
-    await expect(triggerOf(page)).toHaveText("31 de diciembre de 2026")
-    await expect(page.locator('[aria-label="Periodo visible"]:visible')).toContainText("2026–2027")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 31 de diciembre de 2026")
+    await expect(page.locator('[aria-label="Periodo visible"]:visible')).toHaveText("28 diciembre 2026 – 3 enero 2027")
     await triggerOf(page).click()
     await expect(popupOf(page).locator('button[data-day="31/12/2026"]')).toHaveAttribute("data-selected-single", "true")
     await page.keyboard.press("Escape")
     await page.setViewportSize({ width: 390, height: 844 })
-    await expect(triggerOf(page)).toHaveText("31 de diciembre de 2026")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 31 de diciembre de 2026")
     await expect(page.locator('[aria-label="Periodo visible"]:visible')).toContainText("2026")
     await expect(page.locator('[aria-label="Periodo visible"]:visible')).toContainText("2027")
     await expect(page.getByLabel("Vista", { exact: true })).toContainText("Semana")
@@ -113,7 +114,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(popupOf(page)).toHaveCount(0)
     await expect(triggerOf(page)).toBeFocused()
     await expect(triggerOf(page)).toContainText("2400")
-    await expect(triggerOf(page)).toContainText("29")
+    await expect(triggerOf(page)).toHaveAccessibleName(/29/)
     await expect(page.locator(".rbc-toolbar").getByRole("button", { name: "Día", exact: true })).toHaveAttribute("aria-pressed", "true")
     await triggerOf(page).click()
     await expect(popupOf(page).locator('button[data-day="29/2/2400"]')).toHaveAttribute("data-selected-single", "true")
@@ -149,6 +150,7 @@ for (const theme of ["light", "dark"] as const) {
       }
     }
     await page.setViewportSize({ width: 844, height: 390 })
+    await settleCalendarLayout(page)
     await triggerOf(page).click()
     await popupOf(page).getByLabel("Año", { exact: true }).fill("2027")
     await popupOf(page).locator('button[data-day]').first().scrollIntoViewIfNeeded()

@@ -54,6 +54,7 @@ import {
 import { AttachmentsTab } from "./attachments-tab"
 import { BackgroundTab } from "./background-tab"
 import { ClinicalNavigation, ClinicalNavigationFooter } from "./clinical-navigation"
+import { ClinicalFormActions } from "./clinical-form-actions"
 import navigationStyles from "./clinical-navigation.module.css"
 import { DataConsentTab } from "./data-consent-tab"
 import { EncountersTab } from "./encounters-tab"
@@ -63,9 +64,11 @@ import { PatientAppointmentsTab } from "./patient-appointments-tab"
 import { PatientDataTab } from "./patient-data-tab"
 import { PerformedTreatmentsTab } from "./performed-treatments-tab"
 import { PeriodontalEvolutionTab } from "./periodontal-evolution-tab"
+import { pocketCountHint } from "./periodontal-indicator-presentation"
 import { RecordHeader } from "./record-header"
 import { TreatmentPlanTab } from "./treatment-plan-tab"
 import { TruthDeclarationCard } from "./truth-declaration-card"
+import "./clinical-density.css"
 
 export type { RecordTab } from "../lib/record-sections"
 
@@ -316,7 +319,7 @@ export function RecordWorkspace({
 
   return (
     <FormProvider {...form}>
-      <div ref={navigationContainer} className={`${navigationStyles.scope} min-w-0 space-y-5`}>
+      <div ref={navigationContainer} className={`${navigationStyles.scope} clinic-history-workspace min-w-0 space-y-4`}>
         <RecordHeader patient={patient} record={record} onBack={goBack} onRegisterEncounter={() => openRegister(null)} />
 
         {/* MOCK-ONLY */}
@@ -346,20 +349,22 @@ export function RecordWorkspace({
           </Alert>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Atenciones registradas" value={encounters.length} icon={ClipboardList} />
-          <KpiCard label="Tratamientos realizados" value={countPerformedTreatments(encounters)} icon={Stethoscope} />
+        <div className="clinic-clinical-kpis grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard label="Atenciones registradas" value={encounters.length} icon={ClipboardList} layout="split" />
+          <KpiCard label="Tratamientos realizados" value={countPerformedTreatments(encounters)} icon={Stethoscope} layout="split" />
           <KpiCard
             label="Próximo control"
             value={last?.nextVisit ? shortDate(last.nextVisit) : "Por definir"}
             hint={last?.nextVisit ? `Según la atención del ${shortDate(last.date)}` : undefined}
             icon={CalendarClock}
+            layout="split"
           />
           <KpiCard
             label="Sangrado al sondaje"
             value={indicators?.bleedingPercent != null ? `${indicators.bleedingPercent}%` : "Sin registro"}
-            hint={indicators ? `${indicators.sitesWithPocket} sitios con bolsa ≥ 4 mm` : undefined}
+            hint={pocketCountHint(indicators)}
             icon={Activity}
+            layout="split"
           />
         </div>
 
@@ -448,24 +453,23 @@ export function RecordWorkspace({
         />
 
         {hasChanges && (
-          <div
+          <ClinicalFormActions
             role="region"
             aria-label="Cambios sin guardar"
-            className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-3 shadow-lg"
+            leading={
+              <p className="text-sm">
+                <span className="font-medium">Tienes cambios sin guardar</span>
+                <span className="text-muted-foreground"> en {changedLabels}.</span>
+              </p>
+            }
           >
-            <p className="text-sm">
-              <span className="font-medium">Tienes cambios sin guardar</span>
-              <span className="text-muted-foreground"> en {changedLabels}.</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={saving} onClick={() => setConfirmDiscard(true)}>
                 Descartar cambios
               </Button>
               <Button disabled={saving || !chartReady} onClick={requestSave}>
                 {saving ? "Guardando..." : "Guardar cambios"}
               </Button>
-            </div>
-          </div>
+          </ClinicalFormActions>
         )}
 
         <ClinicalNavigationFooter navigation={navigation} controlsInHeader={controlsInHeader} />

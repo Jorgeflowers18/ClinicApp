@@ -27,5 +27,5 @@ export function RegisterEncounterPage() {
     )
   }
 
-  return <RegisterEncounterForm patient={patient} history={history} appointmentId={searchParams.get("cita")} />
+  return <RegisterEncounterForm key={patient.id} patient={patient} history={history} appointmentId={searchParams.get("cita")} />
 }

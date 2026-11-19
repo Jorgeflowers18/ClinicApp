@@ -48,7 +48,7 @@ export function TreatmentPlanTab() {
           <PlanItemForm treatments={activeTreatments ?? []} onAdd={(item) => updatePlan([...plan, item])} />
 
           {plan.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            <div className="clinic-clinical-empty">
               No hay tratamientos propuestos. Agrégalos desde el catálogo.
             </div>
           ) : (

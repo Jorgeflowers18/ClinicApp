@@ -1,40 +1,36 @@
 import type { ToolbarProps, View } from "react-big-calendar"
-import { addDays, startOfWeek } from "date-fns"
+import { createPortal } from "react-dom"
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { CalendarDateNavigator } from "./calendar-date-navigator"
 import { useAppointmentsCalendar } from "./calendar-presentation-context"
+import { calendarPeriod } from "./calendar-period"
+import "../calendar-toolbar.css"
 
-export function AppointmentsToolbar<TEvent extends object, TResource extends object>({ date, label, view, views, localizer, onNavigate, onView }: ToolbarProps<TEvent, TResource>) {
-  const { goToToday } = useAppointmentsCalendar()
+export function AppointmentsToolbar<TEvent extends object, TResource extends object>({ date, view, views, localizer, onNavigate, onView }: ToolbarProps<TEvent, TResource>) {
+  const { goToToday, toolbarHost, filters } = useAppointmentsCalendar()
   const messages = localizer.messages
   const availableViews = Array.isArray(views) ? views : Object.keys(views) as View[]
-  const year = String(date.getFullYear())
-  const weekStart = startOfWeek(date, { weekStartsOn: 1 })
-  const weekEnd = addDays(weekStart, 6)
-  const years = view === "week" && weekStart.getFullYear() !== weekEnd.getFullYear()
-    ? `${weekStart.getFullYear()}–${weekEnd.getFullYear()}`
-    : year
-  const periodLabel = label.includes(years) ? label : `${label} · ${years}`
 
-  return (
+  if (!toolbarHost) return null
+  return createPortal(
     <div className="rbc-toolbar">
-      <div className="rbc-btn-group" role="group" aria-label="Navegación temporal">
+      {filters}
+      <div className="rbc-btn-group clinic-calendar-navigation" role="group" aria-label="Navegación temporal">
         <button type="button" onClick={goToToday}><CalendarDays aria-hidden="true" />{messages.today}</button>
-        <button type="button" onClick={() => onNavigate("PREV")}><ChevronLeft aria-hidden="true" />{messages.previous}</button>
-        <button type="button" onClick={() => onNavigate("NEXT")}>{messages.next}<ChevronRight aria-hidden="true" /></button>
+        <button type="button" aria-label="Anterior" className="clinic-calendar-arrow" onClick={() => onNavigate("PREV")}><ChevronLeft aria-hidden="true" /><span>{messages.previous}</span></button>
+        <button type="button" aria-label="Siguiente" className="clinic-calendar-arrow" onClick={() => onNavigate("NEXT")}><span>{messages.next}</span><ChevronRight aria-hidden="true" /></button>
       </div>
       <div className="rbc-toolbar-label">
-        <CalendarDateNavigator date={date} onSelect={(target) => onNavigate("DATE", target)} />
-        <p className="clinic-calendar-period" aria-label="Periodo visible">{periodLabel}</p>
+        <CalendarDateNavigator date={date} label={calendarPeriod(date, view)} onSelect={(target) => onNavigate("DATE", target)} />
       </div>
-      <div className="rbc-btn-group" role="group" aria-label="Vista del calendario">
+      <div className="rbc-btn-group clinic-calendar-views" role="group" aria-label="Vista del calendario">
         {availableViews.map((name) => (
           <button key={name} type="button" aria-pressed={view === name} className={view === name ? "rbc-active" : undefined} onClick={() => onView(name)}>
             {messages[name]}
           </button>
         ))}
       </div>
-    </div>
+    </div>, toolbarHost
   )
 }

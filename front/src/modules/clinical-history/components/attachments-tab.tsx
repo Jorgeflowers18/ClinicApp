@@ -71,8 +71,8 @@ function AttachmentCard({
   }
 
   return (
-    <article className="overflow-hidden rounded-lg border">
-      <div className="flex h-40 items-center justify-center bg-muted/40">
+    <article className="clinic-history-file overflow-hidden rounded-lg border">
+      <div className="clinic-history-file-preview flex items-center justify-center bg-muted/40" data-image={isImage}>
         {blob ? (
           <button type="button" className="size-full cursor-zoom-in" aria-label={`Abrir ${file.name}`} onClick={() => openBlob(blob)}>
             <BlobImage blob={blob} alt={file.name} />
@@ -278,7 +278,7 @@ export function AttachmentsTab({ patientId, onOpenEncounter }: AttachmentsTabPro
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="clinic-history-attachment-tools relative flex flex-wrap items-end gap-3">
             <Field className="w-64">
               <FieldLabel htmlFor="attachment-kind">Tipo de archivo clínico</FieldLabel>
               <Select items={kindItems} value={kind} onValueChange={(value) => value && setKind(value)}>
@@ -310,7 +310,7 @@ export function AttachmentsTab({ patientId, onOpenEncounter }: AttachmentsTabPro
           </div>
 
           {attachments.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+            <div className="clinic-clinical-empty">
               Todavía no hay archivos en la historia del paciente.
             </div>
           ) : (

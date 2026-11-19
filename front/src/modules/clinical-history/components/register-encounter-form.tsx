@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeft, ArrowRight, Check, Pencil } from "lucide-react"
+import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { FormProvider, useForm, useWatch, type FieldPath, type Path } from "react-hook-form"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { calculateAge } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { createId } from "@/shared/lib/id"
 import { formatCurrency } from "@/shared/lib/number"
-import { cn } from "@/lib/utils"
 import { ApiError } from "@/shared/types/common"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 import type { Patient } from "@/modules/patients/types/patient.types"
@@ -25,13 +25,17 @@ import { encounterSections, encounterSteps, type EncounterStepId } from "../lib/
 import { sumCosts, today, withCaseData } from "../lib/record"
 import { clinicalHistoryPath, encounterPath } from "../lib/routes"
 import { encounterFormSchema, type EncounterFormValues, type PatientClinicalHistory } from "../types/clinical-history.types"
-import { EncounterSummary } from "./encounter-summary"
+import { ClinicalFormActions } from "./clinical-form-actions"
+import { EncounterReview } from "./encounter-review"
+import { EncounterRevealContext, type EncounterReveal } from "./encounter-reveal-context"
 import { StepDiagnosis } from "./encounter-steps/step-diagnosis"
 import { StepExam } from "./encounter-steps/step-exam"
 import { StepReason } from "./encounter-steps/step-reason"
 import { StepTreatments } from "./encounter-steps/step-treatments"
 import { StepVitals } from "./encounter-steps/step-vitals"
 import { MedicalAlerts } from "./medical-alerts"
+import "./register-encounter.css"
+import "./encounter-dialog.css"
 
 type Field = FieldPath<EncounterFormValues>
 
@@ -69,6 +73,7 @@ export function RegisterEncounterForm({ patient, history, appointmentId }: Regis
   const form = useForm<EncounterFormValues>({
     resolver: zodResolver(encounterFormSchema),
     defaultValues: emptyEncounterValues(),
+    shouldUnregister: false,
   })
   const { getValues, setValue } = form
   const { options } = usePatientAppointmentOptions(patient.id, encounters)
@@ -87,6 +92,19 @@ export function RegisterEncounterForm({ patient, history, appointmentId }: Regis
   const saving = registerEncounter.isPending
   const current = encounterSteps[step]
   const isDirty = form.formState.isDirty
+  const heading = useRef<HTMLHeadingElement>(null)
+  const modalHeading = useRef<HTMLHeadingElement>(null)
+  const scroll = useRef<HTMLDivElement>(null)
+  const [dialogOpen, setDialogOpen] = useState(true)
+  const finishingExit = useRef(false)
+  const [reveal, setReveal] = useState<EncounterReveal | null>(null)
+  const draft = useWatch({ control: form.control }) as EncounterFormValues
+  // Read the existing schema only: display progress without triggering errors or changing validation.
+  const validation = encounterFormSchema.safeParse(draft)
+  const issues = validation.success ? [] : validation.error.issues
+  const invalidSteps = new Set(issues.map((issue) => stepOfField(String(issue.path[0]))))
+  const errorSteps = new Set(Object.keys(form.formState.errors).map(stepOfField))
+  const filledSteps = new Set(encounterSections(draft).map((section) => section.step))
 
   // Las citas y los profesionales llegan de forma asíncrona: se completan solo si el usuario no eligió nada.
   useEffect(() => {
@@ -109,14 +127,21 @@ export function RegisterEncounterForm({ patient, history, appointmentId }: Regis
     return () => window.removeEventListener("beforeunload", warn)
   }, [isDirty, saving])
 
-  function goToStep(index: number) {
+  function goToStep(index: number, field?: string) {
     setStep(index)
-    window.scrollTo({ top: 0 })
+    setReveal(previous => field ? { step: encounterSteps[index].id, field, version: (previous?.version ?? 0) + 1 } : null)
+    requestAnimationFrame(() => {
+      scroll.current?.scrollTo({ top: 0, behavior: "instant" })
+      heading.current?.focus({ preventScroll: true })
+    })
   }
 
   async function next() {
     const valid = await form.trigger(stepFields[current.id])
     if (!valid) {
+      const result = encounterFormSchema.safeParse(getValues())
+      const issue = result.success ? undefined : result.error.issues.find(issue => stepFields[current.id].some(field => field === issue.path[0]))
+      goToStep(step, issue?.path.join("."))
       toast.error("Revisa los campos marcados de este paso")
       return
     }
@@ -130,7 +155,9 @@ export function RegisterEncounterForm({ patient, history, appointmentId }: Regis
         .map(stepOfField)
         .filter((index) => index >= 0)
         .sort((a, b) => a - b)[0]
-      if (first !== undefined) goToStep(first)
+      const result = encounterFormSchema.safeParse(getValues())
+      const issue = result.success ? undefined : result.error.issues.find(issue => stepOfField(String(issue.path[0])) === first)
+      if (first !== undefined) goToStep(first, issue?.path.join("."))
       toast.error("Revisa los campos marcados de la atención")
       return
     }
@@ -163,15 +190,22 @@ export function RegisterEncounterForm({ patient, history, appointmentId }: Regis
           form.setError(field as Path<EncounterFormValues>, { type: "server", message })
         )
         const target = stepOfField(error.fieldErrors[0].field)
-        if (target >= 0) goToStep(target)
+        if (target >= 0) goToStep(target, error.fieldErrors[0].field)
       }
       toast.error(getErrorMessage(error))
     }
   }
 
   function leave() {
+    if (saving || confirming || confirmLeave) return
     if (isDirty) setConfirmLeave(true)
-    else navigate(clinicalHistoryPath(patient.id))
+    else finishClose()
+  }
+
+  function finishClose() {
+    setConfirmLeave(false)
+    finishingExit.current = true
+    setDialogOpen(false)
   }
 
   const [linkedAppointment, performed, requestedExams] = useWatch({
@@ -195,171 +229,92 @@ export function RegisterEncounterForm({ patient, history, appointmentId }: Regis
     .filter(Boolean)
     .join(" ")
 
+
   return (
     <FormProvider {...form}>
-      <div className="min-w-0 space-y-5">
-        <div className="space-y-3">
-          <Button variant="ghost" size="sm" className="-ml-2" onClick={leave}>
-            <ArrowLeft />
-            Volver a la historia
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Registrar atención</h1>
-            <p className="text-sm text-muted-foreground">
-              {patientName} · Cédula {patient.documentId}
-              {age !== null && ` · ${age} años`}
-              {patient.clinicalRecordNumber && ` · ${patient.clinicalRecordNumber}`}
-            </p>
-          </div>
-          <MedicalAlerts source={record.allergiesAndMedication} />
-        </div>
+      <EncounterRevealContext.Provider value={reveal}>
+        <Dialog open={dialogOpen} disablePointerDismissal={saving} onOpenChange={(open, details) => {
+          if (!open) { details.cancel(); leave() }
+        }} onOpenChangeComplete={open => {
+          if (!open && finishingExit.current) navigate(clinicalHistoryPath(patient.id))
+        }}>
+          <DialogContent className="clinic-encounter-dialog" showCloseButton={false} initialFocus={modalHeading}>
+            <DialogHeader className="clinic-encounter-modal-heading">
+              <div>
+                <DialogTitle ref={modalHeading} tabIndex={-1}>Registrar atención</DialogTitle>
+                <DialogDescription>
+                  <span className="clinic-encounter-patient-name">{patientName}</span>
+                  <span>Documento {patient.documentId}{age !== null && ` · ${age} años`}{patient.clinicalRecordNumber && ` · ${patient.clinicalRecordNumber}`}</span>
+                </DialogDescription>
+              </div>
+              <DialogClose render={<Button type="button" variant="ghost" size="icon" aria-label="Cerrar registro de atención" disabled={saving} />}><X aria-hidden="true" /></DialogClose>
+            </DialogHeader>
 
-        <nav aria-label="Pasos de la atención" className="overflow-x-auto">
-          <ol className="flex min-w-max gap-2">
-            {encounterSteps.map((item, index) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  aria-current={index === step ? "step" : undefined}
-                  onClick={() => goToStep(index)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors",
-                    index === step ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted",
-                    index < step && "border-primary/50"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-5 items-center justify-center rounded-full text-xs font-medium",
-                      index === step ? "bg-primary-foreground text-primary" : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {index < step ? <Check className="size-3" /> : index + 1}
-                  </span>
-                  {item.label}
-                </button>
-              </li>
-            ))}
-          </ol>
-        </nav>
+            <nav aria-label="Pasos de la atención" className="clinic-encounter-step-navigation">
+              <p className="text-xs text-muted-foreground" aria-label="Paso actual">Paso {step + 1} de {encounterSteps.length}</p>
+              <Select items={Object.fromEntries(encounterSteps.map(item => [item.id, item.label]))} value={current.id} disabled={saving}
+                onValueChange={value => {
+                  const index = encounterSteps.findIndex(item => item.id === value)
+                  if (index >= 0 && index !== step) goToStep(index)
+                }}>
+                <SelectTrigger aria-label="Paso de la atención" className="clinic-encounter-step-selector"><SelectValue /></SelectTrigger>
+                <SelectContent className="clinic-encounter-step-options" alignItemWithTrigger={false}>
+                  {encounterSteps.map((item, index) => {
+                    const error = errorSteps.has(index) && invalidSteps.has(index)
+                    const complete = filledSteps.has(item.id) && !invalidSteps.has(index)
+                    const state = index === step ? "active" : error ? "error" : complete ? "complete" : "pending"
+                    return <SelectItem key={item.id} value={item.id} aria-label={`${index + 1}. ${item.label}`} data-state={state}
+                      aria-describedby={`encounter-step-status-${item.id}`}>
+                      <span className="clinic-encounter-step-option-number" aria-hidden="true">{index + 1}</span>
+                      <span className="clinic-encounter-step-option-copy">{item.label}<small id={`encounter-step-status-${item.id}`}>{error ? "Con errores" : complete ? "Con datos válidos" : index === step ? "Actual" : "Pendiente"}</small></span>
+                    </SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
+            </nav>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Paso {step + 1} de {encounterSteps.length}: {current.label}
-            </CardTitle>
-            <CardDescription>
-              Una vez guardada, la atención no se puede modificar. Para corregirla se agregan notas aclaratorias.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form
-              id="register-encounter-form"
-              noValidate
-              aria-label={current.label}
-              onSubmit={(event) => {
-                event.preventDefault()
-                if (current.id === "revision") void requestSave()
-                else void next()
-              }}
-            >
-              {current.id === "motivo" && <StepReason appointmentOptions={appointmentOptions} />}
-              {current.id === "signos" && <StepVitals />}
-              {current.id === "examen" && <StepExam />}
-              {current.id === "diagnostico" && <StepDiagnosis record={record} />}
-              {current.id === "tratamientos" && <StepTreatments proposed={record.plan} />}
-              {current.id === "revision" && (
-                <ReviewStep
-                  professionalName={professionals?.find((item) => item.id === getValues("professionalId"))?.name}
-                  onEdit={(id) => goToStep(encounterSteps.findIndex((item) => item.id === id))}
-                />
-              )}
-            </form>
-          </CardContent>
-        </Card>
-
-        <div className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-background p-3 shadow-lg">
-          <Button type="button" variant="outline" disabled={saving} onClick={leave}>
-            Cancelar
-          </Button>
-          <div className="flex flex-wrap gap-2">
-            {step > 0 && (
-              <Button type="button" variant="outline" disabled={saving} onClick={() => goToStep(step - 1)}>
-                <ArrowLeft />
-                Anterior
-              </Button>
-            )}
-            {current.id !== "revision" && (
-              <Button type="submit" form="register-encounter-form" variant="secondary" disabled={saving}>
-                Siguiente
-                <ArrowRight />
-              </Button>
-            )}
-            <Button type="button" disabled={saving} onClick={() => void requestSave()}>
-              {saving ? "Guardando..." : "Guardar atención"}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <ConfirmDialog
-        open={confirming}
-        onOpenChange={(open) => !saving && setConfirming(open)}
-        title="Guardar atención"
-        description={`La atención no se podrá modificar después de guardarla. ${confirmSummary}`}
-        confirmLabel="Confirmar y guardar"
-        cancelLabel="Volver"
-        isLoading={saving}
-        onConfirm={() => void save()}
-      />
-      <ConfirmDialog
-        open={confirmLeave}
-        onOpenChange={setConfirmLeave}
-        title="Salir sin guardar"
-        description="Lo escrito en esta atención se perderá."
-        confirmLabel="Salir sin guardar"
-        cancelLabel="Seguir editando"
-        destructive
-        onConfirm={() => navigate(clinicalHistoryPath(patient.id))}
-      />
+            <div ref={scroll} className="clinic-encounter-scroll">
+              <div className="clinic-encounter min-w-0 space-y-4">
+                <MedicalAlerts source={record.allergiesAndMedication} />
+                <section className="clinic-encounter-step-content" aria-labelledby="encounter-step-heading">
+                  <div className="clinic-encounter-step-heading">
+                    <h3 ref={heading} id="encounter-step-heading" tabIndex={-1}>Paso {step + 1} de {encounterSteps.length}: {current.label}</h3>
+                    <p className="text-sm text-muted-foreground">Una vez guardada, la atención no se puede modificar. Para corregirla se agregan notas aclaratorias.</p>
+                  </div>
+                  <form id="register-encounter-form" noValidate aria-label={current.label} onSubmit={event => {
+                    event.preventDefault()
+                    if (current.id === "revision") void requestSave()
+                    else void next()
+                  }}>
+                    <div data-encounter-step="motivo" hidden={current.id !== "motivo"} inert={current.id !== "motivo"}><StepReason appointmentOptions={appointmentOptions} /></div>
+                    <div data-encounter-step="signos" hidden={current.id !== "signos"} inert={current.id !== "signos"}><StepVitals active={current.id === "signos"} /></div>
+                    <div data-encounter-step="examen" hidden={current.id !== "examen"} inert={current.id !== "examen"}><StepExam /></div>
+                    <div data-encounter-step="diagnostico" hidden={current.id !== "diagnostico"} inert={current.id !== "diagnostico"}><StepDiagnosis record={record} /></div>
+                    <div data-encounter-step="tratamientos" hidden={current.id !== "tratamientos"} inert={current.id !== "tratamientos"}><StepTreatments proposed={record.plan} active={current.id === "tratamientos"} /></div>
+                    <div data-encounter-step="revision" hidden={current.id !== "revision"} inert={current.id !== "revision"}>
+                      {current.id === "revision" && <EncounterReview
+                        professionalName={professionals?.find(item => item.id === draft.professionalId)?.name}
+                        appointmentLabel={appointmentOptions.find(item => item.appointment.id === draft.appointmentId)?.label}
+                        issues={issues.map(issue => ({ step: stepOfField(String(issue.path[0])), message: issue.message, field: issue.path.join(".") }))}
+                        onEdit={(id, field) => goToStep(encounterSteps.findIndex(item => item.id === id), field)} />}
+                    </div>
+                  </form>
+                </section>
+                <ClinicalFormActions leading={<Button type="button" variant="outline" disabled={saving} onClick={leave}>Cancelar</Button>}>
+                  {step > 0 && <Button type="button" variant="outline" disabled={saving} onClick={() => goToStep(step - 1)}><ChevronLeft />Anterior</Button>}
+                  {current.id !== "revision" && <Button type="submit" form="register-encounter-form" variant="outline" className="clinic-clinical-next" disabled={saving}>Siguiente<ChevronRight /></Button>}
+                  <Button type="button" disabled={saving} onClick={() => void requestSave()}>{saving ? "Guardando..." : "Guardar atención"}</Button>
+                </ClinicalFormActions>
+              </div>
+            </div>
+            <ConfirmDialog open={confirming} onOpenChange={open => !saving && setConfirming(open)} title="Guardar atención"
+              description={`La atención no se podrá modificar después de guardarla. ${confirmSummary}`}
+              confirmLabel="Confirmar y guardar" cancelLabel="Volver" isLoading={saving} onConfirm={() => void save()} />
+            <ConfirmDialog open={confirmLeave} onOpenChange={setConfirmLeave} title="Salir sin guardar"
+              description="Lo escrito en esta atención se perderá." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" destructive onConfirm={finishClose} />
+          </DialogContent>
+        </Dialog>
+      </EncounterRevealContext.Provider>
     </FormProvider>
-  )
-}
-
-function ReviewStep({ professionalName, onEdit }: { professionalName?: string; onEdit: (step: EncounterStepId) => void }) {
-  const values = useWatch() as EncounterFormValues
-  const sections = encounterSections(values)
-  const total = sumCosts(values.performedTreatments)
-  return (
-    <div className="space-y-4">
-      <p className="text-sm">
-        <strong>Fecha:</strong> {values.date || "—"} · <strong>Profesional:</strong> {professionalName ?? "Sin asignar"}
-      </p>
-      <EncounterSummary
-        sections={sections}
-        action={(section) => (
-          <Button type="button" size="sm" variant="ghost" onClick={() => onEdit(section.step)}>
-            <Pencil />
-            Editar
-          </Button>
-        )}
-      />
-      <section aria-label="Tratamientos realizados" className="space-y-1.5">
-        <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Tratamientos realizados</h4>
-        {values.performedTreatments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No se registran tratamientos realizados.</p>
-        ) : (
-          <ul className="text-sm">
-            {values.performedTreatments.map((item) => (
-              <li key={item.id}>
-                {item.description}
-                {item.tooth && ` (${item.tooth})`} · {formatCurrency(Number.isFinite(item.cost) ? item.cost : 0)}
-              </li>
-            ))}
-            <li className="font-medium">Total {formatCurrency(total)}</li>
-          </ul>
-        )}
-      </section>
-    </div>
   )
 }

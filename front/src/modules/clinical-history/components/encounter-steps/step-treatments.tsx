@@ -12,10 +12,11 @@ import type { EncounterFormValues, ProposedTreatment } from "../../types/clinica
 import { examKindItems, examKindLabels, type ExamKind } from "../../types/encounter-assessment.types"
 import { TextField } from "../form-controls"
 import { PerformedTreatmentsField } from "../performed-treatments-field"
+import { EncounterAccordion } from "../encounter-accordion"
 
 const examItems = Object.fromEntries(examKindItems)
 
-function RequestedExamsField() {
+function RequestedExamsField({ active }: { active: boolean }) {
   const { control, setValue } = useFormContext<EncounterFormValues>()
   const exams = useWatch({ control, name: "requestedExams" })
   const [kind, setKind] = useState<ExamKind | "">("")
@@ -70,7 +71,7 @@ function RequestedExamsField() {
             <li key={exam.id} className="flex flex-wrap items-start gap-3 p-3 text-sm">
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{examKindLabels[exam.kind]}</p>
-                <TextField name={`requestedExams.${index}.detail`} label={`Detalle de ${examKindLabels[exam.kind]}`} />
+                {active && <TextField name={`requestedExams.${index}.detail`} label={`Detalle de ${examKindLabels[exam.kind]}`} />}
               </div>
               <Button
                 type="button"
@@ -96,29 +97,54 @@ function RequestedExamsField() {
 }
 
 /** Paso 5: procedimientos, tratamientos realizados, materiales, exámenes solicitados y evolución. */
-export function StepTreatments({ proposed }: { proposed: ProposedTreatment[] }) {
+export function StepTreatments({ proposed, active }: { proposed: ProposedTreatment[]; active: boolean }) {
   return (
-    <FieldGroup>
-      <TextField
-        name="procedures"
-        label="Procedimientos realizados"
-        placeholder="Procedimientos ejecutados en esta atención"
-        multiline
-        rows={3}
-      />
-      <PerformedTreatmentsField proposed={proposed} />
-      <TextField name="materials" label="Materiales / anestesia / lote" multiline rows={2} />
-      <RequestedExamsField />
-      <TextField name="examFindings" label="Hallazgos relevantes de los exámenes" multiline rows={2} />
-      <TextField
-        name="evolution"
-        label="Evolución / indicaciones"
-        placeholder="Evolución respecto a la atención anterior e indicaciones"
-        multiline
-        rows={3}
-      />
-      <TextField name="notes" label="Observaciones" placeholder="Observaciones internas del profesional" multiline rows={2} />
-      <TextField name="nextVisit" label="Próximo control" type="date" className="md:max-w-xs" />
-    </FieldGroup>
+    <EncounterAccordion step="tratamientos" items={[
+      {
+        id: "procedures", title: "Procedimientos realizados", fields: ["procedures"], children: (
+
+          <TextField
+            name="procedures"
+            label="Procedimientos realizados"
+            placeholder="Procedimientos ejecutados en esta atención"
+            multiline
+            rows={3}
+          />
+
+        )
+      },
+      {
+        id: "performed", title: "Tratamientos realizados", fields: ["performedTreatments"], children: (
+          <PerformedTreatmentsField proposed={proposed} />
+        )
+      },
+      {
+        id: "materials", title: "Materiales y anestesia", fields: ["materials"], children: (
+          <TextField name="materials" label="Materiales / anestesia / lote" multiline rows={2} />
+        )
+      },
+      {
+        id: "exams", title: "Exámenes solicitados", fields: ["requestedExams"], children: (
+          <RequestedExamsField active={active} />
+        )
+      },
+      {
+        id: "evolution", title: "Evolución e indicaciones", fields: ["examFindings", "evolution", "notes", "nextVisit"], children: (
+          <FieldGroup>
+            <TextField name="examFindings" label="Hallazgos relevantes de los exámenes" multiline rows={2} />
+            <TextField
+              name="evolution"
+              label="Evolución / indicaciones"
+              placeholder="Evolución respecto a la atención anterior e indicaciones"
+              multiline
+              rows={3}
+            />
+            <TextField name="notes" label="Observaciones" placeholder="Observaciones internas del profesional" multiline rows={2} />
+            <TextField name="nextVisit" label="Próximo control" type="date" className="md:max-w-xs" />
+
+          </FieldGroup>
+        )
+      },
+    ]} />
   )
 }

@@ -4,14 +4,7 @@ import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { DialogFooter } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -20,6 +13,7 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 
 import { useCreateScheduleBlock, useProfessionals, useRooms } from "../api/appointments.queries"
 import { scheduleBlockSchema, type ScheduleBlockFormValues } from "../types/appointment.types"
+import { ScheduleFormDialog } from "./schedule-form-dialog"
 
 interface ScheduleBlockFormDialogProps {
   open: boolean
@@ -37,7 +31,7 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
     control,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ScheduleBlockFormValues>({
     resolver: zodResolver(scheduleBlockSchema),
     defaultValues: {
@@ -73,29 +67,22 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Bloquear horario</DialogTitle>
-          <DialogDescription>
-            Bloquea un rango de tiempo puntual para un profesional y/o un consultorio (vacaciones, almuerzo,
-            mantenimiento, etc.). No se podrán agendar citas en ese horario.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <FieldGroup>
+    <ScheduleFormDialog open={open} onOpenChange={onOpenChange} dirty={isDirty}
+      busy={isSubmitting || createScheduleBlock.isPending} title="Bloquear horario"
+      description="Bloquea un rango de tiempo puntual para un profesional y/o un consultorio (vacaciones, almuerzo, mantenimiento, etc.). No se podrán agendar citas en ese horario.">
+      {requestClose => <form onSubmit={handleSubmit(onSubmit)} className="clinic-schedule-form">
+          <FieldGroup className="clinic-schedule-fields">
             <Field>
               <FieldLabel htmlFor="professionalId">Profesional (opcional)</FieldLabel>
               <Controller
                 control={control}
                 name="professionalId"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries((professionals ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="professionalId" className="w-full">
                       <SelectValue placeholder="Selecciona un profesional..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="clinic-schedule-options">
                       {professionals?.map((professional) => (
                         <SelectItem key={professional.id} value={professional.id}>
                           {professional.name} · {professional.specialty}
@@ -113,11 +100,11 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
                 control={control}
                 name="roomId"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries((rooms ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="roomId" className="w-full" aria-invalid={!!errors.roomId}>
                       <SelectValue placeholder="Selecciona un consultorio..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="clinic-schedule-options">
                       {rooms?.map((room) => (
                         <SelectItem key={room.id} value={room.id}>
                           {room.name}
@@ -130,7 +117,7 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
               <FieldError errors={errors.roomId ? [errors.roomId] : undefined} />
             </Field>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="clinic-schedule-times clinic-schedule-wide">
               <Field data-invalid={!!errors.date}>
                 <FieldLabel htmlFor="date">Fecha</FieldLabel>
                 <Input id="date" type="date" aria-invalid={!!errors.date} {...register("date")} />
@@ -150,7 +137,7 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
               </Field>
             </div>
 
-            <Field data-invalid={!!errors.reason}>
+            <Field className="clinic-schedule-wide" data-invalid={!!errors.reason}>
               <FieldLabel htmlFor="reason">Motivo</FieldLabel>
               <Textarea
                 id="reason"
@@ -164,15 +151,14 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
           </FieldGroup>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" disabled={isSubmitting} onClick={requestClose}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Guardando..." : "Bloquear horario"}
             </Button>
           </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </form>}
+    </ScheduleFormDialog>
   )
 }

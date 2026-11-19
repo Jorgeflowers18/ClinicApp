@@ -78,15 +78,16 @@ export function AppRoutes() {
                   <PatientClinicalHistoryPage />
                 </Suspense>
               }
-            />
+            >
             <Route
-              path="/historial-clinico/paciente/:patientId/atencion/nueva"
+              path="atencion/nueva"
               element={
                 <Suspense fallback={<p>Cargando…</p>}>
                   <RegisterEncounterPage />
                 </Suspense>
               }
             />
+            </Route>
             <Route path="/historial-clinico/paciente/:patientId/odontologia" element={<LegacyDentalHistoryRedirect />} />
             <Route path="/historial-clinico/nuevo" element={<LegacyNewEntryRedirect />} />
             <Route path="/historial-clinico/:id" element={<LegacyEntryRedirect />} />

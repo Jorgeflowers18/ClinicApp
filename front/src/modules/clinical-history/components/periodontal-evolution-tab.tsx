@@ -6,6 +6,7 @@ import { buildEvolutionSeries, computeChartIndicators, POCKET_THRESHOLD_MM } fro
 import { compareEncounters, today } from "../lib/record"
 import type { ClinicalEncounter, RecordFormValues } from "../types/clinical-history.types"
 import { PeriodontalEvolutionChart } from "./periodontal-evolution-chart"
+import { evaluatedPocketCount } from "./periodontal-indicator-presentation"
 
 function percent(value: number | null) {
   return value === null ? "Sin registro" : `${value}%`
@@ -43,7 +44,7 @@ export function PeriodontalEvolutionTab({ encounters }: { encounters: ClinicalEn
         { label: "Implantes", value: indicators.implants },
         { label: "Piezas con caries", value: indicators.teethWithCaries },
         { label: "Sitios sondeados", value: indicators.sitesProbed },
-        { label: `Sitios con bolsa ≥ ${POCKET_THRESHOLD_MM} mm`, value: indicators.sitesWithPocket },
+        { label: `Sitios con bolsa ≥ ${POCKET_THRESHOLD_MM} mm`, value: evaluatedPocketCount(indicators) ?? "Sin evaluar" },
         { label: "Profundidad de sondaje máxima", value: millimeters(indicators.maxProbingDepth) },
         {
           label: "Pérdida de inserción clínica máxima",
@@ -70,7 +71,7 @@ export function PeriodontalEvolutionTab({ encounters }: { encounters: ClinicalEn
           {!indicators ? (
             <p className="text-sm text-muted-foreground">Sin odontograma registrado.</p>
           ) : (
-            <dl className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <dl className="clinic-periodontal-stats grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {stats.map((stat) => (
                 <div key={stat.label} className="rounded-lg border p-3">
                   <dt className="text-xs text-muted-foreground">{stat.label}</dt>
@@ -88,6 +89,7 @@ export function PeriodontalEvolutionTab({ encounters }: { encounters: ClinicalEn
           <CardTitle>Evolución periodontal</CardTitle>
           <CardDescription>
             Comparación de los indicadores entre atenciones. El último punto es el estado actual de la historia.
+            {series.some((point) => point.maxProbingDepth === null) && " Los registros sin sondaje no muestran un conteo de bolsas; no equivalen a cero sitios evaluados."}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -18,6 +18,8 @@ import { useProfessionals } from "@/modules/appointments/api/appointments.querie
 import { useEncountersList } from "../api/clinical-history.queries"
 import { resolveProfessionalName } from "../lib/record"
 import { diagnosisSummary, type EncounterListItem } from "../types/clinical-history.types"
+import "../components/clinical-density.css"
+import styles from "./clinical-history-list.module.css"
 
 const ALL = "todos"
 const shortDate = (value: string) => formatDateOnly(value, { day: "2-digit", month: "short", year: "numeric" })
@@ -84,7 +86,12 @@ export function ClinicalHistoryListPage() {
     { key: "reason", header: "Motivo de consulta", cell: (row) => row.reason || "—", className: "max-w-56 truncate" },
     { key: "diagnosis", header: "Diagnóstico", cell: (row) => diagnosisSummary(row) || "—", className: "max-w-56 truncate" },
     { key: "professional", header: "Profesional", cell: (row) => resolveProfessionalName(row, professionals) },
-    { key: "nextVisit", header: "Próximo control", cell: (row) => (row.nextVisit ? shortDate(row.nextVisit) : "—") },
+    {
+      key: "nextVisit",
+      header: "Próximo control",
+      cell: (row) => (row.nextVisit ? shortDate(row.nextVisit) : <span className="text-muted-foreground">—</span>),
+      className: styles.nextControl,
+    },
   ]
 
   const desktopFilters = (
@@ -113,7 +120,7 @@ export function ClinicalHistoryListPage() {
   )
 
   return (
-    <div className="space-y-4">
+    <div className="clinic-history-list space-y-4">
       <PageHeader
         title="Historial clínico"
         description="Atenciones odontológicas de todos los pacientes. Acceso restringido a personal médico y administración."

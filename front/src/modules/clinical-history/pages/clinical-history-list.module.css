@@ -1,0 +1,10 @@
+/* Intrinsic date width; the remaining columns retain the table's automatic layout. */
+.nextControl[data-column="nextVisit"] {
+  width: 1%;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.nextControl[data-column="nextVisit"][data-slot] {
+  padding-inline: 10px;
+}

@@ -73,7 +73,7 @@ export function EncountersTab({ patientId, patientName, birthDate, encounters, h
       </CardHeader>
       <CardContent className="space-y-3">
         {sorted.length === 0 && (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+          <div className="clinic-clinical-empty">
             Aún no hay atenciones registradas. Usa «Registrar atención» para agregar la primera.
           </div>
         )}
@@ -88,7 +88,7 @@ export function EncountersTab({ patientId, patientName, birthDate, encounters, h
               ref={isHighlighted ? highlighted : undefined}
               aria-current={isHighlighted ? "true" : undefined}
               aria-label={`Atención del ${longDate(encounter.date)}`}
-              className={cn("space-y-2 rounded-lg border p-4", isHighlighted && "border-primary ring-2 ring-primary/30")}
+              className={cn("clinic-history-encounter space-y-2 rounded-lg border", isHighlighted && "clinic-history-encounter-selected")}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

@@ -90,7 +90,7 @@ export function DataConsentTab({ patientId }: { patientId: string }) {
             </AlertDescription>
           </Alert>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="clinic-history-consent-choice">
             <Field data-invalid={!!consentErrors?.status}>
               <FieldLabel htmlFor="consent-status">Estado</FieldLabel>
               <Controller
@@ -136,7 +136,7 @@ export function DataConsentTab({ patientId }: { patientId: string }) {
             </Field>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="clinic-history-consent-identity">
             <Field data-invalid={!!consentErrors?.signerName}>
               <FieldLabel htmlFor="consent-signer-name">Nombre de quien firma</FieldLabel>
               <Input id="consent-signer-name" aria-invalid={!!consentErrors?.signerName} {...register("dataConsent.signerName")} />

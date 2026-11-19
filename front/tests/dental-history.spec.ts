@@ -1,5 +1,6 @@
 import { test, expect, type Download, type Locator, type Page } from "@playwright/test"
 import { expectRecordSection, selectRecordSection } from "./helpers/clinical-navigation"
+import { encounterStepSelector, openEncounterGroup, selectEncounterStep } from "./helpers/encounter-navigation"
 
 // Cada prueba corre en un contexto nuevo: IndexedDB vacía, semillas insertadas una vez y mocks en memoria
 // recién cargados. `page.goto` recarga la app y reinicia los mocks en memoria (pacientes, citas,
@@ -55,12 +56,12 @@ async function saveChanges(page: Page, sections: string[]) {
 }
 
 /** Página «Registrar atención»: paso actual y botones de la barra inferior. */
-const currentStep = (page: Page) => page.getByRole("navigation", { name: "Pasos de la atención" }).locator('[aria-current="step"]')
+const currentStep = encounterStepSelector
 const nextStep = (page: Page) => page.getByRole("button", { name: "Siguiente", exact: true })
 const saveEncounter = (page: Page) => page.getByRole("button", { name: "Guardar atención", exact: true })
 
 async function goToStep(page: Page, name: string) {
-  await page.getByRole("navigation", { name: "Pasos de la atención" }).getByRole("button", { name }).click()
+  await selectEncounterStep(page, name)
   await expect(currentStep(page)).toContainText(name)
 }
 
@@ -441,27 +442,36 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await page.getByLabel("Peso (kg)", { exact: true }).fill("70")
   await page.getByLabel("Talla (cm)", { exact: true }).fill("175")
   await expect(page.getByLabel("IMC calculado")).toHaveText("22.9")
+  await openEncounterGroup(page, "asa")
   await radio(page, "Clasificación ASA", "ASA II").click()
+  await openEncounterGroup(page, "risk")
   await page.getByRole("checkbox", { name: "Riesgo hemorrágico" }).click()
   await page.getByRole("checkbox", { name: "Interconsulta requerida" }).click()
   await nextStep(page).click()
+  // La validación abre automáticamente el grupo; esperar su error evita pulsar el trigger mientras se abre.
   await expect(page.getByText("Valor entre 30 y 220")).toBeVisible()
   await expect(page.getByText("Formato 120/80")).toBeVisible()
+  await openEncounterGroup(page, "risk")
   await expect(page.getByText("Indica el especialista o el motivo de la interconsulta")).toBeVisible()
+  await openEncounterGroup(page, "vitals")
   await page.getByLabel("FC (lpm)", { exact: true }).fill("72")
   await page.getByLabel("PA (mmHg)", { exact: true }).fill("120/80")
+  await openEncounterGroup(page, "risk")
   await page.getByLabel("Especialista o motivo de la interconsulta", { exact: true }).fill("Cardiología: control de anticoagulación")
   await nextStep(page).click()
 
   // Paso 3: examen por estructura; Alterado exige el hallazgo; «Marcar todo como normal».
   await expect(currentStep(page)).toContainText("Examen clínico")
   await radio(page, "ATM / ruidos / dolor", "Alterado").click()
+  await openEncounterGroup(page, "intraoral")
   await page.getByRole("button", { name: "Marcar todo como normal: Examen intraoral" }).click()
   await expect(radio(page, "Oclusión", "Normal")).toHaveAttribute("aria-checked", "true")
   await nextStep(page).click()
   await expect(page.getByText("Describe el hallazgo")).toBeVisible()
   await page.getByLabel("Hallazgo de ATM / ruidos / dolor", { exact: true }).fill("Chasquido en ATM derecha")
+  await openEncounterGroup(page, "pain")
   await page.getByLabel("Dolor EVA (0 a 10)", { exact: true }).fill("4")
+  await openEncounterGroup(page, "risks")
   await radio(page, "Nivel de riesgo de caries", "Alto").click()
   await nextStep(page).click()
 
@@ -471,17 +481,23 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await expect(page.getByText("Registra al menos un diagnóstico")).toBeVisible()
   await addDiagnosis(page, "Caries dentinaria en pieza 46 (K02.1)")
   await page.getByRole("listitem", { name: "Diagnóstico 1" }).getByLabel("Pieza / región", { exact: true }).fill("46")
+  await openEncounterGroup(page, "prognosis")
   await radio(page, "Pronóstico", "Favorable").click()
+  await openEncounterGroup(page, "periodontal")
   await radio(page, "Periodontitis", "Estadio II").click()
+  await openEncounterGroup(page, "modifiers")
   await radio(page, "Intervalo de mantenimiento", "6 meses").click()
   await expect(page.getByText(/^Próximo control: /)).toBeVisible()
   await nextStep(page).click()
 
   // Paso 5: tratamientos realizados con costo editable y exámenes solicitados.
   await expect(currentStep(page)).toContainText("Tratamientos y evolución")
+  await openEncounterGroup(page, "evolution")
   await expect(page.getByLabel("Próximo control", { exact: true })).not.toHaveValue("")
   await page.getByLabel("Observaciones", { exact: true }).fill("Nota de prueba <script>window.injected=true</script>")
+  await openEncounterGroup(page, "materials")
   await page.getByLabel("Materiales / anestesia / lote", { exact: true }).fill("Lidocaína 2% lote A123")
+  await openEncounterGroup(page, "performed")
   await page.getByRole("button", { name: /Resina compuesta \(46\)/ }).click()
   await chooseOption(page, page, "Tratamiento del catálogo", /^Limpieza dental/)
   await page.getByRole("button", { name: "Agregar", exact: true }).click()
@@ -497,6 +513,7 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await expect(page.getByText("Indica el costo")).toHaveCount(0)
   await expect(performed).toContainText("Catálogo: $55,00")
   await expect(performed.getByRole("row", { name: /Total de la atención/ })).toContainText("$75,00")
+  await openEncounterGroup(page, "exams")
   await chooseOption(page, page, "Examen", "Panorámica")
   await page.getByRole("button", { name: "Solicitar", exact: true }).click()
   await expect(page.getByLabel("Detalle de Interconsulta médica", { exact: true })).toHaveValue("Cardiología: control de anticoagulación")
@@ -517,6 +534,7 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await expect(confirm).toContainText("Quedarán 2 exámenes solicitados como pendientes en la historia.")
   await confirm.getByRole("button", { name: "Volver" }).click()
   await goToStep(page, "Diagnóstico y pronóstico")
+  await openEncounterGroup(page, "diagnoses")
   await expect(page.getByLabel("Diagnóstico clínico / CIE-10", { exact: true })).toHaveValue("Caries dentinaria en pieza 46 (K02.1)")
   await confirmEncounter(page)
 

@@ -37,7 +37,7 @@ export function PerformedTreatmentsTab({ patientId, encounters, professionalName
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+          <div className="clinic-clinical-empty">
             Aún no hay tratamientos realizados. Se registran al guardar una atención.
           </div>
         ) : (

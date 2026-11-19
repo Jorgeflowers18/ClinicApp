@@ -1,0 +1,48 @@
+.clinic-encounter-dialog[data-slot="dialog-content"] { display: flex; flex-direction: column; gap: 0; width: min(1344px, 94vw); max-width: calc(100vw - 32px); height: min(760px, 92dvh); max-height: 94dvh; padding: 0; overflow: hidden; border: 1px solid var(--border); background: var(--popover); animation: encounter-dialog-in 200ms ease both; }
+.clinic-encounter-dialog[data-closed] { animation: encounter-dialog-out 180ms ease both; }
+.clinic-encounter-modal-heading[data-slot="dialog-header"] { display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 20px 10px; }
+.clinic-encounter-modal-heading > div { min-width: 0; }
+.clinic-encounter-dialog .clinic-encounter-modal-heading [data-slot="dialog-title"] { font-size: 22px; line-height: 1.3; outline: none; }
+.clinic-encounter-modal-heading [data-slot="dialog-description"] { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin-top: 4px; font-size: 13px; }
+.clinic-encounter-patient-name { color: var(--foreground); font-weight: 500; }
+.clinic-encounter-dialog [data-slot="dialog-close"] { min-width: 40px; min-height: 40px; flex-shrink: 0; }
+.clinic-encounter-step-navigation { display: flex; align-items: center; gap: 12px; padding: 0 20px 12px; border-bottom: 1px solid var(--border); }
+.clinic-encounter-step-navigation > p { flex-shrink: 0; }
+.clinic-encounter-dialog[data-slot="dialog-content"] .clinic-encounter-step-selector[data-slot="select-trigger"] { width: min(100%, 400px); min-width: 0; min-height: 40px; font-size: 14px; }
+.clinic-encounter-step-options[data-slot="select-content"] { width: min(420px, calc(100vw - 24px)); max-width: var(--available-width); max-height: min(380px, var(--available-height)); }
+.clinic-encounter-step-options [data-slot="select-item"] { min-height: 52px; gap: 10px; white-space: normal; }
+.clinic-encounter-step-options [data-slot="select-item-text"] { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.clinic-encounter-step-option-number { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: var(--muted); color: var(--muted-foreground); font-size: 12px; }
+.clinic-encounter-step-option-copy { display: flex; flex-direction: column; min-width: 0; }
+.clinic-encounter-step-option-copy small { font-size: 12px; color: var(--muted-foreground); font-weight: 400; }
+.clinic-encounter-step-options [data-state="error"] .clinic-encounter-step-option-copy small { color: var(--destructive); }
+.clinic-encounter-step-options [data-state="complete"] .clinic-encounter-step-option-copy small { color: var(--success); }
+.clinic-encounter-scroll { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.clinic-encounter-dialog .clinic-encounter { padding: 16px 20px 20px; margin: 0 auto; }
+.clinic-encounter-step-content { min-width: 0; }
+.clinic-encounter-step-heading { margin-bottom: 16px; }
+.clinic-encounter-step-heading > h3 { margin-bottom: 4px; font-size: 17px; font-weight: 600; outline: none; }
+.clinic-encounter-dialog [data-encounter-step][hidden] { display: none; }
+.clinic-encounter-dialog [data-encounter-step]:not([hidden]) { animation: encounter-step-in 160ms ease; }
+.clinic-encounter-dialog .clinic-clinical-actions { margin-top: 16px; }
+.clinic-encounter-dialog[data-slot="dialog-content"] .clinic-encounter :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="button"]) { min-height: 40px; }
+.clinic-encounter-dialog[data-slot="dialog-content"] .clinic-encounter-modal-heading [data-slot="dialog-close"] { min-width: 40px; min-height: 40px; }
+@media (max-width: 1023px), (pointer: coarse) {
+  .clinic-encounter-dialog[data-slot="dialog-content"] .clinic-encounter :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="button"]),
+  .clinic-encounter-dialog[data-slot="dialog-content"] .clinic-encounter-step-selector[data-slot="select-trigger"],
+  .clinic-encounter-dialog[data-slot="dialog-content"] .clinic-encounter-modal-heading [data-slot="dialog-close"] { min-height: 44px; }
+}
+@keyframes encounter-dialog-in { from { opacity: 0; scale: .99; } to { opacity: 1; scale: 1; } }
+@keyframes encounter-dialog-out { from { opacity: 1; scale: 1; } to { opacity: 0; scale: .99; } }
+@keyframes encounter-step-in { from { opacity: .5; } to { opacity: 1; } }
+@media (max-width: 767px) {
+  .clinic-encounter-dialog[data-slot="dialog-content"] { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; }
+  .clinic-encounter-modal-heading[data-slot="dialog-header"] { padding: 12px 12px 8px; }
+  .clinic-encounter-dialog .clinic-encounter-modal-heading [data-slot="dialog-title"] { font-size: 20px; }
+  .clinic-encounter-step-navigation { gap: 8px; padding: 0 12px 10px; }
+  .clinic-encounter-dialog .clinic-encounter { padding: 12px; }
+  .clinic-encounter-step-selector[data-slot="select-trigger"], .clinic-encounter-dialog :is([data-slot="button"], [data-slot="input"], [data-slot="select-trigger"]) { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .clinic-encounter-dialog[data-slot="dialog-content"], .clinic-encounter-dialog [data-encounter-step]:not([hidden]) { animation: none; transition: none; }
+}

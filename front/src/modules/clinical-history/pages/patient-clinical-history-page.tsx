@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Navigate, useParams, useSearchParams } from "react-router-dom"
+import { useEffect, useRef, useState } from "react"
+import { Navigate, Outlet, useMatch, useParams, useSearchParams } from "react-router-dom"
 import { AlertCircle } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -25,6 +25,16 @@ export function PatientClinicalHistoryPage() {
   const [mountKey, setMountKey] = useState(0)
   // Pestaña en la que se vuelve a montar la historia tras descartar o recargar.
   const [resumeTab, setResumeTab] = useState<RecordTab | null>(null)
+  const registering = Boolean(useMatch("/historial-clinico/paciente/:patientId/atencion/nueva"))
+  const registrationWasOpen = useRef(registering)
+  useEffect(() => {
+    // A successful registration returns to its immutable encounter, using fresh saved record values.
+    if (registrationWasOpen.current && !registering && searchParams.get("atencion")) {
+      setResumeTab("atenciones")
+      setMountKey((key) => key + 1)
+    }
+    registrationWasOpen.current = registering
+  }, [registering, searchParams])
 
   if (patientLoading || historyLoading) return <Skeleton className="h-96 w-full" />
   if (!patient || patientError) {
@@ -50,7 +60,7 @@ export function PatientClinicalHistoryPage() {
   const appointmentEncounter = appointmentParam
     ? history.encounters.find((encounter) => encounter.appointmentId === appointmentParam)
     : undefined
-  if (appointmentParam && !appointmentEncounter) {
+  if (appointmentParam && !appointmentEncounter && !registering) {
     return <Navigate to={registerEncounterPath(patient.id, appointmentParam)} replace />
   }
   const encounterParam = searchParams.get("atencion") ?? searchParams.get("visita") ?? appointmentEncounter?.id ?? null
@@ -67,7 +77,7 @@ export function PatientClinicalHistoryPage() {
   }
 
   return (
-    <RecordWorkspace
+    <><RecordWorkspace
       key={mountKey}
       patient={patient}
       history={history}
@@ -76,6 +86,6 @@ export function PatientClinicalHistoryPage() {
       onReset={remount}
       onReload={(tab) => void reload(tab)}
       onShowEncounter={(encounterId) => setSearchParams({ atencion: encounterId }, { replace: true })}
-    />
+    /><Outlet /></>
   )
 }

@@ -44,10 +44,11 @@ function AppointmentDayButton(props: ComponentProps<typeof CalendarDayButton>) {
   )
 }
 
-export function CalendarDateNavigator({ date, onSelect, className }: {
+export function CalendarDateNavigator({ date, onSelect, className, label }: {
   date: Date
   onSelect: (date: Date) => void
   className?: string
+  label?: string
 }) {
   const { goToToday } = useAppointmentsCalendar()
   const selectedLabel = format(date, "d 'de' MMMM 'de' yyyy", { locale: es })
@@ -78,11 +79,11 @@ export function CalendarDateNavigator({ date, onSelect, className }: {
           className={cn(styles.trigger, className)}
         >
           <CalendarDays aria-hidden="true" />
-          <span>{selectedLabel}</span>
+          <span aria-label={label ? "Periodo visible" : undefined}>{label ?? selectedLabel}</span>
           <ChevronDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
         </Button>
       } />
-      <PopoverContent className={styles.popup} sideOffset={8}>
+      <PopoverContent className={styles.popup} side="bottom" align="center" sideOffset={8}>
         <div className={styles.popupHeader}>
           <div className={styles.heading}>
             <PopoverTitle><span className="sr-only">Ir a una fecha: </span>{format(cursor, "LLLL yyyy", { locale: es })}</PopoverTitle>
