@@ -1,0 +1,166 @@
+CLINICAPP — VALIDACIONES VISUALES Y NAVEGACIÓN AL ERROR
+Fecha: 20 de noviembre de 2026
+
+RESULTADO
+Los formularios identifican los campos inválidos mediante mensajes específicos,
+borde semántico y relaciones aria-invalid/aria-describedby. Al intentar guardar,
+se revela el primer campo siguiendo el orden del formulario, conservando los demás
+valores. Se mantienen los esquemas, reglas, datos, contratos y persistencia existentes.
+
+PATRÓN REUTILIZABLE
+- field-context.ts y Field/FieldError/FieldDescription: asociación de controles,
+  errores y ayudas mediante identificadores reales. Un control válido puede
+  conservar explícitamente aria-invalid=false dentro de un grupo con errores.
+- use-validated-form.ts: integra React Hook Form sin sustituir sus esquemas;
+  coordina el foco tras la validación, conserva formState actualizado y revalida
+  errores ya mostrados, incluidos los dependientes de otro campo. Los errores del
+  servidor se conservan al editar campos ajenos.
+- validation-focus.ts: busca el control, espera visibilidad y animaciones y usa
+  focus({preventScroll:true}). Desplaza el contenedor real del modal y respeta
+  prefers-reduced-motion. Una nueva interacción cancela un foco pendiente anterior.
+  Conserva el foco explícito de grupos accesibles como el instrumental.
+- field-issues.ts: admite únicamente rutas de errores presentes en el formulario,
+  incluidas filas dinámicas; ordena los errores reconocidos según sus campos.
+  Los errores generales o desconocidos conservan su tratamiento general.
+- ValidationSummary: resumen compacto con acceso al primer error.
+- DateRangeFields: presenta la relación min/max existente junto a ambas fechas,
+  sin modificar las consultas ni las reglas de los filtros.
+
+FORMULARIOS Y CONTROLES CORREGIDOS
+- Pacientes: creación y edición, campos personales, contacto, emergencia,
+  seguros, preferencias y observaciones. Se conservan las secciones cerradas.
+  La validación al guardar evita que un error al perder foco desplace el botón
+  del acordeón durante el clic; las correcciones posteriores actualizan el error.
+- Atenciones: navegación al paso y grupo correctos, selección de profesionales,
+  controles clínicos compartidos, números, opciones, casillas y tratamientos
+  realizados. El primer error se obtiene del mismo esquema de la atención,
+  evitando depender de una actualización de React todavía pendiente.
+- Historia clínica: datos del paciente, antecedentes, plan, consentimiento y
+  notas aclaratorias. Las subidas de consentimiento muestran su error asociado.
+- Archivo clínico: carga múltiple, metadatos individuales, edición, categorías,
+  etiquetas y fechas. Se reutilizan las restricciones existentes del servicio
+  frontend, devolviendo errores de campo precisos.
+- Citas y bloqueos: controles personalizados, horarios cruzados, profesional o
+  consultorio y errores reconocidos del servidor.
+- Inventario: insumos, compras y sus filas, proveedores, movimientos y
+  esterilización. Se conservan sus validaciones de stock y operaciones.
+- Tratamientos: formularios de creación/edición e insumos asociados.
+- Mensajería y reportes: plantilla, errores de guardado y rangos de fechas.
+- Autenticación: login y validación existente de recuperación/solicitud de acceso.
+  El fallo local conocido de lectura del perfil conserva su mensaje comprensible,
+  sin mostrar causas internas ni permitir sobrescribir el perfil ilegible.
+- Perfil institucional: errores de nombre/correo y selección de imagen.
+- Mi perfil: información accesible y foco del error en la vista previa de foto.
+
+ACORDEONES Y SCROLL
+Se reutilizan los controladores propios de pacientes, inventario, tratamientos,
+atenciones y archivo. Conservan sus aperturas, cierres, animaciones y datos montados.
+No se impone un acordeón exclusivo a otros formularios clínicos.
+Dentro de un modal no se desplaza la página que queda detrás. Encabezados y
+acciones se mantienen fuera del área donde se coloca el campo enfocado.
+
+CARGA MÚLTIPLE
+Cada archivo conserva su nombre, original, metadatos comunes y ajustes propios.
+Se identifican todos los archivos con errores y se abre el primero afectado.
+Un tipo clínico faltante no marca como inválido un nombre correcto.
+Las correcciones retiran el error de metadatos correspondiente sin borrar errores
+binarios ajenos. Si el original es rechazado, se abre Archivos y recibe foco el
+mensaje de ese archivo. Los originales ya guardados no se repiten al reintentar.
+
+PRUEBAS EJECUTADAS
+53 casos distintos de Playwright aprobados en Chrome, en la demostración local.
+Se ejecutó una selección pertinente, no la suite completa del repositorio.
+
+Corridas conservadas en front/test-results/:
+- validation-final-confirmation: 34 aprobados.
+- validation-cross-module: 14 aprobados.
+- validation-modal-responsive: 4 aprobados.
+- validation-template-final: 2 aprobados, repetidos dentro de los anteriores.
+- validation-complete: 17 aprobados; incluye repeticiones y el caso adicional
+  de original rechazado. Esta corrida verifica los últimos ajustes.
+
+Los 9 casos de tests/form-validation.spec.ts comprueban: carga múltiple en ambos
+temas, asociación accesible, foco y scroll interno, nombres válidos sin falsos
+errores, conservación de metadatos, guardado correcto, correcciones progresivas,
+horarios cruzados, errores de servidor en orden lógico, conservación de errores
+de servidor al editar otro dato, dependencias entre controles y originales vacíos.
+
+Responsive: 320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px en ambos temas.
+También se comprobaron 375 y 600 px en modales de pacientes/atenciones, ventanas
+de poca altura, los seis pasos clínicos y ambos estados del sidebar.
+Se inspeccionaron visualmente capturas claras y oscuras con errores de campo.
+
+- npm.cmd run build: aprobado; incluye tsc -b y la compilación de Vite.
+- npm.cmd run lint: aprobado, sin errores. Permanecen tres avisos previos de
+  Fast Refresh en button.tsx, badge.tsx y tabs.tsx.
+- Vite mantiene su aviso previo de bundles superiores a 500 kB.
+- git diff --check: aprobado.
+- Sin cambios en vendor, dependencias, lockfile, odontogram.html, archivos públicos,
+  odontogram-frame.tsx ni encounter-chart.tsx; tampoco se modificaron CSS globales,
+  modelos, esquemas clínicos ni cálculos financieros.
+
+LÍMITES DE LA VERIFICACIÓN
+Las pruebas usan Chrome y datos de demostración aislados; no certifican otros
+navegadores ni una API de producción conectada.
+Recuperación y solicitud de acceso conservan la disponibilidad real existente.
+Finanzas no dispone actualmente de formularios de pagos, cuotas o seguros que
+editar. No se crearon funcionalidades nuevas. Sedes y datos personales del perfil
+conservan sus reglas actuales; no se inventaron campos obligatorios ni un cambio
+de contraseña inexistente.
+No se realizaron commits ni pushes. El localhost habitual sigue en el puerto 5173.
+
+ARCHIVOS MODIFICADOS O CREADOS
+Rutas relativas a la raíz del repositorio:
+- front/docs/validaciones-visuales.txt
+- front/src/components/ui/checkbox.tsx
+- front/src/components/ui/field-context.ts
+- front/src/components/ui/field.tsx
+- front/src/components/ui/input.tsx
+- front/src/components/ui/select.tsx
+- front/src/components/ui/switch.tsx
+- front/src/components/ui/textarea.tsx
+- front/src/modules/appointments/components/appointment-form-dialog.tsx
+- front/src/modules/appointments/components/schedule-block-form-dialog.tsx
+- front/src/modules/auth/components/profile-photo-controls.tsx
+- front/src/modules/auth/pages/login-page.tsx
+- front/src/modules/auth/pages/recover-password-page.tsx
+- front/src/modules/auth/pages/request-access-page.tsx
+- front/src/modules/clinical-history/archive/api.ts
+- front/src/modules/clinical-history/archive/components/catalog-dialog.tsx
+- front/src/modules/clinical-history/archive/components/controls.tsx
+- front/src/modules/clinical-history/archive/components/edit-dialog.tsx
+- front/src/modules/clinical-history/archive/components/metadata-fields.tsx
+- front/src/modules/clinical-history/archive/components/toolbar.tsx
+- front/src/modules/clinical-history/archive/components/upload-dialog.tsx
+- front/src/modules/clinical-history/archive/lib/validation.ts
+- front/src/modules/clinical-history/components/data-consent-tab.tsx
+- front/src/modules/clinical-history/components/encounter-accordion.tsx
+- front/src/modules/clinical-history/components/encounter-note-dialog.tsx
+- front/src/modules/clinical-history/components/encounter-steps/step-reason.tsx
+- front/src/modules/clinical-history/components/form-controls.tsx
+- front/src/modules/clinical-history/components/performed-treatments-field.tsx
+- front/src/modules/clinical-history/components/plan-item-form.tsx
+- front/src/modules/clinical-history/components/record-workspace.tsx
+- front/src/modules/clinical-history/components/register-encounter-form.tsx
+- front/src/modules/institution/components/institution-logo-controls.tsx
+- front/src/modules/institution/pages/institution-profile-page.tsx
+- front/src/modules/inventory/components/inventory-item-form-dialog.tsx
+- front/src/modules/inventory/components/purchase-order-form-dialog.tsx
+- front/src/modules/inventory/components/register-movement-dialog.tsx
+- front/src/modules/inventory/components/sterilization-cycle-form-dialog.tsx
+- front/src/modules/inventory/components/supplier-form-dialog.tsx
+- front/src/modules/inventory/hooks/use-inventory-accordion.ts
+- front/src/modules/inventory/hooks/use-inventory-submit.ts
+- front/src/modules/notifications/components/notification-template-editor.tsx
+- front/src/modules/notifications/pages/notifications-report-page.tsx
+- front/src/modules/patients/components/patient-form.tsx
+- front/src/modules/patients/hooks/use-patient-accordion.ts
+- front/src/modules/reports/components/period-selector.tsx
+- front/src/modules/treatments/components/treatment-form-dialog.tsx
+- front/src/modules/treatments/hooks/use-treatment-accordion.ts
+- front/src/shared/components/date-range-fields.tsx
+- front/src/shared/components/validation-summary.tsx
+- front/src/shared/hooks/use-validated-form.ts
+- front/src/shared/lib/field-issues.ts
+- front/src/shared/lib/validation-focus.ts
+- front/tests/form-validation.spec.ts

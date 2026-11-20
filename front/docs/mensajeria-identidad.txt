@@ -1,0 +1,79 @@
+CLINICAPP - IDENTIDAD INSTITUCIONAL Y CONTEXTO DE CITAS EN MENSAJERIA
+Fecha: 20 de noviembre de 2026
+
+Implementacion
+- Mensajeria toma el nombre y el logo del Perfil institucional guardado,
+  utilizando la misma persistencia y suscripcion que la marca existente.
+  Los cambios sin guardar no afectan la vista previa ni la preparacion.
+- Sin logo se reutilizan las iniciales institucionales existentes.
+- La vista previa permite Datos de ejemplo o Cita existente. Las citas se
+  buscan por paciente, fecha o identificador, sin seleccion automatica.
+- Cada cita resuelve su propio paciente y profesional mediante sus IDs.
+  No se utiliza el primer profesional ni datos de ejemplo como respaldo.
+- El resolver compartido conserva la sintaxis de las cinco variables y
+  sustituye sus valores literalmente, sin alterar la plantilla original.
+- Fecha y hora utilizan es-EC y America/Guayaquil, incluida la conversion
+  de marcas de tiempo cercanas a medianoche.
+- Los cambios de citas utilizan las consultas e invalidaciones existentes.
+  La preparacion consulta nuevamente los registros en cada invocacion.
+- Los datos faltantes y las variables desconocidas muestran advertencias
+  especificas. La preparacion rechaza variables sin resolver, citas
+  inactivas para recordatorio, preferencias deshabilitadas y falta de permiso.
+- La insercion de variables conserva cursor, foco, texto y borrador.
+- El editor y la vista previa mantienen dos columnas cuando hay espacio
+  y una disposicion vertical en movil. Los estilos son locales a Mensajeria.
+
+Limite verificado del repositorio
+El directorio back contiene documentacion y backlog, sin un servicio real
+de envio implementado. No existe una cola operativa de recordatorios ni
+un cuerpo historico de mensaje en el contrato NotificationLog actual.
+prepareAppointmentMessage es una utilidad de solo lectura que compone y
+valida mensajes con datos actuales; no envia, no programa y no crea logs.
+No se agrego un servicio inexistente ni una simulacion de envio exitoso.
+La simulacion de logs que ya existia en modo demostracion no se modifico.
+Los logs enviados se preservan sin recalcularlos ni ampliar su contrato.
+La entrega futura y la actualizacion de una cola real quedan fuera del
+alcance verificable hasta que exista ese servicio en el proyecto.
+
+Validacion
+- 20 pruebas seleccionadas de Playwright aprobadas: 9 nuevas de identidad
+  y contexto, y 11 existentes de plantillas, institucion y permisos.
+- Despues del ajuste final de posicion del boton Guardar plantilla,
+  se repitieron 7 pruebas relevantes; todas aprobaron. Son parte de las
+  20 anteriores, no 7 casos distintos adicionales.
+- Nombre y logo guardados sincronizados entre dos pestanas; ediciones
+  institucionales sin guardar no se filtran; borrador conservado.
+- Dos citas del mismo paciente con distintos profesionales; reprogramacion
+  y reasignacion mediante la API existente; historial sin cambios.
+- Falta de nombre/profesional, variables desconocidas, preferencias,
+  permisos, contexto obligatorio, IDs incompatibles y reemplazos literales.
+- Ambos temas: 320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px.
+- Capturas de escritorio y movil inspeccionadas visualmente.
+- npm.cmd run build: aprobado, incluye TypeScript.
+- npm.cmd run lint: aprobado; permanecen tres advertencias Fast Refresh
+  previas en button, badge y tabs. Permanece el aviso de tamano de bundle
+  de Vite; no se instalaron dependencias ni se cambio su configuracion.
+- git diff --check: aprobado.
+- Odontograma, periodontograma y dependencias de librerias sin cambios.
+- Servidor original de localhost:5173 preservado.
+
+Comando principal de pruebas (desde front, servidor de prueba en 5175)
+$env:CLINIC_TEST_URL='http://127.0.0.1:5175'
+npx.cmd playwright test tests/messaging-identity.spec.ts tests/messaging-redesign.spec.ts tests/institution-profile.spec.ts --grep 'messaging-identity|template insertion|draft confirmation|failed background template|institution metadata|messaging and notification permissions' --workers=2 --output=test-results/messaging-identity-final --reporter=line
+
+Archivos de esta tarea (rutas desde front)
+src/modules/institution/types/institution.types.ts
+src/modules/institution/hooks/use-institution-profile.ts
+src/modules/notifications/types/notification.types.ts
+src/modules/notifications/lib/message-template.ts (nuevo)
+src/modules/notifications/lib/prepare-appointment-message.ts (nuevo)
+src/modules/notifications/components/notification-message-preview.tsx (nuevo)
+src/modules/notifications/components/notification-template-editor.tsx
+src/modules/notifications/pages/notifications-report-page.tsx
+src/modules/notifications/messaging.css
+tests/messaging-identity.spec.ts (nuevo)
+tests/messaging-redesign.spec.ts (una expectativa de variable desconocida)
+docs/mensajeria-identidad.txt (este informe)
+
+Se conservaron los cambios locales anteriores de validaciones visuales.
+No se realizaron commits ni pushes.
