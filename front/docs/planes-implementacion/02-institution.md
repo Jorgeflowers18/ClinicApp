@@ -23,7 +23,7 @@ Que el perfil de la clínica se lea y se guarde en la API (`endpoints-api.md` §
 
 | Campo | Frontend | API | Resuelve |
 |---|---|---|---|
-| `subtitle` | Existe: lo muestran el login y la barra lateral | **No existe** | **Back:** agregar `subtitle` (hasta 120) a `institutions`, al perfil y a `/public` |
+| `subtitle` | Existe: lo muestran el login y la barra lateral | ✅ Hasta 120, en el perfil, en el `PUT` y en `/public` (`53b1d64`) | Coinciden |
 | `logoText` | "Legacy": las iniciales se calculan del nombre | Hasta 10 caracteres | Front: seguir enviándolo (o `""`). No bloquea. |
 | `updatedAt` | No existe | Lo devuelve la API | Front: sumarlo al tipo (sirve para mostrar "Actualizado el…") |
 | `branches[i].id` | Texto del navegador | UUID del servidor; `""` o `null` para una sede nueva | Front: no generar ids. Usar un id temporal solo como `key` de React, sin enviarlo. |
@@ -57,10 +57,7 @@ Que el perfil de la clínica se lea y se guarde en la API (`endpoints-api.md` §
 
 ## Cambios necesarios en el back
 
-- **`subtitle`:**
-  - columna `institutions.subtitle varchar(120)`, con una migración;
-  - en `InstitutionProfileDto`, `InstitutionProfileRequest` y `PublicInstitutionDto`;
-  - en las pruebas de `InstitutionTests` y en `endpoints-api.md` § 11.
+✅ **Hecho** (`53b1d64`, migración `InstitucionSubtitulo`): `subtitle` en `institutions`, en el perfil, en el `PUT` y en `GET /institution/public` (`{ name, subtitle, logoText, logoImage }`). Ya no queda nada del back para este plan.
 
 ## Verificación
 
@@ -76,4 +73,4 @@ Que el perfil de la clínica se lea y se guarde en la API (`endpoints-api.md` §
 - Sin `localStorage` para el perfil en modo API.
 - El login usa `/public`.
 - Las sedes usan los UUID del servidor.
-- `subtitle` se guarda en la base.
+- `subtitle` se guarda en la base y se ve en el login.

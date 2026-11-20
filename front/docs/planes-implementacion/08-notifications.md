@@ -28,14 +28,15 @@ La página `/notificaciones` (plantilla, vista previa e historial), el aviso "cl
 | Notificaciones pendientes | El mock solo tiene enviadas y fallidas | Las pendientes **no** salen en la API | Coinciden: la UI no cambia |
 | Sin proveedor (producción, por ahora) | — | No se registra ninguna notificación | Front: la página puede mostrar "El envío automático aún no está configurado" si la lista está vacía. Es opcional; depende de la decisión del proveedor. |
 | Variables de la plantilla | Las 5 de `notificationVariables` | Las mismas 5, reemplazadas igual ("12 de septiembre", "10:00 am") | Coinciden. `resolveAppointmentMessage` (vista previa) y el back deben dar el mismo texto. |
-| Mensaje enviado | No se guarda en `NotificationLog` | El back lo guarda ya armado, pero **no lo expone** | Opcional, back: sumar `message` al DTO para verlo en el historial |
+| Mensaje enviado | No se guarda en `NotificationLog` | ✅ `message`: el texto enviado, ya armado | Front: sumarlo al tipo y mostrarlo en el detalle del historial |
+| Nombre del paciente | Se busca en `mockPatients` | ✅ `patientName` en cada notificación | Front: sumarlo al tipo y usarlo en la tabla, sin pedir cada paciente |
 
 ## Cambios en el frontend
 
 1. **Estándar del plan 0:**
    - `notifications.contract.ts` (`list`, `listByAppointment`, `getTemplate` y `updateTemplate`), `.http.ts`, `.mock.ts` y `.api.ts`;
    - `logAppointmentEvent` queda solo dentro de `appointments.mock.ts` (plan 4).
-2. **Historial** (`notifications-report-page.tsx`): enviar `search`, `dateFrom` y `dateTo` al back, con `signal`. Los nombres de los pacientes de cada fila se resuelven con `usePatient(id)` o, mejor, con el cambio de back opcional "`patientName` en el DTO".
+2. **Historial** (`notifications-report-page.tsx`): enviar `search`, `dateFrom` y `dateTo` al back, con `signal`. El nombre de cada fila sale de `patientName`, así que `useMessagingCatalog` ya no hace falta en esa página.
 3. **Mensajería y vista previa** (`notification-message-preview.tsx`, `prepare-appointment-message.ts`):
    - el selector de citas usa `useAppointmentsList({ from: hoy, to: hoy + 30 días })` en lugar de todas las citas (plan 4);
    - el nombre de la clínica sale de la consulta del perfil (plan 2);
@@ -46,34 +47,39 @@ La página `/notificaciones` (plantilla, vista previa e historial), el aviso "cl
    - **todo** el inventario;
    - **todo** el historial de notificaciones.
 
-   Con datos reales son decenas de peticiones por usuario.
-   - **Con el endpoint del back** (abajo): una sola petición, `GET /alerts`.
-   - **Mientras no exista:**
-     - citas con `from = to = hoy`;
-     - notificaciones con `dateFrom` de hace 7 días;
-     - inventario con `fetchAllPages`;
-     - cumpleaños **desactivados** en modo API (no hay filtro por fecha de nacimiento).
-5. **`collectAlertPages`** se reemplaza por `fetchAllPages` (plan 0).
+   Con datos reales son decenas de peticiones por usuario. En modo API se reemplaza todo por **una sola petición**, `GET /alerts`, cada 5 minutos:
+   - `buildGlobalAlerts` arma las alertas desde la respuesta:
+     - `appointmentsToday` ya trae `patientName`;
+     - `birthdaysToday`;
+     - `criticalItems`, con `unit` para `inventoryUnit`;
+     - `failedDeliveries`, con `patientName`;
+   - los ids de las alertas siguen igual (`inventory:…`, `delivery:…`, `appointment:…`, `birthday:…`), para que `use-alert-reads.ts` conserve las leídas;
+   - el médico recibe `criticalItems` y `failedDeliveries` vacíos, así que `canManage` deja de decidir qué se pide.
+5. **`collectAlertPages`** se borra en modo API. Donde quede un uso, se reemplaza por `fetchAllPages` (plan 0).
 6. **Editor de la plantilla:** avisar cuando el mensaje armado pasa de 160 caracteres, el largo de un SMS. Usar la vista previa con datos reales, porque las variables cambian el largo.
 7. **Invalidaciones:** después de crear o cancelar una cita, invalidar `notificationsKeys.byAppointment(id)` con unos segundos de retraso, o volver a consultar al abrir el detalle, porque el envío es en segundo plano (cada 10 s en desarrollo).
 
 ## Cambios necesarios en el back
 
-- **Recomendado — `GET /api/alerts`:** alertas del día según el rol.
+✅ **Hecho** (`d0aeeed`; `endpoints-api.md` § 12):
+- **`GET /api/alerts`** (los tres roles):
 
   ```json
   {
-    "appointmentsToday": [ { "id", "start", "status", "patientId", "patientName" } ],
-    "birthdaysToday": [ { "patientId", "patientName" } ],
+    "date": "2026-11-20",
+    "appointmentsToday": [ { "id", "start", "end", "status", "patientId", "patientName", "professionalId", "professionalName" } ],
+    "birthdaysToday": [ { "patientId", "patientName", "birthDate" } ],
     "criticalItems": [ { "itemId", "name", "stock", "minStock", "unit" } ],
-    "failedDeliveries": [ { "id", "patientId", "patientName", "channel", "type", "sentAt" } ]
+    "failedDeliveries": [ { "id", "patientId", "patientName", "appointmentId", "channel", "type", "sentAt" } ]
   }
   ```
 
-  - Inventario y fallidas solo para admin y recepción.
-  - Fechas según el día de la clínica.
-  - Cumpleaños por mes y día de `birth_date`, sin los pacientes dados de baja.
-- **Opcional:** `patientName` y `message` en `NotificationLogDto`.
+  - Las citas son las programadas o confirmadas que empiezan hoy, en el día de la clínica.
+  - Los cumpleaños son de pacientes activos; los del 29 de febrero se muestran el 28 en los años no bisiestos.
+  - Inventario y envíos fallidos (últimos 7 días) solo para admin y recepción.
+- **`patientName` y `message`** en cada notificación del historial. El destinatario no se expone.
+
+Ya no queda nada del back para este plan.
 
 ## Verificación
 
@@ -89,5 +95,4 @@ La página `/notificaciones` (plantilla, vista previa e historial), el aviso "cl
 
 - Plantilla e historial en la API.
 - El frontend no registra notificaciones.
-- Mensajería y alertas sin leer listados completos.
-- Decisión tomada sobre `GET /alerts`.
+- Mensajería y alertas sin leer listados completos: el centro de alertas usa `GET /alerts`.

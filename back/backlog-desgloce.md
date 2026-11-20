@@ -18,7 +18,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ 2 | `appointments`: profesionales y consultorios | Hecho (falta su pantalla en el frontend) | 1 | Base |
 | ✅ 3 | `appointments`: citas y bloqueos | Hecho (falta que el frontend envíe el rango del calendario) | 2 | `patients`, profesionales y consultorios |
 | ✅ 4 | `treatments`: tratamientos realizados (`treatment-assignments`) | Hecho | 2 | `patients`, `treatments`, `inventory` |
-| ✅ 5 | `clinical-history` | Hecho (falta el registro transaccional de la atención) | 3 | `patients`, profesionales, citas, tratamientos realizados |
+| ✅ 5 | `clinical-history` | Hecho, con el registro de la atención en una transacción y el archivo clínico | 3 | `patients`, profesionales, citas, tratamientos realizados |
 | ✅ 6 | `institution` | Hecho (falta su `institution.api.ts` en el frontend) | 1 | Base |
 | ✅ 7 | `notifications` | Hecho (falta elegir el proveedor de envío) | 2 | Citas, `patients` |
 | ✅ 8 | `finance` | Etapa A hecha (pagos, cartera y resúmenes); la etapa B espera el ítem 8 | 4 | Tratamientos realizados, `patients` |

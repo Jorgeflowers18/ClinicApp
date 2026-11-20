@@ -16,7 +16,7 @@ El catálogo `/tratamientos`, su detalle con "Pacientes que recibieron este trat
 | `createMock`, `updateMock` | Alta y edición | `POST` y `PUT /treatments/:id`. El back valida los insumos (`errors["consumption[1].itemId"]`: "El insumo no existe" o "Insumo repetido"). |
 | `removeMock`: borra siempre | Borrado | `DELETE /treatments/:id`, con `409` "Este tratamiento ya se usó. Desactívalo en su lugar." si está en citas, tratamientos realizados o historias |
 | `listAssignmentsMock`, `listAssignmentsByPatientMock` | Tratamientos realizados | `GET /treatments/:id/assignments` y `GET /treatment-assignments?patientId=` |
-| `createAssignmentMock`: idempotente por `sourceKey` y **descuenta insumos llamando a `inventoryApi.registerConsumption`** | Registro desde la atención | `POST /treatment-assignments`. El back descuenta por FEFO en la misma operación y es idempotente por `sourceKey`. **El frontend ya no llama a inventario.** |
+| `createAssignmentMock`: idempotente por `sourceKey` y **descuenta insumos llamando a `inventoryApi.registerConsumption`** | Registro desde la atención | En modo API la historia ya no lo llama: `POST …/encounters/register` (plan 7) registra los tratamientos realizados dentro de la misma transacción de la atención. `POST /treatment-assignments` sigue disponible, con FEFO e idempotente por `sourceKey`. **El frontend ya no llama a inventario.** |
 | `mockTreatments`, `mockTreatmentAssignments` | Datos | Solo modo mock. Hoy también los importan `finance.mock-data.ts` y `reports.api.ts` (se resuelve en los planes 9 y 10). |
 
 ## Diferencias de contrato

@@ -1,6 +1,6 @@
 # Planes para conectar el frontend con la API
 
-Estado al **2026-11-20**. El backend tiene los 80 endpoints listos (`back/docs/endpoints-api.md`), pero el frontend sigue funcionando con los mocks (`VITE_USE_MOCK_API=true`). Estos planes describen, módulo por módulo, qué mocks se apagan y cómo se reemplaza cada uno por la llamada real.
+Estado al **2026-11-20**. El backend tiene los **91 endpoints** listos (`back/docs/endpoints-api.md`), incluido todo lo que estos planes le pedían al back. El frontend sigue funcionando con los mocks (`VITE_USE_MOCK_API=true`). Estos planes describen, módulo por módulo, qué mocks se apagan y cómo se reemplaza cada uno por la llamada real.
 
 **Flujo de trabajo:** un plan por módulo. Al terminarlo se hace el commit, se registra el cambio en `documentacion/arquitectura-frontend.md` y se borra el plan. Lo que quede pendiente se anota en `back/backlog-desgloce.md` § "Pendientes al cerrar los planes".
 
@@ -12,16 +12,18 @@ El orden importa: las pantallas se cruzan por id (una cita apunta a un paciente,
 |---|---|---|---|
 | 0 | [`00-base-cliente-api.md`](./00-base-cliente-api.md): compilación, cliente HTTP, errores, estándar de recurso y conmutador por módulo | — | No |
 | 1 | [`01-auth.md`](./01-auth.md): sesión, renovación, perfil, recuperación y solicitud de acceso | 0 | No |
-| 2 | [`02-institution.md`](./02-institution.md): perfil de la clínica, marca y sedes | 1 | Sí: `subtitle` |
-| 3 | [`03-patients.md`](./03-patients.md) | 1 | Sí: `documentType`, teléfono opcional, filtros y lista de dados de baja |
+| 2 | [`02-institution.md`](./02-institution.md): perfil de la clínica, marca y sedes | 1 | ✅ `subtitle` (`53b1d64`) |
+| 3 | [`03-patients.md`](./03-patients.md) | 1 | ✅ `documentType`, teléfono opcional, filtros y lista de dados de baja (`a5f633a`) |
 | 4 | [`04-agenda.md`](./04-agenda.md): profesionales, consultorios, citas y bloqueos | 3 | No |
 | 5 | [`05-treatments.md`](./05-treatments.md): catálogo y tratamientos realizados | 3 | No |
 | 6 | [`06-inventory.md`](./06-inventory.md) | 4 (responsables de esterilización) | No |
-| 7 | [`07-clinical-history.md`](./07-clinical-history.md): historia, atenciones, adjuntos y archivo clínico | 3, 4, 5 | Sí: archivo clínico y registro transaccional (recomendado) |
-| 8 | [`08-notifications.md`](./08-notifications.md): plantilla, historial, mensajería y alertas | 2, 3, 4 | Opcional: alertas agregadas |
+| 7 | [`07-clinical-history.md`](./07-clinical-history.md): historia, atenciones, adjuntos y archivo clínico | 3, 4, 5 | ✅ Archivo clínico (`9dd2426`) y registro de la atención en una transacción (`fad02ef`) |
+| 8 | [`08-notifications.md`](./08-notifications.md): plantilla, historial, mensajería y alertas | 2, 3, 4 | ✅ `GET /alerts`, y `patientName` y `message` en el historial (`d0aeeed`) |
 | 9 | [`09-finance.md`](./09-finance.md): cartera, resúmenes y pagos | 3, 5 | No |
 | 10 | [`10-reports-dashboard.md`](./10-reports-dashboard.md): reportes e Inicio | 4–9 | No |
 | 11 | [`11-cierre.md`](./11-cierre.md): apagar el modo mock por defecto, pruebas E2E reales y limpieza | todos | No |
+
+**El back ya no bloquea ningún plan:** lo que los planes 2, 3, 7 y 8 le pedían está implementado, con pruebas, y documentado en `back/docs/endpoints-api.md`. Queda una sola decisión de la clínica que afecta al frontend: si el teléfono del paciente es opcional. La API ya lo acepta vacío.
 
 Los planes 5 y 6 se pueden hacer en paralelo con el 4.
 
@@ -29,13 +31,12 @@ Los planes 5 y 6 se pueden hacer en paralelo con el 4.
 
 1. **El frontend no compila.** `npx tsc -b` da 2 errores: `useSavedInstitutionName` (`notification-message-preview.tsx:13`) y `readSavedInstitutionName` (`prepare-appointment-message.ts:3`) no existen. El commit `3e72a03` ("Actualiza ClinicApp") solo agregó archivos nuevos; los cambios que esos archivos necesitaban en `institution` no se subieron. Se corrige en el plan 0, antes que nada.
 2. **El back recibió un proyecto nuevo, `back/ClinicApp.ErrorHandling`,** con otro formato de error (`code`, `errors` como lista). La API no lo referencia, así que hoy no cambia nada. El plan 0 deja el frontend preparado para los dos formatos; adoptarlo en la API es otra decisión.
-3. **El frontend avanzó más que el contrato del back** en cuatro puntos:
+3. **El frontend había avanzado más que el contrato del back** en cuatro puntos. Los tres primeros ya están en el back:
    - el tipo de documento del paciente y los filtros de la lista;
    - el subtítulo de la institución;
-   - el archivo clínico digital (metadatos, categorías, etiquetas y archivado de archivos);
-   - los pagos con estado `reversado`.
+   - el archivo clínico digital (metadatos, categorías, etiquetas y archivado de archivos).
 
-   Cada plan lo detalla en "Cambios necesarios en el back".
+   El cuarto, los pagos con estado `reversado`, espera la etapa B de finanzas: el frontend lo deja sin uso (plan 9).
 4. **Mocks con efectos que en la API hace el servidor:**
    - las notificaciones de las citas;
    - el descuento de insumos;
@@ -47,7 +48,7 @@ Los planes 5 y 6 se pueden hacer en paralelo con el 4.
    - las alertas globales leen todos los pacientes, todas las citas y todo el inventario;
    - la agenda y la vista previa de mensajería leen todas las citas.
 
-   Con 820 pacientes eso son muchas peticiones. Cada plan propone el filtro o el endpoint que lo evita.
+   Con 820 pacientes eso son muchas peticiones. Las alertas tienen ahora una sola petición (`GET /alerts`, plan 8) y la agenda se pide por rango (`?from&to`, plan 4).
 
 ## El estándar que falta para un recurso de API reutilizable
 

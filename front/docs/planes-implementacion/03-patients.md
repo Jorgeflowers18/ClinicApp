@@ -10,7 +10,7 @@ Lista, ficha, alta y edición de pacientes contra la API (`endpoints-api.md` § 
 
 | Mock (`patients.api.ts`) | Qué simula | Se reemplaza por |
 |---|---|---|
-| `listMock`: filtra sin tildes por nombre, cédula, teléfono y correo; filtros `status`, `gender`, `registeredFrom` y `registeredTo`; orden por `createdAt` | Búsqueda y filtros | `GET /patients?page&pageSize&search` (más los filtros nuevos, ver "Back") |
+| `listMock`: filtra sin tildes por nombre, cédula, teléfono y correo; filtros `status`, `gender`, `registeredFrom` y `registeredTo`; orden por `createdAt` | Búsqueda y filtros | `GET /patients?page&pageSize&search&status&gender&registeredFrom&registeredTo` |
 | `getMock` | Ficha | `GET /patients/:id` (devuelve también los dados de baja, con `deletedAt`) |
 | `createMock`: valida con `patientEditorSchema`, cédula repetida → `409`, y **calcula el N.° de historia** (`HC-…`) | Alta | `POST /patients`. El número lo asigna una secuencia de PostgreSQL; la cédula repetida da `409` con `errors.documentId`. |
 | `updateMock`: conserva el N.° de historia | Edición | `PUT /patients/:id` (ignora `clinicalRecordNumber`; `409` si está dado de baja) |
@@ -22,9 +22,9 @@ Lista, ficha, alta y edición de pacientes contra la API (`endpoints-api.md` § 
 
 | Punto | Frontend | API | Resuelve |
 |---|---|---|---|
-| `documentType` (`cedula`, `pasaporte`, `otro`) | Existe; con `cedula` valida el dígito verificador (`isEcuadorianId`) | **No existe**: se pierde al guardar | **Back:** agregar el campo (y validar la cédula si `cedula`) |
-| `phone` | **Opcional** (`optionalPhone`) | **Obligatorio**, de 7 a 30 | Decidir con la clínica. Si es opcional: **back** lo cambia. Si no: **front** vuelve a hacerlo obligatorio. Los datos que se importarán tienen pacientes sin teléfono, así que conviene opcional. |
-| Filtros `status`, `gender`, `registeredFrom`, `registeredTo` | Los usa la lista y los 4 contadores (total, activos, en seguimiento, inactivos) | **Se ignoran**: los contadores darían todos el mismo número | **Back:** aceptarlos en `GET /patients` |
+| `documentType` (`cedula`, `pasaporte`, `otro`) | Existe; con `cedula` valida el dígito verificador (`isEcuadorianId`) | ✅ Igual, con el mismo algoritmo y el mismo mensaje en `errors.documentId`. Sin tipo, la respuesta trae `null`. | Front: mapeo `null` → `undefined` |
+| `phone` | **Opcional** (`optionalPhone`) | ✅ Opcional; si viene, con al menos 7 dígitos (igual `emergencyContactPhone`) | Coinciden. Confirmar con la clínica que sea opcional. |
+| Filtros `status`, `gender`, `registeredFrom`, `registeredTo` | Los usa la lista y los 4 contadores (total, activos, en seguimiento, inactivos) | ✅ Aceptados; las fechas son días de la clínica, inclusivos; `400` si son inválidas | Coinciden |
 | Búsqueda por correo | El mock busca también en `email` | Nombres, cédula, teléfono y N.° de historia | Aceptable. Si se quiere el correo: back. |
 | "Inactivo" | `removeMock` lo usa como baja | La baja es `deletedAt`; `inactivo` es solo un estado del tratamiento | Front: el contador "Inactivos" cuenta `treatmentStatus = inactivo`; los dados de baja van en otra vista (ver abajo) |
 | `deletedAt` | No existe en el tipo | `null` o fecha | Front: sumarlo al tipo `Patient` |
@@ -42,24 +42,18 @@ Lista, ficha, alta y edición de pacientes contra la API (`endpoints-api.md` § 
      - aviso "Paciente dado de baja";
      - sin "Editar", porque el back responde `409`;
      - para admin, el botón "Reactivar" (`restore`).
-   - Vista de dados de baja: depende del cambio del back (`?deleted=true`).
+   - Vista de dados de baja (solo admin): `GET /patients?deleted=true`, con los mismos filtros, del más reciente en darse de baja al más antiguo. Cada fila con "Reactivar".
 5. **Contadores de la lista** (`patients-list-page.tsx:32-35`): siguen con `pageSize: 1` y leen `totalItems`, lo que funciona en cuanto el back acepte `status`.
 6. **`usePatientLastVisit`:** sin cambios. Ya respeta los roles, porque la historia solo la pide a admin y médico.
 
 ## Cambios necesarios en el back
 
-En `PatientsController.List`, con un `PatientsQuery` que extienda `PageQuery`:
-- **Filtros:**
-  - `status` (`treatmentStatus` exacto);
-  - `gender`;
-  - `registeredFrom` y `registeredTo` (fechas de la clínica, inclusivas, sobre `createdAt`);
-  - `deleted=true` (solo admin), para listar los dados de baja.
-- **`documentType`:**
-  - columna `varchar(20)`, opcional, `cedula`, `pasaporte` u `otro`;
-  - en el DTO y el request;
-  - validación del dígito verificador cuando es `cedula`, con el mismo algoritmo de `isEcuadorianId`, para que el mensaje coincida.
-- **`phone`:** opcional, si la clínica lo decide.
-- **Pruebas** en `PatientsTests` y la documentación en `endpoints-api.md` § 7.
+✅ **Hecho** (`a5f633a`, migración `PacientesTipoDocumento`; `endpoints-api.md` § 7):
+- `GET /patients` acepta `status`, `gender`, `registeredFrom` y `registeredTo`, y `deleted=true` (solo admin; `403` para los demás).
+- `documentType` (`cedula`, `pasaporte`, `otro` o vacío), con validación del dígito verificador cuando es `cedula`.
+- `phone` y `emergencyContactPhone` opcionales; si vienen, con al menos 7 dígitos.
+
+Ya no queda nada del back para este plan. Pendiente de la clínica: confirmar que el teléfono sea opcional.
 
 ## Verificación
 
@@ -75,5 +69,6 @@ En `PatientsController.List`, con un `PatientsQuery` que extienda `PageQuery`:
 
 - Pacientes 100 % en la API.
 - La baja usa `deletedAt`, con reactivación.
-- Filtros y `documentType` soportados en el back.
+- La lista usa los filtros del back, los contadores cuadran y `documentType` se guarda.
+- Admin ve y reactiva a los dados de baja.
 - `mockPatients` solo lo importan archivos `*.mock*`. Los planes 8 y 10 quitan las otras dos importaciones.
