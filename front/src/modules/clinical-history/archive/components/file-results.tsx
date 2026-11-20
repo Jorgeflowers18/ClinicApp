@@ -1,7 +1,9 @@
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Archive, ArchiveRestore, Download, Eye, FileText, ImageOff, Images, Maximize, MoreHorizontal, Pencil, Link } from "lucide-react"
+import { Archive, ArchiveRestore, Download, Ellipsis, Eye, FileText, ImageOff, Images, Maximize, Pencil, Link } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatDateOnly } from "@/shared/lib/date"
 import type { DentalAttachment } from "../../types/clinical-history.types"
 import { useVisibleThumbnail } from "../hooks"
@@ -30,32 +32,41 @@ export function FileThumbnail({ patientId, file }: { patientId: string; file: De
 interface FileResultsProps { patientId: string; files: DentalAttachment[]; view: string; selected: string[]; options: MetadataOptions; writable: boolean; onSelect: (file: DentalAttachment) => void; onPreview: (file: DentalAttachment, fullscreen?: boolean) => void; onEdit: (file: DentalAttachment) => void; onArchive: (file: DentalAttachment) => void; onDownload: (file: DentalAttachment) => void }
 function FileActions({ file, ...props }: Omit<FileResultsProps, "files" | "view"> & { file: DentalAttachment }) {
   const navigate = useNavigate()
-  return <DropdownMenu modal={false}>
-    <DropdownMenuTrigger render={<Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      aria-label={`Acciones de ${fileName(file)}`}
+  const [open, setOpen] = useState(false)
+  return <DropdownMenu modal={false} onOpenChange={setOpen}>
+    <Tooltip>
+      <TooltipTrigger disabled={open} render={<DropdownMenuTrigger render={<Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className={styles.fileActionTrigger}
+        aria-label={`Acciones de ${fileName(file)}`}
+      >
+        <Ellipsis aria-hidden="true" />
+      </Button>} />} />
+      <TooltipContent>Acciones del archivo</TooltipContent>
+    </Tooltip>
+    <DropdownMenuContent
+      align="start"
+      sideOffset={6}
+      className={styles.fileActionMenu}
     >
-      <MoreHorizontal />
-    </Button>} />
-    <DropdownMenuContent align="end">
-      <DropdownMenuItem onClick={() => props.onPreview(file)}><Eye />Vista previa</DropdownMenuItem>
-      <DropdownMenuItem onClick={() => props.onPreview(file, true)}><Maximize />Pantalla completa</DropdownMenuItem>
+      <DropdownMenuItem onClick={() => props.onPreview(file)}><Eye aria-hidden="true" /><span>Vista previa</span></DropdownMenuItem>
+      <DropdownMenuItem onClick={() => props.onPreview(file, true)}><Maximize aria-hidden="true" /><span>Pantalla completa</span></DropdownMenuItem>
       {isClinicalImage(file) && <DropdownMenuItem disabled={!props.selected.includes(file.id) && props.selected.length === 2} onClick={() => props.onSelect(file)}>
-        <Images />
-        {props.selected.includes(file.id) ? "Quitar de comparación" : "Seleccionar para comparar"}
+        <Images aria-hidden="true" />
+        <span>{props.selected.includes(file.id) ? "Quitar de comparación" : "Seleccionar para comparar"}</span>
       </DropdownMenuItem>}
       {props.writable && <>
-        <DropdownMenuItem onClick={() => props.onEdit(file)}><Pencil />Editar metadatos, categoría y etiquetas</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => props.onEdit(file)}><Pencil aria-hidden="true" /><span>Editar información</span></DropdownMenuItem>
       </>}
-      {file.archive?.encounterId && <DropdownMenuItem onClick={() => navigate(`/historial-clinico/paciente/${props.patientId}?atencion=${encodeURIComponent(file.archive!.encounterId!)}`)}><Link />Abrir atención vinculada</DropdownMenuItem>}
-      <DropdownMenuItem onClick={() => props.onDownload(file)}><Download />Descargar original</DropdownMenuItem>
+      {file.archive?.encounterId && <DropdownMenuItem onClick={() => navigate(`/historial-clinico/paciente/${props.patientId}?atencion=${encodeURIComponent(file.archive!.encounterId!)}`)}><Link aria-hidden="true" /><span>Abrir atención vinculada</span></DropdownMenuItem>}
+      <DropdownMenuItem onClick={() => props.onDownload(file)}><Download aria-hidden="true" /><span>Descargar original</span></DropdownMenuItem>
       {props.writable && <>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => props.onArchive(file)}>
-          {file.archive?.archivedAt ? <ArchiveRestore /> : <Archive />}
-          {file.archive?.archivedAt ? "Restaurar archivo" : "Archivar archivo"}
+        <DropdownMenuItem variant={file.archive?.archivedAt ? "default" : "destructive"} onClick={() => props.onArchive(file)}>
+          {file.archive?.archivedAt ? <ArchiveRestore aria-hidden="true" /> : <Archive aria-hidden="true" />}
+          <span>{file.archive?.archivedAt ? "Restaurar archivo" : "Archivar archivo"}</span>
         </DropdownMenuItem>
       </>}
     </DropdownMenuContent>

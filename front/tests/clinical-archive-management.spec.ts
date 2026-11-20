@@ -8,7 +8,7 @@ test("metadata editing, catalog rename, category archival and file restore work 
   await seedArchive(page, 1)
   await openArchive(page)
   await page.getByRole("button", { name: "Acciones de Imagen de prueba 1", exact: true }).click()
-  await page.getByRole("menuitem", { name: "Editar metadatos, categoría y etiquetas", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Editar información", exact: true }).click()
   const edit = page.getByRole("dialog", { name: "Editar metadatos", exact: true })
   await edit.getByLabel("Nombre del archivo", { exact: true }).fill("Nombre editado en interfaz")
   await edit.getByLabel("Fecha de estudio", { exact: true }).fill("2026-10-05")
