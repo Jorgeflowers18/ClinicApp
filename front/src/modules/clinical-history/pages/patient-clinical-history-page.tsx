@@ -78,7 +78,7 @@ export function PatientClinicalHistoryPage() {
 
   return (
     <><RecordWorkspace
-      key={mountKey}
+      key={`${patient.id}:${mountKey}`}
       patient={patient}
       history={history}
       initialTab={resumeTab ?? (highlighted ? "atenciones" : "odontograma")}

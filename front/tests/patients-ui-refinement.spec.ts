@@ -58,7 +58,7 @@ for (const theme of ["light", "dark"]) {
     await page.getByRole("button", { name: "Cancelar", exact: true }).click()
     for (const width of widths) {
       await page.setViewportSize({ width, height: 900 })
-      for (const name of ["Citas", "Historial clínico", "Tratamientos", "Finanzas", "Documentos", "Resumen"]) {
+      for (const name of ["Citas", "Historial clínico", "Tratamientos", "Finanzas", "Archivo clínico", "Resumen"]) {
         await selectTab(page, name)
         const panel = page.getByRole("tabpanel")
         await expect(panel.locator('[data-slot="skeleton"]')).toHaveCount(0)
@@ -203,14 +203,15 @@ test("patient documents preserve stored bytes, real metadata and separate consen
     await clinicalHistoryApi.saveRecord({ ...history.record, attachments: [...history.record.attachments, metadata] })
     await queryClient.invalidateQueries({ queryKey: ["clinical-history"] })
   })
-  await selectTab(page, "Documentos")
-  const file = page.locator(".patient-documents > li")
+  await selectTab(page, "Archivo clínico")
+  const file = page.locator("[data-file-id]")
   await expect(file).toContainText("consent-test.pdf")
-  await expect(file).toContainText("Registrado")
+  await expect(file).toContainText("Consentimiento")
   await expect(file).not.toContainText("Firmado")
   await expect(page.getByRole("tabpanel")).toContainText("Pendiente")
   const download = page.waitForEvent("download")
-  await page.getByRole("button", { name: "Descargar consent-test.pdf", exact: true }).click()
+  await page.getByRole("button", { name: "Acciones de consent-test.pdf", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Descargar original", exact: true }).click()
   const downloaded = await download
   expect(downloaded.suggestedFilename()).toBe("consent-test.pdf")
   const stream = await downloaded.createReadStream()
@@ -218,7 +219,7 @@ test("patient documents preserve stored bytes, real metadata and separate consen
   for await (const chunk of stream!) chunks.push(chunk)
   expect(Buffer.concat(chunks).toString()).toBe("%PDF-1.4\nPatient document bytes\n%%EOF")
   await page.reload()
-  await selectTab(page, "Documentos")
+  await selectTab(page, "Archivo clínico")
   await expect(file).toContainText("consent-test.pdf")
 })
 

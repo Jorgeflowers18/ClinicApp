@@ -1,4 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react"
+import { useIsMutating } from "@tanstack/react-query"
+import { archiveMutationKey } from "../archive/hooks"
+import { mergeArchiveRows } from "../archive/lib/filter"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
 import { Activity, AlertCircle, CalendarClock, ClipboardList, Info, Stethoscope } from "lucide-react"
@@ -147,12 +150,23 @@ export function RecordWorkspace({
   })
   const saveRecord = useSaveRecord()
   const updatePatient = useUpdatePatient(patient.id)
-  const saving = saveRecord.isPending || updatePatient.isPending
+  const archiveWrites = useIsMutating({ mutationKey: archiveMutationKey })
+  const saving = saveRecord.isPending || updatePatient.isPending || archiveWrites > 0
   const chartHandle = useRef<ChartHandle | null>(null)
   const chartReadyRef = useRef(false)
   const [chartReady, setChartReady] = useState(false)
   // Último estado guardado: contra él se detecta qué secciones cambiaron.
   const [saved, setSaved] = useState(initialValues)
+  const confirmedArchive = useRef({ attachments: record.attachments, examRequests: record.examRequests })
+  useEffect(() => {
+    const previous = confirmedArchive.current
+    if (JSON.stringify(previous.attachments) === JSON.stringify(record.attachments) && JSON.stringify(previous.examRequests) === JSON.stringify(record.examRequests)) return
+    // Merge only archive-owned arrays. Unrelated clinical drafts and chart state are never reset.
+    form.setValue("attachments", mergeArchiveRows(previous.attachments, form.getValues("attachments"), record.attachments), { shouldDirty: true })
+    form.setValue("examRequests", mergeArchiveRows(previous.examRequests, form.getValues("examRequests"), record.examRequests), { shouldDirty: true })
+    setSaved(current => ({ ...current, attachments: record.attachments, examRequests: record.examRequests }))
+    confirmedArchive.current = { attachments: record.attachments, examRequests: record.examRequests }
+  }, [record.attachments, record.examRequests, form])
   const [tab, setTab] = useState<RecordTab>(initialTab)
   const sectionHeadingId = useId()
   const navigationContainer = useRef<HTMLDivElement>(null)

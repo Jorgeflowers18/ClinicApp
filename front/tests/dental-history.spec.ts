@@ -28,6 +28,18 @@ async function chooseOption(scope: Page | Locator, page: Page, label: string, op
   await page.getByRole("option", { name: option }).click()
 }
 
+/** The shared archive now commits originals independently of unsaved clinical fields. */
+async function uploadClinicalFile(page: Page, name: string) {
+  await page.getByRole("button", { name: "Adjuntar archivos", exact: true }).click()
+  const dialog = page.getByRole("dialog", { name: "Adjuntar archivos clínicos", exact: true })
+  await dialog.getByLabel("Seleccionar archivos clínicos", { exact: true }).setInputFiles({ name, mimeType: "image/png", buffer: png })
+  await dialog.getByRole("button", { name: /^Clasificación clínica/ }).click()
+  await chooseOption(dialog, page, "Tipo clínico", "Fotografía clínica")
+  await dialog.getByRole("button", { name: "Guardar archivos", exact: true }).click()
+  await expect(dialog.getByText("1 de 1 archivos guardados en el archivo clínico.", { exact: true })).toBeVisible()
+  await dialog.getByRole("button", { name: "Cerrar", exact: true }).last().click()
+}
+
 const radio = (scope: Page | Locator, group: string, option: string) =>
   scope.getByRole("radiogroup", { name: group, exact: true }).getByRole("radio", { name: option, exact: true })
 
@@ -82,7 +94,7 @@ async function confirmEncounter(page: Page, texts: string[] = []) {
 }
 
 const png = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf1sAAAAASUVORK5CYII=",
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAX+XDSwAAAABJRU5ErkJggg==",
   "base64"
 )
 
@@ -172,13 +184,11 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   await page.getByLabel("Fecha de la decisión", { exact: true }).fill("2026-09-20")
 
   await selectRecordSection(page, "Fotos y documentos")
-  await page
-    .getByLabel("Seleccionar archivos clínicos")
-    .setInputFiles({ name: "radiografia-prueba.png", mimeType: "image/png", buffer: png })
+  await uploadClinicalFile(page, "radiografia-prueba.png")
   await expect(page.getByText("radiografia-prueba.png", { exact: true })).toBeVisible()
-  await expect(page.getByText(/Fotografías clínicas · /)).toBeVisible()
+  await expect(page.getByText(/Fotografía clínica · PNG/)).toBeVisible()
 
-  await saveChanges(page, ["Odontograma y periodontograma", "Plan de tratamiento", "Consentimiento de datos", "Fotos y documentos"])
+  await saveChanges(page, ["Odontograma y periodontograma", "Plan de tratamiento", "Consentimiento de datos"])
   await expect(page.getByText("Consentimiento de datos pendiente")).toHaveCount(0)
 
   // Lo guardado sobrevive a una recarga.
@@ -244,7 +254,8 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
 
   await selectRecordSection(page, "Fotos y documentos")
   const attachmentPromise = page.waitForEvent("download")
-  await page.getByRole("button", { name: "Descargar", exact: true }).click()
+  await page.getByRole("button", { name: "Acciones de radiografia-prueba.png", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Descargar original", exact: true }).click()
   expect(await readDownload(await attachmentPromise)).toEqual(png)
 
   // Indicadores calculados desde el periodontograma, incluidos los máximos de sondaje e inserción.
@@ -728,7 +739,7 @@ test("visitas guardadas con la versión anterior se convierten en historia y ate
       },
     }
     await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open("clinicapp-dental-v1", 1)
+      const request = indexedDB.open("clinicapp-dental-v1")
       request.onupgradeneeded = () => {
         request.result.createObjectStore("records", { keyPath: "patientId" })
         request.result.createObjectStore("files", { keyPath: "id" })
@@ -785,12 +796,12 @@ test("funciona sin HTTPS: sin crypto.randomUUID se generan los ids igual", async
   await chooseOption(planForm, page, "Tratamiento del catálogo", /^Limpieza dental/)
   await planForm.getByRole("button", { name: "Agregar", exact: true }).click()
   await selectRecordSection(page, "Fotos y documentos")
-  await page.getByLabel("Seleccionar archivos clínicos").setInputFiles({ name: "rx.png", mimeType: "image/png", buffer: png })
+  await uploadClinicalFile(page, "rx.png")
   await expect(page.getByText("rx.png", { exact: true })).toBeVisible()
   await selectRecordSection(page, "Antecedentes")
   await page.getByRole("button", { name: "Agregar alergia" }).click()
   await page.getByLabel("Alergia / reacción", { exact: true }).fill("Látex")
-  await saveChanges(page, ["Plan de tratamiento", "Fotos y documentos", "Alergias, medicamentos y alertas"])
+  await saveChanges(page, ["Plan de tratamiento", "Alergias, medicamentos y alertas"])
 
   // Atención (id generado antes de guardar). Salir con datos escritos pide confirmación.
   await page.getByRole("button", { name: "Registrar atención", exact: true }).click()

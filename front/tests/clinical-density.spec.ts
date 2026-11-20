@@ -22,7 +22,7 @@ async function login(page: Page, theme: string, patient = "pat_5") {
 }
 async function stored(page: Page) {
   return page.evaluate(() => new Promise<unknown>((resolve, reject) => {
-    const request = indexedDB.open("clinicapp-dental-v1", 1)
+    const request = indexedDB.open("clinicapp-dental-v1")
     request.onsuccess = () => {
       const db = request.result, tx = db.transaction(["records", "files"])
       const records = tx.objectStore("records").getAll(), files = tx.objectStore("files").getAll()

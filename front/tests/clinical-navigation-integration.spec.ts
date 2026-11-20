@@ -42,7 +42,7 @@ async function fits(page: Page) {
 
 async function storedHistory(page: Page) {
   return page.evaluate(() => new Promise<unknown>((resolve, reject) => {
-    const request = indexedDB.open("clinicapp-dental-v1", 1)
+    const request = indexedDB.open("clinicapp-dental-v1")
     request.onsuccess = () => {
       const db = request.result
       const record = db.transaction("records").objectStore("records").get("pat_5")

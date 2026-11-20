@@ -151,7 +151,7 @@ for (const theme of ["light", "dark"]) {
       }
     }
     await page.setViewportSize({ width: 1440, height: 1000 })
-    for (const name of ["Citas", "Historial clínico", "Tratamientos", "Finanzas", "Documentos", "Resumen"]) {
+    for (const name of ["Citas", "Historial clínico", "Tratamientos", "Finanzas", "Archivo clínico", "Resumen"]) {
       const tab = page.getByRole("tab", { name, exact: true })
       if (!await tab.isVisible()) { await page.getByRole("button", { name: /^Más pestañas/ }).click(); await page.getByRole("menuitemradio", { name, exact: true }).click() }
       else await tab.click()
@@ -281,7 +281,7 @@ for (const role of ["admin", "medico", "recepcion"]) {
     await expect(page.getByText("14/11/2026", { exact: true })).toBeVisible()
     expect((await savedPatient(page, "pat_1")).lastVisitAt).toBe(record.lastVisitAt)
     if (role === "recepcion") {
-      await page.getByRole("tab", { name: "Documentos", exact: true }).click()
+      await page.getByRole("tab", { name: "Archivo clínico", exact: true }).click()
       await expect(page.getByRole("tabpanel")).toContainText("perfil clínico autorizado")
       await page.goto("/historial-clinico/paciente/pat_1")
       await expect(page).toHaveURL(/\/403$/)

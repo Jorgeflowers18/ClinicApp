@@ -1,16 +1,17 @@
 // MOCK-ONLY: eliminar al conectar el backend (ver arquitectura-frontend.md § Código solo-mock).
 //
 // Almacenamiento local de demostración. IndexedDB guarda las historias (una por paciente, con su
-// estado actual y sus atenciones) y los archivos binarios fuera de localStorage. El nombre y la
-// versión de la base no cambian para conservar lo que ya se guardó con versiones anteriores del
-// módulo: la conversión se hace al leer (ver `clinical-history.mock-migration.ts`).
+// estado actual y sus atenciones) y los archivos binarios fuera de localStorage. Se conserva el
+// nombre de la base. La versión 2 añade únicamente el catálogo del archivo clínico; no recrea
+// registros ni originales. Los registros anteriores se normalizan al leer.
 import { ApiError } from "@/shared/types/common"
+import { emptyArchiveCatalog, type ArchiveCatalog } from "../archive/types"
 
 import type { PatientClinicalHistory } from "../types/clinical-history.types"
 import { normalizeStoredHistory, referencedFileIds, toStoredHistory } from "./clinical-history.mock-migration"
 
 const DB_NAME = "clinicapp-dental-v1"
-const DB_VERSION = 1
+const DB_VERSION = 2
 const SEED_FLAG = "clinicapp-clinical-history-seeded-v1"
 
 let database: Promise<IDBDatabase> | undefined
@@ -19,16 +20,24 @@ let seeding: Promise<void> | undefined
 function openDatabase() {
   return (database ??= new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
+    let blocked = false
     request.onupgradeneeded = () => {
-      request.result.createObjectStore("records", { keyPath: "patientId" })
-      request.result.createObjectStore("files", { keyPath: "id" })
+      const db = request.result
+      if (!db.objectStoreNames.contains("records")) db.createObjectStore("records", { keyPath: "patientId" })
+      if (!db.objectStoreNames.contains("files")) db.createObjectStore("files", { keyPath: "id" })
+      if (!db.objectStoreNames.contains("archive-catalog")) db.createObjectStore("archive-catalog", { keyPath: "id" })
     }
-    request.onsuccess = () => resolve(request.result)
+    request.onsuccess = () => {
+      if (blocked) { request.result.close(); return }
+      request.result.onversionchange = () => { request.result.close(); database = undefined }
+      resolve(request.result)
+    }
     request.onerror = () => {
       database = undefined
       reject(request.error)
     }
     request.onblocked = () => {
+      blocked = true
       database = undefined
       reject(new ApiError("Cierra las otras pestañas de la aplicación para abrir la historia clínica.", 409))
     }
@@ -62,7 +71,8 @@ export async function readAllHistories(): Promise<PatientClinicalHistory[]> {
  */
 export async function writeHistory(
   patientId: string,
-  mutate: (history: PatientClinicalHistory) => PatientClinicalHistory
+  mutate: (history: PatientClinicalHistory) => PatientClinicalHistory,
+  files: { id: string; file: File; thumbnail?: Blob }[] = []
 ): Promise<PatientClinicalHistory> {
   const db = await openDatabase()
   return new Promise((resolve, reject) => {
@@ -76,21 +86,24 @@ export async function writeHistory(
       const current = normalizeStoredHistory(request.result, patientId)
       try {
         result = mutate(current)
+        const retained = referencedFileIds(result)
+        for (const id of referencedFileIds(current)) {
+          if (!retained.has(id)) tx.objectStore("files").delete(id)
+        }
+        store.put(toStoredHistory(result))
+        for (const entry of files) tx.objectStore("files").add({ ...entry, patientId })
       } catch (error) {
-        failure = error
+        failure = error instanceof DOMException
+          ? new ApiError("No se pudo guardar el archivo. Revisa el espacio disponible del navegador.", 500)
+          : error
         tx.abort()
         return
       }
-      const retained = referencedFileIds(result)
-      for (const id of referencedFileIds(current)) {
-        if (!retained.has(id)) tx.objectStore("files").delete(id)
-      }
-      store.put(toStoredHistory(result))
     }
     tx.oncomplete = () => resolve(result as PatientClinicalHistory)
     tx.onabort = () =>
       reject(failure ?? new ApiError("No se pudo guardar la historia. Revisa el espacio disponible del navegador.", 500))
-    tx.onerror = () => reject(failure ?? tx.error)
+    tx.onerror = () => { failure ??= new ApiError("No se pudo guardar la historia. Revisa el espacio disponible del navegador.", 500) }
   })
 }
 
@@ -117,6 +130,57 @@ export async function readFile(patientId: string, id: string): Promise<Blob> {
       resolve(request.result.file)
     }
     request.onerror = () => reject(request.error)
+  })
+}
+
+/** Derivative cache only. Never replaces the original. Ownership is checked before reading. */
+export async function readThumbnail(patientId: string, id: string): Promise<Blob | null> {
+  const db = await openDatabase()
+  return new Promise((resolve, reject) => {
+    const request = db.transaction("files").objectStore("files").get(id)
+    request.onsuccess = () => request.result?.patientId === patientId
+      ? resolve(request.result.thumbnail ?? null)
+      : reject(new ApiError("Archivo no disponible para este paciente", 404))
+    request.onerror = () => reject(request.error)
+  })
+}
+
+export async function cacheThumbnail(patientId: string, id: string, thumbnail: Blob) {
+  const db = await openDatabase()
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("files", "readwrite")
+    const store = tx.objectStore("files")
+    const request = store.get(id)
+    request.onsuccess = () => { if (request.result?.patientId === patientId) store.put({ ...request.result, thumbnail }) }
+    tx.oncomplete = () => resolve()
+    tx.onabort = () => reject(tx.error)
+  })
+}
+
+export async function readArchiveCatalog(): Promise<ArchiveCatalog> {
+  const db = await openDatabase()
+  return new Promise((resolve, reject) => {
+    const request = db.transaction("archive-catalog").objectStore("archive-catalog").get("local-institution")
+    request.onsuccess = () => resolve(request.result ?? emptyArchiveCatalog())
+    request.onerror = () => reject(request.error)
+  })
+}
+
+export async function writeArchiveCatalog(mutate: (catalog: ArchiveCatalog) => ArchiveCatalog): Promise<ArchiveCatalog> {
+  const db = await openDatabase()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("archive-catalog", "readwrite")
+    const store = tx.objectStore("archive-catalog")
+    const request = store.get("local-institution")
+    let result: ArchiveCatalog
+    let failure: unknown
+    request.onsuccess = () => {
+      try { result = mutate(request.result ?? emptyArchiveCatalog()); store.put(result) }
+      catch (error) { failure = error; tx.abort() }
+    }
+    tx.oncomplete = () => resolve(result)
+    tx.onabort = () => reject(failure ?? new ApiError("No se pudo guardar el catálogo en este navegador.", 500))
+    tx.onerror = () => { failure ??= new ApiError("No se pudo guardar el catálogo en este navegador.", 500) }
   })
 }
 
@@ -165,5 +229,5 @@ export function seedOnce(seeds: Record<string, PatientClinicalHistory>) {
           reject(tx.error)
         }
       })
-  ))
+  ).catch(error => { seeding = undefined; throw error }))
 }
