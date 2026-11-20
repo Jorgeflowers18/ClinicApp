@@ -73,6 +73,9 @@ public record ClinicalReferences(
 /// <summary>GET /clinical-history/patients/:patientId</summary>
 public record PatientClinicalHistoryDto(ClinicalRecordDto Record, List<ClinicalEncounterDto> Encounters, ClinicalReferences References);
 
+/// <summary>Resultado de registrar la atención en una transacción (<c>RegisterEncounterResult</c> del frontend).</summary>
+public record RegisterEncounterResultDto(ClinicalEncounterDto Encounter, ClinicalRecordDto? Record, bool AppointmentCompleted, List<string> Warnings);
+
 /// <summary>Guardar la historia (PUT): la forma de <c>ClinicalRecord</c> que envía el frontend.</summary>
 public class SaveRecordRequest
 {

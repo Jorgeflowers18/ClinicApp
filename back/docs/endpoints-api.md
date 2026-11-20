@@ -1,6 +1,6 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-20**: **90 endpoints implementados**:
+Estado al **2026-11-20**: **91 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 9 de `treatments` (catálogo y tratamientos realizados);
@@ -8,7 +8,7 @@ Estado al **2026-11-20**: **90 endpoints implementados**:
 - 6 de `patients`;
 - 7 de `professionals` y `rooms`;
 - 8 de `appointments` y `schedule-blocks`;
-- 16 de `clinical-history` (7 de la historia y 9 del archivo clínico);
+- 17 de `clinical-history` (8 de la historia y 9 del archivo clínico);
 - 3 de `institution`;
 - 4 de `notifications` (con las alertas del día);
 - 5 de `finance`;
@@ -157,6 +157,7 @@ La respuesta tiene esta forma:
 | `GET` | `/api/clinical-history/patients/:patientId` | admin, medico | `200` |
 | `PUT` | `/api/clinical-history/patients/:patientId` | admin, medico | `200` |
 | `POST` | `/api/clinical-history/patients/:patientId/encounters` | admin, medico | `201` (o `200` si ya existía) |
+| `POST` | `/api/clinical-history/patients/:patientId/encounters/register` | admin, medico | `201` (o `200` si ya existía) |
 | `POST` | `/api/clinical-history/encounters/:encounterId/notes` | admin, medico | `201` |
 | `POST` | `/api/clinical-history/attachments` | admin, medico | `201` |
 | `GET` | `/api/clinical-history/attachments/:attachmentId/file` | admin, medico | `200` archivo |
@@ -694,6 +695,7 @@ Solo `admin` y `medico` (`403` para `recepcion`). Contrato: `front/src/modules/c
 | `GET /api/clinical-history/patients/:patientId` | `200` `{ record, encounters, references }` (ver abajo); `404` "Paciente no encontrado" |
 | `PUT /api/clinical-history/patients/:patientId` | `200` con la historia guardada y `revision + 1`; `400` por campo; `404`; `409` (revisión vieja, o paciente dado de baja) |
 | `POST /api/clinical-history/patients/:patientId/encounters` | `201` con la atención, o `200` si el `id` ya existía para ese paciente; `400`; `404`; `409` (mismo `id` en otro paciente, cita ya vinculada, paciente dado de baja) |
+| `POST /api/clinical-history/patients/:patientId/encounters/register` | **Registro completo en una transacción** (recomendado para el frontend; ver abajo). `201` `{ encounter, record, appointmentCompleted, warnings }`, o `200` si el `id` ya existía; mismos errores que el anterior, más `400` en `performedTreatments[i].treatmentId` (tratamiento inactivo) o `performedTreatments[i].assignmentId` (no es de este paciente). |
 | `POST /api/clinical-history/encounters/:encounterId/notes` | Body `{ text }` (10 a 4000). `201` `{ id, text, authorName, createdAt }`; el autor sale de la sesión. `400`; `404` "Atención no encontrada". |
 | `POST /api/clinical-history/attachments` | Multipart: `file`, `kind`, `patientId`. `201` `{ id, name, kind, mime, size, createdAt }`. `400` con `errors.file` y el título "<nombre>: utiliza JPG, PNG, WebP o PDF de hasta 20 MB". |
 | `GET /api/clinical-history/attachments/:attachmentId/file` | `200` con el archivo, su tipo y `Content-Disposition` con el alias; `404`; `410` si el protocolo de conservación lo borró |
@@ -722,7 +724,21 @@ Solo `admin` y `medico` (`403` para `recepcion`). Contrato: `front/src/modules/c
 - Reglas de `encounterFormSchema`: signos vitales en rango y PA `NNN/NN`; hallazgo obligatorio si una estructura está `alterado` (`extraoralExam.atm.finding`); interconsulta con detalle; intervalo `otro` con texto; `nextVisit` igual o posterior a la fecha.
 - `appointmentId` opcional: cita existente del mismo paciente, y sin otra atención (`409`).
 - Las estructuras del examen extraoral (6) e intraoral (8) que no vienen se guardan `no_evaluado`.
-- No cambia la cita ni la historia: eso lo sigue haciendo el frontend (ver pendientes en `backlog.md`).
+- No cambia la cita ni la historia: para eso está `…/encounters/register`.
+
+**Registrar la atención en una transacción (`POST …/encounters/register`):** mismo body que `POST …/encounters`. Hace en una sola transacción lo que hoy coordina `registerEncounterSequence` del frontend; si algo falla, no queda nada a medias:
+1. **Tratamientos realizados:** cada ítem de `performedTreatments` con `treatmentId` y sin `assignmentId` se registra como tratamiento realizado:
+   - completado, con la fecha de la atención y el `cost` como precio cobrado;
+   - con el profesional de la atención (`treatment_assignments.professional_id`);
+   - descontando sus insumos por FEFO;
+   - idempotente por `sourceKey` = `"{id de la atención}:{id del ítem}"`, así que reutiliza lo que haya registrado un intento anterior por pasos.
+
+   Un `assignmentId` que ya venga debe ser de este paciente.
+2. **Atención:** se crea, con los `assignmentId`.
+3. **Historia:** se quitan los propuestos con el mismo `id` que un tratamiento realizado y se agregan los `requestedExams` como exámenes `pendiente`. Si cambió, guarda la versión anterior y sube la revisión; si no tenía historia, la crea. `record` en la respuesta es la historia guardada, o `null` si no cambió.
+4. **Cita:** pasa a `completada` si estaba programada o confirmada. Si estaba cancelada o no asistió, no cambia y queda un aviso en `warnings`.
+
+Dos registros simultáneos con la misma cita: uno `201` y el otro `409`, sin descontar insumos dos veces.
 
 **Adjuntos:** se reconocen por los primeros bytes (no por la extensión). Se guardan en `{Attachments:RootPath}/{patientId}/{id}.{ext}`; lo guardado en una historia se conserva siempre, y los subidos que nunca se guardaron se borran a las 24 h.
 
@@ -935,7 +951,7 @@ Todos con `?from=YYYY-MM-DD&to=YYYY-MM-DD`, **obligatorios e inclusivos**, en ho
 | `auth` | Jorge Flores | ✅ Endpoints hechos. Faltan el proveedor de correo, la gestión de usuarios, la revisión de solicitudes de acceso y la limpieza de tokens viejos. |
 | `treatments` | Jorge Flores | ✅ Catálogo, insumos y tratamientos realizados |
 | `inventory` | Jorge Flores | ✅ Los 18 endpoints |
-| `clinical-history` | Jorge Flores | ✅ Los 7 endpoints de la historia, con versiones, adjuntos y referencias, y los 9 del archivo clínico. ⏳ Registro transaccional de la atención. |
+| `clinical-history` | Jorge Flores | ✅ Los 7 endpoints de la historia, con versiones, adjuntos y referencias, , el registro de la atención en una transacción y los 9 del archivo clínico. |
 | `patients` | Jorge Flores | ✅ Los 6 endpoints, con baja lógica y N.° de historia |
 | `appointments`: profesionales y consultorios | Jorge Flores | ✅ Los 7 endpoints |
 | `appointments`: citas y bloqueos | Jorge Flores | ✅ Los 8 endpoints, con choques, candados y hora de la clínica |

@@ -225,7 +225,7 @@ Tratamientos realizados a un paciente. La API los registra ya completados desde 
 | `source_encounter_id` | `uuid` | sí | Atención de origen. **Sin FK** por ahora: el frontend registra el tratamiento antes de crear la atención. |
 | `source_key` | `varchar(200)` | sí | Idempotencia (atención + ítem). Único cuando no es `null`. |
 | `price` | `numeric(10,2)` | sí | Costo cobrado (`CHECK ≥ 0`). `null` en asignaciones antiguas: vale el precio del catálogo. |
-| `professional_id` | `uuid` FK → `professionals` (restrict) | sí | Profesional que lo realizó (lo llenará el registro transaccional de la atención) |
+| `professional_id` | `uuid` FK → `professionals` (restrict) | sí | Profesional que lo realizó: lo llena `POST …/encounters/register` (el registro por pasos lo deja vacío) |
 | `created_at` | `timestamptz` | | |
 | `created_by_user_id` | `uuid` FK → `users` (set null) | sí | |
 

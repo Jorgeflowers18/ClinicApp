@@ -26,18 +26,19 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 
 ## Pendientes al cerrar los planes (2026-11-17)
 
-Los 9 planes están implementados (80 endpoints, 215 pruebas: [`docs/pruebas.md`](./docs/pruebas.md)). Lo que queda, en orden de importancia. El detalle de cada punto está en la sección del módulo en [`backlog.md`](./backlog.md).
+Los 9 planes están implementados, más lo que pidió el frontend el 2026-11-20 (91 endpoints, 256 pruebas: [`docs/pruebas.md`](./docs/pruebas.md)). Lo que queda, en orden de importancia. El detalle de cada punto está en la sección del módulo en [`backlog.md`](./backlog.md).
 
 **1. Decisiones de la clínica:**
 - **Canal y proveedor de notificaciones** (SMS o WhatsApp). Hasta elegirlo, en producción no se envía ni se registra nada.
-- **Qué es una atención:** las preguntas A1 a A8 de `backlog.md` § `clinical-history`. De ellas depende el registro de la atención en una sola transacción.
+- **Qué es una atención:** las preguntas A1 a A8 de `backlog.md` § `clinical-history`. El registro en una transacción ya existe con las reglas actuales; las respuestas pueden cambiarlas (varias sesiones, cortesías, borradores).
+- **Teléfono del paciente:** la API lo dejó opcional, porque hay pacientes importados sin teléfono. Confirmar con la clínica.
 - **Importación de los 820 pacientes:** las preguntas de `documentacion/decisiones-backend.md` § 5 (número de ficha, datos cortados, especialidad, segundo teléfono).
 - **Texto legal del consentimiento** y la forma de **firmar** (paciente y profesional).
 - **Una o varias sedes** (ítem 2 del backlog de producto).
 - **Diseño del ítem 8** (cuotas, seguros y factura electrónica): habilita la etapa B de finanzas.
 
 **2. Backend:**
-- Registro transaccional de la atención (`POST …/encounters` que registre tratamientos, atención, historia y cita a la vez), con la FK `treatment_assignments.source_encounter_id` y el profesional de cada tratamiento realizado.
+- FK `treatment_assignments.source_encounter_id` → `clinical_encounters`, cuando el frontend use `…/encounters/register` y se retire el registro por pasos.
 - Comando de importación de pacientes (cuando se respondan las preguntas).
 - Proveedor real de notificaciones (`INotificationSender`) y de correo para la recuperación de contraseña (hoy solo se escriben en el log).
 - Última visita del paciente calculada desde las atenciones.
@@ -46,13 +47,9 @@ Los 9 planes están implementados (80 endpoints, 215 pruebas: [`docs/pruebas.md`
 - Etapa B de finanzas; ingresos reales en el reporte de tratamientos.
 - Antivirus de adjuntos.
 - Multi-clínica, si se aprueba ([`docs/plan-multiclinica.md`](./docs/plan-multiclinica.md)).
-- **Lo que pide el frontend** (revisión del 2026-11-20; detalle en los planes de `front/docs/planes-implementacion/`):
-  - `institution`: campo `subtitle` en el perfil y en `/public` (plan 2).
-  - `patients`: `documentType` (con validación de cédula), `phone` opcional (decisión de la clínica), filtros `status`, `gender`, `registeredFrom`, `registeredTo` y `deleted=true` en `GET /patients` (plan 3).
-  - `clinical-history`: **archivo clínico digital**, con metadatos, categorías y etiquetas, archivado, auditoría y duplicados por SHA-256. Necesita su propio `docs/plan-archivo-clinico.md` (plan 7).
-  - `notifications`: `GET /alerts` para el centro de alertas; opcionales `patientName` y `message` en el historial (plan 8).
+- Sesiones por profesional en el reporte de productividad (los tratamientos realizados ya guardan el profesional al registrarse con `…/encounters/register`).
 
-**3. Frontend, para consumir la API:** los 12 planes de [`front/docs/planes-implementacion/`](../front/docs/planes-implementacion/README.md), en orden. Incluyen la sesión con refresh, el estándar de recurso de API, los pares Mock/Real que faltan (`institution` y `finance`), las pantallas nuevas (profesionales y consultorios, pagos, pacientes dados de baja) y los ajustes por módulo. El frontend hoy **no compila**: lo arregla el plan 0. La conversión `[0]` → `.0` ya la hace `shared/lib/field-issues.ts`.
+**3. Frontend, para consumir la API:** los 12 planes de [`front/docs/planes-implementacion/`](../front/docs/planes-implementacion/README.md), en orden. Lo que esos planes pedían al back ya está hecho (subtítulo de la institución, filtros y tipo de documento de pacientes, archivo clínico digital, registro de la atención en una transacción y alertas del día). Incluyen la sesión con refresh, el estándar de recurso de API, los pares Mock/Real que faltan (`institution` y `finance`), las pantallas nuevas (profesionales y consultorios, pagos, pacientes dados de baja) y los ajustes por módulo. El frontend hoy **no compila**: lo arregla el plan 0. La conversión `[0]` → `.0` ya la hace `shared/lib/field-issues.ts`.
 
 **4. Infraestructura:** despliegue en el Droplet (nginx, `systemd`, migraciones y respaldos que **incluyan la carpeta de adjuntos**): `tutorial/fase-0.md` § 5.9.
 

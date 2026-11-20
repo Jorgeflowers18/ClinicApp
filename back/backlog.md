@@ -75,6 +75,7 @@ Implementado en `back/src/ClinicApp.Api/Modules/Patients/`. Roles: los tres ven,
 - [x] `POST /patients/:id/restore` (nuevo, solo `admin`): reactiva. `409` si otro paciente activo ya usa su cédula.
 - [x] **Datos del cliente (ítem 12):** `maritalStatus`, `occupation`, `company`, `nationality`, `city` y `emergencyContactRelationship`. `medicalHistory` y `allergies` no existen en el backend: el frontend ya los quitó y no hay datos que migrar.
 - [x] **N.° de historia clínica:** `clinicalRecordNumber` lo asigna una secuencia de PostgreSQL (`patient_record_number_seq`) y es de solo lectura.
+- [x] **Pedidos del frontend (2026-11-20):** `documentType` (con validación de la cédula), teléfono opcional, filtros `status`, `gender`, `registeredFrom`, `registeredTo` y `deleted=true` (solo admin) en `GET /patients`.
 - [ ] **Importar los 820 pacientes** del archivo de la clínica: comando de una sola vez, que conserve las fichas como N.° de historia y siga la secuencia desde la última. Necesita las respuestas de `documentacion/decisiones-backend.md` § 5. El archivo real nunca se sube al repositorio.
 - [ ] **Frontend:** ocultar el botón "Eliminar" al médico (la API le responde `403`); una pantalla o filtro para ver y reactivar a los dados de baja; agregar `deletedAt` al tipo `Patient`.
 - [ ] **Última visita automática:** hoy `lastVisitAt` se edita a mano; calcularla desde las atenciones de la historia clínica.
@@ -96,7 +97,7 @@ Implementado en `back/src/ClinicApp.Api/Modules/Appointments/`. Roles: los tres 
 - [x] `POST /schedule-blocks` — `409` si se solapa con una cita no cancelada del mismo profesional o consultorio; los bloqueos sí pueden superponerse entre sí.
 - [x] `DELETE /schedule-blocks/:id`.
 - [x] `DELETE /treatments/:id` responde `409` si el tratamiento aparece en una cita.
-- [ ] Registrar una atención clínica vinculada a una cita la pasa a `completada` (lo hará la historia clínica, con la misma regla de estados).
+- [x] Registrar una atención clínica vinculada a una cita la pasa a `completada`: lo hace `POST …/encounters/register` (si la cita estaba programada o confirmada; si no, avisa en `warnings`).
 - [ ] **Frontend:** enviar `from`/`to` con el rango visible del calendario (hoy pide todas) y dejar de convertir la hora a UTC en el navegador: el mock lo hacía con la hora del equipo, que falla si el navegador está en otra zona.
 - [ ] Bloqueos son puntuales únicamente (sin recurrencia) — si el negocio pide recurrencia (ej. "todos los lunes de 13:00 a 14:00"), es un cambio de modelo, no solo de endpoint.
 
@@ -114,7 +115,9 @@ Implementado en `back/src/ClinicApp.Api/Modules/ClinicalHistory/`. Historia clí
 - [x] `GET /clinical-history/attachments/:attachmentId/file`: el archivo con el alias como nombre de descarga. También si se quitó de la historia (las versiones lo nombran). `410` si el protocolo de conservación lo borró.
 - [x] **Conservación de adjuntos:** lo guardado en una historia no se borra nunca; quitarlo solo lo marca (`removed_at`). Los subidos y nunca guardados se borran a las 24 h (`Attachments:OrphanHours`). Protocolo de limpieza preparado y **apagado** (`Attachments:Retention:RemovedDays` vacío, `DryRun: true`).
 - [x] **Referencias en vez de copias:** el plan y los tratamientos realizados guardan solo el `treatmentId`; `description` se conserva solo en los ítems antiguos de texto libre. `DELETE /treatments/:id` responde `409` si el tratamiento está en un plan o una atención.
-- [ ] **Registro transaccional de la atención (recomendado):** hoy el frontend coordina en varios pasos registrar los tratamientos realizados (`POST /treatment-assignments`), crear la atención, quitar de la historia los propuestos registrados y agregar los exámenes solicitados (`PUT`) y pasar la cita a `completada` (`useRegisterEncounter`). Lo ideal es que `POST …/encounters` haga todo en una transacción; depende de las preguntas A1 a A8 de abajo. Con eso se agregan la FK `treatment_assignments.source_encounter_id` → `clinical_encounters` y el profesional que realizó cada tratamiento.
+- [x] **Registro transaccional de la atención:** `POST /clinical-history/patients/:patientId/encounters/register` hace en una transacción los tratamientos realizados (con insumos y el profesional de la atención), la atención, la historia (propuestos usados y exámenes pendientes) y la cita completada. Reutiliza lo registrado por un intento anterior por pasos (`sourceKey`). Las respuestas a A1–A8 pueden cambiar sus reglas (por ejemplo, tratamientos de varias sesiones o cortesías).
+- [ ] **FK `treatment_assignments.source_encounter_id` → `clinical_encounters`:** se agrega cuando el frontend use `…/encounters/register` y se retire el registro por pasos (hoy el tratamiento realizado se crea antes que la atención, en otra petición).
+- [x] **Archivo clínico digital:** metadatos por adjunto (nombre visible, tipo clínico, fecha de estudio, categoría, etiquetas, vínculos), archivado, auditoría, catálogo de categorías y etiquetas, y duplicados por SHA-256. 9 endpoints en `docs/endpoints-api.md` § 10.
 - [ ] **Qué es una atención (preguntas para la clínica):**
   - A1: ¿cuenta como atención una llamada, la revisión de un resultado o la respuesta de una interconsulta?
   - A2: ¿el diagnóstico es siempre obligatorio (controles, retiro de puntos)?
@@ -150,7 +153,8 @@ Implementado en `back/src/ClinicApp.Api/Modules/ClinicalHistory/`. Historia clí
 - [x] `POST /treatment-assignments` (solo `admin` y `medico`) (body: `treatmentId`, `patientId`, `date`, `tooth`, `sourceEncounterId`, `sourceKey`, `price`) — registra un tratamiento **realizado** en una atención: crea la asignación ya `completado` con 1 de 1 sesión y descuenta stock de inventario por cada línea de `Treatment.consumption` (ver `inventory.registerConsumption`). **Idempotente por `sourceKey`** (atención + tratamiento de esa atención): si ya existe, devuelve la existente sin descontar de nuevo (el registro de la atención puede reintentarse). `404` si el tratamiento no existe y `400` si está inactivo. No valida deuda del paciente. Reemplaza a `POST /treatment-assignments/:id/advance-session`, que el frontend ya no usa (se quitó "+ Sesión").
 - [x] Persistir `tooth`, `sourceEncounterId` y `sourceKey` (opcionales) en `TreatmentAssignment`, para trazar en qué atención y pieza se realizó cada tratamiento. `GET /treatments/:id/assignments` debe devolverlos: el detalle del catálogo los muestra en "Pacientes que recibieron este tratamiento".
 - [x] **Costo cobrado del tratamiento (`price`):** se guarda en `treatment_assignments.price` (precio del catálogo si no viene). El doctor puede ajustar el costo en la atención (por ejemplo, un descuento). Persistir `price` en `TreatmentAssignment` (número ≥ 0; si falta, se usa el precio del catálogo, como en las asignaciones anteriores) y devolverlo en `GET /treatments/:id/assignments` y `GET /treatment-assignments?patientId=`. La cartera de Finanzas (`totalValue`, `pendingBalance`, `patientResponsibility`) y el ingreso estimado de reportes deben calcularse con `price`, no con el precio del catálogo. Hoy el mock de Finanzas resume por tratamiento + paciente y toma el costo de la asignación más reciente; con backend, la cartera debería calcularse por asignación (se revisará junto con pagos y abonos, ítem 8).
-- [ ] `treatment_assignments.source_encounter_id` → `clinical_encounters` y el profesional que lo realizó (`professional_id`): con el registro transaccional de la atención en la historia clínica.
+- [x] `treatment_assignments.professional_id`: lo llena `POST …/encounters/register` con el profesional de la atención.
+- [ ] FK `treatment_assignments.source_encounter_id` → `clinical_encounters`: ver § `clinical-history`.
 
 ## `inventory`
 
@@ -190,7 +194,7 @@ Implementado en `back/src/ClinicApp.Api/Modules/Reports/`. Query `from`/`to` en 
 - [x] `GET /reports/productivity`.
 - [x] `GET /reports/treatments` — `estimatedRevenue` con el costo cobrado; **provisional** hasta que exista facturación.
 - [x] `GET /reports/inventory`.
-- [ ] **Sesiones por profesional** en productividad, cuando los tratamientos realizados registren `professionalId` (con el registro transaccional de la atención).
+- [ ] **Sesiones por profesional** en productividad: los tratamientos realizados ya guardan `professional_id` cuando se registran con `…/encounters/register`; falta sumarlo al reporte.
 - [ ] **Ingresos reales** (pagos o facturas) en lugar del ingreso estimado, cuando exista la facturación (finanzas, etapa B).
 - [ ] **Medir el rendimiento** con volumen real (miles de citas). Los filtros por fecha ya tienen índice (`appointments.start`, `patients.created_at`, `notification_logs.sent_at`, `stock_movements (type, created_at)`).
 
@@ -203,6 +207,7 @@ Implementado en `back/src/ClinicApp.Api/Modules/Notifications/`. Detalle en [`do
 - [x] `GET /notifications/template` y `PUT /notifications/template` (body: `{ message }`, 10 a 1000) — `admin` y `recepcion`. La migración crea la plantilla predeterminada del mock.
 - [x] **Disparo automático:** crear una cita guarda una `confirmacion_cita` pendiente y cancelarla, una `cancelacion_cita` (se descarta la confirmación si no salió). Es un efecto de `POST /appointments` y `PATCH /appointments/:id/status`, en la misma transacción (`IAppointmentEvents` → `AppointmentNotifications`), solo si `patient.notificationsEnabled`. El mensaje se arma con la plantilla y la hora de la clínica.
 - [x] **Recordatorios (`recordatorio_cita`):** `NotificationDispatcher` (tarea en segundo plano) crea uno por cita programada o confirmada que empieza en las próximas 24 h, y envía las pendientes cada 10 s con hasta 3 intentos.
+- [x] `GET /api/alerts` (citas y cumpleaños de hoy; stock crítico y envíos fallidos para admin y recepción) y `patientName` y `message` en el historial.
 - [ ] **Canal y proveedor de envío:** por definir con la clínica (solo el 4 % de los pacientes tiene correo y el 92 % tiene celular: SMS o WhatsApp). Al elegirlo, implementar `INotificationSender` y su valor en `Notifications:Provider`. **Hasta entonces, en producción no se registran notificaciones.**
 - [ ] **Frontend:** el editor de la plantilla debería avisar que un SMS admite 160 caracteres.
 
@@ -231,6 +236,7 @@ Implementado en `back/src/ClinicApp.Api/Modules/Institution/`. Perfil de la inst
 - [x] `GET /institution/public` (**sin sesión**) — `{ name, logoText, logoImage }` para la pantalla de inicio de sesión.
 - [x] `PUT /institution/profile` — solo `admin`. Reemplaza el perfil completo y sincroniza las sedes por `id`. Valida el RUC (13 dígitos o vacío), el correo, el sitio web, el logo (data URL PNG/JPG/WebP de hasta ~500 KB, sin SVG) y como máximo una sede principal.
 - [x] **Logo:** se guarda como data URL dentro del perfil (igual que la foto de "Mi perfil"); el contrato del frontend no cambia. Si llega a pesar demasiado, pasar a un archivo aparte (`POST /institution/logo`).
+- [x] `subtitle` (hasta 120) en el perfil y en `GET /institution/public` (lo muestran el login y la barra lateral).
 - [ ] **Frontend:** crear `institution.api.ts` con el par Mock/Real (hoy el perfil vive en `localStorage`) y que `auth-layout.tsx` lea `GET /institution/public`.
 - [ ] **Sedes:** el backlog de producto (ítem 2) tiene pendiente definir si el grupo maneja una o varias sedes. Si son varias, las citas, consultorios y profesionales podrían tener que vincularse a una sede; es un cambio de modelo, no solo de endpoint.
 

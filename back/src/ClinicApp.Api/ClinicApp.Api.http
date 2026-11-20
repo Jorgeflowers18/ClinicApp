@@ -554,6 +554,23 @@ Content-Type: application/json
   "clinicalSnapshot": null
 }
 
+### Registrar la atención completa en una transacción: tratamientos realizados (con insumos), atención,
+### historia (propuestos usados y exámenes pendientes) y cita completada → { encounter, record, appointmentCompleted, warnings }
+POST {{api}}/clinical-history/patients/{{paciente.response.body.id}}/encounters/register
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "0199d000-0000-7000-8000-000000000002",
+  "date": "2026-11-17",
+  "professionalId": "{{profesional.response.body.id}}",
+  "appointmentId": null,
+  "reason": "Control",
+  "diagnoses": [{ "id": "d1", "description": "Gingivitis", "tooth": "", "priority": "" }],
+  "requestedExams": [{ "id": "e1", "kind": "panoramica", "detail": "" }],
+  "performedTreatments": [{ "id": "p1", "treatmentId": "{{crear.response.body.id}}", "description": "", "tooth": "26", "cost": 35, "assignmentId": null }]
+}
+
 ### Agregar una nota aclaratoria (el autor sale de la sesión)
 POST {{api}}/clinical-history/encounters/{{atencion.response.body.id}}/notes
 Authorization: Bearer {{token}}

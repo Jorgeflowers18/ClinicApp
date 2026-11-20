@@ -1,6 +1,8 @@
 using ClinicApp.Api.Common;
 using ClinicApp.Api.Data;
 using ClinicApp.Api.Modules.Auth;
+using ClinicApp.Api.Modules.Inventory;
+using ClinicApp.Api.Modules.Treatments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +16,7 @@ namespace ClinicApp.Api.Modules.ClinicalHistory;
 [ApiController]
 [Route("api/clinical-history")]
 [Authorize(Roles = Roles.AdminYMedico)]
-public class EncountersController(AppDbContext db, ClinicClock clock) : ControllerBase
+public class EncountersController(AppDbContext db, ClinicClock clock, StockService stock, ClinicalHistoryLoader loader) : ControllerBase
 {
     /// <summary>
     /// GET /api/clinical-history/encounters?page&amp;pageSize&amp;search&amp;patientId&amp;professionalId
@@ -108,6 +110,207 @@ public class EncountersController(AppDbContext db, ClinicClock clock) : Controll
         }
 
         return StatusCode(StatusCodes.Status201Created, ClinicalEncounterDto.FromEntity(encounter));
+    }
+
+    /// <summary>
+    /// POST /api/clinical-history/patients/{patientId}/encounters/register → registra la atención completa en
+    /// <b>una sola transacción</b> (lo que hoy el frontend hace en cuatro pasos, <c>registerEncounterSequence</c>):
+    /// <list type="number">
+    /// <item>cada tratamiento realizado sin <c>assignmentId</c> se registra en Tratamientos (completado, con el
+    /// profesional de la atención y el costo cobrado) y descuenta sus insumos por FEFO; idempotente por
+    /// <c>sourceKey</c> = "{atención}:{ítem}";</item>
+    /// <item>se crea la atención, con los <c>assignmentId</c>;</item>
+    /// <item>en la historia se quitan los propuestos registrados (mismo id) y se agregan los exámenes solicitados
+    /// como pendientes (con versión anterior y revisión + 1);</item>
+    /// <item>la cita vinculada pasa a "completada" si estaba programada o confirmada.</item>
+    /// </list>
+    /// Si algo falla no queda nada a medias. 201 con <c>{ encounter, record, appointmentCompleted, warnings }</c>
+    /// (<c>record</c> es null si la historia no cambió). Reintentar con el mismo id: 200 con lo ya registrado.
+    /// </summary>
+    [HttpPost("patients/{patientId:guid}/encounters/register")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<ActionResult<RegisterEncounterResultDto>> Register(Guid patientId, CreateEncounterRequest request, CancellationToken cancellationToken)
+    {
+        var id = request.Id!.Value;
+        var patient = await db.Patients.AsNoTracking().Where(entry => entry.Id == patientId).Select(entry => new { entry.DeletedAt }).FirstOrDefaultAsync(cancellationToken);
+        if (patient is null) return Problem(statusCode: StatusCodes.Status404NotFound, title: "Paciente no encontrado");
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtext({"encounter:" + id}))", cancellationToken);
+
+        var existing = await db.ClinicalEncounters.AsNoTracking().Include(encounter => encounter.Addenda)
+            .FirstOrDefaultAsync(encounter => encounter.Id == id, cancellationToken);
+        if (existing is not null)
+        {
+            if (existing.PatientId != patientId) return this.FieldConflict("id", "Ese identificador ya pertenece a una atención de otro paciente");
+            var current = await loader.LoadAsync(patientId, cancellationToken);
+            return Ok(new RegisterEncounterResultDto(ClinicalEncounterDto.FromEntity(existing), current.Record, false, []));
+        }
+
+        if (patient.DeletedAt is not null) return Problem(statusCode: StatusCodes.Status409Conflict, title: "Reactiva al paciente antes de registrar una atención");
+
+        await ValidateReferencesAsync(patientId, request, cancellationToken);
+        var treatments = await ValidatePerformedAsync(patientId, request, cancellationToken);
+        if (!ModelState.IsValid) return this.ValidationError(ModelState);
+
+        if (request.AppointmentId is { } linkedAppointment
+            && await db.ClinicalEncounters.AnyAsync(encounter => encounter.AppointmentId == linkedAppointment, cancellationToken))
+        {
+            return this.FieldConflict("appointmentId", "La cita ya está vinculada a otra atención");
+        }
+
+        var date = Validation.ParseDate(request.Date)!.Value;
+        var userId = User.GetUserId();
+        var now = clock.UtcNow;
+
+        // 1. Tratamientos realizados (y su consumo de insumos).
+        for (var index = 0; index < request.PerformedTreatments.Count; index++)
+        {
+            var item = request.PerformedTreatments[index];
+            if (!string.IsNullOrWhiteSpace(item.AssignmentId) || item.TreatmentId is not { } treatmentId) continue;
+
+            var sourceKey = $"{id}:{item.Id}";
+            await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtext({"assignment:" + sourceKey}))", cancellationToken);
+            var previous = await db.TreatmentAssignments.AsNoTracking().FirstOrDefaultAsync(entry => entry.SourceKey == sourceKey, cancellationToken);
+            if (previous is not null)
+            {
+                // Un intento anterior por el flujo de pasos ya lo registró: se reutiliza sin volver a descontar.
+                if (previous.PatientId != patientId || previous.TreatmentId != treatmentId)
+                    return this.FieldConflict($"performedTreatments[{index}].treatmentId", "Esta atención ya registró ese tratamiento para otro paciente o tratamiento");
+                item.AssignmentId = previous.Id.ToString();
+                continue;
+            }
+
+            var treatment = treatments[treatmentId];
+            var assignment = new TreatmentAssignment
+            {
+                Id = Guid.CreateVersion7(),
+                TreatmentId = treatmentId,
+                PatientId = patientId,
+                TotalSessions = 1,
+                CompletedSessions = 1,
+                Status = AssignmentStatuses.Completado,
+                StartDate = date,
+                Tooth = item.Tooth.Trim(),
+                SourceEncounterId = id,
+                SourceKey = sourceKey,
+                Price = item.Cost,
+                ProfessionalId = request.ProfessionalId,
+                CreatedAt = now,
+                CreatedByUserId = userId,
+            };
+            db.TreatmentAssignments.Add(assignment);
+            item.AssignmentId = assignment.Id.ToString();
+
+            if (treatment.Consumption.Count > 0)
+            {
+                var items = await stock.LockItemsAsync(treatment.Consumption.Select(line => line.ItemId).ToList(), cancellationToken);
+                var info = new MovementInfo($"Tratamiento realizado: {treatment.Name}", userId, TreatmentAssignmentId: assignment.Id, PatientId: patientId);
+                foreach (var line in treatment.Consumption)
+                    await stock.ConsumeAsync(items.First(entry => entry.Id == line.ItemId), line.Quantity, info, cancellationToken);
+            }
+        }
+
+        // 2. La atención.
+        var created = ToEntity(patientId, request);
+        db.ClinicalEncounters.Add(created);
+
+        // 3. La historia: sin los propuestos registrados y con los exámenes solicitados como pendientes.
+        await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtext({"clinical-record:" + patientId}))", cancellationToken);
+        var record = await db.ClinicalRecords.FirstOrDefaultAsync(entry => entry.PatientId == patientId, cancellationToken);
+        var usedIds = request.PerformedTreatments.Select(item => item.Id).ToHashSet();
+        var knownExams = record?.ExamRequests.Select(exam => exam.Id).ToHashSet() ?? [];
+        var newExams = request.RequestedExams.Where(exam => !knownExams.Contains(exam.Id)).Select(exam => new ExamRequest
+        {
+            Id = exam.Id, Kind = exam.Kind, Detail = exam.Detail, Status = "pendiente", EncounterId = id.ToString(),
+            RequestedAt = request.Date, AttachmentId = null, ReceivedAt = null,
+        }).ToList();
+        var recordChanged = (record?.Plan.Any(item => usedIds.Contains(item.Id)) ?? false) || newExams.Count > 0;
+        if (recordChanged)
+        {
+            if (record is null)
+            {
+                record = new ClinicalRecord { PatientId = patientId, Revision = 0, CreatedAt = now };
+                db.ClinicalRecords.Add(record);
+            }
+            else
+            {
+                var attachments = await loader.Attachments(patientId).AsNoTracking().AsSplitQuery().ToListAsync(cancellationToken);
+                db.ClinicalRecordVersions.Add(new ClinicalRecordVersion
+                {
+                    Id = Guid.CreateVersion7(), PatientId = patientId, Revision = record.Revision,
+                    Data = System.Text.Json.JsonSerializer.SerializeToElement(ClinicalRecordDto.FromEntity(record, attachments), JsonbConversion.Options),
+                    SavedByUserId = record.UpdatedByUserId, SavedAt = record.UpdatedAt,
+                });
+            }
+            record.Plan = record.Plan.Where(item => !usedIds.Contains(item.Id)).ToList();
+            record.ExamRequests = [.. record.ExamRequests, .. newExams];
+            record.Revision += 1;
+            record.UpdatedAt = now;
+            record.UpdatedByUserId = userId;
+        }
+
+        // 4. La cita vinculada.
+        var warnings = new List<string>();
+        var appointmentCompleted = false;
+        if (request.AppointmentId is { } appointmentId)
+        {
+            var appointment = await db.Appointments.FirstAsync(entry => entry.Id == appointmentId, cancellationToken);
+            if (appointment.Status is Appointments.AppointmentStatuses.Programada or Appointments.AppointmentStatuses.Confirmada)
+            {
+                appointment.Status = Appointments.AppointmentStatuses.Completada;
+                appointment.StatusChangedAt = now;
+                appointment.StatusChangedByUserId = userId;
+                appointmentCompleted = true;
+            }
+            else if (appointment.Status is Appointments.AppointmentStatuses.Cancelada or Appointments.AppointmentStatuses.NoAsistio)
+            {
+                warnings.Add("La cita vinculada está cancelada o marcada como no asistida; no se cambió su estado.");
+            }
+        }
+
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return this.FieldConflict("appointmentId", "La cita ya está vinculada a otra atención");
+        }
+
+        var savedRecord = recordChanged ? (await loader.LoadAsync(patientId, cancellationToken)).Record : null;
+        return StatusCode(StatusCodes.Status201Created,
+            new RegisterEncounterResultDto(ClinicalEncounterDto.FromEntity(created), savedRecord, appointmentCompleted, warnings));
+    }
+
+    /// <summary>
+    /// Tratamientos realizados del registro: los que se van a registrar deben estar activos; los que ya traen
+    /// <c>assignmentId</c>, ser tratamientos realizados de este paciente. Devuelve los tratamientos con sus insumos.
+    /// </summary>
+    private async Task<Dictionary<Guid, Treatment>> ValidatePerformedAsync(Guid patientId, CreateEncounterRequest request, CancellationToken cancellationToken)
+    {
+        var ids = request.PerformedTreatments.Select(item => item.TreatmentId).OfType<Guid>().Distinct().ToList();
+        var treatments = ids.Count == 0
+            ? []
+            : await db.Treatments.AsNoTracking().Include(treatment => treatment.Consumption)
+                .Where(treatment => ids.Contains(treatment.Id)).ToDictionaryAsync(treatment => treatment.Id, cancellationToken);
+
+        for (var index = 0; index < request.PerformedTreatments.Count; index++)
+        {
+            var item = request.PerformedTreatments[index];
+            if (!string.IsNullOrWhiteSpace(item.AssignmentId))
+            {
+                var owned = Guid.TryParse(item.AssignmentId, out var assignmentId)
+                    && await db.TreatmentAssignments.AnyAsync(entry => entry.Id == assignmentId && entry.PatientId == patientId, cancellationToken);
+                if (!owned) ModelState.AddModelError($"performedTreatments[{index}].assignmentId", "El tratamiento realizado no es de este paciente");
+            }
+            else if (item.TreatmentId is { } treatmentId && treatments.TryGetValue(treatmentId, out var treatment) && !treatment.Active)
+            {
+                ModelState.AddModelError($"performedTreatments[{index}].treatmentId", $"El tratamiento \"{treatment.Name}\" está inactivo");
+            }
+        }
+        return treatments;
     }
 
     /// <summary>POST /api/clinical-history/encounters/{encounterId}/notes → 201. El autor sale de la sesión.</summary>
