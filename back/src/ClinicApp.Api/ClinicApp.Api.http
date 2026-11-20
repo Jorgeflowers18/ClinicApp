@@ -296,6 +296,14 @@ Content-Type: application/json
 GET {{api}}/patients?page=1&pageSize=10&search=perez
 Authorization: Bearer {{token}}
 
+### Filtros: estado, género y fecha de registro (días de la clínica, inclusivos)
+GET {{api}}/patients?page=1&pageSize=10&status=activo&gender=femenino&registeredFrom=2026-11-01&registeredTo=2026-11-30
+Authorization: Bearer {{token}}
+
+### Dados de baja (solo admin)
+GET {{api}}/patients?page=1&pageSize=10&deleted=true
+Authorization: Bearer {{token}}
+
 ### Ver un paciente
 GET {{api}}/patients/{{paciente.response.body.id}}
 Authorization: Bearer {{token}}

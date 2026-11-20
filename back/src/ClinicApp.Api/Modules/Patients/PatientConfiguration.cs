@@ -13,6 +13,7 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
         builder.ToTable("patients", table =>
         {
             table.HasCheckConstraint("ck_patients_gender", "gender IN ('femenino', 'masculino', 'otro')");
+            table.HasCheckConstraint("ck_patients_document_type", "document_type IN ('', 'cedula', 'pasaporte', 'otro')");
             table.HasCheckConstraint("ck_patients_marital_status",
                 "marital_status IN ('', 'soltero', 'casado', 'union_libre', 'divorciado', 'viudo')");
             table.HasCheckConstraint("ck_patients_treatment_status",
@@ -27,6 +28,7 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
         builder.Property(patient => patient.FirstName).HasMaxLength(80);
         builder.Property(patient => patient.LastName).HasMaxLength(80);
         builder.Property(patient => patient.DocumentId).HasMaxLength(20);
+        builder.Property(patient => patient.DocumentType).HasMaxLength(10);
         builder.Property(patient => patient.Gender).HasMaxLength(10);
         builder.Property(patient => patient.MaritalStatus).HasMaxLength(15);
         builder.Property(patient => patient.Occupation).HasMaxLength(120);

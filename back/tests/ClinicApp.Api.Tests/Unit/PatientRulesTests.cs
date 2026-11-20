@@ -72,4 +72,33 @@ public class PatientRulesTests
     [InlineData("a_b", @"%a\_b%")]
     public void ContainsPattern_escapa_comodines(string search, string expected) =>
         Assert.Equal(expected, TextSearch.ContainsPattern(search));
+
+    [Theory]
+    [InlineData("1710034065", true)]   // verificador 5 correcto
+    [InlineData("1710034066", false)]  // verificador incorrecto
+    [InlineData("2510034065", false)]  // provincia 25 no existe
+    [InlineData("1770034065", false)]  // tercer dígito mayor que 5
+    [InlineData("171003406", false)]   // 9 dígitos
+    [InlineData("17100340A5", false)]
+    public void IsEcuadorianId_valida_provincia_tercer_digito_y_verificador(string value, bool expected) =>
+        Assert.Equal(expected, PatientOptions.IsEcuadorianId(value));
+
+    [Theory]
+    [InlineData("", true)]
+    [InlineData(null, true)]
+    [InlineData("099 123 4567", true)]
+    [InlineData("+593 (2) 222-2222 ext. 12", true)]
+    [InlineData("12345", false)]       // menos de 7 dígitos
+    [InlineData("099-ABC-4567", false)]
+    public void IsValidOptionalPhone_acepta_vacio_o_7_digitos(string? value, bool expected) =>
+        Assert.Equal(expected, PatientOptions.IsValidOptionalPhone(value));
+
+    [Fact]
+    public void ValidateRules_exige_cedula_valida_solo_con_tipo_cedula()
+    {
+        Assert.Contains(new PatientRequest { DocumentType = "cedula", DocumentId = "1710034066" }.ValidateRules(), error => error.Field == "documentId");
+        Assert.Empty(new PatientRequest { DocumentType = "cedula", DocumentId = "1710034065" }.ValidateRules());
+        Assert.Empty(new PatientRequest { DocumentType = "pasaporte", DocumentId = "AB123456" }.ValidateRules());
+        Assert.Empty(new PatientRequest { DocumentType = null, DocumentId = "1710034066" }.ValidateRules());
+    }
 }

@@ -1741,6 +1741,12 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("document_id");
 
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("document_type");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(254)
@@ -1882,6 +1888,8 @@ namespace ClinicApp.Api.Data.Migrations
 
                     b.ToTable("patients", null, t =>
                         {
+                            t.HasCheckConstraint("ck_patients_document_type", "document_type IN ('', 'cedula', 'pasaporte', 'otro')");
+
                             t.HasCheckConstraint("ck_patients_gender", "gender IN ('femenino', 'masculino', 'otro')");
 
                             t.HasCheckConstraint("ck_patients_marital_status", "marital_status IN ('', 'soltero', 'casado', 'union_libre', 'divorciado', 'viudo')");

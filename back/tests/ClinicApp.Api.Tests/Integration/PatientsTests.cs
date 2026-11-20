@@ -218,6 +218,75 @@ public class PatientsTests(ApiFactory api)
     }
 
     [Fact]
+    public async Task Tipo_de_documento_y_telefono_opcional()
+    {
+        var client = await api.As("recepcion");
+
+        // Con tipo "cedula" se valida el dígito verificador.
+        var body = TestData.PatientBody("1710034066");
+        body["documentType"] = "cedula";
+        var error = await client.PostJson("/api/patients", body, HttpStatusCode.BadRequest);
+        Assert.True(error.HasError("documentId"), error!.ToJsonString());
+
+        // Pasaporte sin teléfono: se guarda, y el tipo vuelve en la respuesta.
+        body = TestData.PatientBody($"AB{TestData.Next():D6}");
+        body["documentType"] = "pasaporte";
+        body["phone"] = "";
+        var created = await client.PostJson("/api/patients", body, HttpStatusCode.Created);
+        Assert.Equal("pasaporte", created.Str("documentType"));
+        Assert.Equal("", created.Str("phone"));
+
+        // Sin tipo (datos anteriores): documentType null.
+        var legacy = await client.CreatePatientAsync();
+        Assert.Null(legacy!["documentType"]);
+
+        body["documentType"] = "dni";
+        Assert.True((await client.PostJson("/api/patients", body, HttpStatusCode.BadRequest)).HasError("documentType"));
+    }
+
+    [Fact]
+    public async Task Filtros_por_estado_genero_y_fecha_de_registro()
+    {
+        var client = await api.As("recepcion");
+        var tag = $"Filtro{TestData.Next()}";
+        var followUp = TestData.PatientBody(lastName: tag);
+        followUp["treatmentStatus"] = "en seguimiento";
+        await client.PostJson("/api/patients", followUp, HttpStatusCode.Created);
+        var male = TestData.PatientBody(lastName: tag);
+        male["gender"] = "masculino";
+        await client.PostJson("/api/patients", male, HttpStatusCode.Created);
+
+        async Task<int> Count(string filters) =>
+            (await client.GetJson($"/api/patients?search={tag}&{filters}"))!["totalItems"]!.GetValue<int>();
+
+        var today = TestData.TodayInClinic();
+        Assert.Equal(2, await Count(""));
+        Assert.Equal(1, await Count("status=en%20seguimiento"));
+        Assert.Equal(1, await Count("gender=masculino"));
+        Assert.Equal(2, await Count($"registeredFrom={today.Iso()}&registeredTo={today.Iso()}"));
+        Assert.Equal(0, await Count($"registeredFrom={today.AddDays(1).Iso()}"));
+
+        var invalid = await client.GetJson("/api/patients?status=raro&registeredFrom=12/05/2026", HttpStatusCode.BadRequest);
+        Assert.True(invalid.HasError("status") && invalid.HasError("registeredFrom"));
+        var reversed = await client.GetJson($"/api/patients?registeredFrom={today.Iso()}&registeredTo={today.AddDays(-1).Iso()}", HttpStatusCode.BadRequest);
+        Assert.True(reversed.HasError("registeredTo"));
+    }
+
+    [Fact]
+    public async Task Lista_de_dados_de_baja_solo_para_admin()
+    {
+        var admin = await api.As("admin");
+        var patient = await admin.CreatePatientAsync();
+        await admin.Delete($"/api/patients/{patient.Id()}", HttpStatusCode.NoContent);
+
+        var deleted = await admin.GetJson($"/api/patients?deleted=true&search={patient.Str("documentId")}");
+        Assert.Equal(patient.Id(), deleted!["items"]![0].Id());
+        Assert.NotNull(deleted["items"]![0]!["deletedAt"]);
+
+        await (await api.As("recepcion")).GetJson("/api/patients?deleted=true", HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Paciente_inexistente_responde_404()
     {
         var admin = await api.As("admin");

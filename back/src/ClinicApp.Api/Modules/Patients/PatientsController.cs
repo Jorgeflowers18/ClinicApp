@@ -21,14 +21,53 @@ public class PatientsController(AppDbContext db, ClinicClock clock) : Controller
     private const string DuplicateDocument = "Ya existe un paciente con esta cédula";
 
     /// <summary>
-    /// GET /api/patients?page=1&amp;pageSize=10&amp;search=perez
+    /// GET /api/patients?page=1&amp;pageSize=10&amp;search=perez&amp;status&amp;gender&amp;registeredFrom&amp;registeredTo&amp;deleted
     /// Sin los dados de baja, de la más reciente a la más antigua. La búsqueda no distingue
     /// mayúsculas ni tildes y mira nombres, apellidos, cédula, teléfono y N.° de historia (HC-000123).
+    /// Filtros: <c>status</c> (estado del tratamiento), <c>gender</c>, <c>registeredFrom</c>/<c>registeredTo</c>
+    /// (días de la clínica, inclusivos, sobre la fecha de registro) y <c>deleted=true</c> (solo admin): solo los
+    /// dados de baja, del más reciente en darse de baja al más antiguo.
     /// </summary>
     [HttpGet]
-    public async Task<PagedResult<PatientDto>> List([FromQuery] PageQuery query, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<PatientDto>>> List(
+        [FromQuery] PageQuery query,
+        [FromQuery] string? status, [FromQuery] string? gender,
+        [FromQuery] string? registeredFrom, [FromQuery] string? registeredTo,
+        [FromQuery] bool deleted,
+        CancellationToken cancellationToken)
     {
-        var patients = db.Patients.AsNoTracking().Where(patient => patient.DeletedAt == null);
+        if (deleted && !User.IsInRole(Roles.Admin)) return Forbid();
+
+        if (!string.IsNullOrEmpty(status) && !PatientOptions.TreatmentStatuses.Contains(status))
+            ModelState.AddModelError("status", "Estado de tratamiento inválido");
+        if (!string.IsNullOrEmpty(gender) && !PatientOptions.Genders.Contains(gender))
+            ModelState.AddModelError("gender", "Género inválido");
+        var dateAttribute = new IsoDateAttribute();
+        if (!dateAttribute.IsValid(registeredFrom)) ModelState.AddModelError("registeredFrom", "Fecha inválida (formato AAAA-MM-DD)");
+        if (!dateAttribute.IsValid(registeredTo)) ModelState.AddModelError("registeredTo", "Fecha inválida (formato AAAA-MM-DD)");
+        if (!ModelState.IsValid) return this.ValidationError(ModelState);
+
+        var from = Validation.ParseDate(registeredFrom);
+        var to = Validation.ParseDate(registeredTo);
+        if (from is not null && to is not null && from > to)
+            ModelState.AddModelError("registeredTo", "La fecha final no puede ser anterior a la inicial");
+        if (!ModelState.IsValid) return this.ValidationError(ModelState);
+
+        var patients = db.Patients.AsNoTracking()
+            .Where(patient => deleted ? patient.DeletedAt != null : patient.DeletedAt == null);
+
+        if (!string.IsNullOrEmpty(status)) patients = patients.Where(patient => patient.TreatmentStatus == status);
+        if (!string.IsNullOrEmpty(gender)) patients = patients.Where(patient => patient.Gender == gender);
+        if (from is { } fromDate)
+        {
+            var start = clock.ToUtc(fromDate, TimeOnly.MinValue);
+            patients = patients.Where(patient => patient.CreatedAt >= start);
+        }
+        if (to is { } toDate)
+        {
+            var end = clock.ToUtc(toDate.AddDays(1), TimeOnly.MinValue);
+            patients = patients.Where(patient => patient.CreatedAt < end);
+        }
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -43,10 +82,10 @@ public class PatientsController(AppDbContext db, ClinicClock clock) : Controller
                 || (recordNumber != null && patient.RecordNumber == recordNumber));
         }
 
-        var page = await patients
-            .OrderByDescending(patient => patient.CreatedAt)
-            .ThenByDescending(patient => patient.Id)
-            .ToPagedResultAsync(query, cancellationToken);
+        var ordered = deleted
+            ? patients.OrderByDescending(patient => patient.DeletedAt).ThenByDescending(patient => patient.Id)
+            : patients.OrderByDescending(patient => patient.CreatedAt).ThenByDescending(patient => patient.Id);
+        var page = await ordered.ToPagedResultAsync(query, cancellationToken);
 
         return new PagedResult<PatientDto>(
             page.Items.Select(PatientDto.FromEntity).ToList(), page.Page, page.PageSize, page.TotalItems, page.TotalPages);
@@ -181,7 +220,7 @@ public class PatientsController(AppDbContext db, ClinicClock clock) : Controller
 
     private bool ValidateDates(PatientRequest request)
     {
-        foreach (var (field, message) in request.ValidateDates(clock.Today))
+        foreach (var (field, message) in request.ValidateDates(clock.Today).Concat(request.ValidateRules()))
         {
             ModelState.AddModelError(field, message);
         }

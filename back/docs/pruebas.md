@@ -43,8 +43,8 @@ Todos desde la carpeta `back/`.
 | Módulo | Archivo | Qué cubre |
 |---|---|---|
 | Base | `Unit/ClinicClockTests.cs` | "Hoy" en la zona de la clínica, conversión a UTC, rangos de fechas y zona inválida |
-| `patients` | `Unit/PatientRulesTests.cs` | Formato y búsqueda del N.° de historia, fechas, limpieza de textos y escape de comodines |
-| | `Integration/PatientsTests.cs` | Roles, validación de cada campo, cédula repetida (también con altas simultáneas), búsqueda sin tildes, orden y paginación, baja lógica y reactivación |
+| `patients` | `Unit/PatientRulesTests.cs` | Formato y búsqueda del N.° de historia, fechas, limpieza de textos, escape de comodines, cédula ecuatoriana (verificador) y teléfono opcional |
+| | `Integration/PatientsTests.cs` | Roles, validación de cada campo, tipo de documento y teléfono opcional, cédula repetida (también con altas simultáneas), búsqueda sin tildes, filtros (estado, género, fecha de registro), orden y paginación, baja lógica, lista de dados de baja (solo admin) y reactivación |
 | `inventory` | `Integration/SterilizationTests.cs` | "No futura" según el día de la clínica |
 | `appointments` (catálogos) | `Integration/ProfessionalsAndRoomsTests.cs` | Semilla de desarrollo y vínculo del médico, roles, desactivar, vincular usuarios sin repetir, nombre único de consultorio, responsable de esterilización existente y activo, FK que impide borrar un profesional con ciclos |
 | `appointments` (agenda) | `Unit/AppointmentRulesTests.cs` | Cambios de estado permitidos, citas editables, choque de rangos (citas pegadas), duración y lectura de ids opcionales |

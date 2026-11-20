@@ -550,7 +550,8 @@ Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos selecci
   "clinicalRecordNumber": "HC-000123",
   "firstName": "María",
   "lastName": "Pérez",
-  "documentId": "1712345678",
+  "documentId": "1710034065",
+  "documentType": "cedula",
   "birthDate": "1990-05-12",
   "gender": "femenino",
   "maritalStatus": "",
@@ -577,9 +578,10 @@ Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos selecci
   - `firstName` y `lastName`: 2 a 80;
   - `documentId`: 5 a 20;
   - `birthDate`: no futura y desde 1900;
-  - `gender`: `femenino`, `masculino` u `otro`;
-  - `phone`: 7 a 30.
+  - `gender`: `femenino`, `masculino` u `otro`.
 - **Opcionales:**
+  - `documentType`: `cedula`, `pasaporte`, `otro`, `""` o `null` (sin indicar: la respuesta trae `null`). Con `cedula`, `documentId` debe ser una cédula ecuatoriana válida (10 dígitos, provincia, tercer dígito y verificador), igual que `isEcuadorianId` del frontend;
+  - `phone` y `emergencyContactPhone`: vacíos, o con al menos 7 dígitos (hasta 30 caracteres; se aceptan `+`, espacios, guiones, paréntesis y `ext.`);
   - `maritalStatus`: `""` o una de 5 opciones;
   - `email`: correo válido o `""`;
   - `treatmentStatus`: una de 4 opciones, `activo` por defecto;
@@ -589,7 +591,8 @@ Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos selecci
 
 | Endpoint | Roles | Detalle |
 |---|---|---|
-| `GET /api/patients?page&pageSize&search` | los tres | `200` paginado, sin los dados de baja, del más reciente al más antiguo. `search` no distingue mayúsculas ni tildes y busca en nombres y apellidos (en cualquier orden), cédula, teléfono y N.° de historia (`HC-000123`). |
+| `GET /api/patients?page&pageSize&search&status&gender&registeredFrom&registeredTo` | los tres | `200` paginado, sin los dados de baja, del más reciente al más antiguo. `search` no distingue mayúsculas ni tildes y busca en nombres y apellidos (en cualquier orden), cédula, teléfono y N.° de historia (`HC-000123`). Filtros: `status` (estado del tratamiento), `gender`, y `registeredFrom`/`registeredTo` (días de la clínica, inclusivos, sobre la fecha de registro). `400` con un valor o una fecha inválidos, o `registeredFrom > registeredTo`. |
+| `GET /api/patients?deleted=true` | admin | `200` paginado de los **dados de baja**, del más reciente en darse de baja al más antiguo (para reactivarlos). Acepta los mismos filtros. `403` para los demás roles. |
 | `GET /api/patients/:id` | los tres | `200` (también si está dado de baja, con `deletedAt`); `404` "Paciente no encontrado" |
 | `POST /api/patients` | los tres | `201` con `Location`; `400`; `409` "Ya existe un paciente con esta cédula" con `errors.documentId` |
 | `PUT /api/patients/:id` | los tres | `200`; `400`; `404`. `409` si la cédula **cambió** a una que ya usa otro paciente activo, o si el paciente está dado de baja ("Reactiva al paciente antes de editarlo"). |

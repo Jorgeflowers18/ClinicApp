@@ -346,12 +346,13 @@ Baja lógica: un paciente nunca se borra, porque tiene citas, tratamientos, hist
 | `record_number` | `integer` | | N.° de historia clínica. Lo asigna la secuencia `patient_record_number_seq` (`DEFAULT nextval(...)`). Único. La API lo muestra como `HC-000123`. |
 | `first_name`, `last_name` | `varchar(80)` | | 2 a 80 |
 | `document_id` | `varchar(20)` | | Cédula o pasaporte. Índice **no único**: los datos que se importarán tienen cédulas repetidas. La API rechaza repetidas entre pacientes activos. |
+| `document_type` | `varchar(10)` | | `cedula`, `pasaporte`, `otro` o `''` sin indicar (`CHECK`). Con `cedula` la API valida el dígito verificador. |
 | `birth_date` | `date` | sí | Obligatoria en la API; nulable solo para datos importados con fechas imposibles |
 | `gender` | `varchar(10)` | | `femenino`, `masculino`, `otro` (`CHECK`) |
 | `marital_status` | `varchar(15)` | | `""` o 5 opciones (`CHECK`) |
 | `occupation`, `company` | `varchar(120)` | | |
 | `nationality` | `varchar(60)` | | |
-| `phone` | `varchar(30)` | | |
+| `phone` | `varchar(30)` | | Opcional (`''`); si hay, al menos 7 dígitos |
 | `email` | `varchar(254)` | | En minúsculas, o `""` |
 | `address` | `varchar(250)` | | |
 | `city` | `varchar(120)` | | |
@@ -606,6 +607,7 @@ Pagos de los pacientes por sus tratamientos. Un pago no se borra: se anula, con 
 | `20261118032137_IndicesReportes` | Índice `stock_movements (type, created_at)` para el reporte de inventario |
 | `20261120175534_SedesConUuid` | `institution_branches.id` pasa de texto a `uuid` y queda como PK. Las sedes con ids de texto reciben un UUID nuevo. |
 | `20261120191521_InstitucionSubtitulo` | Columna `institutions.subtitle` |
+| `20261120191802_PacientesTipoDocumento` | Columna `patients.document_type` con su `CHECK` |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
