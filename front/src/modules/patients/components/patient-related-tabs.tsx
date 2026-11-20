@@ -1,6 +1,6 @@
+import { ClinicalFileManager } from "@/modules/clinical-history/archive/components/clinical-file-manager"
 import { useNavigate } from "react-router-dom"
-import { CalendarDays, CalendarClock, CheckCheck, ChevronDown, CircleAlert, Clock3, Download, FileImage, FileText, ReceiptText, Stethoscope, UserRound, Wallet } from "lucide-react"
-import { toast } from "sonner"
+import { CalendarDays, CalendarClock, CheckCheck, ChevronDown, CircleAlert, Clock3, FileText, ReceiptText, Stethoscope, UserRound, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DataTable } from "@/shared/components/data-table"
@@ -12,10 +12,9 @@ import { appointmentStatusLabels } from "@/modules/appointments/types/appointmen
 import { useTreatment, usePatientAssignments } from "@/modules/treatments/api/treatments.queries"
 import { assignmentStatusLabels } from "@/modules/treatments/types/treatment.types"
 import { usePatientFinancialSummary, useTreatmentFinancialSummary } from "@/modules/finance/api/finance.queries"
-import { fetchAttachmentFile, useClinicalHistory } from "@/modules/clinical-history/api/clinical-history.queries"
-import { attachmentKindLabels, dataConsentStatusLabels, type DentalAttachment } from "@/modules/clinical-history/types/clinical-history.types"
+import { useClinicalHistory } from "@/modules/clinical-history/api/clinical-history.queries"
+import { dataConsentStatusLabels } from "@/modules/clinical-history/types/clinical-history.types"
 import { resolveProfessionalName } from "@/modules/clinical-history/lib/record"
-import { downloadBlob } from "@/modules/clinical-history/lib/dental-export"
 import { PatientEmptyState, PatientStateBadge } from "./patient-ui"
 
 function TreatmentName({ id }: { id?: string }) {
@@ -111,16 +110,6 @@ export function PatientFinances({ patientId, canOpenPortfolio }: { patientId: st
 }
 
 export function PatientDocuments({ patientId }: { patientId: string }) {
-  const navigate = useNavigate()
   const query = useClinicalHistory(patientId)
-  async function download(file: DentalAttachment) {
-    try { downloadBlob(await fetchAttachmentFile(patientId, file), file.name) } catch (error) { toast.error(getErrorMessage(error)) }
-  }
-  if (query.isLoading) return <Skeleton className="h-28 w-full" />
-  if (query.isError || !query.data) return <div role="alert" className="patient-source-error">No se pudieron cargar los documentos.<Button variant="outline" onClick={() => query.refetch()}>Reintentar</Button></div>
-  return <div className="patient-related-tab"><div className="patient-tab-heading"><h2><FileText aria-hidden="true" />Documentos de la historia clínica</h2><Button variant="outline" onClick={() => navigate(`/historial-clinico/paciente/${patientId}`)}><FileText />Abrir historia clínica</Button></div>
-    <p className="patient-field-help">Consentimiento de datos personales: <PatientStateBadge status={query.data.record.dataConsent.status}>{dataConsentStatusLabels[query.data.record.dataConsent.status]}</PatientStateBadge> Se conserva por separado del consentimiento informado del paciente.</p>
-    {query.data.record.attachments.length ? <ul className="patient-documents">{query.data.record.attachments.map(file => { const Icon = file.mime.startsWith("image/") ? FileImage : FileText; return <li key={file.id}><Icon aria-hidden="true" /><div><strong>{file.name}</strong><p>{attachmentKindLabels[file.kind]} · {formatDateTime(file.createdAt, { day: "2-digit", month: "short", year: "numeric" })}</p></div><PatientStateBadge status="registrado">Registrado</PatientStateBadge><Button variant="outline" onClick={() => download(file)} aria-label={`Descargar ${file.name}`}><Download />Descargar</Button></li> })}</ul>
-      : <PatientEmptyState icon={FileText} title="No hay documentos registrados." description="Se incorporan desde la historia clínica existente." />}
-  </div>
+  return <div className="patient-related-tab"><p className="patient-field-help">Consentimiento de datos personales: {query.data ? <PatientStateBadge status={query.data.record.dataConsent.status}>{dataConsentStatusLabels[query.data.record.dataConsent.status]}</PatientStateBadge> : "Consultando"}. Se conserva por separado del consentimiento informado del paciente.</p><ClinicalFileManager patientId={patientId} /></div>
 }

@@ -1,0 +1,138 @@
+/* All selectors belong to Treatments; no shared components or dental editor overrides. */
+.treatments-catalog, .treatment-detail { container: treatment-content / inline-size; min-width: 0; }
+.treatments-catalog .clinic-page-header, .treatment-detail .clinic-page-header { margin-bottom: 0; }
+.treatment-category-filter { width: 220px; max-width: 100%; }
+.treatment-status-filter { width: 175px; max-width: 100%; }
+.treatment-filter-controls { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 8px; }
+.treatments-catalog div:has(> .treatment-filter-controls) { flex-grow: 0; }
+.treatment-mobile-filters { display: grid; gap: 12px; }
+.treatment-mobile-filters [data-slot="select-trigger"] { width: 100%; }
+.treatments-catalog [data-column="name"] { width: 46%; }
+.treatments-catalog [data-column="duration"], .treatments-catalog [data-column="status"], .treatments-catalog [data-column="actions"] { width: 1%; white-space: nowrap; }
+.treatments-catalog [data-column="price"] { width: 16%; text-align: right; font-variant-numeric: tabular-nums; }
+.treatments-catalog [data-column="actions"] { text-align: right; }
+.treatments-catalog [data-column="name"] p { white-space: normal; overflow-wrap: anywhere; }
+.treatment-status { width: fit-content; color: var(--muted-foreground); background: var(--secondary); border-color: var(--border); }
+.treatment-status[data-active="true"] { color: var(--success); background: var(--success-surface); border-color: color-mix(in srgb, var(--success) 22%, var(--border)); }
+.treatment-action-menu[data-slot="dropdown-menu-content"] { width: min(240px, calc(100vw - 24px)); min-width: 210px; max-width: var(--available-width); }
+.treatment-action-menu [data-slot="dropdown-menu-item"] { min-height: 40px; gap: 10px; padding: 8px 10px; white-space: nowrap; }
+.treatment-detail { display: grid; gap: 16px; }
+.treatment-detail-back { justify-self: start; margin-left: -8px; }
+.treatment-detail-identity { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; font-size: 13px; color: var(--muted-foreground); }
+.treatment-detail h1, .treatment-detail-identity > span { overflow-wrap: anywhere; }
+.treatment-overview { display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: center; padding: 12px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
+.treatment-overview > div { display: flex; align-items: center; gap: 10px; }
+.treatment-overview svg { width: 18px; height: 18px; color: var(--muted-foreground); }
+.treatment-overview dt { font-size: 12px; color: var(--muted-foreground); }
+.treatment-overview dd { font-size: 16px; font-weight: 600; }
+.treatment-detail .treatment-information[data-slot="card"] { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0; }
+.treatment-information > section { position: relative; min-width: 0; padding: 14px 16px; }
+.treatment-information > section + section::before { content: ""; position: absolute; inset: 0 16px auto; height: 1px; background: var(--border); pointer-events: none; }
+.treatment-information h2 { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; line-height: 1.4; }
+.treatment-information h2 > svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--primary); }
+.treatment-information .treatment-description { margin-top: 10px; color: var(--muted-foreground); }
+.treatment-information .treatment-empty { padding: 0; margin-top: 10px; }
+.treatment-information :is([data-slot="skeleton"], [data-slot="alert"]) { margin-top: 10px; }
+.treatment-supply-list { margin-top: 10px; font-size: 14px; line-height: 1.6; color: var(--muted-foreground); }
+.treatment-supply-list > li { display: grid; grid-template-columns: minmax(0, 1fr) fit-content(45%); align-items: baseline; gap: 12px; padding-block: 7px; overflow-wrap: anywhere; }
+.treatment-supply-list > li:first-child { padding-top: 0; }
+.treatment-supply-list > li:last-child { padding-bottom: 0; }
+.treatment-supply-list > li + li { border-top: 1px solid var(--border); }
+.treatment-supply-quantity { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--foreground); }
+.treatment-detail [data-slot="card"] { padding-block: 14px; gap: 12px; }
+.treatment-detail :is([data-slot="card-header"], [data-slot="card-content"]) { padding-inline: 16px; }
+.treatment-detail [data-slot="card-title"] { font-size: 16px; }
+.treatment-description { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
+.treatment-empty { padding-block: 8px; font-size: 13px; color: var(--muted-foreground); }
+.treatment-empty-table [data-slot="table-cell"][colspan], .treatment-empty-table > div:last-child > div { padding-block: 16px; }
+.treatment-empty-table [data-slot="table-cell"][colspan] svg, .treatment-empty-table > div:last-child > div svg { width: 20px; height: 20px; }
+.treatment-financial-values { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 16px; }
+.treatment-financial-values dt { font-size: 12px; color: var(--muted-foreground); line-height: 1.4; }
+.treatment-financial-values dd { margin-top: 4px; font-size: clamp(18px, 1.6vw, 22px); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.treatment-financial-values [data-tone="paid"] dd { color: var(--success); }
+.treatment-financial-values [data-tone="pending"] dd { color: var(--warning); }
+.treatment-recipient { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.treatment-recipient > span:last-child { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.treatment-recipients [data-column="status"] { min-width: 150px; }
+.treatment-recipients [data-column="cost"] { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.treatment-recipients [data-column="date"], .treatment-recipients [data-column="encounter"] { white-space: nowrap; }
+.treatment-sessions { display: grid; gap: 5px; font-size: 12px; min-width: 125px; }
+.treatment-session-track { height: 4px; max-width: 150px; overflow: hidden; border-radius: 99px; background: var(--muted); }
+.treatment-session-track > span { display: block; height: 100%; background: var(--info); }
+.treatment-assignment-status { width: fit-content; color: var(--muted-foreground); background: var(--secondary); border-color: var(--border); }
+.treatment-sessions[data-status="en_progreso"] .treatment-assignment-status { color: var(--info); background: var(--info-surface); }
+.treatment-sessions[data-status="completado"] .treatment-assignment-status { color: var(--success); background: var(--success-surface); }
+.treatment-sessions[data-status="completado"] .treatment-session-track > span { background: var(--success); }
+.treatment-sessions[data-status="suspendido"] .treatment-assignment-status { color: var(--warning); background: var(--warning-surface); }
+.treatment-dialog[data-slot="dialog-content"] { display: flex; flex-direction: column; width: min(860px, 94vw); max-width: calc(100vw - 24px); max-height: 92dvh; padding: 0; gap: 0; overflow: hidden; background: var(--popover); }
+.treatment-dialog-heading[data-slot="dialog-header"] { display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; }
+.treatment-dialog-heading > div { min-width: 0; }
+.treatment-dialog .treatment-dialog-heading [data-slot="dialog-title"] { font-size: 22px; line-height: 1.3; outline: none; }
+.treatment-dialog-heading [data-slot="dialog-description"] { margin-top: 4px; font-size: 13px; }
+.treatment-editor-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; overflow-anchor: none; scrollbar-gutter: stable; }
+.treatment-editor { padding: 0 20px 20px; }
+.treatment-form-fields { min-width: 0; }
+.treatment-sections { display: grid; gap: 10px; }
+.treatment-section { position: relative; min-width: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.treatment-section-trigger { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 12px; background: var(--card); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer; }
+.treatment-section-trigger > svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--muted-foreground); }
+.treatment-section-trigger > small { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+.treatment-section-trigger > small svg { width: 14px; height: 14px; }
+.treatment-section-trigger > small[data-invalid] { color: var(--destructive); }
+.treatment-section-trigger:focus-visible { outline: 2px solid var(--ring); outline-offset: -3px; }
+.treatment-section-trigger .treatment-section-chevron { transition: transform 200ms ease; }
+.treatment-section-trigger[aria-expanded="true"] { background: var(--secondary); }
+.treatment-section-trigger[aria-expanded="true"] .treatment-section-chevron { transform: rotate(180deg); }
+.treatment-section-panel { height: var(--accordion-panel-height); opacity: 1; overflow: hidden; transition: height 200ms ease, opacity 200ms ease; }
+.treatment-section-panel[data-starting-style], .treatment-section-panel[data-ending-style] { height: 0; opacity: 0; }
+.treatment-section-panel[hidden] { display: none; }
+.treatment-section-content { display: grid; gap: 14px; padding: 14px; }
+.treatment-general-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, .8fr) minmax(0, .8fr); gap: 12px; }
+.treatment-dialog [data-slot="field"] { min-width: 0; gap: 6px; }
+.treatment-dialog [data-slot="field-label"] { font-size: 13px; }
+.treatment-dialog textarea { min-height: 82px; resize: vertical; }
+.treatment-active-field { align-items: center; padding-top: 2px; }
+.treatment-active-field [data-slot="field-label"] { display: grid; gap: 4px; }
+.treatment-active-field [data-slot="field-description"] { margin: 0; font-weight: 400; font-size: 12px; }
+.treatment-active-field [data-slot="switch"] { position: relative; flex-shrink: 0; }
+.treatment-active-field [data-slot="switch"]::after { content: ""; position: absolute; inset: -14px -8px; }
+.treatment-consumption-heading { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.treatment-consumption-heading h3 { font-size: 14px; font-weight: 500; }
+.treatment-consumption-heading p { margin-top: 3px; color: var(--muted-foreground); font-size: 12px; }
+.treatment-consumption-row { display: grid; grid-template-columns: minmax(0, 1fr) 90px 40px; align-items: start; gap: 10px; }
+.treatment-consumption-row > button { margin-top: 24px; }
+.treatment-consumption-row [data-slot="select-trigger"] { height: auto; }
+.treatment-consumption-row [data-slot="select-value"] { display: block; -webkit-line-clamp: unset; white-space: normal; overflow-wrap: anywhere; text-overflow: clip; overflow: visible; }
+.treatment-remove-supply { color: var(--destructive); }
+.treatment-inventory-options[data-slot="select-content"] { max-width: min(540px, calc(100vw - 24px)); }
+.treatment-inventory-options [data-slot="select-item"] { white-space: normal; overflow-wrap: anywhere; min-height: 40px; }
+.treatment-form-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding-top: 16px; }
+.treatment-dialog[data-slot="dialog-content"] .treatment-editor :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="button"]),
+.treatment-dialog[data-slot="dialog-content"] .treatment-dialog-heading [data-slot="dialog-close"] { min-height: 40px; }
+@container treatment-content (min-width: 50rem) {
+  .treatment-detail .treatment-information[data-slot="card"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .treatment-information > section { padding: 24px 20px; }
+  .treatment-information h2 { font-size: 18px; }
+  .treatment-information h2 > svg { width: 18px; height: 18px; }
+  .treatment-information .treatment-description, .treatment-information .treatment-supply-list { margin-top: 20px; font-size: 16px; }
+  .treatment-information > section + section::before { inset: 20px auto 20px 0; width: 1px; height: auto; }
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .treatment-dialog[data-slot="dialog-content"] .treatment-editor :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="button"]),
+  .treatment-dialog[data-slot="dialog-content"] .treatment-dialog-heading [data-slot="dialog-close"] { min-height: 44px; }
+  .treatment-action-menu [data-slot="dropdown-menu-item"] { min-height: 44px; }
+  .treatment-dialog[data-slot="dialog-content"] :is([data-slot="dialog-close"], .treatment-remove-supply) { min-width: 44px; }
+}
+@media (max-width: 639px) {
+  .treatment-dialog[data-slot="dialog-content"] { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .treatment-dialog-heading[data-slot="dialog-header"] { padding: 14px 12px 12px; }
+  .treatment-editor { padding: 0 12px max(16px, env(safe-area-inset-bottom)); }
+  .treatment-section-content { padding: 12px; }
+  .treatment-general-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .treatment-general-grid > :first-child { grid-column: 1 / -1; }
+  .treatment-section-trigger > small { max-width: 85px; }
+  .treatment-consumption-row { grid-template-columns: minmax(0, 1fr) 72px 44px; gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .treatment-section-panel, .treatment-section-chevron { transition: none !important; }
+}

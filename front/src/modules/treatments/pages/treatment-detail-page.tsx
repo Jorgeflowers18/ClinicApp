@@ -1,253 +1,124 @@
+import { useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, CreditCard, Pencil } from "lucide-react"
-
+import { useQueries } from "@tanstack/react-query"
+import { ArrowLeft, Banknote, Clock, FileText, Package, Pencil, Wallet } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
 import { PageHeader } from "@/shared/components/page-header"
 import { formatDateOnly } from "@/shared/lib/date"
 import { formatCurrency } from "@/shared/lib/number"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
-import { useInventoryList } from "@/modules/inventory/api/inventory.queries"
-import { usePatientsList } from "@/modules/patients/api/patients.queries"
-
-import {
-  useTreatment,
-  useTreatmentAssignments,
-} from "../api/treatments.queries"
+import { patientsApi } from "@/modules/patients/api/patients.api"
+import { patientsKeys } from "@/modules/patients/api/patients.queries"
 import { useTreatmentFinancialSummary } from "@/modules/finance/api/finance.queries"
-import { assignmentPrice, assignmentStatusLabels } from "../types/treatment.types"
+import { useTreatment, useTreatmentAssignments } from "../api/treatments.queries"
+import { useTreatmentInventory } from "../hooks/use-treatment-options"
+import { TreatmentFormDialog } from "../components/treatment-form-dialog"
+import { TreatmentSessionProgress } from "../components/treatment-session-progress"
+import { TreatmentStatus } from "../components/treatment-status"
+import { assignmentPrice, type TreatmentAssignment } from "../types/treatment.types"
+import "../treatments.css"
+
+function displaySupplyUnit(unit: string, quantity: number) {
+  const forms = [["unidad", "unidades"], ["caja", "cajas"], ["jeringa", "jeringas"], ["litro", "litros"]]
+  const pair = forms.find(values => values.includes(unit.trim().toLowerCase()))
+  return pair ? pair[quantity === 1 ? 0 : 1] : unit
+}
 
 export function TreatmentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const treatmentQuery = useTreatment(id)
+  const { data: treatment } = treatmentQuery
+  const assignments = useTreatmentAssignments(id)
+  const inventory = useTreatmentInventory()
+  const financial = useTreatmentFinancialSummary(id)
+  const [editing, setEditing] = useState(false)
+  const returnFocus = useRef<HTMLElement | null>(null)
+  const canOpenHistory = useAuthStore(state => state.user?.role === "admin" || state.user?.role === "medico")
+  const received = [...(assignments.data ?? [])].sort((a, b) => b.startDate.localeCompare(a.startDate))
+  const patientIds = [...new Set(received.map(item => item.patientId))]
+  const patients = useQueries({ queries: patientIds.map(patientId => ({ queryKey: patientsKeys.detail(patientId), queryFn: () => patientsApi.get(patientId) })) })
 
-  const { data: treatment, isLoading, isError, error } = useTreatment(id)
-  const { data: assignments, isLoading: isLoadingAssignments } = useTreatmentAssignments(id)
-  const { data: inventoryPage } = useInventoryList({ page: 1, pageSize: 100 })
-  const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
-  const { data: financialSummary } = useTreatmentFinancialSummary(id)
-  // El enlace a la atención solo sirve a quienes pueden abrir la historia clínica.
-  const canOpenHistory = useAuthStore((state) => state.user?.role === "admin" || state.user?.role === "medico")
-  const received = [...(assignments ?? [])].sort((a, b) => b.startDate.localeCompare(a.startDate))
+  if(treatmentQuery.isPending) return <div className="space-y-4"><Skeleton className="h-10 w-72" /><Skeleton className="h-48 w-full" /></div>
+  if(!treatment) return <Alert variant="destructive"><AlertTitle>No se pudo cargar el tratamiento</AlertTitle><AlertDescription>{getErrorMessage(treatmentQuery.error)}</AlertDescription></Alert>
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-72" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    )
-  }
+  const columns: DataTableColumn<TreatmentAssignment>[] = [
+    {
+      key: "patient", header: "Paciente", cell: row => {
+        const query = patients[patientIds.indexOf(row.patientId)], patient = query?.data
+        const name = patient ? patient.firstName + " " + patient.lastName : query?.isPending ? "Cargando paciente…" : "Paciente no disponible"
+        const initials = patient ? ((patient.firstName[0] ?? "") + (patient.lastName[0] ?? "")).toUpperCase() : "?"
+        return <div className="treatment-recipient"><Avatar size="sm" aria-hidden="true"><AvatarFallback>{initials}</AvatarFallback></Avatar><span className="font-medium">{name}</span></div>
+      }
+    },
+    { key: "date", header: "Fecha", cell: row => formatDateOnly(row.startDate, { day: "2-digit", month: "short", year: "numeric" }) },
+    { key: "tooth", header: "Pieza / zona", cell: row => row.tooth || "General" },
+    { key: "cost", header: "Costo", className: "text-right", cell: row => formatCurrency(assignmentPrice(row, treatment.price)) },
+    { key: "status", header: "Estado", cell: row => <TreatmentSessionProgress assignment={row} /> },
+    ...(canOpenHistory ? [{
+      key: "encounter", header: "Atención", cell: (row: TreatmentAssignment) => row.sourceEncounterId
+        ? <Link className="text-sm font-medium hover:underline" to={"/historial-clinico/paciente/" + row.patientId + "?atencion=" + row.sourceEncounterId}>Ver atención</Link>
+        : <span className="text-muted-foreground">—</span>
+    }] : []),
+  ]
 
-  if (isError || !treatment) {
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>No se pudo cargar el tratamiento</AlertTitle>
-        <AlertDescription>{getErrorMessage(error)}</AlertDescription>
-      </Alert>
-    )
-  }
+  const summary = financial.data
+  const amounts = summary ? [
+    { label: "Valor tratamiento", value: summary.totalValue },
+    { label: "Seguro", value: summary.insuranceCovered },
+    { label: "Responsabilidad paciente", value: summary.patientResponsibility },
+    { label: "Pagado", value: summary.totalPaid, tone: "paid" },
+    { label: "Pendiente", value: summary.pendingBalance, tone: summary.pendingBalance > 0 ? "pending" : undefined },
+  ] : []
 
-  function itemName(itemId: string) {
-    return inventoryPage?.items.find((item) => item.id === itemId)?.name ?? itemId
-  }
-
-  function patientName(patientId: string) {
-    const patient = patientsPage?.items.find((item) => item.id === patientId)
-    return patient ? `${patient.firstName} ${patient.lastName}` : patientId
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <Button variant="ghost" size="sm" onClick={() => navigate("/tratamientos")} className="mb-2 -ml-2">
-          <ArrowLeft />
-          Volver a tratamientos
-        </Button>
-        <PageHeader
-          title={treatment.name}
-          description={treatment.category}
-          actions={
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => navigate(`/tratamientos/${treatment.id}/editar`)}>
-                <Pencil />
-                Editar
-              </Button>
-              <Button variant="secondary" onClick={() => navigate("/finanzas")}>
-                <CreditCard />
-                Ver finanzas
-              </Button>
-            </div>
-          }
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Duración</p>
-            <p className="text-2xl font-semibold">{treatment.durationMinutes} min</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Precio</p>
-            <p className="text-2xl font-semibold">{formatCurrency(treatment.price)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Estado</p>
-            <Badge variant={treatment.active ? "default" : "outline"} className="mt-1">
-              {treatment.active ? "Activo" : "Inactivo"}
-            </Badge>
-          </CardContent>
-        </Card>
-      </div>
-
-      {treatment.description && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Descripción</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{treatment.description}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Resumen financiero</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {financialSummary ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-              <div>
-                <p className="text-sm text-muted-foreground">Valor tratamiento</p>
-                <p className="text-xl font-semibold">{formatCurrency(financialSummary.totalValue)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Seguro</p>
-                <p className="text-xl font-semibold">{formatCurrency(financialSummary.insuranceCovered)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Responsabilidad paciente</p>
-                <p className="text-xl font-semibold">{formatCurrency(financialSummary.patientResponsibility)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pagado</p>
-                <p className="text-xl font-semibold">{formatCurrency(financialSummary.totalPaid)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pendiente</p>
-                <p className="text-xl font-semibold">{formatCurrency(financialSummary.pendingBalance)}</p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Sin información financiera disponible.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Consumo de insumos por sesión</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {treatment.consumption.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Este tratamiento no consume insumos.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Insumo</TableHead>
-                  <TableHead>Cantidad</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {treatment.consumption.map((entry, index) => (
-                  <TableRow key={`${entry.itemId}-${index}`}>
-                    <TableCell>{itemName(entry.itemId)}</TableCell>
-                    <TableCell>{entry.quantity}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Pacientes que recibieron este tratamiento</CardTitle>
-          <CardDescription>
-            Los tratamientos se registran desde la atención en la historia clínica del paciente.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingAssignments ? (
-            <Skeleton className="h-24 w-full" />
-          ) : received.length > 0 ? (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Paciente</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Pieza / zona</TableHead>
-                    <TableHead className="text-right">Costo</TableHead>
-                    <TableHead>Estado</TableHead>
-                    {canOpenHistory && <TableHead>Atención</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {received.map((assignment) => (
-                    <TableRow key={assignment.id}>
-                      <TableCell className="font-medium">{patientName(assignment.patientId)}</TableCell>
-                      <TableCell>{formatDateOnly(assignment.startDate, { day: "2-digit", month: "short", year: "numeric" })}</TableCell>
-                      <TableCell>{assignment.tooth || "General"}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(assignmentPrice(assignment, treatment.price))}</TableCell>
-                      <TableCell>
-                        {/* Las asignaciones antiguas con varias sesiones conservan su progreso. */}
-                        {assignment.totalSessions > 1 ? (
-                          <span className="text-sm">
-                            {assignment.completedSessions}/{assignment.totalSessions} sesiones ·{" "}
-                            {assignmentStatusLabels[assignment.status]}
-                          </span>
-                        ) : (
-                          <Badge variant="outline">Realizado</Badge>
-                        )}
-                      </TableCell>
-                      {canOpenHistory && (
-                        <TableCell>
-                          {assignment.sourceEncounterId ? (
-                            <Link
-                              className="text-sm font-medium hover:underline"
-                              to={`/historial-clinico/paciente/${assignment.patientId}?atencion=${assignment.sourceEncounterId}`}
-                            >
-                              Ver atención
-                            </Link>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Ningún paciente ha recibido este tratamiento todavía.</p>
-          )}
-        </CardContent>
-      </Card>
+  return <div className="treatment-detail">
+    <div>
+      <Button variant="ghost" size="sm" onClick={() => navigate("/tratamientos")} className="treatment-detail-back"><ArrowLeft />Volver a tratamientos</Button>
+      <PageHeader title={treatment.name} actions={<div className="flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => navigate("/finanzas")}><Wallet />Ver finanzas</Button>
+        <Button onClick={event => { returnFocus.current = event.currentTarget; setEditing(true) }}><Pencil />Editar</Button>
+      </div>} />
+      <div className="treatment-detail-identity"><span>{treatment.category}</span><TreatmentStatus active={treatment.active} /></div>
     </div>
-  )
+    <dl className="treatment-overview">
+      <div><Clock aria-hidden="true" /><div><dt>Duración estimada</dt><dd>{treatment.durationMinutes} min</dd></div></div>
+      <div><Banknote aria-hidden="true" /><div><dt>Precio del catálogo</dt><dd>{formatCurrency(treatment.price)}</dd></div></div>
+    </dl>
+    <Card className="treatment-information">
+      <section aria-labelledby="treatment-description-heading">
+        <h2 id="treatment-description-heading"><FileText aria-hidden="true" />Descripción</h2>
+        <p className="treatment-description">{treatment.description || "Sin descripción registrada."}</p>
+      </section>
+      <section aria-labelledby="treatment-supplies-heading">
+        <h2 id="treatment-supplies-heading"><Package aria-hidden="true" />Insumos por sesión</h2>
+        {treatment.consumption.length === 0 ? <p className="treatment-empty">Este tratamiento no consume insumos de inventario.</p>
+          : inventory.isPending ? <Skeleton className="h-16 w-full" />
+            : inventory.isError ? <Alert variant="destructive"><AlertTitle>No se pudieron cargar los insumos</AlertTitle><AlertDescription>{getErrorMessage(inventory.error)}</AlertDescription></Alert>
+              : <ul className="treatment-supply-list" role="list">
+                {treatment.consumption.map((entry, index) => {
+                  const item = inventory.data?.find(item => item.id === entry.itemId)
+                  return <li key={entry.itemId + "-" + index}><span>{item?.name ?? "Insumo no disponible"}</span><span className="treatment-supply-quantity">{entry.quantity}{item?.unit && " " + displaySupplyUnit(item.unit, entry.quantity)}</span></li>
+                })}
+              </ul>}
+      </section>
+    </Card>
+    <Card><CardHeader><CardTitle>Resumen financiero</CardTitle></CardHeader><CardContent>
+      {financial.isPending ? <Skeleton className="h-16 w-full" />
+        : financial.isError ? <Alert variant="destructive"><AlertTitle>No se pudo cargar el resumen financiero</AlertTitle><AlertDescription>{getErrorMessage(financial.error)}</AlertDescription></Alert>
+          : summary ? <dl className="treatment-financial-values">{amounts.map(amount => <div key={amount.label} data-tone={amount.tone}><dt>{amount.label}</dt><dd>{formatCurrency(amount.value)}</dd></div>)}</dl>
+            : <p className="treatment-empty">Sin información financiera disponible.</p>}
+    </CardContent></Card>
+    <Card><CardHeader><CardTitle>Pacientes que recibieron este tratamiento</CardTitle><CardDescription>Los tratamientos se registran desde la atención en la historia clínica del paciente.</CardDescription></CardHeader><CardContent>
+        <DataTable className={"treatment-recipients" + (!assignments.isPending && !assignments.isError && received.length === 0 ? " treatment-empty-table" : "")} columns={columns} mobileTitleKey="patient" data={received} getRowId={row => row.id}
+        isLoading={assignments.isPending} isError={assignments.isError} errorMessage={getErrorMessage(assignments.error)}
+        emptyTitle="Sin pacientes asociados" emptyDescription="Ningún paciente ha recibido este tratamiento todavía." />
+    </CardContent></Card>
+    {editing && <TreatmentFormDialog treatmentId={treatment.id} returnFocus={() => returnFocus.current} onClose={() => setEditing(false)} />}
+  </div>
 }

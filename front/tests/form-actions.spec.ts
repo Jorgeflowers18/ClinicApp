@@ -1,10 +1,11 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 test.use({ reducedMotion: "reduce" })
 const widths = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440, 1920]
 async function login(page: Page, theme: string) {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -18,10 +19,12 @@ for (const theme of ["light", "dark"]) {
     const measurements = []
     for (const route of ["/pacientes/nuevo", "/pacientes/pat_5/editar", "/tratamientos/nuevo", "/inventario/nuevo", "/perfil-usuario", "/perfil-institucion", "/notificaciones"]) {
       await page.goto(route)
-      const actions = page.locator('main [data-form-actions][data-context="page"]')
+      if (route === "/notificaciones") await page.getByRole("tab", { name: "Plantillas de mensajes", exact: true }).click()
+      const actions = route === "/tratamientos/nuevo" ? page.locator('.treatment-dialog .treatment-form-actions') : route === "/inventario/nuevo" ? page.locator('.inventory-dialog .inventory-form-actions') : page.locator('main [data-form-actions][data-context="page"]')
       await expect(actions).toHaveCount(1)
       for (const width of widths) {
         await page.setViewportSize({ width, height: 900 })
+        if (route === "/tratamientos/nuevo") await actions.scrollIntoViewIfNeeded()
         await actions.scrollIntoViewIfNeeded()
         await expect(actions).toHaveCSS("position", "static")
         await expect(actions).toHaveCSS("border-radius", "0px")
@@ -55,7 +58,7 @@ for (const theme of ["light", "dark"]) {
     await page.locator("#category").fill("Odontología general")
     await page.locator("#price").fill("60")
     await page.getByRole("button", { name: "Crear tratamiento", exact: true }).click()
-    await expect(page.getByRole("heading", { name: "Tratamiento de acciones", exact: true })).toBeVisible()
+    await expect(page.getByRole("row", { name: "Ver tratamiento: Tratamiento de acciones", exact: true })).toBeVisible()
     await page.goto("/inventario/nuevo")
     await page.locator("#name").fill("Insumo de acciones")
     await page.locator("#category").fill("Material dental")
@@ -81,6 +84,7 @@ for (const theme of ["light", "dark"]) {
       await expect(appointment.getByLabel("Notas", { exact: true })).toHaveValue("Borrador conservado")
     }
     await appointment.getByRole("button", { name: "Cancelar", exact: true }).click()
+    await page.getByRole("button", { name: "Descartar cambios", exact: true }).click()
     await expect(appointment).not.toBeVisible()
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto("/perfil-institucion")

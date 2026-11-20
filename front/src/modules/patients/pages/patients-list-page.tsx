@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { CalendarDays, Mail, Phone, Plus, SlidersHorizontal, UsersRound, UserRoundCheck, UserRoundX, UserRoundSearch, X } from "lucide-react"
+import { CalendarDays, Mail, Phone, Plus, SlidersHorizontal, UsersRound, UserRoundCheck, UserRoundX, UserRoundSearch } from "lucide-react"
+import { ResetFiltersButton } from "@/shared/components/reset-filters-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -64,7 +65,7 @@ export function PatientsListPage() {
         </Select>
       </div>
       <Button variant="outline" aria-expanded={advanced} aria-controls="patient-advanced-filters" onClick={() => setAdvanced(value => !value)}><SlidersHorizontal />Filtros avanzados{advancedCount > 0 && <span>({advancedCount})</span>}</Button>
-      <Button variant="ghost" onClick={clear} disabled={!hasFilters}><X />Limpiar</Button>
+      <ResetFiltersButton onReset={clear} disabled={!hasFilters} />
     </div>
     <div id="patient-advanced-filters" className="patient-advanced-filters" hidden={!advanced} role="region" aria-label="Filtros avanzados de pacientes">
       <div><label htmlFor="patient-gender-filter">Género</label><Select items={{ all: "Todos", ...Object.fromEntries(genderOptions.map(option => [option.value, option.label])) }} value={filters.gender ?? "all"} onValueChange={value => changeFilters({ gender: value === "all" ? undefined : value as Patient["gender"] })}>

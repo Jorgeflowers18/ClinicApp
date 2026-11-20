@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 import type { InstitutionBranch, InstitutionProfile } from "../src/modules/institution/types/institution.types"
 
@@ -5,7 +6,7 @@ const storageKey = "clinicapp.institution-profile"
 const widths = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440, 1920]
 const photo = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII="
 const initial: InstitutionProfile = {
-  name: "Clínica de origen", legalName: "Grupo Dental S.A.", ruc: "1798765432001", phone: "+593 98 123 4567",
+  name: "Clínica de origen", subtitle: "", legalName: "Grupo Dental S.A.", ruc: "1798765432001", phone: "+593 98 123 4567",
   email: "contacto@clinica.test", address: "Av. Amazonas, Quito", website: "https://clinica.test", logoText: "CA", logoImage: null,
   notes: "Atención odontológica integral.", hours: "Lunes a viernes: 08:00 - 18:00\nSábados: 08:00 - 13:00", branches: [],
 }
@@ -26,7 +27,7 @@ async function enter(page: Page, theme: "light" | "dark", locations = branches(2
     }
   })
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -56,8 +57,8 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.locator(`#institution-profile-${key}`)).toHaveValue(initial[key])
     }
     await expect(page.getByLabel("Horarios de atención", { exact: true })).toHaveValue(initial.hours)
-    const next = { ...initial, name: "Clínica Renovada", legalName: "Nueva Razón S.A.", ruc: "RUC libre como antes", website: "https://nueva.test", notes: "Descripción editada", phone: "0987654321", email: "nueva@clinica.test", address: "Calle Nueva 123", hours: "Atención con cita previa\nSábados: 09:00 - 12:00", logoText: "CD", logoImage: `data:image/png;base64,${photo}`, branches: branches(2) }
-    for (const key of ["name", "legalName", "ruc", "website", "notes", "phone", "email", "address", "logoText"] as const) {
+    const next = { ...initial, name: "Clínica Renovada", legalName: "Nueva Razón S.A.", ruc: "RUC libre como antes", website: "https://nueva.test", notes: "Descripción editada", phone: "0987654321", email: "nueva@clinica.test", address: "Calle Nueva 123", hours: "Atención con cita previa\nSábados: 09:00 - 12:00", logoImage: `data:image/png;base64,${photo}`, branches: branches(2) }
+    for (const key of ["name", "legalName", "ruc", "website", "notes", "phone", "email", "address"] as const) {
       await page.locator(`#institution-profile-${key}`).fill(next[key])
     }
     await page.getByLabel("Horarios de atención", { exact: true }).fill(next.hours)
@@ -215,9 +216,11 @@ for (const theme of ["light", "dark"] as const) {
       const dialog = page.getByRole("dialog", { name: "Nueva sede", exact: true })
       await expect(dialog).toHaveCount(1)
       await expect(dialog.getByLabel("Nombre de la sede", { exact: true })).toBeFocused()
-      await expect.poll(async () => Math.round((await dialog.boundingBox())!.x)).toBe(width < 600 ? 0 : width - 480)
+      const expectedWidth = width < 600 ? width - 24 : Math.min(600, width - 32)
+      await expect.poll(async () => Math.round((await dialog.boundingBox())!.width)).toBe(expectedWidth)
       const rect = (await dialog.boundingBox())!
-      expect(Math.round(rect.width)).toBe(width < 600 ? width : 480)
+      expect(Math.round(rect.x)).toBe(Math.round((width - expectedWidth) / 2))
+      expect(rect.height).toBeLessThan(850)
       const save = dialog.getByRole("button", { name: "Guardar sede", exact: true })
       await page.mouse.move(0, 0)
       const saveRect = (await save.boundingBox())!
@@ -250,10 +253,10 @@ for (const theme of ["light", "dark"] as const) {
     await page.setViewportSize({ width: 320, height: 480 })
     await page.getByRole("button", { name: "Crear sede", exact: true }).click()
     const dialog = page.getByRole("dialog", { name: "Nueva sede", exact: true })
-    await expect.poll(async () => Math.round((await dialog.boundingBox())!.x)).toBe(0)
+    await expect.poll(async () => Math.round((await dialog.boundingBox())!.x)).toBe(12)
     await dialog.getByLabel("Horarios", { exact: true }).fill("Atención matutina")
     const field = (await dialog.getByLabel("Horarios", { exact: true }).boundingBox())!
-    const footer = (await dialog.locator('[data-slot="sheet-footer"]').boundingBox())!
+    const footer = (await dialog.locator('[data-institution-editor-actions]').boundingBox())!
     expect(field.y + field.height).toBeLessThanOrEqual(footer.y + 1)
     expect(footer.y + footer.height).toBeLessThanOrEqual(480)
     await dialog.getByRole("button", { name: "Guardar sede", exact: true }).click()

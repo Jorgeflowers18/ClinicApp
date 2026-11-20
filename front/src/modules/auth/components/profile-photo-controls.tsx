@@ -117,7 +117,7 @@ export function ProfilePhotoControls({ name, image, disabled, avatarClassName, o
       {status && <p className={styles.status} role="status">{status}</p>}
 
       <Dialog open={previewOpen} onOpenChange={(open) => { if (!open) closePreview() }}>
-        <DialogContent className={styles.dialog} showCloseButton={!busy} finalFocus={trigger}>
+        <DialogContent variant="small" className={styles.dialog} showCloseButton={!busy} finalFocus={trigger}>
           <DialogHeader><DialogTitle>Vista previa de fotografía</DialogTitle><DialogDescription>La fotografía guardada se conserva hasta que confirmes la nueva imagen.</DialogDescription></DialogHeader>
           <div className={styles.previewBody} aria-busy={reading}>
             {reading ? <p role="status"><LoaderCircle className="animate-spin" aria-hidden="true" />Leyendo imagen…</p> : candidate && <img src={candidate} alt="Vista previa de fotografía" />}

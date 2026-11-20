@@ -52,7 +52,7 @@ export function TruthDeclarationCard() {
             )}
           />
 
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="clinic-history-declaration-grid">
             <Field>
               <FieldLabel htmlFor="declaration-signer">Quien declara</FieldLabel>
               <Controller
@@ -82,7 +82,7 @@ export function TruthDeclarationCard() {
             <FieldDescription>Al marcar la aceptación se piden el nombre, la C.I. y la fecha (no futura).</FieldDescription>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="clinic-history-declaration-professional">
             <Field>
               <FieldLabel htmlFor="declaration-professional">Profesional tratante</FieldLabel>
               <Controller
@@ -110,7 +110,7 @@ export function TruthDeclarationCard() {
             </Field>
             <div className="space-y-1">
               <p className="text-sm font-medium">Registro profesional</p>
-              <p className="rounded-md border bg-muted/40 px-2.5 py-1.5 text-sm" aria-label="Registro profesional">
+              <p className="clinic-history-readonly" aria-label="Registro profesional">
                 {professional ? professional.registrationNumber || "Sin registro" : "—"}
               </p>
             </div>

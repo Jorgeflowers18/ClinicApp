@@ -21,7 +21,7 @@
 .patient-statistic[data-tone="primary"] > span { color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, var(--card)); }
 .patient-statistic[data-tone="success"] > span { color: var(--success); background: var(--success-surface); }
 .patient-statistic[data-tone="warning"] > span { color: var(--warning); background: var(--warning-surface); }
-.patient-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.patient-toolbar { --content-control-height: 44px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
 .patient-toolbar .clinic-patients-search { flex: 1 1 300px; max-width: none; }
 .patient-status-filter { flex: 0 1 180px; min-width: 140px; }
 .patient-status-filter label, .patient-advanced-filters label { display: block; margin-bottom: 4px; color: var(--muted-foreground); font-size: 12px; font-weight: 510; }

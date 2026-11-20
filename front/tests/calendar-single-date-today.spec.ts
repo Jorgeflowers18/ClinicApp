@@ -1,4 +1,6 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
+import { settleCalendarLayout } from "./helpers/calendar-layout"
 
 test.use({ timezoneId: "America/Guayaquil" })
 test.describe.configure({ mode: "parallel" })
@@ -12,7 +14,7 @@ const widths = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440, 1920]
 async function login(page: Page, theme: "light" | "dark", now = "2026-11-11T17:00:00Z", route = "/citas") {
   await page.clock.install({ time: new Date(now) })
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -48,7 +50,7 @@ async function distantDate(page: Page) {
   await browse(page, "2028", "febrero")
   await popupOf(page).locator('button[data-day="29/2/2028"]').click()
   await expect(popupOf(page)).toHaveCount(0)
-  await expect(triggerOf(page)).toHaveText("29 de febrero de 2028")
+  await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 29 de febrero de 2028")
 }
 
 async function snapshot(page: Page) {
@@ -73,7 +75,7 @@ for (const theme of ["light", "dark"] as const) {
         await expect(page.getByRole("button", { name: "Hoy", exact: true })).toHaveCount(2)
         await expect(selectedOf(page)).toHaveAttribute("datetime", "2028-02-29")
         await browse(page, "2400", "marzo")
-        await expect(triggerOf(page)).toHaveText("29 de febrero de 2028")
+        await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 29 de febrero de 2028")
         await expect(selectedOf(page)).toHaveAttribute("datetime", "2028-02-29")
         const today = footerOf(page).getByRole("button", { name: "Hoy", exact: true })
         await page.mouse.move(0, 0)
@@ -81,13 +83,13 @@ for (const theme of ["light", "dark"] as const) {
         await today.click()
         await expect(popupOf(page)).toHaveCount(0)
         await expect(triggerOf(page)).toBeFocused()
-        await expect(triggerOf(page)).toHaveText("11 de noviembre de 2026")
+        await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 11 de noviembre de 2026")
         await expectView(page, view)
         await expect(page.getByRole("dialog")).toHaveCount(0)
         await distantDate(page)
         await expect(page.getByRole("button", { name: "Hoy", exact: true })).toHaveCount(1)
         await page.getByRole("button", { name: "Hoy", exact: true }).click()
-        await expect(triggerOf(page)).toHaveText("11 de noviembre de 2026")
+        await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 11 de noviembre de 2026")
         await expectView(page, view)
         await triggerOf(page).click()
         await expect(selectedOf(page)).toHaveAttribute("datetime", "2026-11-11")
@@ -102,15 +104,15 @@ for (const theme of ["light", "dark"] as const) {
   test(`exact trigger, cursor heading and selected footer remain separate and allow keyboard Today in ${theme}`, async ({ page }) => {
     await login(page, theme)
     const before = await snapshot(page)
-    await expect(triggerOf(page)).toHaveText("11 de noviembre de 2026")
-    await expect(page.locator('[aria-label="Periodo visible"]:visible')).toContainText("09 – 15")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 11 de noviembre de 2026")
+    await expect(page.locator('[aria-label="Periodo visible"]:visible')).toHaveText("9 noviembre – 15 noviembre 2026")
     await triggerOf(page).click()
     await expect(popupOf(page).getByRole("heading", { name: /Ir a una fecha: noviembre 2026/i })).toBeVisible()
     await expect(popupOf(page).getByText("Selecciona únicamente un día", { exact: true })).toBeVisible()
     expect(await popupOf(page).locator(".rdp-weekday").allTextContents()).toEqual(["L", "M", "M", "J", "V", "S", "D"])
     await popupOf(page).locator('button[data-day="15/11/2026"]').click({ modifiers: ["Shift"] })
     await expect(popupOf(page)).toHaveCount(0)
-    await expect(triggerOf(page)).toHaveText("15 de noviembre de 2026")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 15 de noviembre de 2026")
     await triggerOf(page).click()
     await expect(selectedOf(page)).toHaveText("15 de noviembre de 2026")
     await expect(popupOf(page).locator('button[data-selected-single="true"]')).toHaveCount(1)
@@ -119,7 +121,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(popupOf(page).locator('[data-range-start="true"], [data-range-middle="true"], [data-range-end="true"]')).toHaveCount(0)
     await browse(page, "2400", "febrero")
     await expect(popupOf(page).getByRole("heading", { name: /febrero 2400/i })).toBeVisible()
-    await expect(triggerOf(page)).toHaveText("15 de noviembre de 2026")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 15 de noviembre de 2026")
     await expect(selectedOf(page)).toHaveText("15 de noviembre de 2026")
     await popupOf(page).getByLabel("Año", { exact: true }).fill("")
     await expect(popupOf(page).getByRole("alert")).toContainText("año válido")
@@ -129,7 +131,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.keyboard.press("Space")
     await expect(popupOf(page)).toHaveCount(0)
     await expect(triggerOf(page)).toBeFocused()
-    await expect(triggerOf(page)).toHaveText("11 de noviembre de 2026")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 11 de noviembre de 2026")
     await expectView(page, "week")
     expect(await snapshot(page)).toBe(before)
   })
@@ -196,6 +198,7 @@ for (const theme of ["light", "dark"] as const) {
     }
     for (const size of [{ width: 844, height: 390 }, { width: 375, height: 420 }, { width: 320, height: 568 }]) {
       await page.setViewportSize(size)
+      await settleCalendarLayout(page)
       await triggerOf(page).click()
       const popup = popupOf(page)
       await popup.locator('button[data-day]').last().scrollIntoViewIfNeeded()
@@ -221,11 +224,11 @@ for (const [instant, localDay] of [["2026-11-11T02:30:00Z", "10"], ["2026-11-11T
     await triggerOf(page).click()
     await footerOf(page).getByRole("button", { name: "Hoy", exact: true }).click()
     await expect(popupOf(page)).toHaveCount(0)
-    await expect(triggerOf(page)).toHaveText(expected)
+    await expect(triggerOf(page)).toHaveAccessibleName(`Elegir fecha: ${expected}`)
     await expectView(page, "day")
     await distantDate(page)
     await page.getByRole("button", { name: "Hoy", exact: true }).click()
-    await expect(triggerOf(page)).toHaveText(expected)
+    await expect(triggerOf(page)).toHaveAccessibleName(`Elegir fecha: ${expected}`)
     await triggerOf(page).click()
     await expect(popupOf(page).locator(`button[data-day="${localDay}/11/2026"]`)).toHaveAttribute("data-selected-single", "true")
     await expect(popupOf(page).locator('button[data-selected-single="true"]')).toHaveCount(1)

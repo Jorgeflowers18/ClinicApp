@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge"
+import { InventoryStockStatus, InventoryStatus, StockQuantity } from "@/modules/inventory/components/inventory-presentation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { downloadCsv } from "@/shared/lib/csv"
 import { formatDateTime } from "@/shared/lib/date"
@@ -10,10 +10,10 @@ import { formatPeriodLabel } from "../lib/period"
 import type { ReportPeriod } from "../types/report.types"
 import { ReportTableCard } from "./report-table-card"
 
-const STATUS_VARIANT: Record<PurchaseOrderStatus, "outline" | "default" | "destructive"> = {
-  pendiente: "outline",
-  recibida: "default",
-  cancelada: "destructive",
+const STATUS_TONE: Record<PurchaseOrderStatus, "warning" | "success" | "danger"> = {
+  pendiente: "warning",
+  recibida: "success",
+  cancelada: "danger",
 }
 
 interface InventoryReportTabProps {
@@ -21,7 +21,8 @@ interface InventoryReportTabProps {
 }
 
 export function InventoryReportTab({ period }: InventoryReportTabProps) {
-  const { data, isLoading } = useInventoryReport(period)
+  const { data, isLoading: initialLoading, isPlaceholderData, isError } = useInventoryReport(period)
+  const isLoading = initialLoading || isPlaceholderData
   const suffix = formatPeriodLabel(period)
   const critical = data?.criticalItems ?? []
   const purchases = data?.purchasesInPeriod ?? []
@@ -33,8 +34,9 @@ export function InventoryReportTab({ period }: InventoryReportTabProps) {
         title={`Stock crítico${critical.length > 0 ? ` (${critical.length})` : ""}`}
         description="Insumos en o bajo su stock mínimo. Es un dato actual, no depende del periodo."
         isLoading={isLoading}
+        isError={isError}
         isEmpty={critical.length === 0}
-        emptyMessage="Ningún insumo está por debajo de su stock mínimo."
+        emptyMessage="Ningún insumo está en el mínimo o por debajo."
         onExport={() =>
           downloadCsv(`stock-critico_${suffix}`, critical, [
             { key: "name", header: "Insumo" },
@@ -50,8 +52,9 @@ export function InventoryReportTab({ period }: InventoryReportTabProps) {
             <TableRow>
               <TableHead>Insumo</TableHead>
               <TableHead>Categoría</TableHead>
-              <TableHead className="text-right">Stock</TableHead>
+              <TableHead className="text-right">Stock actual</TableHead>
               <TableHead className="text-right">Mínimo</TableHead>
+              <TableHead>Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -59,12 +62,13 @@ export function InventoryReportTab({ period }: InventoryReportTabProps) {
               <TableRow key={row.itemId}>
                 <TableCell className="font-medium">{row.name}</TableCell>
                 <TableCell className="text-muted-foreground">{row.category}</TableCell>
-                <TableCell className="text-right text-destructive">
-                  {row.stock} {row.unit}
+                <TableCell className="text-right">
+                  <StockQuantity quantity={row.stock} unit={row.unit} />
                 </TableCell>
                 <TableCell className="text-right">
-                  {row.minStock} {row.unit}
+                  <StockQuantity quantity={row.minStock} unit={row.unit} secondary />
                 </TableCell>
+                <TableCell><InventoryStockStatus item={row} /></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -73,6 +77,7 @@ export function InventoryReportTab({ period }: InventoryReportTabProps) {
 
       <ReportTableCard
         title="Compras del periodo"
+        isError={isError}
         description={`Total de órdenes no canceladas: ${formatCurrency(data?.purchasesTotal ?? 0)}`}
         isLoading={isLoading}
         isEmpty={purchases.length === 0}
@@ -100,7 +105,7 @@ export function InventoryReportTab({ period }: InventoryReportTabProps) {
               <TableRow key={row.orderId}>
                 <TableCell className="font-medium">{row.supplierName}</TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANT[row.status]}>{row.statusLabel}</Badge>
+                  <InventoryStatus label={row.statusLabel} tone={STATUS_TONE[row.status]} />
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatDateTime(row.createdAt, { year: "numeric", month: "short", day: "2-digit" })}
@@ -114,6 +119,7 @@ export function InventoryReportTab({ period }: InventoryReportTabProps) {
 
       <ReportTableCard
         title="Consumo del periodo"
+        isError={isError}
         description="Salidas de stock (manuales y por consumo clínico) agrupadas por insumo."
         isLoading={isLoading}
         isEmpty={consumption.length === 0}
@@ -137,7 +143,7 @@ export function InventoryReportTab({ period }: InventoryReportTabProps) {
               <TableRow key={row.itemId}>
                 <TableCell className="font-medium">{row.name}</TableCell>
                 <TableCell className="text-right">
-                  {row.quantity} {row.unit}
+                  <StockQuantity quantity={row.quantity} unit={row.unit} />
                 </TableCell>
               </TableRow>
             ))}

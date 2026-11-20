@@ -1,0 +1,146 @@
+/* External clinical UI only. No selectors reach the iframe document or the dental library. */
+.clinic-history-workspace { --clinical-section-gap: 16px; }
+.clinic-history-workspace [data-slot="card"]:not(.clinic-kpi-card) { gap: 12px; padding-block: 14px; box-shadow: none; }
+.clinic-history-workspace [data-slot="card"]:not(.clinic-kpi-card) > :is([data-slot="card-header"], [data-slot="card-content"]) { padding-inline: 16px; min-width: 0; }
+.clinic-history-workspace [data-slot="card-title"] { font-size: 16px; line-height: 1.4; }
+.clinic-history-workspace [data-slot="field"] { min-width: 0; gap: 6px; }
+.clinic-history-workspace [data-slot="field-set"] { min-width: 0; gap: 12px; }
+.clinic-history-workspace [data-slot="field-group"] { gap: 16px; }
+.clinic-history-workspace [data-slot="field-label"] { font-size: 13px; line-height: 1.45; }
+.clinic-history-workspace :is([data-slot="input"], [data-slot="select-trigger"]) { min-height: 40px; }
+.clinic-history-workspace [data-slot="button"] { min-height: 40px; }
+.clinic-history-workspace [data-slot="table-container"] { max-width: 100%; overscroll-behavior-inline: contain; }
+.clinic-history-workspace :is([data-slot="table-head"], [data-slot="table-cell"]) { padding: 8px 10px; font-size: 14px; vertical-align: top; }
+.clinic-history-workspace [data-slot="table-head"] { height: 38px; font-size: 13px; vertical-align: middle; }
+.clinic-history-workspace [data-slot="table-cell"].text-right { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.clinic-history-workspace .clinic-demo-notice { padding: 6px 10px; gap: 7px; }
+
+/* Subgrid shares header/value/hint tracks: wrapping never misaligns the four readings. */
+.clinic-clinical-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+.clinic-clinical-kpis .clinic-kpi-card { align-self: stretch; display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 2px; padding: 10px 12px; min-width: 0; }
+.clinic-clinical-kpis .clinic-kpi-card > [data-slot="card-content"], .clinic-clinical-kpis .clinic-kpi-reading { display: contents; }
+.clinic-clinical-kpis .clinic-kpi-heading { grid-row: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-width: 0; }
+.clinic-clinical-kpis .clinic-kpi-label { min-width: 0; font-size: 13px; line-height: 1.4; }
+.clinic-clinical-kpis .clinic-kpi-value { grid-row: 2; margin: 0; font-size: 22px; line-height: 1.2; }
+.clinic-clinical-kpis .clinic-kpi-value[data-textual="true"] { font-size: 21px; }
+.clinic-clinical-kpis .clinic-kpi-hint { grid-row: 3; margin: 0; font-size: 12px; line-height: 1.4; }
+.clinic-clinical-kpis .clinic-summary-icon { width: 24px; height: 24px; }
+.clinic-clinical-kpis .clinic-summary-icon > svg { width: 18px; height: 18px; }
+
+.clinic-history-readonly { display: flex; align-items: center; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--muted); font-size: 14px; }
+.clinic-patient-id-grid, .clinic-patient-contact-grid, .clinic-patient-emergency-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.clinic-patient-metadata { display: grid; gap: 10px 16px; grid-template-columns: minmax(0, 1fr); font-size: 13px; }
+.clinic-patient-metadata .clinic-history-readonly { min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; font-size: 13px; color: var(--muted-foreground); }
+.clinic-history-medical-columns { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 12px; }
+.clinic-history-medical-denies { padding: 8px 10px; }
+.clinic-history-medical-denies .clinic-clinical-checkbox > div { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.clinic-history-medical-denies [data-slot="field-description"] { margin: 0; }
+.clinic-history-medical-denies [data-slot="field-error"] { flex-basis: 100%; }
+.clinic-history-medical-table { min-width: 0; overflow: hidden; }
+.clinic-history-medical-table table { table-layout: fixed; }
+.clinic-history-medical-table :is(th, td) { padding: 5px 10px; }
+.clinic-history-medical-table th:not(:first-child) { width: 92px; }
+.clinic-history-medical-table tbody tr:hover { background: color-mix(in srgb, var(--muted) 35%, transparent); }
+.clinic-history-medical-table .clinic-clinical-checkbox { position: relative; align-items: center; justify-content: center; gap: 4px; min-height: 40px; }
+.clinic-history-medical-table .clinic-clinical-checkbox > [role="checkbox"] { position: relative; margin: 0; }
+.clinic-history-medical-table .clinic-clinical-checkbox > [role="checkbox"]::after { content: ""; position: absolute; inset: -12px; }
+.clinic-history-condition-label { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; text-transform: capitalize; }
+.clinic-history-habits { display: grid; gap: 0 20px; }
+.clinic-history-habit { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px 12px; padding-block: 12px; border-bottom: 1px solid var(--border); min-width: 0; }
+.clinic-history-habit > p { align-self: center; }
+.clinic-history-habit > :last-child { grid-column: 1 / -1; }
+.clinic-history-habit > :last-child:empty { display: none; }
+.clinic-history-checks { max-width: none; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.clinic-history-repeat-summary { padding: 10px 12px; }
+.clinic-history-reference-link { display: flex; flex-wrap: wrap; align-content: center; gap: 0 6px; width: 100%; min-height: 40px; text-align: left; font-size: 14px; border-radius: 4px; cursor: pointer; }
+.clinic-history-reference-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.clinic-history-allergies > section { display: grid; gap: 10px; }
+.clinic-history-allergies > section > div:first-child { align-items: center; }
+.clinic-history-allergies > section > div:first-child + p { margin: 0; }
+.clinic-clinical-empty { margin: 0; padding: 10px 0; color: var(--muted-foreground); font-size: 14px; line-height: 1.5; }
+.clinic-plan-entry { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 0; border: 0; background: transparent; align-items: start; }
+.clinic-plan-entry > [data-slot="button"] { justify-self: start; }
+.clinic-history-export[data-slot="card"] { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 14px 16px; }
+.clinic-history-workspace .clinic-history-export[data-slot="card"] > [data-slot="card-header"] { padding: 0; align-self: center; }
+.clinic-history-workspace .clinic-history-export[data-slot="card"] > [data-slot="card-content"] { display: contents; }
+.clinic-history-export-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.clinic-history-export-description { grid-column: 1 / -1; font-size: 12px; line-height: 1.5; }
+.clinic-history-file-preview { min-height: 56px; }
+.clinic-history-file-preview[data-image="true"] { height: 144px; }
+.clinic-history-attachment-tools > [data-slot="field"] { width: min(100%, 256px); }
+.clinic-history-consent-choice, .clinic-history-consent-identity, .clinic-history-declaration-grid, .clinic-history-declaration-professional { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.clinic-history-consent-choice { max-width: 680px; }
+.clinic-history-declaration-professional { max-width: 800px; }
+.clinic-history-encounter { padding: 12px; border-color: var(--border); }
+.clinic-history-encounter[aria-current="true"] { border-color: var(--border); box-shadow: inset 3px 0 color-mix(in srgb, var(--primary) 65%, transparent); }
+.clinic-history-encounter h3 { font-size: 15px; line-height: 1.45; }
+.clinic-history-encounter details { padding: 8px 10px; }
+.clinic-periodontal-stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 10px; align-items: stretch; }
+.clinic-periodontal-stats > div { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 3px; padding: 10px 12px; min-width: 0; }
+.clinic-periodontal-stats dt { font-size: 13px; }
+.clinic-periodontal-stats dd { overflow-wrap: anywhere; }
+.clinic-periodontal-stats dd:first-of-type { grid-row: 2; font-size: 20px; line-height: 1.35; }
+.clinic-history-list [data-slot="table-cell"] { padding-block: 8px; }
+
+@container clinical-navigation (min-width: 30rem) {
+  .clinic-patient-id-grid, .clinic-patient-contact-grid, .clinic-patient-emergency-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .clinic-patient-metadata { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .clinic-plan-entry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .clinic-history-consent-choice, .clinic-history-declaration-grid, .clinic-history-declaration-professional { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container clinical-navigation (min-width: 40rem) {
+  .clinic-patient-id-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .clinic-patient-id-grid > :is(:nth-child(1), :nth-child(8)) { grid-column: span 5; }
+  .clinic-patient-id-grid > :is(:nth-child(2), :nth-child(4), :nth-child(9)) { grid-column: span 4; }
+  .clinic-patient-id-grid > :is(:nth-child(3), :nth-child(6), :nth-child(7), :nth-child(10)) { grid-column: span 3; }
+  .clinic-patient-id-grid > :nth-child(5) { grid-column: span 2; }
+  .clinic-patient-contact-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .clinic-patient-contact-grid > :is(:first-child, :last-child) { grid-column: span 8; }
+  .clinic-patient-contact-grid > :is(:nth-child(2), :nth-child(3)) { grid-column: span 4; }
+  .clinic-patient-emergency-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .clinic-history-habits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .clinic-history-export[data-slot="card"] { grid-template-columns: minmax(0, 1fr) auto; }
+  .clinic-history-export-actions { justify-content: flex-end; }
+  .clinic-history-consent-identity { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(150px, .9fr); }
+}
+@container clinical-navigation (min-width: 48rem) {
+  .clinic-plan-entry { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .clinic-plan-entry > :first-child { grid-column: span 2; }
+}
+@container clinical-navigation (min-width: 62rem) {
+  .clinic-plan-entry { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(145px, .9fr) auto; }
+  .clinic-plan-entry > :first-child { grid-column: auto; }
+  .clinic-plan-entry > [data-slot="button"] { margin-top: 25px; }
+}
+@container clinical-navigation (min-width: 56rem) {
+  .clinic-history-declaration-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) minmax(0, 1fr) minmax(160px, 1fr); }
+  .clinic-history-medical-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container clinical-navigation (min-width: 58rem) {
+  .clinic-clinical-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@container clinical-navigation (max-width: 22rem) {
+  .clinic-clinical-kpis .clinic-kpi-heading { gap: 6px; }
+  .clinic-clinical-kpis .clinic-summary-icon { width: 20px; height: 20px; }
+  .clinic-clinical-kpis .clinic-kpi-value[data-textual="true"] { font-size: 19px; }
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .clinic-history-workspace :is([data-slot="button"], [data-slot="input"], [data-slot="select-trigger"]), .clinic-history-readonly { min-height: 44px; }
+  .clinic-history-reference-link { min-height: 44px; }
+}
+@media (max-width: 479px) {
+  .clinic-history-workspace [data-slot="card"]:not(.clinic-kpi-card) > :is([data-slot="card-header"], [data-slot="card-content"]) { padding-inline: 12px; }
+  .clinic-history-workspace .clinic-demo-notice { padding: 7px 9px; }
+  .clinic-history-workspace .clinic-history-export[data-slot="card"] > [data-slot="card-header"] { padding: 0; }
+  .clinic-history-medical-table table, .clinic-history-medical-table tbody { display: block; }
+  .clinic-history-medical-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .clinic-history-medical-table { position: relative; }
+  .clinic-history-medical-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 8px 10px; }
+  .clinic-history-medical-table tbody td:first-child { grid-column: 1 / -1; padding: 0; }
+  .clinic-history-medical-table tbody td { padding: 0; text-align: left; }
+  .clinic-history-medical-table .clinic-clinical-checkbox { min-height: 44px; justify-content: flex-start; gap: 8px; }
+  .clinic-history-medical-table .clinic-clinical-checkbox label { min-height: 44px; }
+  .clinic-history-condition-label { position: static; width: auto; height: auto; clip-path: none; overflow: visible; }
+  .clinic-history-habit { grid-template-columns: minmax(0, 1fr); }
+  .clinic-history-export-actions > [data-slot="button"] { flex: 1 1 100%; }
+}

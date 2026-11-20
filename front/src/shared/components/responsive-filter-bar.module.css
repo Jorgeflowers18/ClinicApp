@@ -1,0 +1,15 @@
+.root { container: filter-bar / inline-size; min-width: 0; }
+.line { display: flex; min-width: 0; align-items: end; gap: 8px; }
+.search { flex: 1 1 220px; min-width: 0; }
+.search > div { max-width: none; }
+.desktop { display: none; min-width: 0; align-items: end; gap: 8px; flex: 1 1 auto; }
+.desktop > * { flex: 1 1 auto; min-width: 0; }
+.root[data-wide="true"] .desktop, .root[data-wide="true"] .desktop > * { flex: 0 0 auto; }
+.mobileTrigger { flex-shrink: 0; }
+.panel:global([data-slot="sheet-content"]) { display: flex; flex-direction: column; gap: 0; max-height: 85dvh; overflow: hidden; }
+.body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 16px 16px; }
+.footer { display: flex; flex-shrink: 0; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
+.footer > button:last-child { min-height: 44px; }
+@container filter-bar (min-width: 48rem) { .root:not([data-wide="true"]) .desktop { display: flex; } .root:not([data-wide="true"]) .mobileTrigger { display: none; } }
+@container filter-bar (min-width: 32rem) { .root[data-compact="true"] .desktop { display: flex; } .root[data-compact="true"] .mobileTrigger { display: none; } }
+@container filter-bar (min-width: 60rem) { .root[data-wide="true"] .desktop { display: flex; } .root[data-wide="true"] .mobileTrigger { display: none; } }

@@ -1,10 +1,12 @@
-import { createContext, useContext } from "react"
+import { createContext, useContext, type ReactNode } from "react"
 
 interface CalendarPresentation {
   date: Date
   counts: ReadonlyMap<string, number>
   treatmentNames: ReadonlyMap<string, string>
   goToToday: () => void
+  toolbarHost: HTMLElement | null
+  filters: ReactNode
 }
 
 export const CalendarPresentationContext = createContext<CalendarPresentation | null>(null)

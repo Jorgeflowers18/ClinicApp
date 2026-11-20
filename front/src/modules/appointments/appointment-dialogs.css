@@ -1,0 +1,32 @@
+/* Scoped to appointment editors, including their existing patient-profile entry points. */
+.clinic-schedule-dialog[data-slot="dialog-content"] { --content-control-height: 40px; display: flex; flex-direction: column; gap: 0; width: min(860px, calc(100vw - 48px)); max-width: calc(100vw - 48px); max-height: 88dvh; padding: 0; overflow: hidden; }
+.clinic-schedule-heading[data-slot="dialog-header"] { flex: 0 0 auto; display: flex; flex-direction: row; align-items: start; justify-content: space-between; gap: 16px; padding: 20px 24px 16px; border-bottom: 1px solid var(--border); }
+.clinic-schedule-heading > div { display: grid; gap: 6px; min-width: 0; }
+.clinic-schedule-heading [data-slot="dialog-title"] { font-size: 20px; line-height: 26px; font-weight: 620; }
+.clinic-schedule-heading [data-slot="dialog-description"] { font-size: 13px; line-height: 19px; }
+.clinic-schedule-heading > button { flex-shrink: 0; width: 40px; height: 40px; }
+.clinic-schedule-form { display: flex; flex: 1; min-height: 0; min-width: 0; flex-direction: column; overflow: hidden; }
+.clinic-schedule-fields[data-slot="field-group"] { display: grid; flex: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 16px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scroll-padding-block: 16px; padding: 20px 24px; }
+.clinic-schedule-fields > [data-slot="field"] { min-width: 0; gap: 6px; }
+.clinic-schedule-fields [data-slot="field-label"] { font-size: 13px; line-height: 18px; }
+.clinic-schedule-fields :is(input, textarea, [data-slot="select-trigger"]) { width: 100%; min-width: 0; min-height: 40px; height: auto; font-size: 14px; scroll-margin-block: 16px; }
+.clinic-schedule-fields [data-slot="select-trigger"] { padding-block: 8px; align-items: center; }
+.clinic-schedule-fields [data-slot="select-value"] { display: block; overflow: visible; white-space: normal; overflow-wrap: anywhere; -webkit-line-clamp: unset; line-clamp: unset; line-height: 20px; }
+.clinic-schedule-fields textarea[data-slot="textarea"] { min-height: 80px; resize: vertical; }
+.clinic-schedule-times { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; }
+.clinic-schedule-times > [data-slot="field"] { min-width: 0; gap: 6px; }
+.clinic-schedule-wide { grid-column: 1 / -1; }
+.clinic-schedule-form > [data-form-actions] { position: static; flex: 0 0 auto; padding: 12px 24px max(12px, env(safe-area-inset-bottom)); }
+.clinic-schedule-options [data-slot="select-item"] { min-height: 36px; line-height: 20px; }
+@media (max-width: 1023px), (pointer: coarse) {
+  .clinic-schedule-fields :is(input, textarea, [data-slot="select-trigger"]), .clinic-schedule-heading > button { min-height: 44px; }
+  .clinic-schedule-fields :is(input, textarea, [data-slot="select-trigger"]) { font-size: 16px; }
+  .clinic-schedule-options [data-slot="select-item"] { min-height: 44px; }
+}
+@media (max-width: 767px) {
+  .clinic-schedule-dialog[data-slot="dialog-content"] { inset: 0; translate: 0; width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; }
+  .clinic-schedule-heading[data-slot="dialog-header"] { padding: max(12px, env(safe-area-inset-top)) 16px 12px; gap: 8px; }
+  .clinic-schedule-fields[data-slot="field-group"] { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 14px; }
+  .clinic-schedule-times { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .clinic-schedule-form > [data-form-actions] { padding-inline: 16px; }
+}

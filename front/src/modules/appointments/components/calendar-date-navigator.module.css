@@ -15,7 +15,7 @@
   --selector-today-surface: var(--secondary);
   --selector-today-text: var(--secondary-foreground);
   --selector-panel-border: var(--border);
-  width: 400px;
+  width: 360px;
   max-width: min(calc(100vw - 16px), var(--available-width));
   max-height: min(620px, var(--available-height));
   min-height: 0;

@@ -1,0 +1,74 @@
+/* Scoped to the encounter page, outside the unchanged dental editor. */
+.clinic-encounter { container: encounter / inline-size; width: 100%; max-width: 1280px; margin-inline: auto; padding-bottom: 8px; }
+.clinic-encounter-stepper { padding: 2px 2px 8px; scrollbar-width: thin; overscroll-behavior-inline: contain; }
+.clinic-encounter-step { position: relative; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--muted-foreground); background: var(--card); cursor: pointer; transition: background-color 160ms, border-color 160ms; }
+.clinic-encounter-step:hover { background: var(--muted); color: var(--foreground); }
+.clinic-encounter-step:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.clinic-encounter-step[data-state="complete"] { color: var(--foreground); }
+.clinic-encounter-step[data-state="complete"] .clinic-encounter-step-number { color: var(--success); background: var(--success-surface); }
+.clinic-encounter-step[data-state="error"] { border-color: var(--destructive); color: var(--destructive); }
+.clinic-encounter-step[data-state="active"] { border-color: var(--primary); color: var(--primary-foreground); background: var(--primary); }
+.clinic-encounter-step-number { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%; background: var(--muted); color: var(--muted-foreground); font-size: 12px; }
+.clinic-encounter-step[data-state="active"] .clinic-encounter-step-number { color: var(--primary); background: var(--primary-foreground); }
+.clinic-encounter-panel { gap: 16px; padding-block: 16px; box-shadow: none; }
+.clinic-encounter-panel > [data-slot="card-header"], .clinic-encounter-panel > [data-slot="card-content"] { padding-inline: 16px; min-width: 0; }
+.clinic-encounter-heading { font-size: 18px; outline: none; scroll-margin-top: 20px; }
+.clinic-encounter [data-slot="field"], .clinic-encounter [data-slot="field-set"] { min-width: 0; }
+.clinic-encounter [data-slot="field-group"] { gap: 20px; }
+.clinic-encounter [data-slot="field-label"] { font-size: 13px; }
+.clinic-encounter [data-slot="input"], .clinic-encounter [data-slot="select-trigger"], .clinic-encounter [data-slot="button"] { min-height: 40px; }
+.clinic-encounter textarea { min-height: 104px; resize: vertical; }
+.clinic-encounter [data-slot="field-set"] + [data-slot="field-set"] { padding-top: 16px; border-top: 1px solid var(--border); }
+.clinic-encounter-reason-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.clinic-encounter-vitals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 900px; }
+.clinic-encounter-bmi { display: flex; align-items: center; min-height: 40px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--muted); }
+.clinic-encounter-risk { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 20px; max-width: 760px; }
+.clinic-encounter-risk > .clinic-encounter-risk-items { display: contents; }
+.clinic-encounter-exams { display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--border); border-radius: 10px; overflow: clip; }
+.clinic-encounter-exam { display: grid; align-content: start; gap: 8px; min-width: 0; padding: 12px; border-bottom: 1px solid var(--border); }
+.clinic-encounter-exam:last-child { border-bottom: 0; }
+.clinic-encounter-exam > .clinic-clinical-choices { max-width: 420px; }
+.clinic-encounter-diagnosis-row { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
+.clinic-encounter-diagnosis-row > :first-child { color: var(--muted-foreground); font-size: 13px; }
+.clinic-encounter-diagnosis-row > :last-child { justify-self: end; }
+.clinic-encounter-empty { border: 1px dashed var(--border); border-radius: 8px; padding: 14px; }
+.clinic-encounter-review-identity { display: grid; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.clinic-encounter-review dt { color: var(--muted-foreground); font-size: 13px; }
+.clinic-encounter-review-identity dd { margin-top: 4px; font-weight: 500; }
+.clinic-encounter-review-errors { padding: 12px 16px; border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border)); border-radius: 8px; background: var(--warning-surface); }
+.clinic-encounter-review-errors li { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; font-size: 13px; }
+.clinic-encounter-review-errors [data-slot="button"] { padding-left: 0; }
+.clinic-encounter-review-sections { display: grid; gap: 12px; }
+.clinic-encounter-review-sections > section { margin-block: 0; border: 1px solid var(--border); border-radius: 10px; padding: 12px; min-width: 0; }
+.clinic-encounter-review-sections h4 { font-size: 14px; letter-spacing: normal; text-transform: none; color: var(--foreground); }
+.clinic-encounter-review-sections dl { display: grid; gap: 12px; }
+.clinic-encounter-review-sections dl > div { display: block; }
+.clinic-encounter-review dd { overflow-wrap: anywhere; }
+.clinic-encounter-review-notice { display: flex; align-items: flex-start; gap: 8px; color: var(--muted-foreground); }
+@container encounter (min-width: 40rem) {
+  .clinic-encounter-reason-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, .8fr) minmax(0, 1fr); }
+  .clinic-encounter-vitals { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .clinic-encounter-risk { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .clinic-encounter-diagnosis-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; align-items: start; }
+  .clinic-encounter-diagnosis-row > :first-child { grid-column: 1 / -1; }
+  .clinic-encounter-diagnosis-row > :nth-child(4) { grid-column: 1 / 3; }
+  .clinic-encounter-diagnosis-row > :last-child { grid-column: 3; grid-row: 2; margin-top: 25px; }
+  .clinic-encounter-review-identity { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .clinic-encounter-review-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .clinic-encounter-review-sections > :last-child { grid-column: 1 / -1; }
+}
+@container encounter (min-width: 57rem) {
+  .clinic-encounter-exams { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .clinic-encounter-exam:nth-child(odd) { border-right: 1px solid var(--border); }
+  .clinic-encounter-exam:nth-last-child(-n + 2) { border-bottom: 0; }
+}
+@media (max-width: 1023px) {
+  .clinic-encounter-step, .clinic-encounter [data-slot="input"], .clinic-encounter [data-slot="select-trigger"], .clinic-encounter [data-slot="button"], .clinic-encounter-bmi { min-height: 44px; }
+}
+@media (max-width: 479px) {
+  .clinic-encounter-panel { padding-block: 16px; }
+  .clinic-encounter-panel > [data-slot="card-header"], .clinic-encounter-panel > [data-slot="card-content"] { padding-inline: 14px; }
+  .clinic-encounter-exam { padding: 10px; }
+  .clinic-clinical-choices[data-tone="exam"] .clinic-clinical-choice { padding-inline: 3px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .clinic-encounter-step { transition: none; } }

@@ -82,15 +82,15 @@ export function ExportCard({ context, getCurrentHistory, captureOdontogramImage,
   const busy = disabled || preparing
 
   return (
-    <Card>
+    <Card className="clinic-history-export">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <FileText className="size-4" />
           Exportar documentos clínicos
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap gap-2">
+      <CardContent>
+        <div className="clinic-history-export-actions">
           <Button variant="outline" disabled={busy} onClick={() => void print()}>
             <Printer />
             {preparing ? "Preparando documento..." : "Imprimir / Guardar PDF"}
@@ -104,7 +104,7 @@ export function ExportCard({ context, getCurrentHistory, captureOdontogramImage,
             Historia completa JSON
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="clinic-history-export-description text-muted-foreground">
           El PDF y el documento incluyen la imagen del odontograma tal como se ve en pantalla, los tratamientos
           propuestos, el consentimiento de datos y el listado de atenciones. El menú «Exportar» del editor sigue
           ofreciendo su propio informe PDF, imágenes, SVG y FHIR. Las fotos y los documentos originales se descargan

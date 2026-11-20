@@ -61,7 +61,7 @@ function MedicalBackgroundCard() {
           control={control}
           name="medicalBackground.denies"
           render={({ field }) => (
-            <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="clinic-history-medical-denies rounded-lg border bg-muted/30 p-3">
               <CheckboxItem
                 label={<span className="font-medium">Niega antecedentes relevantes</span>}
                 checked={field.value}
@@ -75,65 +75,69 @@ function MedicalBackgroundCard() {
           )}
         />
 
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">Antecedente</th>
-                <th className="w-24 px-3 py-2 text-center font-medium">Personal</th>
-                <th className="w-24 px-3 py-2 text-center font-medium">Familiar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {medicalConditionItems.map(([key, label]) => {
-                const condition = background.conditions[key]
-                const needsDetail = conditionsWithDetail.includes(key) && isConditionMarked(condition)
-                const detailError = errors.medicalBackground?.conditions?.[key]?.detail
-                return (
-                  <tr key={key} className="border-t align-top">
-                    <td className="px-3 py-2">
-                      <p>{label}</p>
-                      {needsDetail && (
-                        <div className="mt-1.5 max-w-md space-y-1">
-                          <Controller
-                            control={control}
-                            name={`medicalBackground.conditions.${key}.detail`}
-                            render={({ field }) => (
-                              <Input
-                                aria-label={`Detalle de ${label}`}
-                                placeholder={key === "otro" ? "Describe el antecedente" : "Cuál y cuándo"}
-                                aria-invalid={!!detailError}
-                                {...field}
-                              />
-                            )}
-                          />
-                          <FieldError errors={detailError ? [detailError] : undefined} />
-                        </div>
-                      )}
-                    </td>
-                    {(["personal", "family"] as const).map((type) => (
-                      <td key={type} className="px-3 py-2 text-center">
-                        <Controller
-                          control={control}
-                          name={`medicalBackground.conditions.${key}.${type}`}
-                          render={({ field }) => (
-                            <span className="inline-flex">
-                              <CheckboxItem
-                                label=""
-                                ariaLabel={`${label}: ${type === "personal" ? "personal" : "familiar"}`}
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </span>
-                          )}
-                        />
-                      </td>
-                    ))}
+        <div className="clinic-history-medical-columns">
+          {[medicalConditionItems.slice(0, Math.ceil(medicalConditionItems.length / 2)), medicalConditionItems.slice(Math.ceil(medicalConditionItems.length / 2))].map((items, groupIndex) => (
+            <div key={groupIndex} className="clinic-history-medical-table rounded-lg border">
+              <table className="w-full text-sm" aria-label={`Antecedentes médicos, grupo ${groupIndex + 1}`}>
+                <thead className="bg-muted/40 text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium">Antecedente</th>
+                    <th className="w-24 px-3 py-2 text-center font-medium">Personal</th>
+                    <th className="w-24 px-3 py-2 text-center font-medium">Familiar</th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {items.map(([key, label]) => {
+                    const condition = background.conditions[key]
+                    const needsDetail = conditionsWithDetail.includes(key) && isConditionMarked(condition)
+                    const detailError = errors.medicalBackground?.conditions?.[key]?.detail
+                    return (
+                      <tr key={key} className="border-t align-top">
+                        <td className="px-3 py-2">
+                          <p>{label}</p>
+                          {needsDetail && (
+                            <div className="mt-1.5 max-w-md space-y-1">
+                              <Controller
+                                control={control}
+                                name={`medicalBackground.conditions.${key}.detail`}
+                                render={({ field }) => (
+                                  <Input
+                                    aria-label={`Detalle de ${label}`}
+                                    placeholder={key === "otro" ? "Describe el antecedente" : "Cuál y cuándo"}
+                                    aria-invalid={!!detailError}
+                                    {...field}
+                                  />
+                                )}
+                              />
+                              <FieldError errors={detailError ? [detailError] : undefined} />
+                            </div>
+                          )}
+                        </td>
+                        {(["personal", "family"] as const).map((type) => (
+                          <td key={type} className="px-3 py-2 text-center">
+                            <Controller
+                              control={control}
+                              name={`medicalBackground.conditions.${key}.${type}`}
+                              render={({ field }) => (
+                                <span className="inline-flex">
+                                  <CheckboxItem
+                                    label={<><span className="sr-only">{label}: {type === "personal" ? "personal" : "familiar"}</span><span aria-hidden="true" className="clinic-history-condition-label">{type === "personal" ? "Personal" : "Familiar"}</span></>}
+                                    ariaLabel={`${label}: ${type === "personal" ? "personal" : "familiar"}`}
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </span>
+                              )}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
@@ -159,8 +163,8 @@ function AllergiesCard() {
           Las alertas y alergias se muestran destacadas en el encabezado de la historia y al registrar una atención.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <section aria-label="Alergias" className="space-y-3">
+      <CardContent className="clinic-history-allergies space-y-4">
+        <section aria-label="Alergias">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-medium">Alergias</h3>
             <Button
@@ -205,7 +209,7 @@ function AllergiesCard() {
           ))}
         </section>
 
-        <section aria-label="Medicación actual" className="space-y-3">
+        <section aria-label="Medicación actual">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-medium">Medicación actual</h3>
             <Button
@@ -250,9 +254,9 @@ function AllergiesCard() {
           ))}
         </section>
 
-        <section aria-label="Alertas" className="space-y-3">
+        <section aria-label="Alertas">
           <h3 className="text-sm font-medium">Alertas</h3>
-          <CheckboxListField name="allergiesAndMedication.alerts" options={medicalAlertItems} />
+          <CheckboxListField name="allergiesAndMedication.alerts" options={medicalAlertItems} className="clinic-history-checks" />
           {errors.allergiesAndMedication?.alerts && (
             <FieldError errors={[errors.allergiesAndMedication.alerts]} />
           )}
@@ -266,8 +270,8 @@ function HabitRow({ label, name, children }: { label: string; name: keyof Habits
   const { control } = useFormContext<RecordFormValues>()
   const answer = useWatch({ control, name: `habits.${name}.answer` }) as YesNo
   return (
-    <div className="grid gap-3 border-t py-3 first:border-t-0 first:pt-0 md:grid-cols-[minmax(0,14rem)_auto_minmax(0,1fr)] md:items-start">
-      <p className="text-sm font-medium md:pt-1">{label}</p>
+    <div className="clinic-history-habit">
+      <p className="text-sm font-medium">{label}</p>
       <ChoiceField name={`habits.${name}.answer`} label={label} options={yesNoItems} hideLabel />
       <div className="min-w-0">{answer === "si" && children}</div>
     </div>
@@ -281,7 +285,7 @@ function HabitsCard() {
         <CardTitle>Hábitos y factores de riesgo</CardTitle>
         <CardDescription>Al marcar «Sí» se piden sus características.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="clinic-history-habits">
         <HabitRow label="Tabaco / vapeo" name="tobacco">
           <TextField name="habits.tobacco.detail" label="Tipo, cantidad y años" />
         </HabitRow>
@@ -327,7 +331,7 @@ function DentalBackgroundCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <CheckboxListField name="dentalBackground.items" options={dentalBackgroundItems} columns={3} />
+        <CheckboxListField name="dentalBackground.items" options={dentalBackgroundItems} columns={3} className="clinic-history-checks" />
         <TextField
           name="dentalBackground.notes"
           label="Última consulta, tratamientos realizados y observaciones"
@@ -376,20 +380,19 @@ function PeriodontalBackgroundCard() {
         <CardTitle>Antecedentes y síntomas periodontales</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <CheckboxListField name="periodontalBackground.items" options={periodontalBackgroundItems} columns={3} />
-        <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+        <CheckboxListField name="periodontalBackground.items" options={periodontalBackgroundItems} columns={3} className="clinic-history-checks" />
+        <div className="clinic-history-repeat-summary space-y-2 rounded-lg border bg-muted/30">
           <p className="text-xs font-medium text-muted-foreground">Ya registrado en otras secciones</p>
           <ul className="grid gap-1.5 text-sm sm:grid-cols-2">
             {repeated.map((item) => (
-              <li key={item.label} className="flex flex-wrap items-baseline gap-x-1.5">
-                <span>{item.label}:</span>
-                <span className="font-medium">{item.value}</span>
+              <li key={item.label} className="min-w-0">
                 <button
                   type="button"
-                  className="text-xs text-primary underline-offset-2 hover:underline"
+                  className="clinic-history-reference-link"
                   onClick={() => goTo(item.section)}
                 >
-                  ya registrado en {item.sectionLabel}
+                  <span>{item.label}:</span><span className="font-medium">{item.value}</span>
+                  <span className="text-xs text-primary underline-offset-2 hover:underline">ya registrado en {item.sectionLabel}</span>
                 </button>
               </li>
             ))}

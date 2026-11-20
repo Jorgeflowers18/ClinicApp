@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 test.use({ timezoneId: "America/Guayaquil" })
@@ -12,7 +13,7 @@ const widths = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440, 1920]
 async function login(page: Page, theme: "light" | "dark", route = "/citas") {
   await page.clock.install({ time: new Date("2026-11-11T17:00:00Z") })
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -238,6 +239,9 @@ for (const theme of ["light", "dark"] as const) {
         const start = new Date(2026, 10, 11, 8, index * 15)
         mockAppointments.push({ id: `crowded_${index}`, patientId: `pat_${index % 5 + 1}`, professionalId: `prof_${index % 3 + 1}`, start: start.toISOString(), end: new Date(+start + 15 * 60000).toISOString(), status: statuses[index % statuses.length], notes: `Calendario de prueba ${index}`, createdAt: new Date().toISOString() })
       }
+      const client = "/src/shared/lib/query-client.ts"
+      const { queryClient } = await import(client)
+      await queryClient.invalidateQueries({ queryKey: ["appointments"] })
     })
     await page.getByRole("link", { name: "Citas", exact: true }).click()
     await expect(toolbarOf(page)).toBeVisible()

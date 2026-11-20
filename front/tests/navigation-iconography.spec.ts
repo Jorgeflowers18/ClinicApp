@@ -1,17 +1,18 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 const widths = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440, 1920]
 const icons = [
   ["Panel", "layout-dashboard"], ["Pacientes", "users-round"], ["Citas", "calendar-days"],
   ["Historial clínico", "clipboard-list"], ["Tratamientos", "stethoscope"], ["Inventario", "package"],
-  ["Finanzas", "wallet"], ["Reportes", "chart-no-axes-combined"], ["Notificaciones", "bell"],
+  ["Finanzas", "wallet"], ["Reportes", "chart-no-axes-combined"], ["Mensajería", "messages-square"],
 ]
 const toggle = (page: Page) => page.locator("[data-sidebar-toggle]")
 const drawer = (page: Page) => page.locator("#mobile-sidebar")
 
 async function login(page: Page, theme: "light" | "dark") {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -78,7 +79,8 @@ for (const theme of ["light", "dark"] as const) {
         await expect(drawer(page)).toBeVisible()
         await expect(drawer(page).getByRole("button", { name: /Cerrar/ })).toHaveCount(0)
         await expect(drawer(page)).toHaveCSS("top", "64px")
-        expect(await toggle(page).evaluate((node) => {
+        // The first-login toast can still be animating over the Header after setup.
+        await expect.poll(() => toggle(page).evaluate((node) => {
           const box = node.getBoundingClientRect()
           const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
           return hit === node || node.contains(hit)
@@ -116,7 +118,7 @@ for (const theme of ["light", "dark"] as const) {
       const errors: string[] = []
       page.on("pageerror", (error) => errors.push(error.message))
       await login(page, theme)
-      const bell = page.getByRole("button", { name: /^Alertas globales:/ })
+      const bell = page.getByRole("button", { name: /^Notificaciones:/ })
       await expect(bell).toHaveAttribute("aria-label", /\d+ sin leer/)
       const count = await bell.getAttribute("aria-label")
       await toggle(page).tap()
@@ -133,7 +135,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(drawer(page)).toBeVisible()
       await bell.tap()
       await expect(drawer(page)).not.toBeVisible()
-      await expect(page.getByRole("dialog", { name: "Alertas globales", exact: true })).toBeVisible()
+      await expect(page.getByRole("dialog", { name: "Notificaciones", exact: true })).toBeVisible()
       await expect(bell).toHaveAttribute("aria-label", count!)
       await page.keyboard.press("Escape")
       await toggle(page).tap()

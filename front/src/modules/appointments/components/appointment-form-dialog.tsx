@@ -5,14 +5,7 @@ import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { DialogFooter } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -29,6 +22,7 @@ import {
 } from "../api/appointments.queries"
 import { appointmentSchema, type AppointmentFormValues } from "../types/appointment.types"
 import type { Appointment } from "../types/appointment.types"
+import { ScheduleFormDialog } from "./schedule-form-dialog"
 
 interface AppointmentFormDialogProps {
   open: boolean
@@ -64,7 +58,7 @@ export function AppointmentFormDialog({
     reset,
     getValues,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<AppointmentFormValues>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
@@ -137,19 +131,14 @@ export function AppointmentFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? "Editar cita" : "Nueva cita"}</DialogTitle>
-          <DialogDescription>
-            {isEditMode
+    <ScheduleFormDialog open={open} onOpenChange={onOpenChange} dirty={isDirty}
+      busy={isSubmitting || createAppointment.isPending || updateAppointment.isPending}
+      title={isEditMode ? "Editar cita" : "Nueva cita"}
+      description={isEditMode
               ? "Modifica los datos de la cita. Se valida disponibilidad del profesional y del consultorio."
-              : "Agenda una nueva cita. Se valida disponibilidad del profesional y del consultorio."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <FieldGroup>
+              : "Agenda una nueva cita. Se valida disponibilidad del profesional y del consultorio."}>
+      {requestClose => <form onSubmit={handleSubmit(onSubmit)} className="clinic-schedule-form">
+          <FieldGroup className="clinic-schedule-fields">
             <Field data-invalid={!!errors.patientId}>
               <FieldLabel htmlFor="patientId">Paciente</FieldLabel>
               <Controller
@@ -160,7 +149,7 @@ export function AppointmentFormDialog({
                     <SelectTrigger id="patientId" className="w-full">
                       <SelectValue placeholder="Selecciona un paciente..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="clinic-schedule-options">
                       {patientOptions.map((patient) => (
                         <SelectItem key={patient.id} value={patient.id}>
                           {patient.firstName} {patient.lastName}
@@ -179,11 +168,11 @@ export function AppointmentFormDialog({
                 control={control}
                 name="professionalId"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries((professionals ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="professionalId" className="w-full">
                       <SelectValue placeholder="Selecciona un profesional..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="clinic-schedule-options">
                       {professionals?.map((professional) => (
                         <SelectItem key={professional.id} value={professional.id}>
                           {professional.name} · {professional.specialty}
@@ -203,13 +192,14 @@ export function AppointmentFormDialog({
                 name="treatmentId"
                 render={({ field }) => (
                   <Select
+                    items={Object.fromEntries((treatments ?? []).map(item => [item.id, item.name]))}
                     value={field.value}
                     onValueChange={(value) => handleTreatmentChange(value, field.onChange)}
                   >
                     <SelectTrigger id="treatmentId" className="w-full">
                       <SelectValue placeholder="Selecciona un tratamiento..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="clinic-schedule-options">
                       {treatments?.map((treatment) => (
                         <SelectItem key={treatment.id} value={treatment.id}>
                           {treatment.name} · {treatment.durationMinutes} min
@@ -227,11 +217,11 @@ export function AppointmentFormDialog({
                 control={control}
                 name="roomId"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries((rooms ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="roomId" className="w-full">
                       <SelectValue placeholder="Selecciona un consultorio..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="clinic-schedule-options">
                       {rooms?.map((room) => (
                         <SelectItem key={room.id} value={room.id}>
                           {room.name}
@@ -243,7 +233,7 @@ export function AppointmentFormDialog({
               />
             </Field>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="clinic-schedule-times clinic-schedule-wide">
               <Field data-invalid={!!errors.date}>
                 <FieldLabel htmlFor="date">Fecha</FieldLabel>
                 <Input id="date" type="date" aria-invalid={!!errors.date} {...register("date")} />
@@ -263,23 +253,22 @@ export function AppointmentFormDialog({
               </Field>
             </div>
 
-            <Field>
+            <Field className="clinic-schedule-wide">
               <FieldLabel htmlFor="notes">Notas</FieldLabel>
               <Textarea id="notes" rows={2} {...register("notes")} />
             </Field>
           </FieldGroup>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" disabled={isSubmitting} onClick={requestClose}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Guardando..." : isEditMode ? "Guardar cambios" : "Agendar cita"}
             </Button>
           </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </form>}
+    </ScheduleFormDialog>
   )
 }
 

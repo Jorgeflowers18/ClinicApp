@@ -1,4 +1,6 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
+import { settleCalendarLayout } from "./helpers/calendar-layout"
 
 test.use({ timezoneId: "America/Guayaquil" })
 test.describe.configure({ mode: "parallel" })
@@ -10,7 +12,7 @@ const dayOf = (page: Page, date: string) => popupOf(page).locator(`button[data-d
 async function login(page: Page, theme: "light" | "dark") {
   await page.clock.install({ time: new Date("2026-11-11T17:00:00Z") })
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -36,7 +38,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(popupOf(page)).toHaveCount(0)
     await triggerOf(page).click()
     const popup = popupOf(page)
-    await expect(popup).toHaveCSS("width", "400px")
+    await expect(popup).toHaveCSS("width", "360px")
     await expect(popup).toHaveCSS("border-radius", "20px")
     await expect(popup).toHaveCSS("background-color", theme === "dark" ? "rgb(15, 16, 17)" : "rgb(255, 255, 255)")
     await expect(popup.locator('[data-slot="popover-title"]')).toHaveCSS("font-size", "18px")
@@ -80,17 +82,17 @@ for (const theme of ["light", "dark"] as const) {
     await previous.focus()
     await page.keyboard.press("Enter")
     await expect(popup.getByLabel("Mes", { exact: true })).toContainText("octubre")
-    await expect(triggerOf(page)).toHaveText("15 de noviembre de 2026")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 15 de noviembre de 2026")
     await popup.getByRole("button", { name: "Mes siguiente", exact: true }).click()
     await dayOf(page, "26/10/2026").click()
     await expect(popup).toHaveCount(0)
-    await expect(triggerOf(page)).toHaveText("26 de octubre de 2026")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 26 de octubre de 2026")
     await expect(triggerOf(page)).toBeFocused()
     await triggerOf(page).click()
     await footerOf(page).getByRole("button", { name: "Hoy", exact: true }).focus()
     await page.keyboard.press("Enter")
     await expect(popup).toHaveCount(0)
-    await expect(triggerOf(page)).toHaveText("11 de noviembre de 2026")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 11 de noviembre de 2026")
     await expect(page.locator(".clinic-calendar-frame")).toHaveAttribute("data-calendar-view", "week")
     expect(await snapshot(page)).toBe(before)
   })
@@ -100,6 +102,7 @@ for (const theme of ["light", "dark"] as const) {
     const measurements = []
     for (const size of [...[320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440, 1920].map((width) => ({ width, height: 1000 })), { width: 844, height: 390 }, { width: 320, height: 568 }]) {
       await page.setViewportSize(size)
+      await settleCalendarLayout(page)
       await triggerOf(page).click()
       const popup = popupOf(page)
       await expect(popup.locator(".rdp-weekday")).toHaveCount(7)

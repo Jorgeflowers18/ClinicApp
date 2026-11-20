@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Info } from "lucide-react"
+import { Info, CalendarDays, ChartNoAxesCombined, Stethoscope, Package } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AdaptiveTabs } from "@/components/ui/adaptive-tabs"
@@ -14,6 +14,7 @@ import { ProductivityReportTab } from "../components/productivity-report-tab"
 import { TreatmentsReportTab } from "../components/treatments-report-tab"
 import { getPresetPeriod } from "../lib/period"
 import type { ReportPeriodState } from "../types/report.types"
+import "../reports.css"
 
 export function ReportsPage() {
   const [state, setState] = useState<ReportPeriodState>({
@@ -22,7 +23,7 @@ export function ReportsPage() {
   })
 
   return (
-    <div className="space-y-4">
+    <div className="reports-module space-y-4">
       <PageHeader
         title="Reportes"
         description="Indicadores de agenda, productividad, tratamientos e inventario."
@@ -31,7 +32,7 @@ export function ReportsPage() {
       <PeriodSelector value={state} onChange={setState} />
 
       {env.useMockApi && (
-        <Alert>
+        <Alert className="report-demo">
           <Info className="size-4" />
           <AlertTitle>Datos de demostración</AlertTitle>
           <AlertDescription>
@@ -43,12 +44,13 @@ export function ReportsPage() {
       )}
 
       <AdaptiveTabs
+        variant="line"
         defaultValue="agenda"
         items={[
-          { value: "agenda", label: "Agenda", accessibleLabel: "Agenda" },
-          { value: "productividad", label: "Productividad", accessibleLabel: "Productividad" },
-          { value: "tratamientos", label: "Tratamientos", accessibleLabel: "Tratamientos" },
-          { value: "inventario", label: "Inventario", accessibleLabel: "Inventario" },
+          { value: "agenda", label: <><CalendarDays aria-hidden="true" />Agenda</>, accessibleLabel: "Agenda" },
+          { value: "productividad", label: <><ChartNoAxesCombined aria-hidden="true" />Productividad</>, accessibleLabel: "Productividad" },
+          { value: "tratamientos", label: <><Stethoscope aria-hidden="true" />Tratamientos</>, accessibleLabel: "Tratamientos" },
+          { value: "inventario", label: <><Package aria-hidden="true" />Inventario</>, accessibleLabel: "Inventario" },
         ]}
       >
         <TabsContent value="agenda" className="pt-4">

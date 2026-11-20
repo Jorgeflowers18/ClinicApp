@@ -1,189 +1,38 @@
+import { useRef } from "react"
+import { FormProvider, Controller, useForm, useWatch, type FieldErrors } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, useForm } from "react-hook-form"
-import { toast } from "sonner"
-
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { getErrorMessage } from "@/shared/lib/error-message"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { FieldError } from "@/components/ui/field"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
+import { getErrorMessage } from "@/shared/lib/error-message"
+import { useCreateSterilizationCycle } from "../api/inventory.queries"
+import { useInventoryCatalog } from "../hooks/use-inventory-catalog"
+import { useInventoryAccordion } from "../hooks/use-inventory-accordion"
+import { useInventorySubmit } from "../hooks/use-inventory-submit"
+import { sterilizationCycleSchema, sterilizationResultLabels, sterilizationResults, type SterilizationCycleFormValues } from "../types/inventory.types"
+import { InventoryDialog } from "./inventory-dialog"
+import { InventoryField, InventoryFormError } from "./inventory-form-fields"
+import { InventorySections } from "./inventory-sections"
 
-import { useCreateSterilizationCycle, useInventoryList } from "../api/inventory.queries"
-import {
-  sterilizationCycleSchema,
-  sterilizationResultLabels,
-  sterilizationResults,
-  type SterilizationCycleFormValues,
-} from "../types/inventory.types"
-
-interface SterilizationCycleFormDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export function SterilizationCycleFormDialog({ open, onOpenChange }: SterilizationCycleFormDialogProps) {
-  const { data: inventoryPage } = useInventoryList({ page: 1, pageSize: 100 })
-  const instrumentalItems = (inventoryPage?.items ?? []).filter((item) => item.kind === "instrumental")
-  const { data: professionals } = useProfessionals()
-  const createCycle = useCreateSterilizationCycle()
-
-  const {
-    register,
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<SterilizationCycleFormValues>({
-    resolver: zodResolver(sterilizationCycleSchema),
-    defaultValues: {
-      itemIds: [],
-      performedAt: new Date().toISOString().slice(0, 10),
-      result: "aprobado",
-      responsibleProfessionalId: "",
-      notes: "",
-    },
-  })
-
-  async function onSubmit(values: SterilizationCycleFormValues) {
-    try {
-      await createCycle.mutateAsync(values)
-      toast.success("Ciclo de esterilización registrado")
-      reset({
-        itemIds: [],
-        performedAt: new Date().toISOString().slice(0, 10),
-        result: "aprobado",
-        responsibleProfessionalId: "",
-        notes: "",
-      })
-      onOpenChange(false)
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Nuevo ciclo de esterilización</DialogTitle>
-          <DialogDescription>Registra qué instrumental se esterilizó y el resultado del ciclo.</DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <FieldGroup>
-            <Field data-invalid={!!errors.itemIds}>
-              <FieldLabel>Instrumental</FieldLabel>
-              {instrumentalItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No hay insumos marcados como instrumental esterilizable. Márcalos desde el formulario de insumo.
-                </p>
-              ) : (
-                <Controller
-                  control={control}
-                  name="itemIds"
-                  render={({ field }) => (
-                    <div className="space-y-2 rounded-lg border p-3">
-                      {instrumentalItems.map((item) => (
-                        <label key={item.id} className="flex items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={field.value.includes(item.id)}
-                            onCheckedChange={(checked) =>
-                              field.onChange(
-                                checked
-                                  ? [...field.value, item.id]
-                                  : field.value.filter((id) => id !== item.id)
-                              )
-                            }
-                          />
-                          {item.name}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                />
-              )}
-              <FieldError errors={errors.itemIds ? [errors.itemIds] : undefined} />
-            </Field>
-
-            <Field data-invalid={!!errors.performedAt}>
-              <FieldLabel htmlFor="performedAt">Fecha</FieldLabel>
-              <Input id="performedAt" type="date" aria-invalid={!!errors.performedAt} {...register("performedAt")} />
-              <FieldError errors={errors.performedAt ? [errors.performedAt] : undefined} />
-            </Field>
-
-            <Field data-invalid={!!errors.result}>
-              <FieldLabel htmlFor="result">Resultado</FieldLabel>
-              <Controller
-                control={control}
-                name="result"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="result" className="w-full">
-                      <SelectValue placeholder="Selecciona..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sterilizationResults.map((result) => (
-                        <SelectItem key={result} value={result}>
-                          {sterilizationResultLabels[result]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <FieldError errors={errors.result ? [errors.result] : undefined} />
-            </Field>
-
-            <Field data-invalid={!!errors.responsibleProfessionalId}>
-              <FieldLabel htmlFor="responsibleProfessionalId">Responsable</FieldLabel>
-              <Controller
-                control={control}
-                name="responsibleProfessionalId"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="responsibleProfessionalId" className="w-full">
-                      <SelectValue placeholder="Selecciona un profesional..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {professionals?.map((professional) => (
-                        <SelectItem key={professional.id} value={professional.id}>
-                          {professional.name} · {professional.specialty}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <FieldError errors={errors.responsibleProfessionalId ? [errors.responsibleProfessionalId] : undefined} />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="notes">Notas (opcional)</FieldLabel>
-              <Textarea id="notes" rows={2} {...register("notes")} />
-            </Field>
-          </FieldGroup>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Registrar ciclo"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
+interface Props { open: boolean; onOpenChange: (open: boolean) => void }
+export function SterilizationCycleFormDialog(props: Props) { return props.open ? <CycleEditor onClose={() => props.onOpenChange(false)} /> : null }
+function CycleEditor({ onClose }: { onClose: () => void }) {
+  const inventory = useInventoryCatalog(), professionals = useProfessionals(), create = useCreateSterilizationCycle()
+  const instruments = (inventory.data ?? []).filter(item => item.kind === "instrumental")
+  const form = useForm<SterilizationCycleFormValues>({ resolver: zodResolver(sterilizationCycleSchema), shouldUnregister: false, shouldFocusError: false, defaultValues: { itemIds: [], performedAt: new Date().toISOString().slice(0, 10), result: "aprobado", responsibleProfessionalId: "", notes: "" } })
+  const selected = useWatch({ control: form.control, name: "itemIds" })
+  const element = useRef<HTMLFormElement>(null), accordion = useInventoryAccordion(element)
+  const reveal = (field: string) => accordion.request(field === "itemIds" ? "instruments" : field === "result" || field === "notes" ? "results" : "general", `[id="${CSS.escape(field)}"]`)
+  const save = useInventorySubmit(form, values => create.mutateAsync(values), "Ciclo de esterilización registrado", reveal)
+  const invalid = (errors: FieldErrors<SterilizationCycleFormValues>) => { const first = Object.keys(errors)[0]; if(first) reveal(first) }
+  const { errors, isDirty, isSubmitting } = form.formState
+  return <InventoryDialog size="cycle" title="Nuevo ciclo de esterilización" description="Registra el instrumental, el responsable y el resultado real del ciclo." dirty={isDirty} pending={isSubmitting} onClose={onClose}>
+    {({ close, cancel }) => <FormProvider {...form}><form ref={element} className="inventory-editor" noValidate onSubmit={event => void form.handleSubmit(values => save(values, close), invalid)(event)}><InventoryFormError /><fieldset disabled={isSubmitting}><InventorySections controller={accordion} groups={[
+      { id: "general", title: "Información del ciclo", invalid: Boolean(errors.performedAt || errors.responsibleProfessionalId), content: <><div className="inventory-form-grid"><InventoryField name="performedAt" label="Fecha" type="date" /><InventoryField name="responsibleProfessionalId" label="Responsable" options={(professionals.data ?? []).map(professional => ({ value: professional.id, label: professional.name + " · " + professional.specialty }))} disabled={professionals.isPending || professionals.isError} /></div>{professionals.isError && <Alert variant="destructive"><AlertTitle>No se pudieron cargar los responsables</AlertTitle><AlertDescription>{getErrorMessage(professionals.error)}</AlertDescription><Button type="button" variant="outline" onClick={() => void professionals.refetch()}>Reintentar</Button></Alert>}</> },
+      { id: "instruments", title: "Instrumental incluido", summary: `${selected.length} seleccionados`, invalid: Boolean(errors.itemIds), content: <><div id="itemIds" tabIndex={-1} aria-describedby={errors.itemIds ? "itemIds-error" : undefined}>{inventory.isPending ? <p className="inventory-hint">Cargando instrumental…</p> : inventory.isError ? <Alert variant="destructive"><AlertTitle>No se pudo cargar el instrumental</AlertTitle><AlertDescription>{getErrorMessage(inventory.error)}</AlertDescription><Button type="button" variant="outline" onClick={() => void inventory.refetch()}>Reintentar</Button></Alert> : instruments.length === 0 ? <p className="inventory-hint">No hay insumos marcados como instrumental esterilizable. Márcalos desde el formulario de insumo.</p> : <Controller control={form.control} name="itemIds" render={({ field }) => <div className="inventory-instrument-list">{instruments.map(item => <label key={item.id}><Checkbox checked={field.value.includes(item.id)} onCheckedChange={checked => field.onChange(checked ? [...field.value, item.id] : field.value.filter(id => id !== item.id))} /><span>{item.name}</span></label>)}</div>} />}</div><FieldError id="itemIds-error" errors={errors.itemIds ? [errors.itemIds] : undefined} /></> },
+      { id: "results", title: "Resultado y observaciones", invalid: Boolean(errors.result || errors.notes), content: <><InventoryField name="result" label="Resultado" options={sterilizationResults.map(value => ({ value, label: sterilizationResultLabels[value] }))} /><InventoryField name="notes" label="Notas (opcional)" type="textarea" /></> },
+    ]} /></fieldset><div className="inventory-form-actions"><Button type="button" variant="outline" disabled={isSubmitting} onClick={cancel}>Cancelar</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Guardando..." : "Registrar ciclo"}</Button></div></form></FormProvider>}
+  </InventoryDialog>
 }

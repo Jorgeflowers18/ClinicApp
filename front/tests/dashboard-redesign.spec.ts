@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 test.use({ timezoneId: "America/Guayaquil" })
@@ -7,7 +8,7 @@ const chart = (page: Page) => page.getByRole("region", { name: "Citas del mes", 
 
 async function login(page: Page, theme: "light" | "dark", beforeDashboard?: () => Promise<void>) {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -78,7 +79,7 @@ export function AppointmentDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent variant="medium">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {patientName}
@@ -88,7 +89,7 @@ export function AppointmentDetailDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-2 text-sm">
+        <DialogBody className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Profesional</span>
             <span className="font-medium">{professionalName}</span>
@@ -142,7 +143,7 @@ export function AppointmentDetailDialog({
               <p>{appointment.notes}</p>
             </div>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter className="flex-wrap gap-2 sm:justify-between">
           <div className="flex flex-wrap gap-2">

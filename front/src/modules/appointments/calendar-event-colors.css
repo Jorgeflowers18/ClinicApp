@@ -1,0 +1,27 @@
+/* Local semantic tokens: shared by native events, month overflow, agenda and legend. */
+:is(.clinic-appointments-calendar, .rbc-overlay:has(.clinic-month-event)) {
+  --calendar-state-cyan: #22d3ee;
+  --calendar-state-green: #34d399;
+  --calendar-state-red: #fb7185;
+  --calendar-state-amber: #fbbf24;
+  --calendar-state-gray: #a1a1aa;
+  --calendar-tone-scheduled: var(--calendar-state-cyan);
+  --calendar-tone-completed: var(--calendar-state-green);
+  --calendar-tone-cancelled: var(--calendar-state-red);
+  --calendar-tone-absence: var(--calendar-state-amber);
+  --calendar-tone-block: var(--calendar-state-gray);
+  --event-color: var(--calendar-tone-scheduled);
+  --event-on-color: var(--foreground);
+}
+:root:not(.dark) :is(.clinic-appointments-calendar, .rbc-overlay:has(.clinic-month-event)) {
+  --calendar-tone-scheduled: color-mix(in srgb, var(--calendar-state-cyan) 70%, var(--foreground));
+  --calendar-tone-completed: color-mix(in srgb, var(--calendar-state-green) 70%, var(--foreground));
+  --calendar-tone-cancelled: color-mix(in srgb, var(--calendar-state-red) 70%, var(--foreground));
+  --calendar-tone-absence: color-mix(in srgb, var(--calendar-state-amber) 70%, var(--foreground));
+  --calendar-tone-block: color-mix(in srgb, var(--calendar-state-gray) 70%, var(--foreground));
+}
+:is(.clinic-appointments-calendar, .rbc-overlay:has(.clinic-month-event)) :is(.clinic-calendar-state-programada, .clinic-calendar-state-confirmada) { --event-color: var(--calendar-tone-scheduled); }
+:is(.clinic-appointments-calendar, .rbc-overlay:has(.clinic-month-event)) .clinic-calendar-state-completada { --event-color: var(--calendar-tone-completed); }
+:is(.clinic-appointments-calendar, .rbc-overlay:has(.clinic-month-event)) .clinic-calendar-state-cancelada { --event-color: var(--calendar-tone-cancelled); }
+:is(.clinic-appointments-calendar, .rbc-overlay:has(.clinic-month-event)) .clinic-calendar-state-no_asistio { --event-color: var(--calendar-tone-absence); }
+:is(.clinic-appointments-calendar, .rbc-overlay:has(.clinic-month-event)) .clinic-calendar-state-block { --event-color: var(--calendar-tone-block); }

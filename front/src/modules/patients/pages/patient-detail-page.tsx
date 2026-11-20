@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, Bell, BriefcaseBusiness, Building2, CalendarDays, CalendarPlus, ClipboardList, FileText, Globe, Heart, Mail, MapPin, MessageSquare, Pencil, Phone, ShieldCheck, Stethoscope, UserRound, Wallet, type LucideIcon } from "lucide-react"
+import { FolderOpen, ArrowLeft, Bell, BriefcaseBusiness, Building2, CalendarDays, CalendarPlus, ClipboardList, FileText, Globe, Heart, Mail, MapPin, MessageSquare, Pencil, Phone, ShieldCheck, Stethoscope, UserRound, Wallet, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -50,7 +50,7 @@ export function PatientDetailPage() {
       ...(clinical ? [{ value: "historial", label: <><ClipboardList />Historial clínico</>, accessibleLabel: "Historial clínico" }] : []),
       { value: "tratamientos", label: <><Stethoscope />Tratamientos</>, accessibleLabel: "Tratamientos" },
       { value: "finanzas", label: <><Wallet />Finanzas</>, accessibleLabel: "Finanzas" },
-      { value: "documentos", label: <><FileText />Documentos</>, accessibleLabel: "Documentos" },
+      { value: "documentos", label: <><FolderOpen />Archivo clínico</>, accessibleLabel: "Archivo clínico" },
     ]}>
       <TabsContent value="resumen"><div className="patient-information-grid">
         <PatientSectionCard title="Información de contacto" icon={Phone} action={editSection("contact", "información de contacto")}><Information items={[["Teléfono", patient.phone, Phone], ["Correo", patient.email, Mail], ["Dirección", patient.address, MapPin], ["Ciudad / provincia", patient.city, MapPin]]} /></PatientSectionCard>
@@ -62,7 +62,7 @@ export function PatientDetailPage() {
         ]} /></PatientSectionCard>
         <PatientSectionCard title="Datos personales" icon={UserRound} action={editSection("personal", "datos personales")}><Information items={[["Fecha de nacimiento", formatDateOnly(patient.birthDate, { day: "2-digit", month: "long", year: "numeric" }), CalendarDays], ["Género", genderLabels[patient.gender], UserRound], ["Estado civil", maritalStatusLabels[patient.maritalStatus], Heart], ["Ocupación", patient.occupation, BriefcaseBusiness], ["Empresa / institución", patient.company, Building2], ["Nacionalidad", patient.nationality, Globe]]} /></PatientSectionCard>
         <PatientSectionCard title="Emergencia y seguro" icon={ShieldCheck} action={editSection("emergency", "emergencia y seguro")}><Information items={[["Contacto de emergencia", `${patient.emergencyContactName || "No registrado"}${patient.emergencyContactRelationship ? ` (${patient.emergencyContactRelationship})` : ""}`, UserRound], ["Teléfono del contacto", patient.emergencyContactPhone, Phone], ["Seguro / convenio", patient.insuranceProvider, ShieldCheck], ["Número de póliza", patient.insurancePolicy, FileText]]} /></PatientSectionCard>
-        <PatientSectionCard title="Documentos y consentimientos" icon={FileText} className="patient-consent-card"><div className="patient-consent-summary"><Information items={[["Consentimiento informado", <PatientStateBadge key="consent" status={patient.consentSigned ? "otorgado" : "pendiente"}>{patient.consentSigned ? "Firmado" : "No firmado"}</PatientStateBadge>, ShieldCheck]]} /><p className="patient-field-help">El consentimiento de datos personales y los archivos clínicos se consultan en sus registros correspondientes.</p><Button variant="outline" onClick={() => setSection("documentos")}><FileText />Consultar documentos</Button></div></PatientSectionCard>
+        <PatientSectionCard title="Documentos y consentimientos" icon={FileText} className="patient-consent-card"><div className="patient-consent-summary"><Information items={[["Consentimiento informado", <PatientStateBadge key="consent" status={patient.consentSigned ? "otorgado" : "pendiente"}>{patient.consentSigned ? "Firmado" : "No firmado"}</PatientStateBadge>, ShieldCheck]]} /><p className="patient-field-help">El consentimiento de datos personales y los archivos clínicos se consultan en sus registros correspondientes.</p><Button variant="outline" onClick={() => setSection("documentos")}><FolderOpen />Consultar archivos</Button></div></PatientSectionCard>
       </div></TabsContent>
       <TabsContent value="citas"><PatientAppointments patientId={patient.id} /></TabsContent>
       {clinical && <TabsContent value="historial"><div className="patient-clinical-tab"><PatientClinicalSummary patientId={patient.id} /></div></TabsContent>}

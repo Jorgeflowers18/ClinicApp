@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 test.use({ timezoneId: "America/Guayaquil" })
@@ -5,7 +6,7 @@ const widths = [320, 375, 430, 768, 1024, 1280, 1440, 1920]
 async function login(page: Page, theme = "light", role = "admin") {
   await page.clock.install({ time: new Date("2026-11-14T17:00:00Z") })
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill(`${role}@clinica.com`)
   await page.locator("#password").fill(`${role}123`)
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -47,7 +48,7 @@ for (const theme of ["light", "dark"]) {
       await expect(rows).toHaveCount(1)
       await expect(rows.first()).toContainText("María González")
     }
-    await page.getByRole("button", { name: "Limpiar", exact: true }).click()
+    await page.getByRole("button", { name: "Restablecer filtros", exact: true }).click()
     await choose(page, "patient-status-filter", "Activo")
     await expect(rows).toHaveCount(2)
     await page.getByRole("button", { name: "Filtros avanzados", exact: true }).click()
@@ -57,7 +58,7 @@ for (const theme of ["light", "dark"]) {
     await expect(rows).toHaveCount(1)
     await expect(rows).toContainText("Valentina Suárez")
     await expect(page.getByRole("group", { name: "Resumen de pacientes", exact: true }).locator("strong")).toHaveText(["5", "2", "1", "1"])
-    await page.getByRole("button", { name: "Limpiar", exact: true }).click()
+    await page.getByRole("button", { name: "Restablecer filtros", exact: true }).click()
     await expect(rows).toHaveCount(5)
     await page.evaluate(async () => {
       const path = "/src/modules/patients/api/patients.mock-data.ts", client = "/src/shared/lib/query-client.ts"
@@ -150,7 +151,7 @@ for (const theme of ["light", "dark"]) {
       }
     }
     await page.setViewportSize({ width: 1440, height: 1000 })
-    for (const name of ["Citas", "Historial clínico", "Tratamientos", "Finanzas", "Documentos", "Resumen"]) {
+    for (const name of ["Citas", "Historial clínico", "Tratamientos", "Finanzas", "Archivo clínico", "Resumen"]) {
       const tab = page.getByRole("tab", { name, exact: true })
       if (!await tab.isVisible()) { await page.getByRole("button", { name: /^Más pestañas/ }).click(); await page.getByRole("menuitemradio", { name, exact: true }).click() }
       else await tab.click()
@@ -280,7 +281,7 @@ for (const role of ["admin", "medico", "recepcion"]) {
     await expect(page.getByText("14/11/2026", { exact: true })).toBeVisible()
     expect((await savedPatient(page, "pat_1")).lastVisitAt).toBe(record.lastVisitAt)
     if (role === "recepcion") {
-      await page.getByRole("tab", { name: "Documentos", exact: true }).click()
+      await page.getByRole("tab", { name: "Archivo clínico", exact: true }).click()
       await expect(page.getByRole("tabpanel")).toContainText("perfil clínico autorizado")
       await page.goto("/historial-clinico/paciente/pat_1")
       await expect(page).toHaveURL(/\/403$/)

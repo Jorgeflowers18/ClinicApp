@@ -1,4 +1,6 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
+import { settleCalendarLayout } from "./helpers/calendar-layout"
 
 test.use({ timezoneId: "America/Guayaquil" })
 test.describe.configure({ mode: "parallel" })
@@ -8,7 +10,7 @@ const popupOf = (page: Page) => page.locator('[data-slot="popover-content"]')
 async function login(page: Page, theme: "light" | "dark", route = "/citas") {
   await page.clock.install({ time: new Date("2026-11-11T17:00:00Z") })
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -30,13 +32,13 @@ for (const theme of ["light", "dark"] as const) {
     await popupOf(page).getByRole("button", { name: "Mes anterior", exact: true }).click()
     await expect(popupOf(page).getByLabel("Año", { exact: true })).toHaveValue("2026")
     await popupOf(page).locator('button[data-day="31/12/2026"]').click()
-    await expect(triggerOf(page)).toHaveText("31 de diciembre de 2026")
-    await expect(page.locator('[aria-label="Periodo visible"]:visible')).toContainText("2026–2027")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 31 de diciembre de 2026")
+    await expect(page.locator('[aria-label="Periodo visible"]:visible')).toHaveText("28 diciembre 2026 – 3 enero 2027")
     await triggerOf(page).click()
     await expect(popupOf(page).locator('button[data-day="31/12/2026"]')).toHaveAttribute("data-selected-single", "true")
     await page.keyboard.press("Escape")
     await page.setViewportSize({ width: 390, height: 844 })
-    await expect(triggerOf(page)).toHaveText("31 de diciembre de 2026")
+    await expect(triggerOf(page)).toHaveAccessibleName("Elegir fecha: 31 de diciembre de 2026")
     await expect(page.locator('[aria-label="Periodo visible"]:visible')).toContainText("2026")
     await expect(page.locator('[aria-label="Periodo visible"]:visible')).toContainText("2027")
     await expect(page.getByLabel("Vista", { exact: true })).toContainText("Semana")
@@ -113,7 +115,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(popupOf(page)).toHaveCount(0)
     await expect(triggerOf(page)).toBeFocused()
     await expect(triggerOf(page)).toContainText("2400")
-    await expect(triggerOf(page)).toContainText("29")
+    await expect(triggerOf(page)).toHaveAccessibleName(/29/)
     await expect(page.locator(".rbc-toolbar").getByRole("button", { name: "Día", exact: true })).toHaveAttribute("aria-pressed", "true")
     await triggerOf(page).click()
     await expect(popupOf(page).locator('button[data-day="29/2/2400"]')).toHaveAttribute("data-selected-single", "true")
@@ -149,6 +151,7 @@ for (const theme of ["light", "dark"] as const) {
       }
     }
     await page.setViewportSize({ width: 844, height: 390 })
+    await settleCalendarLayout(page)
     await triggerOf(page).click()
     await popupOf(page).getByLabel("Año", { exact: true }).fill("2027")
     await popupOf(page).locator('button[data-day]').first().scrollIntoViewIfNeeded()
@@ -158,20 +161,20 @@ for (const theme of ["light", "dark"] as const) {
   })
 
   test(`notifications preserve variable insertion, preview, dirty state and save in ${theme}`, async ({ page }) => {
-    await login(page, theme, "/notificaciones")
+    await login(page, theme, "/notificaciones"); await page.getByRole("tab", { name: "Plantillas de mensajes", exact: true }).click()
     const save = page.getByRole("button", { name: "Guardar plantilla", exact: true })
     await expect(save).toBeDisabled()
     const message = page.getByLabel("Mensaje", { exact: true })
     await message.fill("Hola , confirma tu cita.")
     await message.evaluate((node: HTMLTextAreaElement) => { node.focus(); node.setSelectionRange(5, 5) })
-    await page.getByRole("group", { name: "Insertar variable", exact: true }).getByRole("button", { name: "Nombre del cliente", exact: true }).click()
+    await page.getByRole("group", { name: "Insertar variable", exact: true }).getByRole("button", { name: "Nombre del paciente", exact: true }).click()
     await expect(message).toHaveValue("Hola [nombre del cliente], confirma tu cita.")
     await expect(message).toBeFocused()
     await expect(page.getByRole("region", { name: "Vista previa del mensaje", exact: true })).toContainText("Hola María González, confirma tu cita.")
     await expect(save).toBeEnabled()
     await expect(save).toHaveCSS("background-color", theme === "dark" ? "rgb(228, 242, 34)" : "rgb(83, 80, 204)")
     await save.click()
-    await expect(page.getByText("Plantilla de notificación actualizada", { exact: true })).toBeVisible()
+    await expect(page.getByText("Plantilla de mensaje actualizada", { exact: true })).toBeVisible()
     await expect(save).toBeDisabled()
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 1000 })
@@ -188,7 +191,8 @@ for (const theme of ["light", "dark"] as const) {
     await expect(table.getByText("Bajo mínimo", { exact: true }).first()).toBeVisible()
     const tab = page.getByRole("tab", { name: "Insumos", exact: true })
     await expect(tab).toHaveAttribute("aria-selected", "true")
-    await expect(tab).toHaveCSS("box-shadow", theme === "dark" ? "rgb(228, 242, 34) 0px -2px 0px 0px inset" : "rgb(83, 80, 204) 0px -2px 0px 0px inset")
+    // The line variant uses its existing pseudo-element for the selection indicator.
+    expect(await tab.evaluate(node => getComputedStyle(node, "::after").backgroundColor)).toBe(theme === "dark" ? "rgb(228, 242, 34)" : "rgb(83, 80, 204)")
     await table.getByRole("button", { name: /^Acciones del insumo/ }).first().click()
     for (const name of ["Ver detalle", "Editar", "Eliminar"]) await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible()
   })

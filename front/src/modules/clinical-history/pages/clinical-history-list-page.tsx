@@ -8,16 +8,19 @@ import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
 import { PageHeader } from "@/shared/components/page-header"
 import { PaginationBar } from "@/shared/components/pagination-bar"
 import { ResponsiveFilterBar } from "@/shared/components/responsive-filter-bar"
+import { FilterField } from "@/shared/components/filter-field"
 import { SearchInput } from "@/shared/components/search-input"
 import { useTableQueryState } from "@/shared/hooks/use-table-query-state"
 import { formatDateOnly } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
-import { usePatientsList } from "@/modules/patients/api/patients.queries"
+import { usePatient, usePatientsList } from "@/modules/patients/api/patients.queries"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 
 import { useEncountersList } from "../api/clinical-history.queries"
 import { resolveProfessionalName } from "../lib/record"
 import { diagnosisSummary, type EncounterListItem } from "../types/clinical-history.types"
+import "../components/clinical-density.css"
+import styles from "./clinical-history-list.module.css"
 
 const ALL = "todos"
 const shortDate = (value: string) => formatDateOnly(value, { day: "2-digit", month: "short", year: "numeric" })
@@ -36,11 +39,14 @@ export function ClinicalHistoryListPage() {
     professionalId,
   })
   const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
+  const missingSelectedPatient = patientId && patientsPage && !patientsPage.items.some(patient => patient.id === patientId) ? patientId : undefined
+  const selectedPatient = usePatient(missingSelectedPatient)
   const { data: professionals } = useProfessionals()
 
   const patientItems: Record<string, string> = {
     [ALL]: "Todos los pacientes",
     ...Object.fromEntries((patientsPage?.items ?? []).map((item) => [item.id, `${item.firstName} ${item.lastName}`])),
+    ...(missingSelectedPatient ? { [missingSelectedPatient]: selectedPatient.data ? `${selectedPatient.data.firstName} ${selectedPatient.data.lastName}` : selectedPatient.isPending ? "Cargando paciente…" : "Nombre no disponible" } : {}),
   }
   const professionalItems: Record<string, string> = {
     [ALL]: "Todos los profesionales",
@@ -84,12 +90,17 @@ export function ClinicalHistoryListPage() {
     { key: "reason", header: "Motivo de consulta", cell: (row) => row.reason || "—", className: "max-w-56 truncate" },
     { key: "diagnosis", header: "Diagnóstico", cell: (row) => diagnosisSummary(row) || "—", className: "max-w-56 truncate" },
     { key: "professional", header: "Profesional", cell: (row) => resolveProfessionalName(row, professionals) },
-    { key: "nextVisit", header: "Próximo control", cell: (row) => (row.nextVisit ? shortDate(row.nextVisit) : "—") },
+    {
+      key: "nextVisit",
+      header: "Próximo control",
+      cell: (row) => (row.nextVisit ? shortDate(row.nextVisit) : <span className="text-muted-foreground">—</span>),
+      className: styles.nextControl,
+    },
   ]
 
   const desktopFilters = (
     <>
-      <Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
+      <FilterField label="Paciente"><Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
         <SelectTrigger className="w-56" aria-label="Filtrar por paciente">
           <SelectValue />
         </SelectTrigger>
@@ -98,8 +109,8 @@ export function ClinicalHistoryListPage() {
             <SelectItem key={value} value={value}>{label}</SelectItem>
           ))}
         </SelectContent>
-      </Select>
-      <Select items={professionalItems} value={professionalId ?? ALL} onValueChange={changeProfessional}>
+      </Select></FilterField>
+      <FilterField label="Profesional"><Select items={professionalItems} value={professionalId ?? ALL} onValueChange={changeProfessional}>
         <SelectTrigger className="w-56" aria-label="Filtrar por profesional">
           <SelectValue />
         </SelectTrigger>
@@ -108,12 +119,12 @@ export function ClinicalHistoryListPage() {
             <SelectItem key={value} value={value}>{label}</SelectItem>
           ))}
         </SelectContent>
-      </Select>
+      </Select></FilterField>
     </>
   )
 
   return (
-    <div className="space-y-4">
+    <div className="clinic-history-list space-y-4">
       <PageHeader
         title="Historial clínico"
         description="Atenciones odontológicas de todos los pacientes. Acceso restringido a personal médico y administración."

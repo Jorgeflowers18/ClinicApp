@@ -23,7 +23,7 @@ function ReadOnlyValue({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-1">
       <p className="text-sm font-medium">{label}</p>
-      <p className="rounded-md border bg-muted/40 px-2.5 py-1.5 text-sm">{value}</p>
+      <p className="clinic-history-readonly">{value}</p>
     </div>
   )
 }
@@ -56,12 +56,12 @@ export function PatientDataTab({ patient, record }: PatientDataTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="clinic-patient-metadata">
             <ReadOnlyValue label="N.° de historia clínica" value={patient.clinicalRecordNumber || "Sin asignar"} />
             <ReadOnlyValue label="Fecha de apertura" value={longDate(record.createdAt)} />
             <ReadOnlyValue label="Fecha de actualización" value={longDate(record.updatedAt)} />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="clinic-patient-id-grid">
             <TextField name="patient.lastName" label="Apellidos" />
             <TextField name="patient.firstName" label="Nombres" />
             <TextField name="patient.documentId" label="Cédula / pasaporte" />
@@ -125,7 +125,7 @@ export function PatientDataTab({ patient, record }: PatientDataTabProps) {
         <CardHeader>
           <CardTitle>Contacto</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="clinic-patient-contact-grid">
           <TextField name="patient.address" label="Dirección domiciliaria" />
           <TextField name="patient.city" label="Ciudad / provincia" />
           <TextField name="patient.phone" label="Teléfono" />
@@ -137,7 +137,7 @@ export function PatientDataTab({ patient, record }: PatientDataTabProps) {
         <CardHeader>
           <CardTitle>Contacto de emergencia</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="clinic-patient-emergency-grid">
           <TextField name="patient.emergencyContactName" label="Contacto de emergencia" />
           <TextField name="patient.emergencyContactRelationship" label="Parentesco" />
           <TextField name="patient.emergencyContactPhone" label="Teléfono de emergencia" />

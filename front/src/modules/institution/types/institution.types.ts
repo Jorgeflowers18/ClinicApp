@@ -9,12 +9,14 @@ export type InstitutionBranch = {
 
 export type InstitutionProfile = {
   name: string
+  subtitle: string
   legalName: string
   ruc: string
   phone: string
   email: string
   address: string
   website: string
+  /** Legacy persisted value; visible initials are generated from name. */
   logoText: string
   logoImage: string | null
   notes: string
@@ -22,10 +24,12 @@ export type InstitutionProfile = {
   branches: InstitutionBranch[]
 }
 
-const INSTITUTION_PROFILE_STORAGE_KEY = "clinicapp.institution-profile"
+export const INSTITUTION_PROFILE_STORAGE_KEY = "clinicapp.institution-profile"
+export const INSTITUTION_PROFILE_CHANGED = "clinicapp:institution-profile-changed"
 
 export const initialInstitutionProfile: InstitutionProfile = {
   name: "ClinicApp Odontología",
+  subtitle: "",
   legalName: "Grupo Odontológico ClinicApp S.A.",
   ruc: "1798765432001",
   phone: "+593 98 123 4567",
@@ -55,6 +59,7 @@ export function readInstitutionProfile(): InstitutionProfile {
     return {
       ...initialInstitutionProfile,
       ...parsed,
+      subtitle: typeof parsed.subtitle === "string" ? parsed.subtitle : initialInstitutionProfile.subtitle,
       branches: parsed.branches?.length ? parsed.branches : initialInstitutionProfile.branches,
     }
   } catch {
@@ -68,4 +73,6 @@ export function writeInstitutionProfile(profile: InstitutionProfile) {
   }
 
   window.localStorage.setItem(INSTITUTION_PROFILE_STORAGE_KEY, JSON.stringify(profile))
+  // Publish only confirmed writes; failed storage must never change the Sidebar.
+  window.dispatchEvent(new Event(INSTITUTION_PROFILE_CHANGED))
 }

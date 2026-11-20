@@ -66,7 +66,7 @@ export function EncounterNoteDialog({ patientId, encounter, onClose }: Encounter
   return (
     <>
       <Dialog open={Boolean(encounter)} onOpenChange={(open) => !open && close()}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent variant="small">
           <DialogHeader>
             <DialogTitle>Agregar nota aclaratoria</DialogTitle>
             <DialogDescription>
@@ -75,7 +75,7 @@ export function EncounterNoteDialog({ patientId, encounter, onClose }: Encounter
               La atención original no cambia: la nota queda debajo, con tu nombre y la fecha.
             </DialogDescription>
           </DialogHeader>
-          <form id="encounter-note-form" onSubmit={handleSubmit(() => setConfirming(true))}>
+          <form id="encounter-note-form" data-slot="dialog-body" onSubmit={handleSubmit(() => setConfirming(true))}>
             <Field data-invalid={!!errors.text}>
               <FieldLabel htmlFor="encounter-note-text">Nota</FieldLabel>
               <Textarea id="encounter-note-text" rows={4} aria-invalid={!!errors.text} {...register("text")} />

@@ -4,8 +4,10 @@ import { Controller, get, useFormContext } from "react-hook-form"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { NumericInput } from "@/components/ui/numeric-input"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import "./clinical-controls.css"
 
 /**
  * Controles de los formularios de la historia y de la atención. Se conectan por nombre al
@@ -30,13 +32,14 @@ interface ChoiceButtonsProps {
   allowClear?: boolean
   invalid?: boolean
   className?: string
+  tone?: "selection" | "exam" | "risk"
 }
 
 /** Una sola opción entre pocas, como botones (Sí / No, Normal / Alterado…). */
-export function ChoiceButtons({ label, options, value, onChange, allowClear = true, invalid, className }: ChoiceButtonsProps) {
+export function ChoiceButtons({ label, options, value, onChange, allowClear = true, invalid, className, tone = "selection" }: ChoiceButtonsProps) {
   return (
-    <div role="radiogroup" aria-label={label} aria-invalid={invalid || undefined} className={cn("flex flex-wrap gap-1", className)}>
-      {options.map(([option, optionLabel]) => {
+    <div role="radiogroup" aria-label={label} aria-invalid={invalid || undefined} data-tone={tone} className={cn("clinic-clinical-choices", className)}>
+      {options.map(([option, optionLabel], index) => {
         const selected = value === option
         return (
           <button
@@ -44,11 +47,17 @@ export function ChoiceButtons({ label, options, value, onChange, allowClear = tr
             type="button"
             role="radio"
             aria-checked={selected}
-            className={cn(
-              "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-              selected ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted",
-              invalid && !selected && "border-destructive"
-            )}
+            data-value={option}
+            tabIndex={selected || (!options.some(([key]) => key === value) && index === 0) ? 0 : -1}
+            onKeyDown={(event) => {
+              if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return
+              event.preventDefault()
+              const next = event.key === "Home" ? 0 : event.key === "End" ? options.length - 1
+                : (index + (["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1) + options.length) % options.length
+              onChange(options[next][0])
+              event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus()
+            }}
+            className={cn("clinic-clinical-choice outline-none focus-visible:ring-3 focus-visible:ring-ring/50", invalid && "border-destructive")}
             onClick={() => onChange(selected && allowClear ? "" : option)}
           >
             {optionLabel}
@@ -67,6 +76,7 @@ export function ChoiceField({
   allowClear,
   hideLabel,
   className,
+  tone,
 }: {
   name: string
   label: string
@@ -74,6 +84,7 @@ export function ChoiceField({
   allowClear?: boolean
   hideLabel?: boolean
   className?: string
+  tone?: ChoiceButtonsProps["tone"]
 }) {
   const { control } = useFormContext()
   const error = useFieldError(name)
@@ -90,6 +101,7 @@ export function ChoiceField({
             value={field.value ?? ""}
             allowClear={allowClear}
             invalid={!!error}
+            tone={tone}
             onChange={(value) => field.onChange(value)}
           />
         )}
@@ -116,7 +128,7 @@ export function CheckboxItem({
 }) {
   const id = useId()
   return (
-    <div className="flex items-start gap-2">
+    <div className="clinic-clinical-checkbox flex items-start gap-2">
       <Checkbox
         id={id}
         checked={checked}
@@ -140,10 +152,12 @@ export function CheckboxListField({
   name,
   options,
   columns = 2,
+  className,
 }: {
   name: string
   options: Options
   columns?: 1 | 2 | 3
+  className?: string
 }) {
   const { control } = useFormContext()
   return (
@@ -153,7 +167,7 @@ export function CheckboxListField({
       render={({ field }) => {
         const selected = new Set<string>(field.value ?? [])
         return (
-          <div className={cn("grid gap-2.5", columns === 2 && "sm:grid-cols-2", columns === 3 && "sm:grid-cols-2 lg:grid-cols-3")}>
+          <div className={cn("grid gap-2.5", columns === 2 && "sm:grid-cols-2", columns === 3 && "sm:grid-cols-2 lg:grid-cols-3", className)}>
             {options.map(([key, label]) => (
               <CheckboxItem
                 key={key}
@@ -194,7 +208,7 @@ export function NumberField({
   const error = useFieldError(name)
   const id = useId()
   return (
-    <Field data-invalid={!!error} className={className}>
+    <Field data-invalid={!!error} className={cn("clinic-clinical-field", className)}>
       <FieldLabel htmlFor={id}>
         {label}
         {unit && <span className="font-normal text-muted-foreground"> ({unit})</span>}
@@ -203,9 +217,9 @@ export function NumberField({
         control={control}
         name={name}
         render={({ field }) => (
-          <Input
+          <NumericInput
             id={id}
-            type="number"
+            suffix={unit}
             inputMode="decimal"
             step={step}
             min={min}
@@ -243,7 +257,7 @@ export function TextField({
   const error = useFieldError(name)
   const id = useId()
   return (
-    <Field data-invalid={!!error} className={className}>
+    <Field data-invalid={!!error} className={cn("clinic-clinical-field", className)}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {multiline ? (
         <Textarea id={id} rows={rows} placeholder={placeholder} aria-invalid={!!error} {...register(name)} />

@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { OdontogramSummary } from "react-advanced-odontogram"
 
 import type { PageQuery } from "@/shared/types/common"
+import type { ClinicalFileMetadata } from "../archive/types"
 
 import { today } from "../lib/today"
 import {
@@ -81,6 +82,7 @@ export interface DentalAttachment {
   mime: string
   size: number
   createdAt: string
+  archive?: ClinicalFileMetadata
 }
 
 const minText = (message: string) => z.string().refine((value) => value.trim().length >= 3, message)

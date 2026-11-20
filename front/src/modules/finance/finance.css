@@ -1,0 +1,67 @@
+.finance-module { container: finance-content / inline-size; min-width: 0; }
+.finance-metrics { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.finance-module .clinic-kpi-card > [data-slot="card-content"] { min-height: 92px; padding: 12px 14px; align-items: center; }
+.finance-module .clinic-kpi-label { font-size: 13px; line-height: 1.4; }
+.finance-module .clinic-kpi-copy > .clinic-kpi-label { display: flex; align-items: center; min-height: 28px; }
+.finance-module .clinic-kpi-copy > div:first-child { min-height: 28px; }
+.finance-module .clinic-kpi-copy button[data-slot="button"] { min-width: 28px; min-height: 28px; }
+.finance-module .clinic-kpi-value { margin-top: 4px; font-size: clamp(22px, 2vw, 26px); line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.finance-module .clinic-kpi-card[data-icon-tone="success"] .clinic-kpi-value { color: var(--success); }
+.finance-module .clinic-kpi-card[data-icon-tone="warning"] .clinic-kpi-value { color: var(--warning); }
+.finance-module .clinic-kpi-card[data-icon-tone="info"] .clinic-kpi-value { color: var(--info); }
+.finance-module .clinic-kpi-card[data-icon-tone="destructive"] .clinic-kpi-value { color: var(--destructive); }
+.finance-portfolio-card > [data-slot="card-header"] { padding: 16px 16px 0; }
+.finance-portfolio-filters { padding: 0 16px 12px; }
+.finance-portfolio-filters > div > div:first-child { align-items: flex-end; }
+.finance-filter-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.finance-filter-fields > div { display: grid; gap: 6px; min-width: 140px; flex: 1; }
+.finance-filter-fields > div:last-child { min-width: 180px; }
+.finance-filter-fields [data-slot="select-trigger"] { width: 100%; }
+.finance-module .clinic-finance-table table { table-layout: auto; width: 100%; }
+.finance-module .clinic-finance-table :is(th, td) { padding: 10px 8px; font-size: 13px; }
+.finance-module .clinic-finance-table :is([data-column="patientName"], [data-column="treatmentName"]) { white-space: normal; overflow-wrap: anywhere; min-width: 120px; }
+.finance-module .clinic-finance-table :is([data-column="total"], [data-column="paid"], [data-column="pending"], [data-column="overdue"], [data-column="daysLate"]) { width: 1%; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.finance-module .clinic-finance-table :is([data-column="nextDueDate"], [data-column="status"]) { width: 1%; white-space: nowrap; }
+.finance-patient { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.finance-patient > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.finance-patient [data-slot="avatar"] { width: 30px; height: 30px; flex-shrink: 0; }
+.finance-patient [data-slot="avatar-fallback"] { background: var(--secondary); color: var(--primary); font-size: 11px; }
+.finance-status { background: var(--secondary); color: var(--muted-foreground); border: 0; font-size: 11px; }
+.finance-status[data-state="al_dia"] { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success); }
+.finance-status[data-state="parcial"] { background: color-mix(in srgb, var(--warning) 12%, transparent); color: var(--warning); }
+.finance-status[data-state="vencida"] { background: color-mix(in srgb, var(--destructive) 12%, transparent); color: var(--destructive); }
+.finance-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.finance-amount:not([data-positive]) { color: var(--muted-foreground); }
+.finance-amount[data-positive][data-kind="total"] { color: var(--foreground); }
+.finance-amount[data-positive][data-kind="paid"] { color: var(--success); }
+.finance-amount[data-positive][data-kind="pending"] { color: var(--warning); }
+.finance-amount[data-positive][data-kind="overdue"] { color: var(--destructive); }
+.finance-portfolio-list { padding: 0 16px; min-width: 0; }
+.finance-portfolio-list > li + li { border-top: 1px solid var(--border); }
+.finance-portfolio-list article { padding: 14px 0; min-width: 0; }
+.finance-portfolio-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.finance-portfolio-heading h3 { min-width: 0; font-size: 14px; }
+.finance-portfolio-heading > [data-slot="badge"] { flex-shrink: 0; }
+.finance-treatment-name { color: var(--muted-foreground); font-size: 13px; padding-left: 38px; margin-top: -3px; overflow-wrap: anywhere; }
+.finance-primary-amounts, .finance-secondary-amounts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.finance-primary-amounts { margin-top: 12px; }
+.finance-primary-amounts dt, .finance-secondary-amounts dt { color: var(--muted-foreground); font-size: 12px; }
+.finance-primary-amounts dd { font-size: 15px; font-weight: 600; margin-top: 4px; }
+.finance-secondary-amounts { margin-top: 10px; }
+.finance-secondary-amounts dd { font-size: 12px; margin-top: 3px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.finance-portfolio-empty { padding: 24px 16px; color: var(--muted-foreground); font-size: 14px; text-align: center; }
+.finance-portfolio-count { padding: 8px 16px 0; font-size: 12px; color: var(--muted-foreground); }
+@container finance-content (min-width: 62rem) { .finance-metrics { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+@container finance-content (max-width: 34rem) {
+  .finance-module .clinic-kpi-card > [data-slot="card-content"] { display: block; position: relative; min-height: 104px; }
+  .finance-module .clinic-kpi-copy > .clinic-kpi-label, .finance-module .clinic-kpi-copy > div:first-child { min-height: 44px; }
+  .finance-module .clinic-kpi-copy button { min-width: 44px; min-height: 44px; }
+  .finance-module .clinic-summary-icon { position: absolute; right: 12px; bottom: 12px; width: 24px; height: 24px; }
+  .finance-module .clinic-summary-icon svg { width: 16px; height: 16px; }
+  .finance-module .clinic-kpi-value { font-size: 22px; }
+}
+@container finance-content (max-width: 18rem) { .finance-metrics { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 1023px), (pointer: coarse) {
+  .finance-module .clinic-kpi-copy > .clinic-kpi-label, .finance-module .clinic-kpi-copy > div:first-child { min-height: 44px; }
+  .finance-module .clinic-kpi-copy button[data-slot="button"] { min-width: 44px; min-height: 44px; }
+}

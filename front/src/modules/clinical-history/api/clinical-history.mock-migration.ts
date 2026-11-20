@@ -8,6 +8,7 @@
 // Se aplica al leer: nada se reescribe hasta que el usuario guarda, así que los datos originales
 // nunca se pierden.
 import { createId } from "@/shared/lib/id"
+import { readFileMetadata } from "../archive/types"
 import { mockProfessionals } from "@/modules/appointments/api/appointments.mock-data"
 import { mockLegacyClinicalNotes } from "@/modules/patients/api/patients.mock-data"
 import { mockTreatments } from "@/modules/treatments/api/treatments.mock-data"
@@ -102,6 +103,7 @@ const legacyAttachmentKinds: Record<string, AttachmentKind> = {
 
 function normalizeAttachment(raw: unknown): DentalAttachment | null {
   if (!isObject(raw) || !text(raw.id)) return null
+  const archive = readFileMetadata(raw.archive)
   return {
     id: text(raw.id),
     name: text(raw.name, "archivo"),
@@ -109,6 +111,7 @@ function normalizeAttachment(raw: unknown): DentalAttachment | null {
     mime: text(raw.mime),
     size: Number(raw.size) || 0,
     createdAt: text(raw.createdAt, new Date(0).toISOString()),
+    ...(archive ? { archive } : {}),
   }
 }
 

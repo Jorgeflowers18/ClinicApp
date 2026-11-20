@@ -64,7 +64,6 @@ for (const theme of ["light", "dark"] as const) {
     const outsideContent = () => page.locator("main > div").evaluate((page) => ({
       heading: page.firstElementChild!.outerHTML,
       indicators: page.children[1].outerHTML,
-      footer: page.lastElementChild!.outerHTML,
     }))
     const originalOutside = await outsideContent()
     const measurements = []
@@ -79,8 +78,10 @@ for (const theme of ["light", "dark"] as const) {
         for (const [index, values] of originalRows.entries()) {
           const card = articles.nth(index)
           await expect(card.getByRole("heading", { level: 3 })).toHaveText(values[0]!)
-          await expect(card.locator("dt")).toHaveText(headers.slice(1))
-          await expect(card.locator("dd")).toHaveText(values.slice(1) as string[])
+          await expect(card.locator(".finance-treatment-name")).toHaveText(values[1]!)
+          await expect(card.locator("dt")).toHaveText(headers.slice(2, 8))
+          await expect(card.locator("dd")).toHaveText(values.slice(2, 8) as string[])
+          await expect(card.locator(".finance-status")).toHaveText(values[8]!)
         }
       } else {
         await expect(table).toBeVisible()
@@ -116,7 +117,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(table).toHaveCount(0)
     await testInfo.attach("portfolio-responsive", { body: JSON.stringify(measurements), contentType: "application/json" })
 
-    const treatments = page.getByRole("button", { name: "Ir a tratamientos", exact: true })
+    const treatments = page.getByRole("button", { name: "Ver tratamientos", exact: true })
     await treatments.focus()
     await expect(treatments).toBeFocused()
     await treatments.press("Enter")

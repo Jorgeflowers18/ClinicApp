@@ -1,0 +1,9 @@
+.resetAnchor { display: inline-flex; flex: 0 0 auto; align-self: end; border-radius: var(--radius-control); }
+.resetAnchor:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.reset:global([data-slot="button"]) { width: var(--content-control-height, 38px); height: var(--content-control-height, 38px); min-width: var(--content-control-height, 38px); min-height: var(--content-control-height, 38px); padding: 0; flex-shrink: 0; border-radius: var(--radius-control); background: var(--card); border-color: var(--border); color: var(--muted-foreground); }
+.reset:global([data-slot="button"]):not(:disabled):hover { background: var(--muted); color: var(--primary); }
+.reset > svg { width: 17px; height: 17px; }
+.field { display: grid; min-width: 0; gap: 4px; align-content: end; }
+.label { color: var(--muted-foreground); font-size: 12px; line-height: 16px; font-weight: 500; }
+.field > :global([data-slot="select-trigger"]), .field > :global([data-slot="input"]) { width: 100%; }
+@media (max-width: 1023px), (pointer: coarse) { .reset:global([data-slot="button"]) { width: 44px; height: 44px; min-width: 44px; min-height: 44px; } }

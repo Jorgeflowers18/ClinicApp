@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 import { clinicalNavigation, expectRecordSection, selectRecordSection } from "./helpers/clinical-navigation"
 
@@ -13,7 +14,7 @@ const next = (page: Page) => page.getByRole("button", { name: "Siguiente", exact
 
 async function login(page: Page, theme: "light" | "dark", patient = "pat_5", role = "admin") {
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "dark" ? "Tema oscuro" : "Tema claro", exact: true }).click()
+  await setAccessTheme(page, theme === "dark" ? "dark" : "light")
   await page.locator("#email").fill(`${role}@clinica.com`)
   await page.locator("#password").fill(`${role}123`)
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -41,7 +42,7 @@ async function fits(page: Page) {
 
 async function storedHistory(page: Page) {
   return page.evaluate(() => new Promise<unknown>((resolve, reject) => {
-    const request = indexedDB.open("clinicapp-dental-v1", 1)
+    const request = indexedDB.open("clinicapp-dental-v1")
     request.onsuccess = () => {
       const db = request.result
       const record = db.transaction("records").objectStore("records").get("pat_5")

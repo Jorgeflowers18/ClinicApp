@@ -1,6 +1,6 @@
 import {
   ChartNoAxesCombined,
-  Bell,
+  MessagesSquare,
   CalendarDays,
   Wallet,
   ClipboardList,
@@ -38,9 +38,9 @@ export const navItems: NavItem[] = [
     roles: ["admin", "recepcion"],
   },
   {
-    label: "Notificaciones",
+    label: "Mensajería",
     to: "/notificaciones",
-    icon: Bell,
+    icon: MessagesSquare,
     roles: ["admin", "recepcion"],
   },
   {

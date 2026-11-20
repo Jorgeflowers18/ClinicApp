@@ -57,7 +57,7 @@ export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="grid gap-3 rounded-lg border bg-muted/30 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto] xl:items-start"
+      className="clinic-plan-entry"
       aria-label="Agregar tratamiento propuesto"
     >
       <Field data-invalid={!!errors.treatmentId}>
@@ -121,7 +121,7 @@ export function PlanItemForm({ treatments, onAdd }: PlanItemFormProps) {
         <FieldError errors={errors.plannedDate ? [errors.plannedDate] : undefined} />
       </Field>
 
-      <Button type="submit" className="xl:mt-6">
+      <Button type="submit">
         <Plus />
         Agregar
       </Button>

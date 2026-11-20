@@ -1,0 +1,9 @@
+.plain { appearance: textfield; -moz-appearance: textfield; }
+.plain::-webkit-inner-spin-button, .plain::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.group { display: flex; position: relative; align-items: center; min-width: 0; width: 100%; }
+.group > input { width: 100%; min-width: 0; }
+.group[data-prefix="true"] > input { padding-inline-start: 28px; }
+.group[data-suffix="true"] > input { padding-inline-end: 52px; }
+.prefix, .suffix { pointer-events: none; position: absolute; z-index: 1; color: var(--muted-foreground); font-size: 12px; line-height: 20px; }
+.prefix { inset-inline-start: 10px; }
+.suffix { inset-inline-end: 10px; max-width: 42px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

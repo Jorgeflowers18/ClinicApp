@@ -1,3 +1,4 @@
+import { setAccessTheme } from "./helpers/access-theme"
 import { expect, test, type Page } from "@playwright/test"
 
 test.use({ timezoneId: "America/Guayaquil" })
@@ -10,7 +11,7 @@ const eventOf = (page: Page, id: string) => page.locator(`.rbc-day-slot .rbc-eve
 async function login(page: Page, theme: "light" | "dark", route = "/citas") {
   await page.clock.install({ time: new Date("2026-11-11T17:00:00Z") })
   await page.goto("/login")
-  await page.getByRole("button", { name: theme === "light" ? "Tema claro" : "Tema oscuro", exact: true }).click()
+  await setAccessTheme(page, theme === "light" ? "light" : "dark")
   await page.locator("#email").fill("admin@clinica.com")
   await page.locator("#password").fill("admin123")
   await page.getByRole("button", { name: "Ingresar", exact: true }).click()
@@ -118,6 +119,9 @@ for (const theme of ["light", "dark"] as const) {
         mockAppointments.push({ id: `simultaneous_${index}`, patientId: `pat_${index + 1}`, professionalId: "prof_2", start: start.toISOString(), end: new Date(+start + duration * 60000).toISOString(), status: ["programada", "cancelada", "no_asistio"][index], notes: `Overlap fixture ${index}`, createdAt: start.toISOString() })
       }
       mockAppointments.push({ id: "spanning_fixture", patientId: "pat_4", professionalId: "prof_3", start: new Date(2026, 10, 10, 12).toISOString(), end: new Date(2026, 10, 12, 12).toISOString(), status: "programada", notes: "Multi-day fixture", createdAt: new Date().toISOString() })
+      const client = "/src/shared/lib/query-client.ts"
+      const { queryClient } = await import(client)
+      await queryClient.invalidateQueries({ queryKey: ["appointments"] })
     })
     await page.getByRole("link", { name: "Citas", exact: true }).click()
     await expect(triggerOf(page)).toBeVisible()

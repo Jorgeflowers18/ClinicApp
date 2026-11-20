@@ -6,7 +6,7 @@
 .clinic-form-actions > [data-slot="button"] > svg { width: 16px; height: 16px; }
 [data-slot="dialog-content"]:has([data-form-actions]) { scroll-padding-bottom: 88px; }
 /* The development-only launcher has a higher z-index than dialogs and must not cover their actions. */
-body:has([data-slot="dialog-content"][data-open], [data-slot="alert-dialog-content"][data-open]) .tsqd-parent-container { display: none; }
+body:has([data-slot="dialog-content"][data-open], [data-slot="alert-dialog-content"][data-open], [data-filter-panel][data-open]) .tsqd-parent-container { display: none; }
 @media (max-width: 1023px), (pointer: coarse) {
   .clinic-form-actions { --content-control-height: 44px; }
   .clinic-form-actions > [data-slot="button"] { min-height: 44px; }

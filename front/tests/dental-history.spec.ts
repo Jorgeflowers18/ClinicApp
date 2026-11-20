@@ -1,5 +1,6 @@
 import { test, expect, type Download, type Locator, type Page } from "@playwright/test"
 import { expectRecordSection, selectRecordSection } from "./helpers/clinical-navigation"
+import { encounterStepSelector, openEncounterGroup, selectEncounterStep } from "./helpers/encounter-navigation"
 
 // Cada prueba corre en un contexto nuevo: IndexedDB vacía, semillas insertadas una vez y mocks en memoria
 // recién cargados. `page.goto` recarga la app y reinicia los mocks en memoria (pacientes, citas,
@@ -25,6 +26,18 @@ async function waitForChart(page: Page) {
 async function chooseOption(scope: Page | Locator, page: Page, label: string, option: string | RegExp) {
   await scope.getByLabel(label, { exact: true }).click()
   await page.getByRole("option", { name: option }).click()
+}
+
+/** The shared archive now commits originals independently of unsaved clinical fields. */
+async function uploadClinicalFile(page: Page, name: string) {
+  await page.getByRole("button", { name: "Adjuntar archivos", exact: true }).click()
+  const dialog = page.getByRole("dialog", { name: "Adjuntar archivos clínicos", exact: true })
+  await dialog.getByLabel("Seleccionar archivos clínicos", { exact: true }).setInputFiles({ name, mimeType: "image/png", buffer: png })
+  await dialog.getByRole("button", { name: /^Clasificación clínica/ }).click()
+  await chooseOption(dialog, page, "Tipo clínico", "Fotografía clínica")
+  await dialog.getByRole("button", { name: "Guardar archivos", exact: true }).click()
+  await expect(dialog.getByText("1 de 1 archivos guardados en el archivo clínico.", { exact: true })).toBeVisible()
+  await dialog.getByRole("button", { name: "Cerrar", exact: true }).last().click()
 }
 
 const radio = (scope: Page | Locator, group: string, option: string) =>
@@ -55,12 +68,12 @@ async function saveChanges(page: Page, sections: string[]) {
 }
 
 /** Página «Registrar atención»: paso actual y botones de la barra inferior. */
-const currentStep = (page: Page) => page.getByRole("navigation", { name: "Pasos de la atención" }).locator('[aria-current="step"]')
+const currentStep = encounterStepSelector
 const nextStep = (page: Page) => page.getByRole("button", { name: "Siguiente", exact: true })
 const saveEncounter = (page: Page) => page.getByRole("button", { name: "Guardar atención", exact: true })
 
 async function goToStep(page: Page, name: string) {
-  await page.getByRole("navigation", { name: "Pasos de la atención" }).getByRole("button", { name }).click()
+  await selectEncounterStep(page, name)
   await expect(currentStep(page)).toContainText(name)
 }
 
@@ -81,7 +94,7 @@ async function confirmEncounter(page: Page, texts: string[] = []) {
 }
 
 const png = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf1sAAAAASUVORK5CYII=",
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAX+XDSwAAAABJRU5ErkJggg==",
   "base64"
 )
 
@@ -171,13 +184,11 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
   await page.getByLabel("Fecha de la decisión", { exact: true }).fill("2026-09-20")
 
   await selectRecordSection(page, "Fotos y documentos")
-  await page
-    .getByLabel("Seleccionar archivos clínicos")
-    .setInputFiles({ name: "radiografia-prueba.png", mimeType: "image/png", buffer: png })
+  await uploadClinicalFile(page, "radiografia-prueba.png")
   await expect(page.getByText("radiografia-prueba.png", { exact: true })).toBeVisible()
-  await expect(page.getByText(/Fotografías clínicas · /)).toBeVisible()
+  await expect(page.getByText(/Fotografía clínica · PNG/)).toBeVisible()
 
-  await saveChanges(page, ["Odontograma y periodontograma", "Plan de tratamiento", "Consentimiento de datos", "Fotos y documentos"])
+  await saveChanges(page, ["Odontograma y periodontograma", "Plan de tratamiento", "Consentimiento de datos"])
   await expect(page.getByText("Consentimiento de datos pendiente")).toHaveCount(0)
 
   // Lo guardado sobrevive a una recarga.
@@ -243,7 +254,8 @@ test("historia editable: odontograma, plan, consentimiento, archivos, guardado c
 
   await selectRecordSection(page, "Fotos y documentos")
   const attachmentPromise = page.waitForEvent("download")
-  await page.getByRole("button", { name: "Descargar", exact: true }).click()
+  await page.getByRole("button", { name: "Acciones de radiografia-prueba.png", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Descargar original", exact: true }).click()
   expect(await readDownload(await attachmentPromise)).toEqual(png)
 
   // Indicadores calculados desde el periodontograma, incluidos los máximos de sondaje e inserción.
@@ -441,27 +453,36 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await page.getByLabel("Peso (kg)", { exact: true }).fill("70")
   await page.getByLabel("Talla (cm)", { exact: true }).fill("175")
   await expect(page.getByLabel("IMC calculado")).toHaveText("22.9")
+  await openEncounterGroup(page, "asa")
   await radio(page, "Clasificación ASA", "ASA II").click()
+  await openEncounterGroup(page, "risk")
   await page.getByRole("checkbox", { name: "Riesgo hemorrágico" }).click()
   await page.getByRole("checkbox", { name: "Interconsulta requerida" }).click()
   await nextStep(page).click()
+  // La validación abre automáticamente el grupo; esperar su error evita pulsar el trigger mientras se abre.
   await expect(page.getByText("Valor entre 30 y 220")).toBeVisible()
   await expect(page.getByText("Formato 120/80")).toBeVisible()
+  await openEncounterGroup(page, "risk")
   await expect(page.getByText("Indica el especialista o el motivo de la interconsulta")).toBeVisible()
+  await openEncounterGroup(page, "vitals")
   await page.getByLabel("FC (lpm)", { exact: true }).fill("72")
   await page.getByLabel("PA (mmHg)", { exact: true }).fill("120/80")
+  await openEncounterGroup(page, "risk")
   await page.getByLabel("Especialista o motivo de la interconsulta", { exact: true }).fill("Cardiología: control de anticoagulación")
   await nextStep(page).click()
 
   // Paso 3: examen por estructura; Alterado exige el hallazgo; «Marcar todo como normal».
   await expect(currentStep(page)).toContainText("Examen clínico")
   await radio(page, "ATM / ruidos / dolor", "Alterado").click()
+  await openEncounterGroup(page, "intraoral")
   await page.getByRole("button", { name: "Marcar todo como normal: Examen intraoral" }).click()
   await expect(radio(page, "Oclusión", "Normal")).toHaveAttribute("aria-checked", "true")
   await nextStep(page).click()
   await expect(page.getByText("Describe el hallazgo")).toBeVisible()
   await page.getByLabel("Hallazgo de ATM / ruidos / dolor", { exact: true }).fill("Chasquido en ATM derecha")
+  await openEncounterGroup(page, "pain")
   await page.getByLabel("Dolor EVA (0 a 10)", { exact: true }).fill("4")
+  await openEncounterGroup(page, "risks")
   await radio(page, "Nivel de riesgo de caries", "Alto").click()
   await nextStep(page).click()
 
@@ -471,17 +492,23 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await expect(page.getByText("Registra al menos un diagnóstico")).toBeVisible()
   await addDiagnosis(page, "Caries dentinaria en pieza 46 (K02.1)")
   await page.getByRole("listitem", { name: "Diagnóstico 1" }).getByLabel("Pieza / región", { exact: true }).fill("46")
+  await openEncounterGroup(page, "prognosis")
   await radio(page, "Pronóstico", "Favorable").click()
+  await openEncounterGroup(page, "periodontal")
   await radio(page, "Periodontitis", "Estadio II").click()
+  await openEncounterGroup(page, "modifiers")
   await radio(page, "Intervalo de mantenimiento", "6 meses").click()
   await expect(page.getByText(/^Próximo control: /)).toBeVisible()
   await nextStep(page).click()
 
   // Paso 5: tratamientos realizados con costo editable y exámenes solicitados.
   await expect(currentStep(page)).toContainText("Tratamientos y evolución")
+  await openEncounterGroup(page, "evolution")
   await expect(page.getByLabel("Próximo control", { exact: true })).not.toHaveValue("")
   await page.getByLabel("Observaciones", { exact: true }).fill("Nota de prueba <script>window.injected=true</script>")
+  await openEncounterGroup(page, "materials")
   await page.getByLabel("Materiales / anestesia / lote", { exact: true }).fill("Lidocaína 2% lote A123")
+  await openEncounterGroup(page, "performed")
   await page.getByRole("button", { name: /Resina compuesta \(46\)/ }).click()
   await chooseOption(page, page, "Tratamiento del catálogo", /^Limpieza dental/)
   await page.getByRole("button", { name: "Agregar", exact: true }).click()
@@ -497,6 +524,7 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await expect(page.getByText("Indica el costo")).toHaveCount(0)
   await expect(performed).toContainText("Catálogo: $55,00")
   await expect(performed.getByRole("row", { name: /Total de la atención/ })).toContainText("$75,00")
+  await openEncounterGroup(page, "exams")
   await chooseOption(page, page, "Examen", "Panorámica")
   await page.getByRole("button", { name: "Solicitar", exact: true }).click()
   await expect(page.getByLabel("Detalle de Interconsulta médica", { exact: true })).toHaveValue("Cardiología: control de anticoagulación")
@@ -517,6 +545,7 @@ test("registrar atención: página por pasos, evaluación, tratamientos, exámen
   await expect(confirm).toContainText("Quedarán 2 exámenes solicitados como pendientes en la historia.")
   await confirm.getByRole("button", { name: "Volver" }).click()
   await goToStep(page, "Diagnóstico y pronóstico")
+  await openEncounterGroup(page, "diagnoses")
   await expect(page.getByLabel("Diagnóstico clínico / CIE-10", { exact: true })).toHaveValue("Caries dentinaria en pieza 46 (K02.1)")
   await confirmEncounter(page)
 
@@ -710,7 +739,7 @@ test("visitas guardadas con la versión anterior se convierten en historia y ate
       },
     }
     await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open("clinicapp-dental-v1", 1)
+      const request = indexedDB.open("clinicapp-dental-v1")
       request.onupgradeneeded = () => {
         request.result.createObjectStore("records", { keyPath: "patientId" })
         request.result.createObjectStore("files", { keyPath: "id" })
@@ -767,12 +796,12 @@ test("funciona sin HTTPS: sin crypto.randomUUID se generan los ids igual", async
   await chooseOption(planForm, page, "Tratamiento del catálogo", /^Limpieza dental/)
   await planForm.getByRole("button", { name: "Agregar", exact: true }).click()
   await selectRecordSection(page, "Fotos y documentos")
-  await page.getByLabel("Seleccionar archivos clínicos").setInputFiles({ name: "rx.png", mimeType: "image/png", buffer: png })
+  await uploadClinicalFile(page, "rx.png")
   await expect(page.getByText("rx.png", { exact: true })).toBeVisible()
   await selectRecordSection(page, "Antecedentes")
   await page.getByRole("button", { name: "Agregar alergia" }).click()
   await page.getByLabel("Alergia / reacción", { exact: true }).fill("Látex")
-  await saveChanges(page, ["Plan de tratamiento", "Fotos y documentos", "Alergias, medicamentos y alertas"])
+  await saveChanges(page, ["Plan de tratamiento", "Alergias, medicamentos y alertas"])
 
   // Atención (id generado antes de guardar). Salir con datos escritos pide confirmación.
   await page.getByRole("button", { name: "Registrar atención", exact: true }).click()

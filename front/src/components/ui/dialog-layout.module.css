@@ -1,0 +1,11 @@
+.standard { --dialog-width: 720px; display: flex; flex-direction: column; width: min(var(--dialog-width), calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); overflow: hidden; gap: 16px; padding: 20px; animation-duration: 180ms; }
+.small { --dialog-width: 520px; }
+.medium { --dialog-width: 720px; }
+.wide { --dialog-width: 960px; }
+.complex { --dialog-width: 1160px; }
+.standard > :global([data-slot="dialog-header"]), .standard > :global([data-form-actions]) { flex-shrink: 0; }
+.body, .standard > :global([data-slot="dialog-body"]) { min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; scroll-padding-block: 12px; }
+.standard > :global([data-form-actions]) { position: static; background: transparent; padding: 0; border: 0; }
+.confirmation { width: min(440px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; overflow-wrap: anywhere; animation-duration: 180ms; }
+@media (max-width: 599px) { .standard { padding: 16px; } }
+@media (prefers-reduced-motion: reduce) { .standard, .confirmation { animation: none; transition: none; } }
