@@ -133,6 +133,7 @@ builder.Services.AddScoped<ReportQueries>();
 // y la tarea que borra los adjuntos nunca guardados (y el protocolo de conservación, apagado por defecto).
 builder.Services.AddSingleton<AttachmentStorage>();
 builder.Services.AddScoped<ReferenceResolver>();
+builder.Services.AddScoped<ClinicalHistoryLoader>();
 builder.Services.AddSingleton<AttachmentCleanupService>();
 builder.Services.AddHostedService(services => services.GetRequiredService<AttachmentCleanupService>());
 

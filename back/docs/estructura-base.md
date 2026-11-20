@@ -504,8 +504,44 @@ Las secciones anidadas del formulario van en columnas `jsonb` (una por sección)
 | `purged_at` | `timestamptz` | sí | El protocolo de conservación borró el archivo (apagado por defecto); la fila queda |
 | `uploaded_by_user_id` | `uuid` FK → `users` (set null) | sí | |
 | `created_at` | `timestamptz` | | Índice `(linked_at, created_at)` para la limpieza |
+| `digest` | `varchar(64)` | sí | SHA-256 (hex) del archivo, calculado por el servidor. Índice `(patient_id, digest)`: detecta originales repetidos. |
+| `metadata_version` | `integer` | | 0 = sin metadatos del archivo clínico; sube con cada edición o archivado (concurrencia optimista) |
+| `display_name`, `clinical_type` | `varchar(200)`, `varchar(40)` | | Nombre visible y tipo clínico (los de `ArchiveKeys.ClinicalTypes`); `''` sin metadatos |
+| `study_date` | `date` | sí | Fecha del estudio |
+| `category_id` | `uuid` FK → `archive_categories` (set null) | sí | |
+| `professional_id` | `uuid` FK → `professionals` (set null) | sí | |
+| `encounter_id` | `uuid` FK → `clinical_encounters` (set null) | sí | Debe ser una atención del paciente |
+| `treatment_assignment_id` | `uuid` FK → `treatment_assignments` (set null) | sí | Tratamiento realizado del paciente (`treatmentId` en la API) |
+| `exam_request_id` | `varchar(60)` | sí | Examen solicitado de la historia cuyo resultado es este archivo; no se reasigna |
+| `zone`, `notes` | `varchar(150)`, `varchar(3000)` | | |
+| `metadata_updated_at`, `archived_at` | `timestamptz` | sí | `archived_at`: archivado (sigue en la historia; la vista lo oculta) |
 
 **Archivos:** en `Attachments:RootPath` (producción: `/var/lib/clinicapp/attachments`, incluida en los respaldos; desarrollo: `App_Data/attachments`, ignorada por git). La tarea `AttachmentCleanupService` corre cada hora.
+
+### `archive_categories` y `archive_tags` (catálogo del archivo clínico)
+
+| Tabla | Columnas |
+|---|---|
+| `archive_categories` | `id uuid` PK, `name varchar(60)`, `description varchar(300)`, `color varchar(20)` (`neutral`, `cyan`, `violet`, `amber`, `green`; `CHECK`), `archived_at`, `version integer`, `created_at`, `updated_at` |
+| `archive_tags` | `id uuid` PK, `name varchar(40)`, `version integer`, `created_at`, `updated_at` |
+
+Los nombres no se repiten sin tildes ni mayúsculas: lo controla la API, con un candado de PostgreSQL (`archive-catalog`). Nada se borra; las categorías se archivan.
+
+### `clinical_attachment_tags`
+
+`(attachment_id, tag_id)` PK; `attachment_id` FK → `clinical_attachments` (cascade), `tag_id` FK → `archive_tags` (cascade), `position integer` (orden en que se eligieron).
+
+### `clinical_attachment_audit`
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `attachment_id` | `uuid` FK → `clinical_attachments` (cascade) | | Índice `(attachment_id, at)` |
+| `action` | `varchar(20)` | | `adjuntar`, `editar`, `archivar`, `restaurar` (`CHECK`) |
+| `fields` | `text[]` | | Campos que cambiaron (nombres del JSON) |
+| `actor_user_id` | `uuid` FK → `users` (set null) | sí | |
+| `actor_name` | `varchar(120)` | | Nombre del usuario en ese momento |
+| `at` | `timestamptz` | | |
 
 ## 11. Módulo `institution`
 
@@ -608,6 +644,7 @@ Pagos de los pacientes por sus tratamientos. Un pago no se borra: se anula, con 
 | `20261120175534_SedesConUuid` | `institution_branches.id` pasa de texto a `uuid` y queda como PK. Las sedes con ids de texto reciben un UUID nuevo. |
 | `20261120191521_InstitucionSubtitulo` | Columna `institutions.subtitle` |
 | `20261120191802_PacientesTipoDocumento` | Columna `patients.document_type` con su `CHECK` |
+| `20261120193107_ArchivoClinico` | Archivo clínico: metadatos y huella en `clinical_attachments`, `archive_categories`, `archive_tags`, `clinical_attachment_tags` y `clinical_attachment_audit` |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 

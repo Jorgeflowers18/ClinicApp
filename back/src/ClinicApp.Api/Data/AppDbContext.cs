@@ -53,6 +53,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ClinicalEncounter> ClinicalEncounters => Set<ClinicalEncounter>();
     public DbSet<EncounterNote> EncounterNotes => Set<EncounterNote>();
     public DbSet<ClinicalAttachment> ClinicalAttachments => Set<ClinicalAttachment>();
+    public DbSet<ArchiveCategory> ArchiveCategories => Set<ArchiveCategory>();
+    public DbSet<ArchiveTag> ArchiveTags => Set<ArchiveTag>();
+    public DbSet<ClinicalAttachmentTag> ClinicalAttachmentTags => Set<ClinicalAttachmentTag>();
+    public DbSet<ClinicalAttachmentAudit> ClinicalAttachmentAudit => Set<ClinicalAttachmentAudit>();
 
     // institution
     public DbSet<InstitutionProfile> Institutions => Set<InstitutionProfile>();

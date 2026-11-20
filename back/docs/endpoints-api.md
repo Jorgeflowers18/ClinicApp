@@ -1,6 +1,6 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-20**: **81 endpoints implementados**:
+Estado al **2026-11-20**: **90 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 9 de `treatments` (catálogo y tratamientos realizados);
@@ -8,7 +8,7 @@ Estado al **2026-11-20**: **81 endpoints implementados**:
 - 6 de `patients`;
 - 7 de `professionals` y `rooms`;
 - 8 de `appointments` y `schedule-blocks`;
-- 7 de `clinical-history`;
+- 16 de `clinical-history` (7 de la historia y 9 del archivo clínico);
 - 3 de `institution`;
 - 4 de `notifications` (con las alertas del día);
 - 5 de `finance`;
@@ -160,6 +160,15 @@ La respuesta tiene esta forma:
 | `POST` | `/api/clinical-history/encounters/:encounterId/notes` | admin, medico | `201` |
 | `POST` | `/api/clinical-history/attachments` | admin, medico | `201` |
 | `GET` | `/api/clinical-history/attachments/:attachmentId/file` | admin, medico | `200` archivo |
+| `GET` | `/api/clinical-history/archive/catalog` | admin, medico | `200` |
+| `POST` | `/api/clinical-history/archive/categories` | admin, medico | `200` catálogo |
+| `PUT` | `/api/clinical-history/archive/categories/:id` | admin, medico | `200` catálogo |
+| `POST` | `/api/clinical-history/archive/tags` | admin, medico | `200` catálogo |
+| `PUT` | `/api/clinical-history/archive/tags/:id` | admin, medico | `200` catálogo |
+| `POST` | `/api/clinical-history/patients/:patientId/archive/files` | admin, medico | `201` historia |
+| `PATCH` | `/api/clinical-history/attachments/:id` | admin, medico | `200` historia |
+| `POST` | `/api/clinical-history/attachments/:id/archive` | admin, medico | `200` historia |
+| `POST` | `/api/clinical-history/attachments/:id/restore` | admin, medico | `200` historia |
 | `GET` | `/api/institution/public` | público | `200` |
 | `GET` | `/api/institution/profile` | los tres | `200` |
 | `PUT` | `/api/institution/profile` | admin | `200` |
@@ -717,6 +726,70 @@ Solo `admin` y `medico` (`403` para `recepcion`). Contrato: `front/src/modules/c
 
 **Adjuntos:** se reconocen por los primeros bytes (no por la extensión). Se guardan en `{Attachments:RootPath}/{patientId}/{id}.{ext}`; lo guardado en una historia se conserva siempre, y los subidos que nunca se guardaron se borran a las 24 h.
 
+### Archivo clínico digital
+
+Metadatos de los archivos de la historia, su archivado y auditoría, y el catálogo de categorías y etiquetas. Contrato: `front/src/modules/clinical-history/archive/types.ts`. Las operaciones sobre archivos devuelven la **historia completa** actualizada (`{ record, encounters, references }`), igual que el `GET`.
+
+**`archive` en cada adjunto** (`record.attachments[i].archive`, `ClinicalFileMetadata`): `null` si el archivo nunca se clasificó (adjuntos anteriores o subidos con `POST /attachments`).
+
+```json
+{
+  "version": 2, "displayName": "Panorámica inicial", "clinicalType": "panoramica", "studyDate": "2026-11-10",
+  "categoryId": "0199…", "tagIds": ["0199…"], "professionalId": "0199…", "encounterId": "0199…",
+  "treatmentId": "0199…", "examRequestId": "4b2a…", "zone": "Arcada superior", "notes": "",
+  "digest": "9f86d0…", "uploadedBy": { "id": "0199…", "name": "Dra. Carla Ríos" },
+  "updatedAt": "2026-11-20T18:00:00Z", "archivedAt": null,
+  "audit": [ { "action": "adjuntar", "at": "2026-11-20T17:00:00Z", "actor": { "id": "0199…", "name": "Dra. Carla Ríos" }, "fields": ["displayName", "…"] } ]
+}
+```
+
+- `treatmentId` es un **tratamiento realizado** del paciente (`treatment_assignments`), no del catálogo.
+- `version` sube con cada cambio de metadatos o de archivado: es la concurrencia optimista de cada archivo.
+- `digest`: SHA-256 del archivo, calculado por el servidor (también en `POST /attachments`).
+
+**Catálogo** (`ArchiveCatalog`): `{ id: "local-institution", revision, categories: [{ id, name, description, color, archivedAt, version }], tags: [{ id, name, version }] }`. `revision` sube con cada cambio.
+
+| Endpoint | Detalle |
+|---|---|
+| `GET /api/clinical-history/archive/catalog` | `200` el catálogo |
+| `POST /api/clinical-history/archive/categories` | Body `{ name (≤ 60), description (≤ 300), color, archivedAt }`. `color`: `neutral`, `cyan`, `violet`, `amber` o `green`. `200` con el catálogo; `409` en `errors.name` si ya existe el nombre (sin tildes, mayúsculas ni espacios repetidos). |
+| `PUT /api/clinical-history/archive/categories/:id` | El mismo body más `version` (la que se leyó). `archivedAt` con valor archiva (la fecha la pone el servidor); `null` la reactiva. `409` "La categoría cambió. Recarga el catálogo." o nombre repetido; `404`. |
+| `POST /api/clinical-history/archive/tags` | Body `{ name (≤ 40) }`. Si ya existe una con ese nombre, `200` sin crear otra. |
+| `PUT /api/clinical-history/archive/tags/:id` | `{ name, version }`. `409` versión vieja o nombre repetido; `404`. |
+| `POST /api/clinical-history/patients/:patientId/archive/files` | Ver abajo |
+| `PATCH /api/clinical-history/attachments/:id` | Ver abajo |
+| `POST /api/clinical-history/attachments/:id/archive` | Body `{ version }`. Archiva: el archivo **sigue en la historia**, la vista lo oculta por defecto. `409` versión vieja; `404` si no está en una historia. |
+| `POST /api/clinical-history/attachments/:id/restore` | Body `{ version }`. Lo restaura. |
+
+**Adjuntar con metadatos (`POST …/patients/:patientId/archive/files`):** multipart con `file` y los campos del borrador:
+- `displayName` (1 a 200), `clinicalType`;
+- `studyDate`, `categoryId`, `tagIds` (un campo por etiqueta), `professionalId`, `encounterId`, `treatmentId`, `examRequestId`, `zone` (≤ 150) y `notes` (≤ 3000), opcionales.
+
+Qué hace:
+- El archivo queda **en la historia en el acto** (no espera al `PUT`), con `kind` = `clinicalType` si es un tipo de la historia, u `otro`. La historia sube de revisión y guarda la versión anterior.
+- Con `examRequestId`, el examen pasa a `recibido`, con este archivo y la fecha de hoy.
+- Responde `201` con la historia.
+
+Errores:
+- `400` por campo:
+  - `clinicalType` fuera de la lista;
+  - `encounterId` que no es del paciente;
+  - `examRequestId` que no está en la historia;
+  - `treatmentId` que no es un tratamiento realizado del paciente;
+  - `professionalId`, `categoryId` o `tagIds` inexistentes;
+  - `errors.file` con formato o tamaño no permitidos (las mismas reglas de `POST /attachments`).
+- `409` en `errors.file` "Este original ya está registrado para el paciente, incluso si está archivado". Se compara el SHA-256; a los adjuntos anteriores sin huella y del mismo tamaño se les calcula en el momento.
+- `409` "Este examen ya tiene un resultado" si el examen ya apunta a otro archivo.
+- `409` si el paciente está dado de baja.
+
+**Editar metadatos (`PATCH /attachments/:id`):** JSON con `version` y los mismos campos (`tagIds` como lista).
+- Los adjuntos anteriores usan `version: 0` y sus metadatos parten de su nombre y su tipo.
+- La auditoría guarda los campos que cambiaron.
+- Si el archivo ya es el resultado de un examen, `examRequestId` no se puede cambiar ni quitar (`400`). Si no tenía, vincularlo marca el examen como recibido.
+- `409` "El archivo cambió en otra pantalla. Recarga antes de editar." con una versión vieja.
+
+**Con el `PUT` de la historia:** la lista `attachments` sigue mandando solo los `id`. Los metadatos no se tocan, y quitar un archivo de la lista lo saca de la historia aunque tenga metadatos.
+
 ## 11. `institution`
 
 Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/institution/types/institution.types.ts` (`InstitutionProfile`).
@@ -862,7 +935,7 @@ Todos con `?from=YYYY-MM-DD&to=YYYY-MM-DD`, **obligatorios e inclusivos**, en ho
 | `auth` | Jorge Flores | ✅ Endpoints hechos. Faltan el proveedor de correo, la gestión de usuarios, la revisión de solicitudes de acceso y la limpieza de tokens viejos. |
 | `treatments` | Jorge Flores | ✅ Catálogo, insumos y tratamientos realizados |
 | `inventory` | Jorge Flores | ✅ Los 18 endpoints |
-| `clinical-history` | Jorge Flores | ✅ Los 7 endpoints, con versiones, adjuntos y referencias. ⏳ Registro transaccional de la atención. |
+| `clinical-history` | Jorge Flores | ✅ Los 7 endpoints de la historia, con versiones, adjuntos y referencias, y los 9 del archivo clínico. ⏳ Registro transaccional de la atención. |
 | `patients` | Jorge Flores | ✅ Los 6 endpoints, con baja lógica y N.° de historia |
 | `appointments`: profesionales y consultorios | Jorge Flores | ✅ Los 7 endpoints |
 | `appointments`: citas y bloqueos | Jorge Flores | ✅ Los 8 endpoints, con choques, candados y hora de la clínica |

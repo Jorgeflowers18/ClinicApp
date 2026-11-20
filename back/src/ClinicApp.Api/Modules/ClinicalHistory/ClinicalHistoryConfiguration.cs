@@ -137,5 +137,68 @@ public class ClinicalAttachmentConfiguration : IEntityTypeConfiguration<Clinical
         builder.HasIndex(attachment => attachment.PatientId);
         // Para la limpieza de huérfanos (nunca guardados) y del protocolo de conservación.
         builder.HasIndex(attachment => new { attachment.LinkedAt, attachment.CreatedAt });
+
+        // Archivo clínico digital.
+        builder.Property(attachment => attachment.Digest).HasMaxLength(64);
+        builder.Property(attachment => attachment.DisplayName).HasMaxLength(200);
+        builder.Property(attachment => attachment.ClinicalType).HasMaxLength(40);
+        builder.Property(attachment => attachment.ExamRequestId).HasMaxLength(60);
+        builder.Property(attachment => attachment.Zone).HasMaxLength(150);
+        builder.Property(attachment => attachment.Notes).HasMaxLength(3000);
+        builder.HasIndex(attachment => new { attachment.PatientId, attachment.Digest });
+
+        builder.HasOne<ArchiveCategory>().WithMany().HasForeignKey(attachment => attachment.CategoryId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<Professional>().WithMany().HasForeignKey(attachment => attachment.ProfessionalId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<ClinicalEncounter>().WithMany().HasForeignKey(attachment => attachment.EncounterId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<Treatments.TreatmentAssignment>().WithMany().HasForeignKey(attachment => attachment.TreatmentAssignmentId).OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasMany(attachment => attachment.Tags).WithOne().HasForeignKey(tag => tag.AttachmentId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(attachment => attachment.Audit).WithOne().HasForeignKey(entry => entry.AttachmentId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class ArchiveCategoryConfiguration : IEntityTypeConfiguration<ArchiveCategory>
+{
+    public void Configure(EntityTypeBuilder<ArchiveCategory> builder)
+    {
+        builder.ToTable("archive_categories", table =>
+            table.HasCheckConstraint("ck_archive_categories_color", "color IN ('neutral', 'cyan', 'violet', 'amber', 'green')"));
+        builder.Property(category => category.Name).HasMaxLength(60);
+        builder.Property(category => category.Description).HasMaxLength(300);
+        builder.Property(category => category.Color).HasMaxLength(20);
+    }
+}
+
+public class ArchiveTagConfiguration : IEntityTypeConfiguration<ArchiveTag>
+{
+    public void Configure(EntityTypeBuilder<ArchiveTag> builder)
+    {
+        builder.ToTable("archive_tags");
+        builder.Property(tag => tag.Name).HasMaxLength(40);
+    }
+}
+
+public class ClinicalAttachmentTagConfiguration : IEntityTypeConfiguration<ClinicalAttachmentTag>
+{
+    public void Configure(EntityTypeBuilder<ClinicalAttachmentTag> builder)
+    {
+        builder.ToTable("clinical_attachment_tags");
+        builder.HasKey(tag => new { tag.AttachmentId, tag.TagId });
+        builder.HasOne<ArchiveTag>().WithMany().HasForeignKey(tag => tag.TagId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class ClinicalAttachmentAuditConfiguration : IEntityTypeConfiguration<ClinicalAttachmentAudit>
+{
+    public void Configure(EntityTypeBuilder<ClinicalAttachmentAudit> builder)
+    {
+        builder.ToTable("clinical_attachment_audit", table =>
+            table.HasCheckConstraint("ck_clinical_attachment_audit_action", "action IN ('adjuntar', 'editar', 'archivar', 'restaurar')"));
+        // El id lo pone la aplicación: así EF trata como nuevas las entradas agregadas a la lista del adjunto.
+        builder.Property(entry => entry.Id).ValueGeneratedNever();
+        builder.Property(entry => entry.Action).HasMaxLength(20);
+        builder.Property(entry => entry.ActorName).HasMaxLength(120);
+        builder.HasOne<User>().WithMany().HasForeignKey(entry => entry.ActorUserId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(entry => new { entry.AttachmentId, entry.At });
     }
 }

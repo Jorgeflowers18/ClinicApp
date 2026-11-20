@@ -458,6 +458,65 @@ Content-Type: application/pdf
 GET {{api}}/clinical-history/attachments/{{adjunto.response.body.id}}/file
 Authorization: Bearer {{token}}
 
+### ── Archivo clínico digital ──
+
+### Catálogo de categorías y etiquetas
+GET {{api}}/clinical-history/archive/catalog
+Authorization: Bearer {{token}}
+
+### Crear una categoría (color: neutral, cyan, violet, amber o green)
+POST {{api}}/clinical-history/archive/categories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Radiografías", "description": "Estudios de imagen", "color": "cyan", "archivedAt": null }
+
+### Crear una etiqueta (si ya existe, no crea otra)
+POST {{api}}/clinical-history/archive/tags
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Control" }
+
+### Adjuntar con metadatos: queda en la historia en el acto (409 si el mismo original ya está)
+# @name archivo
+POST {{api}}/clinical-history/patients/{{paciente.response.body.id}}/archive/files
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="displayName"
+
+Panorámica inicial
+--limite
+Content-Disposition: form-data; name="clinicalType"
+
+panoramica
+--limite
+Content-Disposition: form-data; name="studyDate"
+
+2026-11-10
+--limite
+Content-Disposition: form-data; name="file"; filename="panoramica.pdf"
+Content-Type: application/pdf
+
+%PDF-1.7 panoramica de ejemplo
+--limite--
+
+### Editar los metadatos (version = la que se leyó; 409 si cambió)
+PATCH {{api}}/clinical-history/attachments/{{archivo.response.body.record.attachments[0].id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "version": 1, "displayName": "Panorámica de control", "clinicalType": "panoramica", "studyDate": "2026-11-10", "tagIds": [], "zone": "", "notes": "" }
+
+### Archivar (sigue en la historia; restaurar con /restore)
+POST {{api}}/clinical-history/attachments/{{archivo.response.body.record.attachments[0].id}}/archive
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "version": 2 }
+
 ### Registrar una atención (el id lo genera el frontend: un reintento con el mismo id devuelve 200)
 # @name atencion
 POST {{api}}/clinical-history/patients/{{paciente.response.body.id}}/encounters

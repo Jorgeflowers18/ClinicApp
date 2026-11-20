@@ -5,10 +5,16 @@ using ClinicApp.Api.Common;
 namespace ClinicApp.Api.Modules.ClinicalHistory;
 
 /// <summary>Foto o documento: la forma de <c>DentalAttachment</c> del frontend.</summary>
-public record DentalAttachmentDto(Guid Id, string Name, string Kind, string Mime, long Size, DateTime CreatedAt)
+/// <summary>
+/// Adjunto (<c>DentalAttachment</c> del frontend). <c>archive</c> son los metadatos del archivo clínico digital,
+/// o null si el archivo nunca se clasificó (adjuntos anteriores o subidos desde la historia).
+/// Para que <c>archive</c> traiga etiquetas y auditoría, la consulta debe incluir <c>Tags</c> y <c>Audit</c>.
+/// </summary>
+public record DentalAttachmentDto(Guid Id, string Name, string Kind, string Mime, long Size, DateTime CreatedAt, ClinicalFileMetadataDto? Archive)
 {
     public static DentalAttachmentDto FromEntity(ClinicalAttachment attachment) =>
-        new(attachment.Id, attachment.Alias, attachment.Kind, attachment.Mime, attachment.Size, attachment.CreatedAt);
+        new(attachment.Id, attachment.Alias, attachment.Kind, attachment.Mime, attachment.Size, attachment.CreatedAt,
+            ClinicalFileMetadataDto.FromEntity(attachment));
 }
 
 /// <summary>Historia clínica: la forma de <c>ClinicalRecord</c> del frontend.</summary>

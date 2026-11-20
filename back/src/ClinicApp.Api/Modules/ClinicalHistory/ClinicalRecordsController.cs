@@ -14,7 +14,7 @@ namespace ClinicApp.Api.Modules.ClinicalHistory;
 [ApiController]
 [Route("api/clinical-history/patients/{patientId:guid}")]
 [Authorize(Roles = Roles.AdminYMedico)]
-public class ClinicalRecordsController(AppDbContext db, ClinicClock clock, ReferenceResolver references) : ControllerBase
+public class ClinicalRecordsController(AppDbContext db, ClinicClock clock, ClinicalHistoryLoader loader) : ControllerBase
 {
     public const string ConcurrencyMessage = "Otra pestaña o usuario modificó esta historia. Recarga la historia antes de continuar.";
 
@@ -27,19 +27,7 @@ public class ClinicalRecordsController(AppDbContext db, ClinicClock clock, Refer
     {
         if (!await db.Patients.AnyAsync(patient => patient.Id == patientId, cancellationToken)) return PatientNotFound();
 
-        var record = await db.ClinicalRecords.AsNoTracking().FirstOrDefaultAsync(entry => entry.PatientId == patientId, cancellationToken);
-        var attachments = await db.ClinicalAttachments.AsNoTracking().Where(entry => entry.PatientId == patientId).ToListAsync(cancellationToken);
-        var recordDto = record is null ? ClinicalRecordDto.Empty(patientId, clock.UtcNow) : ClinicalRecordDto.FromEntity(record, attachments);
-
-        var encounters = await db.ClinicalEncounters.AsNoTracking()
-            .Include(encounter => encounter.Addenda)
-            .Where(encounter => encounter.PatientId == patientId)
-            .OrderBy(encounter => encounter.Date)
-            .ThenBy(encounter => encounter.CreatedAt)
-            .ToListAsync(cancellationToken);
-        var encounterDtos = encounters.Select(ClinicalEncounterDto.FromEntity).ToList();
-
-        return new PatientClinicalHistoryDto(recordDto, encounterDtos, await references.ResolveAsync(recordDto, encounterDtos, cancellationToken));
+        return await loader.LoadAsync(patientId, cancellationToken);
     }
 
     /// <summary>
@@ -66,7 +54,7 @@ public class ClinicalRecordsController(AppDbContext db, ClinicClock clock, Refer
         var currentRevision = record?.Revision ?? 0;
         if (request.Revision != currentRevision) return Problem(statusCode: StatusCodes.Status409Conflict, title: ConcurrencyMessage);
 
-        var attachments = await db.ClinicalAttachments.Where(entry => entry.PatientId == patientId).ToListAsync(cancellationToken);
+        var attachments = await loader.Attachments(patientId).AsSplitQuery().ToListAsync(cancellationToken);
         await ValidateReferencesAsync(patientId, request, attachments, cancellationToken);
         if (!ModelState.IsValid) return this.ValidationError(ModelState);
 
