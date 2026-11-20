@@ -718,7 +718,7 @@ Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/in
 
 ```json
 {
-  "name": "Clínica Sonrisas", "legalName": "Sonrisas S.A.", "ruc": "1798765432001",
+  "name": "Clínica Sonrisas", "subtitle": "Odontología integral", "legalName": "Sonrisas S.A.", "ruc": "1798765432001",
   "phone": "+593 98 123 4567", "email": "contacto@sonrisas.ec", "address": "Av. Amazonas N45-120, Quito",
   "website": "https://sonrisas.ec", "logoText": "CS", "logoImage": "data:image/png;base64,…",
   "notes": "", "hours": "Lunes a viernes: 08:00 - 18:00",
@@ -732,12 +732,12 @@ Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/in
 
 | Endpoint | Roles | Detalle |
 |---|---|---|
-| `GET /api/institution/public` | **público** | `200` `{ name, logoText, logoImage }` para la pantalla de inicio de sesión. Límite: 120 por minuto por IP. |
+| `GET /api/institution/public` | **público** | `200` `{ name, subtitle, logoText, logoImage }` para la pantalla de inicio de sesión. Límite: 120 por minuto por IP. |
 | `GET /api/institution/profile` | los tres | `200` el perfil completo, con las sedes en orden |
 | `PUT /api/institution/profile` | admin | `200`. Reemplaza el perfil completo: las sedes con `id` se actualizan, las que vienen sin `id` (o `""`) se crean y las que no vienen se borran. El servidor da el `id` (UUID v7) y lo devuelve en la respuesta. |
 
 **Validación del `PUT`:**
-- `name`: 2 a 160.
+- `name`: 2 a 160; `subtitle`: hasta 120, opcional (texto debajo del nombre en el login y la barra lateral).
 - `ruc`: 13 dígitos o vacío (no se verifica el dígito del SRI).
 - `email`: correo válido o vacío.
 - `website`: `http(s)://…` o vacío.

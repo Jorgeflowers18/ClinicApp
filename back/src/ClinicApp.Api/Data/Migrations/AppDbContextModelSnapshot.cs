@@ -1111,6 +1111,12 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasColumnType("character varying(13)")
                         .HasColumnName("ruc");
 
+                    b.Property<string>("Subtitle")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("subtitle");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");

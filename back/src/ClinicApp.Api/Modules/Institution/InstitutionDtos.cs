@@ -5,11 +5,11 @@ namespace ClinicApp.Api.Modules.Institution;
 
 /// <summary>Perfil completo: la forma de <c>InstitutionProfile</c> del frontend (institution.types.ts).</summary>
 public record InstitutionProfileDto(
-    string Name, string LegalName, string Ruc, string Phone, string Email, string Address, string Website,
+    string Name, string Subtitle, string LegalName, string Ruc, string Phone, string Email, string Address, string Website,
     string LogoText, string? LogoImage, string Notes, string Hours, List<InstitutionBranchDto> Branches, DateTime UpdatedAt)
 {
     public static InstitutionProfileDto FromEntity(InstitutionProfile profile) => new(
-        profile.Name, profile.LegalName, profile.Ruc, profile.Phone, profile.Email, profile.Address, profile.Website,
+        profile.Name, profile.Subtitle, profile.LegalName, profile.Ruc, profile.Phone, profile.Email, profile.Address, profile.Website,
         profile.LogoText, profile.LogoImage, profile.Notes, profile.Hours,
         profile.Branches.OrderBy(branch => branch.Position)
             .Select((branch, index) => InstitutionBranchDto.FromEntity(branch, index + 1)).ToList(),
@@ -28,7 +28,7 @@ public record InstitutionBranchDto(Guid Id, string Name, string Label, string Ad
 }
 
 /// <summary>Lo único que ve la pantalla de inicio de sesión (sin sesión).</summary>
-public record PublicInstitutionDto(string Name, string LogoText, string? LogoImage);
+public record PublicInstitutionDto(string Name, string Subtitle, string LogoText, string? LogoImage);
 
 /// <summary>Guardar el perfil (PUT, solo admin): el perfil completo con sus sedes.</summary>
 public class InstitutionProfileRequest : IValidatableObject
@@ -40,6 +40,10 @@ public class InstitutionProfileRequest : IValidatableObject
     [MinLength(2, ErrorMessage = "Mínimo 2 caracteres")]
     [MaxLength(160, ErrorMessage = "Máximo 160 caracteres")]
     public string Name { get; set; } = "";
+
+    /// <summary>Texto corto debajo del nombre (login y barra lateral). Opcional.</summary>
+    [MaxLength(120, ErrorMessage = "Máximo 120 caracteres")]
+    public string? Subtitle { get; set; }
 
     [MaxLength(200, ErrorMessage = "Máximo 200 caracteres")]
     public string? LegalName { get; set; }

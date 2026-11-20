@@ -514,6 +514,7 @@ Content-Type: application/json
 
 {
   "name": "ClinicApp Odontología",
+  "subtitle": "Odontología integral",
   "legalName": "Grupo Odontológico ClinicApp S.A.",
   "ruc": "1798765432001",
   "phone": "+593 98 123 4567",

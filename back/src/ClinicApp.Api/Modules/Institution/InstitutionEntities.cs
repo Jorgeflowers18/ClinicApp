@@ -15,6 +15,9 @@ public class InstitutionProfile
 
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
+
+    /// <summary>Texto corto debajo del nombre (login y barra lateral). Opcional.</summary>
+    public string Subtitle { get; set; } = "";
     public string LegalName { get; set; } = "";
     public string Ruc { get; set; } = "";
     public string Phone { get; set; } = "";
@@ -61,6 +64,7 @@ public class InstitutionProfileConfiguration : IEntityTypeConfiguration<Institut
             table.HasCheckConstraint("ck_institutions_ruc", "ruc = '' OR ruc ~ '^[0-9]{13}$'"));
 
         builder.Property(profile => profile.Name).HasMaxLength(160);
+        builder.Property(profile => profile.Subtitle).HasMaxLength(120);
         builder.Property(profile => profile.LegalName).HasMaxLength(200);
         builder.Property(profile => profile.Ruc).HasMaxLength(13);
         builder.Property(profile => profile.Phone).HasMaxLength(30);

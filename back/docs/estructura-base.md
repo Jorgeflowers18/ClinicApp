@@ -516,6 +516,7 @@ Si se aprueba la multi-clínica (`plan-multiclinica.md`, M1), esta misma tabla t
 |---|---|---|---|
 | `id` | `uuid` PK | | Fijo (`00000000-0000-7000-8000-0000000000c1`) |
 | `name` | `varchar(160)` | | Nombre comercial |
+| `subtitle` | `varchar(120)` | | Texto debajo del nombre (login y barra lateral); `''` si no hay |
 | `legal_name` | `varchar(200)` | | Razón social |
 | `ruc` | `varchar(13)` | | 13 dígitos o `''` (`CHECK`) |
 | `phone`, `email`, `address`, `website` | `varchar(30)`, `(254)`, `(250)`, `(200)` | | |
@@ -604,6 +605,7 @@ Pagos de los pacientes por sus tratamientos. Un pago no se borra: se anula, con 
 | `20261118031703_CrearPagos` | `financial_payments` |
 | `20261118032137_IndicesReportes` | Índice `stock_movements (type, created_at)` para el reporte de inventario |
 | `20261120175534_SedesConUuid` | `institution_branches.id` pasa de texto a `uuid` y queda como PK. Las sedes con ids de texto reciben un UUID nuevo. |
+| `20261120191521_InstitucionSubtitulo` | Columna `institutions.subtitle` |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
