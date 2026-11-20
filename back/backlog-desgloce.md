@@ -46,20 +46,13 @@ Los 9 planes están implementados (80 endpoints, 215 pruebas: [`docs/pruebas.md`
 - Etapa B de finanzas; ingresos reales en el reporte de tratamientos.
 - Antivirus de adjuntos.
 - Multi-clínica, si se aprueba ([`docs/plan-multiclinica.md`](./docs/plan-multiclinica.md)).
+- **Lo que pide el frontend** (revisión del 2026-11-20; detalle en los planes de `front/docs/planes-implementacion/`):
+  - `institution`: campo `subtitle` en el perfil y en `/public` (plan 2).
+  - `patients`: `documentType` (con validación de cédula), `phone` opcional (decisión de la clínica), filtros `status`, `gender`, `registeredFrom`, `registeredTo` y `deleted=true` en `GET /patients` (plan 3).
+  - `clinical-history`: **archivo clínico digital**, con metadatos, categorías y etiquetas, archivado, auditoría y duplicados por SHA-256. Necesita su propio `docs/plan-archivo-clinico.md` (plan 7).
+  - `notifications`: `GET /alerts` para el centro de alertas; opcionales `patientName` y `message` en el historial (plan 8).
 
-**3. Frontend, para consumir la API** (`VITE_USE_MOCK_API=false`; registrar los cambios en `documentacion/arquitectura-frontend.md`):
-- **Sesión:** `withCredentials: true`, restaurar la sesión con `POST /auth/refresh` al cargar, renovar ante un `401` y las funciones `*Real` que faltan en `auth.api.ts` (§ `auth`). Sin esto la sesión se pierde al recargar.
-- **Errores de listas:** convertir `[0]` en `.0` en `toFieldErrors` (la API nombra `plan[0].tooth`).
-- **Pares Mock/Real nuevos:** `institution.api.ts` (y el logo del login con `GET /institution/public`) y `finance.api.ts`.
-- **Sedes:** dejar de generar `branch-${Date.now()}` (`institution-branches.tsx`). Una sede nueva se envía con `id` vacío y se usa el UUID que devuelve el `PUT`. El nombre pasa a ser opcional y se muestra `label` ("Sede N" si no tiene nombre).
-- **Pantallas nuevas:** administrar profesionales y consultorios; registrar y anular pagos; ver y reactivar pacientes dados de baja.
-- **Ajustes:**
-  - la agenda debe enviar `from`/`to` del calendario;
-  - los selectores deben mostrar solo los profesionales y consultorios activos;
-  - ocultar al médico "Eliminar paciente" y los montos de finanzas;
-  - usar `user.professionalId` como profesional por defecto de la atención;
-  - usar `references` de la historia al mostrar e imprimir, y dejar de enviar `description` en los ítems del catálogo;
-  - avisar del límite de 160 caracteres en la plantilla de SMS.
+**3. Frontend, para consumir la API:** los 12 planes de [`front/docs/planes-implementacion/`](../front/docs/planes-implementacion/README.md), en orden. Incluyen la sesión con refresh, el estándar de recurso de API, los pares Mock/Real que faltan (`institution` y `finance`), las pantallas nuevas (profesionales y consultorios, pagos, pacientes dados de baja) y los ajustes por módulo. El frontend hoy **no compila**: lo arregla el plan 0. La conversión `[0]` → `.0` ya la hace `shared/lib/field-issues.ts`.
 
 **4. Infraestructura:** despliegue en el Droplet (nginx, `systemd`, migraciones y respaldos que **incluyan la carpeta de adjuntos**): `tutorial/fase-0.md` § 5.9.
 
