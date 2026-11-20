@@ -529,9 +529,9 @@ Si se aprueba la multi-clínica (`plan-multiclinica.md`, M1), esta misma tabla t
 
 | Columna | Tipo | Nulo | Reglas |
 |---|---|---|---|
-| `institution_id` | `uuid` FK → `institutions` (cascade) | | PK compuesta `(institution_id, id)` |
-| `id` | `varchar(60)` | | El que genera el frontend (`branch-1731…`) |
-| `position` | `integer` | | Orden en la pantalla |
+| `id` | `uuid` PK | | UUID v7 que genera el servidor |
+| `institution_id` | `uuid` FK → `institutions` (cascade) | | |
+| `position` | `integer` | | Orden en la pantalla. La API muestra "Sede N" (N = lugar en la lista) si `name` está vacío. |
 | `name`, `address`, `phone`, `hours` | `varchar(120)`, `(250)`, `(30)`, `(500)` | | |
 | `is_main` | `boolean` | | Índice único parcial `WHERE is_main`: como máximo una principal |
 
@@ -603,6 +603,7 @@ Pagos de los pacientes por sus tratamientos. Un pago no se borra: se anula, con 
 | `20261118031243_CrearNotificaciones` | `notification_templates` (con la plantilla predeterminada) y `notification_logs` |
 | `20261118031703_CrearPagos` | `financial_payments` |
 | `20261118032137_IndicesReportes` | Índice `stock_movements (type, created_at)` para el reporte de inventario |
+| `20261120175534_SedesConUuid` | `institution_branches.id` pasa de texto a `uuid` y queda como PK. Las sedes con ids de texto reciben un UUID nuevo. |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 

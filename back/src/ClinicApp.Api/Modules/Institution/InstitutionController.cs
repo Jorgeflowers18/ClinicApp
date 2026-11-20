@@ -34,12 +34,13 @@ public class InstitutionController(AppDbContext db, ClinicClock clock) : Control
 
     /// <summary>
     /// PUT /api/institution/profile → reemplaza el perfil completo. Solo admin.
-    /// Las sedes con un id existente se actualizan, las nuevas se crean y las que no vienen se borran.
+    /// Las sedes con id se actualizan, las que vienen sin id se crean (el servidor les da un UUID v7) y las que
+    /// no vienen se borran. Un id que no es de una sede de la clínica da 400 en <c>branches[i].id</c>.
     /// </summary>
     [HttpPut("profile")]
     [Authorize(Roles = Roles.Admin)]
     [RequestSizeLimit(2 * 1024 * 1024)]
-    public async Task<InstitutionProfileDto> UpdateProfile(InstitutionProfileRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<InstitutionProfileDto>> UpdateProfile(InstitutionProfileRequest request, CancellationToken cancellationToken)
     {
         var profile = await LoadAsync(tracking: true, cancellationToken);
 
@@ -57,7 +58,11 @@ public class InstitutionController(AppDbContext db, ClinicClock clock) : Control
         profile.UpdatedAt = clock.UtcNow;
         profile.UpdatedByUserId = User.GetUserId();
 
-        SyncBranches(profile, request.Branches);
+        if (SyncBranches(profile, request.Branches) is { } unknown)
+        {
+            ModelState.AddModelError($"branches[{unknown}].id", "La sede no existe");
+            return ValidationProblem(ModelState);
+        }
 
         // En dos pasos: primero se guardan todas sin "principal" y después se marca la principal. Así el índice
         // único "una sola principal" no choca cuando la principal pasa de una sede a otra.
@@ -73,26 +78,38 @@ public class InstitutionController(AppDbContext db, ClinicClock clock) : Control
         return InstitutionProfileDto.FromEntity(profile);
     }
 
-    private static void SyncBranches(InstitutionProfile profile, List<InstitutionBranchRequest> requested)
+    /// <summary>
+    /// Sincroniza las sedes con la lista recibida. Devuelve el índice de la primera sede cuyo id no es de una sede
+    /// de la clínica, o null si todas son válidas (en ese caso no se cambia nada).
+    /// </summary>
+    private int? SyncBranches(InstitutionProfile profile, List<InstitutionBranchRequest> requested)
     {
-        var wanted = requested.Select((branch, index) => (Branch: branch, Index: index)).ToDictionary(entry => entry.Branch.Id.Trim());
-        profile.Branches.RemoveAll(branch => !wanted.ContainsKey(branch.Id));
+        // La validación del request ya garantiza que cada id es vacío o un UUID, sin repetidos.
+        var ids = requested.Select(branch => Guid.TryParse(branch.Id?.Trim(), out var id) ? id : (Guid?)null).ToList();
+        for (var index = 0; index < ids.Count; index++)
+            if (ids[index] is { } id && profile.Branches.All(branch => branch.Id != id)) return index;
 
-        foreach (var (id, (request, index)) in wanted)
+        foreach (var removed in profile.Branches.Where(branch => !ids.Contains(branch.Id)).ToList())
+            profile.Branches.Remove(removed);
+
+        for (var index = 0; index < requested.Count; index++)
         {
-            var branch = profile.Branches.Find(entry => entry.Id == id);
+            var request = requested[index];
+            var branch = ids[index] is { } id ? profile.Branches.Single(entry => entry.Id == id) : null;
             if (branch is null)
             {
-                branch = new InstitutionBranch { InstitutionId = profile.Id, Id = id };
-                profile.Branches.Add(branch);
+                // db.Add y no solo profile.Branches.Add: con el id ya puesto, EF la tomaría por una fila existente.
+                branch = new InstitutionBranch { Id = Guid.CreateVersion7(), InstitutionId = profile.Id };
+                db.InstitutionBranches.Add(branch);
             }
             branch.Position = index;
-            branch.Name = request.Name.Trim();
+            branch.Name = Validation.Clean(request.Name);
             branch.Address = Validation.Clean(request.Address);
             branch.Phone = Validation.Clean(request.Phone);
             branch.Hours = Validation.Clean(request.Hours);
             branch.IsMain = request.IsMain;
         }
+        return null;
     }
 
     /// <summary>El perfil de la única clínica (la semilla lo crea al arrancar si no existe).</summary>

@@ -26,7 +26,8 @@ public class InstitutionTests(ApiFactory api)
         ["branches"] = branches,
     };
 
-    private static object Branch(string id, string name, bool isMain = false) =>
+    /// <summary>Sede para el PUT: <paramref name="id"/> null es una sede nueva.</summary>
+    private static object Branch(string? id, string name, bool isMain = false) =>
         new { id, name, address = "Quito", phone = "022222222", hours = "08:00 - 18:00", isMain };
 
     [Fact]
@@ -45,20 +46,66 @@ public class InstitutionTests(ApiFactory api)
     {
         var admin = await api.As("admin");
 
+        // Las sedes nuevas van sin id: el servidor les da un UUID.
         var saved = await admin.PutJson("/api/institution/profile",
-            Body(Branch("branch-1", "Matriz", isMain: true), Branch("branch-2", "Norte")), HttpStatusCode.OK);
+            Body(Branch(null, "Matriz", isMain: true), Branch("", "Norte")), HttpStatusCode.OK);
         Assert.Equal("contacto@sonrisas.ec", saved.Str("email"));
-        Assert.Equal(["branch-1", "branch-2"], saved!["branches"]!.AsArray().Select(branch => branch.Str("id")));
+        var created = saved!["branches"]!.AsArray();
+        Assert.Equal(["Matriz", "Norte"], created.Select(branch => branch.Str("name")));
+        Assert.All(created, branch => Assert.True(Guid.TryParse(branch.Str("id"), out _)));
+        var matrizId = created[0].Str("id");
+        var norteId = created[1].Str("id");
 
         // La principal pasa a "Norte", se reordena, se quita la matriz y se agrega otra.
         var changed = await admin.PutJson("/api/institution/profile",
-            Body(Branch("branch-3", "Sur"), Branch("branch-2", "Norte", isMain: true)), HttpStatusCode.OK);
+            Body(Branch(null, "Sur"), Branch(norteId, "Norte", isMain: true)), HttpStatusCode.OK);
         var branches = changed!["branches"]!.AsArray();
-        Assert.Equal(["branch-3", "branch-2"], branches.Select(branch => branch.Str("id")));
+        Assert.Equal(["Sur", "Norte"], branches.Select(branch => branch.Str("name")));
+        Assert.Equal(norteId, branches[1].Str("id"));       // la que se actualizó conserva su id
+        Assert.NotEqual(matrizId, branches[0].Str("id"));
         Assert.True(branches[1]!["isMain"]!.GetValue<bool>());
 
         var read = await admin.GetJson("/api/institution/profile");
         Assert.Equal(2, read!["branches"]!.AsArray().Count);
+    }
+
+    [Fact]
+    public async Task Sede_sin_nombre_se_muestra_como_Sede_N_segun_su_lugar()
+    {
+        var admin = await api.As("admin");
+
+        var saved = await admin.PutJson("/api/institution/profile",
+            Body(Branch(null, "Matriz"), Branch(null, ""), Branch(null, "  ")), HttpStatusCode.OK);
+        var branches = saved!["branches"]!.AsArray();
+        Assert.Equal(["Matriz", "Sede 2", "Sede 3"], branches.Select(branch => branch.Str("label")));
+        Assert.Equal("", branches[1].Str("name"));
+
+        // Se calcula al leer: al quitar la primera, la que era "Sede 3" pasa a ser "Sede 2". Con nombre, se usa el nombre.
+        var changed = await admin.PutJson("/api/institution/profile",
+            Body(Branch(branches[1].Str("id"), "Norte"), Branch(branches[2].Str("id"), "")), HttpStatusCode.OK);
+        Assert.Equal(["Norte", "Sede 2"], changed!["branches"]!.AsArray().Select(branch => branch.Str("label")));
+    }
+
+    [Fact]
+    public async Task Ids_de_sede_invalidos_repetidos_o_ajenos_dan_400()
+    {
+        var admin = await api.As("admin");
+        var saved = await admin.PutJson("/api/institution/profile", Body(Branch(null, "Matriz")), HttpStatusCode.OK);
+        var id = saved!["branches"]![0].Str("id");
+
+        var notUuid = await admin.PutJson("/api/institution/profile", Body(Branch("branch-1", "Matriz")), HttpStatusCode.BadRequest);
+        Assert.True(notUuid.HasError("branches[0].id"));
+
+        var repeated = await admin.PutJson("/api/institution/profile", Body(Branch(id, "A"), Branch(id, "B")), HttpStatusCode.BadRequest);
+        Assert.True(repeated.HasError("branches[1].id"));
+
+        var unknown = await admin.PutJson("/api/institution/profile",
+            Body(Branch(id, "Matriz"), Branch(Guid.CreateVersion7().ToString(), "Otra")), HttpStatusCode.BadRequest);
+        Assert.True(unknown.HasError("branches[1].id"));
+
+        // El 400 no cambió nada: la sede sigue igual.
+        var read = await admin.GetJson("/api/institution/profile");
+        Assert.Equal([id], read!["branches"]!.AsArray().Select(branch => branch.Str("id")));
     }
 
     [Theory]
@@ -81,16 +128,16 @@ public class InstitutionTests(ApiFactory api)
     }
 
     [Fact]
-    public async Task Dos_sedes_principales_o_sin_nombre_dan_400()
+    public async Task Dos_sedes_principales_o_nombre_largo_dan_400()
     {
         var admin = await api.As("admin");
 
         var twoMain = await admin.PutJson("/api/institution/profile",
-            Body(Branch("a", "Uno", isMain: true), Branch("b", "Dos", isMain: true)), HttpStatusCode.BadRequest);
+            Body(Branch(null, "Uno", isMain: true), Branch(null, "Dos", isMain: true)), HttpStatusCode.BadRequest);
         Assert.True(twoMain.HasError("branches"));
 
-        var noName = await admin.PutJson("/api/institution/profile", Body(Branch("a", "")), HttpStatusCode.BadRequest);
-        Assert.True(noName.HasError("branches[0].name"));
+        var longName = await admin.PutJson("/api/institution/profile", Body(Branch(null, new string('x', 121))), HttpStatusCode.BadRequest);
+        Assert.True(longName.HasError("branches[0].name"));
     }
 
     [Fact]

@@ -51,6 +51,7 @@ Los 9 planes están implementados (80 endpoints, 215 pruebas: [`docs/pruebas.md`
 - **Sesión:** `withCredentials: true`, restaurar la sesión con `POST /auth/refresh` al cargar, renovar ante un `401` y las funciones `*Real` que faltan en `auth.api.ts` (§ `auth`). Sin esto la sesión se pierde al recargar.
 - **Errores de listas:** convertir `[0]` en `.0` en `toFieldErrors` (la API nombra `plan[0].tooth`).
 - **Pares Mock/Real nuevos:** `institution.api.ts` (y el logo del login con `GET /institution/public`) y `finance.api.ts`.
+- **Sedes:** dejar de generar `branch-${Date.now()}` (`institution-branches.tsx`). Una sede nueva se envía con `id` vacío y se usa el UUID que devuelve el `PUT`. El nombre pasa a ser opcional y se muestra `label` ("Sede N" si no tiene nombre).
 - **Pantallas nuevas:** administrar profesionales y consultorios; registrar y anular pagos; ver y reactivar pacientes dados de baja.
 - **Ajustes:**
   - la agenda debe enviar `from`/`to` del calendario;

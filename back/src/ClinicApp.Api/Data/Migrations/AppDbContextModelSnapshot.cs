@@ -995,13 +995,8 @@ namespace ClinicApp.Api.Data.Migrations
 
             modelBuilder.Entity("ClinicApp.Api.Modules.Institution.InstitutionBranch", b =>
                 {
-                    b.Property<Guid>("InstitutionId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("institution_id");
-
-                    b.Property<string>("Id")
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)")
                         .HasColumnName("id");
 
                     b.Property<string>("Address")
@@ -1015,6 +1010,10 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("hours");
+
+                    b.Property<Guid>("InstitutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("institution_id");
 
                     b.Property<bool>("IsMain")
                         .HasColumnType("boolean")
@@ -1036,7 +1035,7 @@ namespace ClinicApp.Api.Data.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("position");
 
-                    b.HasKey("InstitutionId", "Id")
+                    b.HasKey("Id")
                         .HasName("pk_institution_branches");
 
                     b.HasIndex("InstitutionId")

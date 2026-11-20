@@ -11,14 +11,20 @@ public record InstitutionProfileDto(
     public static InstitutionProfileDto FromEntity(InstitutionProfile profile) => new(
         profile.Name, profile.LegalName, profile.Ruc, profile.Phone, profile.Email, profile.Address, profile.Website,
         profile.LogoText, profile.LogoImage, profile.Notes, profile.Hours,
-        profile.Branches.OrderBy(branch => branch.Position).Select(InstitutionBranchDto.FromEntity).ToList(),
+        profile.Branches.OrderBy(branch => branch.Position)
+            .Select((branch, index) => InstitutionBranchDto.FromEntity(branch, index + 1)).ToList(),
         profile.UpdatedAt);
 }
 
-public record InstitutionBranchDto(string Id, string Name, string Address, string Phone, string Hours, bool IsMain)
+/// <summary>
+/// <c>Label</c> es lo que se muestra: el nombre, o "Sede N" si la sede no tiene nombre. N es su lugar en la lista
+/// (1, 2, 3…): no se guarda, se calcula al leer, así que cambia si se reordenan o se borran sedes.
+/// </summary>
+public record InstitutionBranchDto(Guid Id, string Name, string Label, string Address, string Phone, string Hours, bool IsMain)
 {
-    public static InstitutionBranchDto FromEntity(InstitutionBranch branch) =>
-        new(branch.Id, branch.Name, branch.Address, branch.Phone, branch.Hours, branch.IsMain);
+    public static InstitutionBranchDto FromEntity(InstitutionBranch branch, int number) => new(
+        branch.Id, branch.Name, string.IsNullOrWhiteSpace(branch.Name) ? $"Sede {number}" : branch.Name,
+        branch.Address, branch.Phone, branch.Hours, branch.IsMain);
 }
 
 /// <summary>Lo único que ve la pantalla de inicio de sesión (sin sesión).</summary>
@@ -77,24 +83,26 @@ public class InstitutionProfileRequest : IValidatableObject
         if (Branches.Count(branch => branch.IsMain) > 1)
             yield return new ValidationResult("Solo puede haber una sede principal", ["branches"]);
 
-        var seen = new HashSet<string>();
+        // Las sedes nuevas vienen sin id; las existentes, con el UUID que devolvió el servidor.
+        var seen = new HashSet<Guid>();
         for (var index = 0; index < Branches.Count; index++)
         {
             var id = Branches[index].Id?.Trim() ?? "";
-            if (id.Length is 0 or > 60) yield return new ValidationResult("Identificador inválido", [$"branches[{index}].id"]);
-            else if (!seen.Add(id)) yield return new ValidationResult("Sede repetida", [$"branches[{index}].id"]);
+            if (id.Length == 0) continue;
+            if (!Guid.TryParse(id, out var guid)) yield return new ValidationResult("Identificador inválido", [$"branches[{index}].id"]);
+            else if (!seen.Add(guid)) yield return new ValidationResult("Sede repetida", [$"branches[{index}].id"]);
         }
     }
 }
 
 public class InstitutionBranchRequest
 {
-    public string Id { get; set; } = "";
+    /// <summary>Vacío o null en una sede nueva; el UUID de la sede para actualizarla.</summary>
+    public string? Id { get; set; }
 
-    [Required(ErrorMessage = "El nombre de la sede es obligatorio")]
-    [MinLength(2, ErrorMessage = "Mínimo 2 caracteres")]
+    /// <summary>Opcional: sin nombre se muestra "Sede N".</summary>
     [MaxLength(120, ErrorMessage = "Máximo 120 caracteres")]
-    public string Name { get; set; } = "";
+    public string? Name { get; set; }
 
     [MaxLength(250, ErrorMessage = "Máximo 250 caracteres")]
     public string? Address { get; set; }

@@ -37,14 +37,15 @@ public class InstitutionProfile
 /// <summary>Sede de la clínica. Tabla <c>institution_branches</c>.</summary>
 public class InstitutionBranch
 {
+    /// <summary>UUID v7 que genera el servidor al crear la sede.</summary>
+    public Guid Id { get; set; }
+
     public Guid InstitutionId { get; set; }
 
-    /// <summary>Identificador que genera el frontend ("branch-1731…"). Único dentro de la clínica.</summary>
-    public string Id { get; set; } = "";
-
-    /// <summary>Orden en la pantalla.</summary>
+    /// <summary>Orden en la pantalla. También da el número de "Sede N" cuando la sede no tiene nombre.</summary>
     public int Position { get; set; }
 
+    /// <summary>Opcional: si está vacío se muestra "Sede N" (lo calcula <see cref="InstitutionBranchDto"/>).</summary>
     public string Name { get; set; } = "";
     public string Address { get; set; } = "";
     public string Phone { get; set; } = "";
@@ -81,9 +82,9 @@ public class InstitutionBranchConfiguration : IEntityTypeConfiguration<Instituti
     public void Configure(EntityTypeBuilder<InstitutionBranch> builder)
     {
         builder.ToTable("institution_branches");
-        builder.HasKey(branch => new { branch.InstitutionId, branch.Id });
+        builder.HasKey(branch => branch.Id);
+        builder.Property(branch => branch.Id).ValueGeneratedNever();
 
-        builder.Property(branch => branch.Id).HasMaxLength(60);
         builder.Property(branch => branch.Name).HasMaxLength(120);
         builder.Property(branch => branch.Address).HasMaxLength(250);
         builder.Property(branch => branch.Phone).HasMaxLength(30);

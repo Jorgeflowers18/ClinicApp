@@ -525,7 +525,8 @@ Content-Type: application/json
   "notes": "",
   "hours": "Lunes a viernes: 08:00 - 18:00",
   "branches": [
-    { "id": "branch-1", "name": "Matriz", "address": "Quito", "phone": "", "hours": "", "isMain": true }
+    { "id": null, "name": "Matriz", "address": "Quito", "phone": "", "hours": "", "isMain": true },
+    { "id": null, "name": "", "address": "Cumbayá", "phone": "", "hours": "", "isMain": false }
   ]
 }
 

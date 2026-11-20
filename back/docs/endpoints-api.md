@@ -722,7 +722,10 @@ Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/in
   "phone": "+593 98 123 4567", "email": "contacto@sonrisas.ec", "address": "Av. Amazonas N45-120, Quito",
   "website": "https://sonrisas.ec", "logoText": "CS", "logoImage": "data:image/png;base64,…",
   "notes": "", "hours": "Lunes a viernes: 08:00 - 18:00",
-  "branches": [ { "id": "branch-1731…", "name": "Matriz", "address": "", "phone": "", "hours": "", "isMain": true } ],
+  "branches": [
+    { "id": "019a8f3c-5e21-7b4a-9c3d-2f8e1a6b4c7d", "name": "Matriz", "label": "Matriz", "address": "", "phone": "", "hours": "", "isMain": true },
+    { "id": "019a8f3c-6a10-7c2e-8b1f-4d3c2b1a0f9e", "name": "", "label": "Sede 2", "address": "", "phone": "", "hours": "", "isMain": false }
+  ],
   "updatedAt": "2026-11-17T20:00:00Z"
 }
 ```
@@ -731,7 +734,7 @@ Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/in
 |---|---|---|
 | `GET /api/institution/public` | **público** | `200` `{ name, logoText, logoImage }` para la pantalla de inicio de sesión. Límite: 120 por minuto por IP. |
 | `GET /api/institution/profile` | los tres | `200` el perfil completo, con las sedes en orden |
-| `PUT /api/institution/profile` | admin | `200`. Reemplaza el perfil completo: las sedes con un `id` existente se actualizan, las nuevas se crean y las que no vienen se borran. |
+| `PUT /api/institution/profile` | admin | `200`. Reemplaza el perfil completo: las sedes con `id` se actualizan, las que vienen sin `id` (o `""`) se crean y las que no vienen se borran. El servidor da el `id` (UUID v7) y lo devuelve en la respuesta. |
 
 **Validación del `PUT`:**
 - `name`: 2 a 160.
@@ -741,7 +744,11 @@ Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/in
 - `logoText`: hasta 10.
 - `logoImage`: data URL PNG, JPG o WebP de hasta ~500 KB, o `null`. SVG no se acepta.
 - `notes`: hasta 1000; `hours`: hasta 500.
-- Hasta 20 sedes, con `id` (el que genera el frontend, hasta 60 caracteres, sin repetir), `name` de 2 a 120 y como máximo una principal (`errors.branches`).
+- Hasta 20 sedes y como máximo una principal (`errors.branches`).
+- `branches[i].id`: vacío para una sede nueva, o el UUID de una sede de la clínica. Un texto que no es UUID, un id repetido o uno que no es de la clínica dan `400` en `errors["branches[i].id"]`, sin cambiar nada.
+- `branches[i].name`: opcional, hasta 120.
+
+**`label` de la sede:** es lo que se muestra. Es el nombre, o "Sede N" si la sede no tiene nombre, donde N es su lugar en la lista (1, 2, 3…). No se guarda: se calcula al leer, así que cambia si se reordenan o se borran sedes.
 
 El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los valores iniciales del frontend (nombre configurable con `Seed__InstitutionName`).
 
