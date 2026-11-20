@@ -1,0 +1,611 @@
+# Peticiones de prueba. En VS Code (extensión REST Client) o Visual Studio / Rider,
+# pulsa "Send Request" sobre cada una. La API debe estar corriendo (dotnet run).
+# Casi todos los endpoints piden sesión: ejecuta primero "Iniciar sesión".
+
+@api = http://localhost:5000/api
+@token = {{login.response.body.accessToken}}
+
+### Chequeo de salud: "Healthy" (200) si la API llega a la base, "Unhealthy" (503) si no
+GET {{api}}/health
+
+### Ruta inexistente: 404 en formato ProblemDetails ("Recurso no encontrado")
+GET {{api}}/no-existe
+
+# ───────────────────────── auth ─────────────────────────
+# Cuentas de desarrollo (las crea la API al arrancar si la tabla users está vacía):
+# admin@clinica.com / admin123 · recepcion@clinica.com / recepcion123 · medico@clinica.com / medico123
+
+### Iniciar sesión (devuelve accessToken y la cookie de refresh)
+# @name login
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@clinica.com",
+  "password": "admin123"
+}
+
+### Usuario de la sesión
+GET {{api}}/auth/me
+Authorization: Bearer {{token}}
+
+### Renovar la sesión con la cookie de refresh (rota la cookie)
+POST {{api}}/auth/refresh
+
+### Guardar "Mi perfil"
+PUT {{api}}/auth/me/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Ana Morales",
+  "title": "Directora clínica",
+  "specialty": "Ortodoncia",
+  "bio": "",
+  "avatarColor": "#0f766e",
+  "avatarImage": null
+}
+
+### Recuperar contraseña (siempre 202; en desarrollo el enlace sale en la consola de la API)
+POST {{api}}/auth/password-recovery
+Content-Type: application/json
+
+{
+  "email": "medico@clinica.com"
+}
+
+### Fijar la contraseña nueva (pega el token del enlace)
+POST {{api}}/auth/password-reset
+Content-Type: application/json
+
+{
+  "token": "PEGA-AQUI-EL-TOKEN",
+  "password": "una-clave-nueva"
+}
+
+### Solicitud de acceso
+POST {{api}}/auth/access-requests
+Content-Type: application/json
+
+{
+  "email": "nueva@clinica.com",
+  "fullName": "Nueva Persona",
+  "institution": "Clínica Dental",
+  "message": "Hola, soy la nueva asistente."
+}
+
+### Cerrar sesión (invalida la cookie de refresh)
+POST {{api}}/auth/logout
+
+# ───────────────────────── treatments ─────────────────────────
+
+### Sin sesión: 401 ("Inicia sesión para continuar")
+GET {{api}}/treatments
+
+### Listar tratamientos (paginado, con búsqueda)
+GET {{api}}/treatments?page=1&pageSize=10&search=limpieza
+Authorization: Bearer {{token}}
+
+### Listar solo los activos (sin paginar)
+GET {{api}}/treatments?active=true
+Authorization: Bearer {{token}}
+
+### Crear un tratamiento
+# @name crear
+POST {{api}}/treatments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Limpieza dental",
+  "category": "Odontología general",
+  "description": "Profilaxis y control de placa bacteriana.",
+  "durationMinutes": 30,
+  "price": 35,
+  "active": true,
+  "consumption": []
+}
+
+### Ver el tratamiento recién creado
+GET {{api}}/treatments/{{crear.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Editarlo
+PUT {{api}}/treatments/{{crear.response.body.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Limpieza dental",
+  "category": "Odontología general",
+  "description": "Profilaxis, control de placa y fluorización.",
+  "durationMinutes": 40,
+  "price": 40,
+  "active": true,
+  "consumption": []
+}
+
+### Error de validación (400): nombre corto, duración y precio inválidos
+POST {{api}}/treatments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "L",
+  "category": "Odontología general",
+  "durationMinutes": 2,
+  "price": -5,
+  "active": true
+}
+
+### Eliminarlo
+DELETE {{api}}/treatments/{{crear.response.body.id}}
+Authorization: Bearer {{token}}
+
+### No encontrado (404)
+GET {{api}}/treatments/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}
+
+# ───────────────────────── inventory ─────────────────────────
+# Leer insumos: los tres roles. Todo lo demás: admin y recepcion.
+
+### Crear un insumo (nace con stock 0)
+# @name insumo
+POST {{api}}/inventory/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Guantes de nitrilo",
+  "category": "Protección",
+  "unit": "caja",
+  "kind": "consumible",
+  "minStock": 5,
+  "unitCost": 8.5,
+  "supplier": "Dental Sur"
+}
+
+### Listar insumos (paginado, busca en nombre, categoría y proveedor)
+GET {{api}}/inventory/items?page=1&pageSize=10&search=guantes
+Authorization: Bearer {{token}}
+
+### Entrada de stock: crea un lote (vencimiento opcional, "YYYY-MM-DD" o "")
+POST {{api}}/inventory/items/{{insumo.response.body.id}}/movements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "entrada",
+  "quantity": 10,
+  "reason": "Compra directa",
+  "expirationDate": "2027-03-31"
+}
+
+### Salida de stock: descuenta por FEFO (400 "Stock insuficiente" si supera el stock)
+POST {{api}}/inventory/items/{{insumo.response.body.id}}/movements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "salida",
+  "quantity": 3,
+  "reason": "Uso en consultorio 1"
+}
+
+### Movimientos del insumo (del más reciente al más antiguo)
+GET {{api}}/inventory/items/{{insumo.response.body.id}}/movements
+Authorization: Bearer {{token}}
+
+### Lotes del insumo (en orden FEFO)
+GET {{api}}/inventory/items/{{insumo.response.body.id}}/lots
+Authorization: Bearer {{token}}
+
+### Crear un proveedor
+# @name proveedor
+POST {{api}}/inventory/suppliers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Dental Sur",
+  "contactName": "Mario Pérez",
+  "phone": "0999999999",
+  "email": "ventas@dentalsur.com",
+  "address": "",
+  "notes": ""
+}
+
+### Listar proveedores
+GET {{api}}/inventory/suppliers
+Authorization: Bearer {{token}}
+
+### Crear una orden de compra (pendiente: no mueve stock)
+# @name orden
+POST {{api}}/inventory/purchase-orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "supplierId": "{{proveedor.response.body.id}}",
+  "notes": "Pedido mensual",
+  "lines": [
+    { "itemId": "{{insumo.response.body.id}}", "quantity": 20, "unitCost": 8.25, "expirationDate": "2027-06-30" }
+  ]
+}
+
+### Recibir la orden: un lote y una entrada por línea (409 si ya no está pendiente)
+POST {{api}}/inventory/purchase-orders/{{orden.response.body.id}}/receive
+Authorization: Bearer {{token}}
+
+### Listar órdenes de compra
+GET {{api}}/inventory/purchase-orders
+Authorization: Bearer {{token}}
+
+### Registrar un ciclo de esterilización (solo insumos "instrumental": este da 400)
+POST {{api}}/inventory/sterilization-cycles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "itemIds": ["{{insumo.response.body.id}}"],
+  "performedAt": "2026-11-15",
+  "result": "aprobado",
+  "responsibleProfessionalId": "0199a000-0000-7000-8000-000000000001",
+  "notes": "Autoclave 1"
+}
+
+### Listar ciclos de esterilización
+GET {{api}}/inventory/sterilization-cycles
+Authorization: Bearer {{token}}
+
+### ───────────── Pacientes ─────────────
+
+### Crear un paciente (el servidor asigna clinicalRecordNumber: HC-000001...)
+# @name paciente
+POST {{api}}/patients
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "firstName": "María",
+  "lastName": "Pérez",
+  "documentId": "1712345678",
+  "birthDate": "1990-05-12",
+  "gender": "femenino",
+  "maritalStatus": "casado",
+  "occupation": "Docente",
+  "company": "",
+  "nationality": "Ecuatoriana",
+  "phone": "0991234567",
+  "email": "maria@correo.com",
+  "address": "Av. Amazonas N45",
+  "city": "Quito",
+  "notes": "",
+  "notificationsEnabled": true,
+  "emergencyContactName": "Juan Pérez",
+  "emergencyContactRelationship": "Esposo",
+  "emergencyContactPhone": "0987654321",
+  "insuranceProvider": "",
+  "insurancePolicy": "",
+  "consentSigned": true,
+  "treatmentStatus": "activo",
+  "lastVisitAt": ""
+}
+
+### Buscar sin tildes (también por cédula, teléfono o HC-000001)
+GET {{api}}/patients?page=1&pageSize=10&search=perez
+Authorization: Bearer {{token}}
+
+### Ver un paciente
+GET {{api}}/patients/{{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Dar de baja (admin o recepción): desaparece de la lista, pero se conserva
+DELETE {{api}}/patients/{{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Reactivar (solo admin)
+POST {{api}}/patients/{{paciente.response.body.id}}/restore
+Authorization: Bearer {{token}}
+
+### ───────────── Profesionales y consultorios ─────────────
+
+### Listar profesionales (también los inactivos, con active: false)
+GET {{api}}/professionals
+Authorization: Bearer {{token}}
+
+### Crear un profesional (solo admin)
+# @name profesional
+POST {{api}}/professionals
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Dra. Lucía Andrade", "specialty": "Periodoncia", "registrationNumber": "MSP-17-05555" }
+
+### Editar, desactivar o vincular un usuario (userId: null desvincula). Devuelve futureAppointments.
+PUT {{api}}/professionals/{{profesional.response.body.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Dra. Lucía Andrade", "specialty": "Periodoncia", "registrationNumber": "MSP-17-05555", "active": true, "userId": null }
+
+### Listar consultorios
+GET {{api}}/rooms
+Authorization: Bearer {{token}}
+
+### Crear un consultorio (solo admin; nombre único entre los activos)
+POST {{api}}/rooms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Consultorio 4" }
+
+### ───────────── Agenda ─────────────
+
+### Agendar una cita: fecha y horas en hora de la clínica (409 si choca con otra cita o un bloqueo)
+# @name cita
+POST {{api}}/appointments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "patientId": "{{paciente.response.body.id}}",
+  "professionalId": "{{profesional.response.body.id}}",
+  "treatmentId": "",
+  "roomId": "",
+  "date": "2026-12-01",
+  "startTime": "09:00",
+  "endTime": "09:30",
+  "notes": "Control"
+}
+
+### Citas de un rango (fechas de la clínica, inclusivas)
+GET {{api}}/appointments?from=2026-12-01&to=2026-12-31
+Authorization: Bearer {{token}}
+
+### Citas de un paciente (de la más reciente a la más antigua)
+GET {{api}}/appointments?patientId={{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Confirmar la cita
+PATCH {{api}}/appointments/{{cita.response.body.id}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "confirmada" }
+
+### Bloquear el horario de un profesional (409 si hay una cita en ese rango)
+# @name bloqueo
+POST {{api}}/schedule-blocks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "professionalId": "{{profesional.response.body.id}}",
+  "roomId": "",
+  "date": "2026-12-01",
+  "startTime": "13:00",
+  "endTime": "14:00",
+  "reason": "Almuerzo"
+}
+
+### Quitar el bloqueo
+DELETE {{api}}/schedule-blocks/{{bloqueo.response.body.id}}
+Authorization: Bearer {{token}}
+
+### ───────────── Tratamientos realizados ─────────────
+
+### Registrar un tratamiento realizado (admin o médico). Descuenta insumos por FEFO.
+### Idempotente por sourceKey: repetirlo devuelve 200 con el mismo registro, sin descontar otra vez.
+POST {{api}}/treatment-assignments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "treatmentId": "{{crear.response.body.id}}",
+  "patientId": "{{paciente.response.body.id}}",
+  "date": "2026-11-17",
+  "tooth": "26",
+  "sourceEncounterId": "0199c000-0000-7000-8000-000000000001",
+  "sourceKey": "0199c000-0000-7000-8000-000000000001:0199c000-0000-7000-8000-000000000002",
+  "price": 35
+}
+
+### Tratamientos realizados de un paciente
+GET {{api}}/treatment-assignments?patientId={{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Pacientes que recibieron un tratamiento
+GET {{api}}/treatments/{{crear.response.body.id}}/assignments
+Authorization: Bearer {{token}}
+
+### ───────────── Historia clínica (admin o médico) ─────────────
+
+### Historia de un paciente: { record, encounters, references }. Sin historia, una vacía con revision 0.
+GET {{api}}/clinical-history/patients/{{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Subir un adjunto (multipart). Solo JPG, PNG, WebP o PDF de hasta 20 MB.
+# @name adjunto
+POST {{api}}/clinical-history/attachments
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="kind"
+
+radiografia_periapical
+--limite
+Content-Disposition: form-data; name="patientId"
+
+{{paciente.response.body.id}}
+--limite
+Content-Disposition: form-data; name="file"; filename="rx.pdf"
+Content-Type: application/pdf
+
+%PDF-1.7 ejemplo
+--limite--
+
+### Descargar el adjunto (con el nombre original como alias)
+GET {{api}}/clinical-history/attachments/{{adjunto.response.body.id}}/file
+Authorization: Bearer {{token}}
+
+### Registrar una atención (el id lo genera el frontend: un reintento con el mismo id devuelve 200)
+# @name atencion
+POST {{api}}/clinical-history/patients/{{paciente.response.body.id}}/encounters
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "0199d000-0000-7000-8000-000000000001",
+  "date": "2026-11-17",
+  "professionalId": "{{profesional.response.body.id}}",
+  "appointmentId": null,
+  "reason": "Dolor en molar superior",
+  "presentIllness": "",
+  "vitals": { "bloodPressure": "120/80", "heartRate": 72, "respiratoryRate": null, "spo2": 98, "temperature": 36.5, "weight": null, "height": null },
+  "asa": "I",
+  "riskAssessment": ["ambulatorio"],
+  "extraoralExam": {},
+  "intraoralExam": {},
+  "pain": { "scale": 6, "location": "16", "character": "Pulsátil" },
+  "cariesRisk": { "level": "alto", "factors": "" },
+  "periodontalRisk": { "level": "", "factors": "" },
+  "diagnoses": [{ "id": "d1", "description": "Caries profunda", "tooth": "16", "priority": "alta" }],
+  "prognosis": { "level": "favorable", "notes": "" },
+  "periodontalDiagnosis": { "gingival": "", "stage": "", "extent": "", "grade": "", "stability": "", "periImplant": "", "smoking": "", "diabetes": "", "otherFactors": "", "teethLostToPerio": null },
+  "maintenanceInterval": { "option": "6", "other": "" },
+  "procedures": "Apertura cameral",
+  "materials": "Lidocaína 2 %",
+  "requestedExams": [],
+  "examFindings": "",
+  "evolution": "",
+  "notes": "",
+  "nextVisit": "",
+  "performedTreatments": [],
+  "chartSnapshot": null,
+  "clinicalSnapshot": null
+}
+
+### Agregar una nota aclaratoria (el autor sale de la sesión)
+POST {{api}}/clinical-history/encounters/{{atencion.response.body.id}}/notes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "text": "Corrección: la pieza tratada fue la 17." }
+
+### Lista global de atenciones (busca sin tildes en motivo, diagnósticos y nombre o cédula del paciente)
+GET {{api}}/clinical-history/encounters?page=1&pageSize=10&search=caries
+Authorization: Bearer {{token}}
+
+### ───────────── Institución ─────────────
+
+### Nombre y logo para la pantalla de inicio de sesión (sin sesión)
+GET {{api}}/institution/public
+
+### Perfil completo con sus sedes
+GET {{api}}/institution/profile
+Authorization: Bearer {{token}}
+
+### Guardar el perfil (solo admin). Las sedes se sincronizan por id; como máximo una principal.
+PUT {{api}}/institution/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "ClinicApp Odontología",
+  "legalName": "Grupo Odontológico ClinicApp S.A.",
+  "ruc": "1798765432001",
+  "phone": "+593 98 123 4567",
+  "email": "contacto@clinicapp.com",
+  "address": "Av. Amazonas N45-120, Quito",
+  "website": "https://clinicapp.com",
+  "logoText": "CA",
+  "logoImage": null,
+  "notes": "",
+  "hours": "Lunes a viernes: 08:00 - 18:00",
+  "branches": [
+    { "id": null, "name": "Matriz", "address": "Quito", "phone": "", "hours": "", "isMain": true },
+    { "id": null, "name": "", "address": "Cumbayá", "phone": "", "hours": "", "isMain": false }
+  ]
+}
+
+### ───────────── Notificaciones (admin o recepción) ─────────────
+
+### Reporte de notificaciones enviadas (búsqueda por nombre o cédula; fechas de la clínica, inclusivas)
+GET {{api}}/notifications?page=1&pageSize=10&dateFrom=2026-11-01&dateTo=2026-11-30
+Authorization: Bearer {{token}}
+
+### Notificaciones de una cita (los tres roles)
+GET {{api}}/notifications?appointmentId={{cita.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Plantilla del mensaje
+GET {{api}}/notifications/template
+Authorization: Bearer {{token}}
+
+### Guardar la plantilla (variables: [nombre del cliente], [nombre de la clínica], [fecha de la cita], [hora de la cita], [profesional])
+PUT {{api}}/notifications/template
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "message": "Hola [nombre del cliente], tu cita en [nombre de la clínica] es el [fecha de la cita] a las [hora de la cita] con [profesional]." }
+
+### ───────────── Finanzas (admin o recepción) ─────────────
+
+### Cartera: una fila por paciente + tratamiento
+GET {{api}}/finance/portfolio
+Authorization: Bearer {{token}}
+
+### Registrar un pago (409 si supera el saldo pendiente)
+# @name pago
+POST {{api}}/finance/payments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "patientId": "{{paciente.response.body.id}}",
+  "treatmentId": "{{crear.response.body.id}}",
+  "date": "2026-11-17",
+  "amount": 20,
+  "method": "transferencia",
+  "reference": "TRX-001",
+  "observations": ""
+}
+
+### Anular el pago (con motivo; nunca se borra)
+POST {{api}}/finance/payments/{{pago.response.body.id}}/void
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "reason": "Transferencia rechazada por el banco" }
+
+### Resumen de un tratamiento de un paciente
+GET {{api}}/finance/treatments/{{crear.response.body.id}}/summary?patientId={{paciente.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Resumen de un paciente
+GET {{api}}/finance/patients/{{paciente.response.body.id}}/summary
+Authorization: Bearer {{token}}
+
+### ───────────── Reportes (from/to inclusivos, en hora de la clínica) ─────────────
+
+### Resumen (los tres roles: lo usa el Inicio)
+GET {{api}}/reports/summary?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+### Agenda: por día, por estado y ocupación por consultorio (los tres roles)
+GET {{api}}/reports/agenda?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+### Productividad por profesional (solo admin)
+GET {{api}}/reports/productivity?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+### Tratamientos (solo admin)
+GET {{api}}/reports/treatments?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+### Inventario: críticos, compras y consumo (solo admin)
+GET {{api}}/reports/inventory?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}

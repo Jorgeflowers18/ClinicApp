@@ -1,0 +1,39 @@
+# Base de datos de desarrollo de ClinicApp.
+#
+#   Levantar:  docker compose up -d      (desde la carpeta back/)
+#   Apagar:    docker compose stop
+#   Estado:    docker compose ps
+#
+# Los datos se guardan en el volumen "clinicapp-pgdata" y sobreviven a "stop" y "down".
+# Solo "docker compose down -v" borra el volumen (y con él todos los datos).
+#
+# Las credenciales se leen de back/.env (copiar .env.example). Los valores por defecto
+# son solo para desarrollo local; en producción se usan otros.
+
+# Nombre del proyecto en Docker (sin esto tomaría el nombre de la carpeta, "back").
+name: clinicapp
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: clinicapp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-clinicapp}
+      POSTGRES_USER: ${POSTGRES_USER:-clinicapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clinicapp_dev}
+      TZ: America/Guayaquil
+    ports:
+      # Puerto de tu PC : puerto dentro del contenedor.
+      # Se usa 5433 para no chocar con otros PostgreSQL que usen el 5432.
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - clinicapp-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  clinicapp-pgdata:
