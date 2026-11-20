@@ -1,6 +1,6 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **80 endpoints implementados**:
+Estado al **2026-11-20**: **81 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 9 de `treatments` (catálogo y tratamientos realizados);
@@ -10,7 +10,7 @@ Estado al **2026-11-17**: **80 endpoints implementados**:
 - 8 de `appointments` y `schedule-blocks`;
 - 7 de `clinical-history`;
 - 3 de `institution`;
-- 3 de `notifications`;
+- 4 de `notifications` (con las alertas del día);
 - 5 de `finance`;
 - 5 de `reports`.
 
@@ -45,6 +45,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `clinical-history` | `admin`, `medico` |
 | `institution` | perfil público: sin sesión; leer: los tres; guardar: `admin` |
 | `notifications` | `admin`, `recepcion`; las de una cita (`?appointmentId=`): los tres |
+| `alerts` | los tres; el stock crítico y los envíos fallidos solo `admin` y `recepcion` |
 | `finance` | `admin`, `recepcion` (el médico no ve montos) |
 | `reports` | resumen y agenda: los tres; los demás: `admin` |
 
@@ -164,6 +165,7 @@ La respuesta tiene esta forma:
 | `PUT` | `/api/institution/profile` | admin | `200` |
 | `GET` | `/api/notifications` | admin, recepcion (con `?appointmentId=`: los tres) | `200` paginado o lista |
 | `GET` | `/api/notifications/template` | admin, recepcion | `200` |
+| `GET` | `/api/alerts` | los tres | `200` |
 | `PUT` | `/api/notifications/template` | admin, recepcion | `200` |
 | `GET` | `/api/finance/portfolio` | admin, recepcion | `200` lista |
 | `GET` | `/api/finance/treatments/:treatmentId/summary` | admin, recepcion | `200` |
@@ -757,7 +759,8 @@ El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los v
 
 ## 12. `notifications`
 
-**Notificación (`NotificationLog`):** `{ id, patientId, appointmentId, type, channel, status, sentAt }`.
+**Notificación (`NotificationLog`):** `{ id, patientId, patientName, appointmentId, type, channel, status, sentAt, message }`.
+- `patientName`: nombre del paciente, para el historial sin pedir cada paciente. `message`: el texto que se le envió, ya armado. El destinatario (teléfono o correo) no se expone.
 - `type`: `confirmacion_cita`, `cancelacion_cita` o `recordatorio_cita`.
 - `channel`: `sms` o `email`.
 - `status`: `enviada` o `fallida`.
@@ -776,6 +779,22 @@ El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los v
 - **La misma tarea envía las pendientes** cada 10 s (`Notifications:DispatchIntervalSeconds`). La cita nunca espera al proveedor. Si el envío falla, se reintenta; al tercer intento queda `fallida`. Las pendientes no salen en la API.
 - **Mensaje:** la plantilla con sus variables reemplazadas (`[nombre del cliente]`, `[nombre de la clínica]`, `[fecha de la cita]` como "12 de septiembre", `[hora de la cita]` como "10:00 am", `[profesional]`). Se guarda ya armado.
 - **Proveedor (`Notifications:Provider`):** por elegir con la clínica. `log` (en desarrollo) solo escribe el mensaje en el log. **Vacío (producción, por ahora): no se registra ninguna notificación**, para no mostrar "cliente notificado" cuando nadie le envió nada.
+
+**Alertas del día (`GET /api/alerts`)**, para el centro de alertas del encabezado (reemplaza leer todos los pacientes, citas, insumos y notificaciones cada 5 minutos). "Hoy" es el día de la clínica.
+
+```json
+{
+  "date": "2026-11-20",
+  "appointmentsToday": [ { "id": "0199…", "start": "2026-11-20T14:00:00Z", "end": "2026-11-20T14:30:00Z", "status": "programada", "patientId": "0199…", "patientName": "María Pérez", "professionalId": "0199…", "professionalName": "Dra. Carla Ríos" } ],
+  "birthdaysToday": [ { "patientId": "0199…", "patientName": "Luis Vera", "birthDate": "1990-11-20" } ],
+  "criticalItems": [ { "itemId": "0199…", "name": "Guantes de nitrilo", "stock": 2, "minStock": 5, "unit": "caja" } ],
+  "failedDeliveries": [ { "id": "0199…", "patientId": "0199…", "patientName": "María Pérez", "appointmentId": "0199…", "channel": "sms", "type": "recordatorio_cita", "sentAt": "2026-11-19T15:00:00Z" } ]
+}
+```
+
+- `appointmentsToday`: citas programadas o confirmadas que empiezan hoy, por hora.
+- `birthdaysToday`: pacientes activos que cumplen años hoy (los del 29 de febrero, el 28 en los años no bisiestos).
+- `criticalItems` (stock ≤ mínimo) y `failedDeliveries` (envíos `fallida` de los últimos 7 días): solo `admin` y `recepcion`; para el médico van vacíos.
 
 ## 13. `finance`
 
@@ -848,7 +867,7 @@ Todos con `?from=YYYY-MM-DD&to=YYYY-MM-DD`, **obligatorios e inclusivos**, en ho
 | `appointments`: profesionales y consultorios | Jorge Flores | ✅ Los 7 endpoints |
 | `appointments`: citas y bloqueos | Jorge Flores | ✅ Los 8 endpoints, con choques, candados y hora de la clínica |
 | `institution` | Jorge Flores | ✅ Los 3 endpoints (falta su `institution.api.ts` en el frontend) |
-| `notifications` | Jorge Flores | ✅ Los 3 endpoints y el envío automático. ⏳ Falta elegir el proveedor de envío. |
+| `notifications` | Jorge Flores | ✅ Los 4 endpoints (con `GET /alerts`) y el envío automático. ⏳ Falta elegir el proveedor de envío. |
 | `finance` | Jorge Flores | ✅ Etapa A: cartera, resúmenes y pagos. ⏳ Etapa B (cuotas, seguros y factura) espera el ítem 8. |
 | `reports` | Jorge Flores | ✅ Los 5 reportes, agregados en la base |
 

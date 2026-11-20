@@ -541,6 +541,10 @@ Content-Type: application/json
 
 ### ───────────── Notificaciones (admin o recepción) ─────────────
 
+### Alertas del día (los tres roles; stock crítico y envíos fallidos solo admin y recepción)
+GET {{api}}/alerts
+Authorization: Bearer {{token}}
+
 ### Reporte de notificaciones enviadas (búsqueda por nombre o cédula; fechas de la clínica, inclusivas)
 GET {{api}}/notifications?page=1&pageSize=10&dateFrom=2026-11-01&dateTo=2026-11-30
 Authorization: Bearer {{token}}

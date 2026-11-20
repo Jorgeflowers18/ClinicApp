@@ -8,11 +8,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClinicApp.Api.Modules.Notifications;
 
-/// <summary>Notificación: la forma de <c>NotificationLog</c> del frontend (notification.types.ts).</summary>
-public record NotificationLogDto(Guid Id, Guid PatientId, Guid? AppointmentId, string Type, string Channel, string Status, DateTime? SentAt)
+/// <summary>
+/// Notificación: la forma de <c>NotificationLog</c> del frontend (notification.types.ts), más el nombre del
+/// paciente (para el historial, sin pedir cada paciente) y el mensaje que se le envió, ya armado.
+/// El destinatario (teléfono o correo) no se expone.
+/// </summary>
+public record NotificationLogDto(
+    Guid Id, Guid PatientId, string PatientName, Guid? AppointmentId, string Type, string Channel, string Status,
+    DateTime? SentAt, string Message)
 {
-    public static NotificationLogDto FromEntity(NotificationLog log) =>
-        new(log.Id, log.PatientId, log.AppointmentId, log.Type, log.Channel, log.Status, log.SentAt);
+    public static NotificationLogDto FromEntity(NotificationLog log, string patientName) =>
+        new(log.Id, log.PatientId, patientName, log.AppointmentId, log.Type, log.Channel, log.Status, log.SentAt, log.Message);
+
+    /// <summary>Convierte una página de notificaciones trayendo los nombres de sus pacientes en una sola consulta.</summary>
+    public static async Task<List<NotificationLogDto>> FromEntitiesAsync(
+        IReadOnlyList<NotificationLog> logs, AppDbContext db, CancellationToken cancellationToken)
+    {
+        var patientIds = logs.Select(log => log.PatientId).Distinct().ToList();
+        var names = await db.Patients.AsNoTracking()
+            .Where(patient => patientIds.Contains(patient.Id))
+            .ToDictionaryAsync(patient => patient.Id, patient => (patient.FirstName + " " + patient.LastName).Trim(), cancellationToken);
+        return logs.Select(log => FromEntity(log, names.GetValueOrDefault(log.PatientId, ""))).ToList();
+    }
 }
 
 public record NotificationTemplateDto(Guid Id, string Message, DateTime UpdatedAt);
@@ -50,7 +67,7 @@ public class NotificationsController(AppDbContext db, ClinicClock clock) : Contr
         {
             var byAppointment = await sent.Where(log => log.AppointmentId == appointmentId)
                 .OrderByDescending(log => log.SentAt).ToListAsync(cancellationToken);
-            return Ok(byAppointment.Select(NotificationLogDto.FromEntity));
+            return Ok(await NotificationLogDto.FromEntitiesAsync(byAppointment, db, cancellationToken));
         }
 
         if (!User.IsInRole(Roles.Admin) && !User.IsInRole(Roles.Recepcion)) return Forbid();
@@ -83,7 +100,7 @@ public class NotificationsController(AppDbContext db, ClinicClock clock) : Contr
 
         var page = await sent.OrderByDescending(log => log.SentAt).ThenByDescending(log => log.Id).ToPagedResultAsync(query, cancellationToken);
         return Ok(new PagedResult<NotificationLogDto>(
-            page.Items.Select(NotificationLogDto.FromEntity).ToList(), page.Page, page.PageSize, page.TotalItems, page.TotalPages));
+            await NotificationLogDto.FromEntitiesAsync(page.Items, db, cancellationToken), page.Page, page.PageSize, page.TotalItems, page.TotalPages));
     }
 
     /// <summary>GET /api/notifications/template</summary>

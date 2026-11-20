@@ -151,6 +151,10 @@ public class NotificationsTests(ApiFactory api)
 
         var byName = await admin.GetJson($"/api/notifications?search={Uri.EscapeDataString(patient.Str("lastName"))}&dateFrom={today}&dateTo={today}");
         Assert.Equal(1, byName!["totalItems"]!.GetValue<int>());
+        var row = byName["items"]![0]!;
+        Assert.Equal($"{patient.Str("firstName")} {patient.Str("lastName")}", row.Str("patientName"));
+        Assert.Contains(patient.Str("lastName"), row.Str("message"));
+        Assert.Null(row["recipient"]); // el teléfono o correo no se expone
 
         var byDocument = await (await api.As("recepcion")).GetJson($"/api/notifications?search={patient.Str("documentId")}");
         Assert.Equal(1, byDocument!["totalItems"]!.GetValue<int>());
