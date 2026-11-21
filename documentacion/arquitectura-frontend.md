@@ -92,7 +92,21 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 | `clinical-history` | Historia clínica odontológica única por paciente: historia editable con guardado confirmado (odontograma y periodontograma, tratamientos propuestos del catálogo, consentimiento de datos, fotos y documentos) más atenciones inmutables, indicadores periodontales y exportación. Lista global de atenciones en `/historial-clinico` e historia del paciente en `/historial-clinico/paciente/:patientId`. Acceso restringido a roles `admin` y `medico`. Ver [Historia clínica odontológica](#historia-clínica-odontológica) |
 | `inventory` | CRUD de insumos (consumibles/instrumental), control de vencimientos por lote (FEFO), compras/órdenes de compra, ciclos de esterilización, reporte de stock crítico, historial de movimientos con ajuste de stock |
 | `notifications` | Registro (`NotificationLog`) de notificaciones enviadas a pacientes (recordatorio/confirmación/cancelación de cita, por email o SMS). Página `/notificaciones` con editor de la plantilla predeterminada (`NotificationTemplate`, con variables insertables) y reporte del historial con filtro por nombre/identificación del paciente y rango de fechas. Consumido también desde `appointments` para mostrar si el cliente ya fue notificado de una cita puntual. Sin CRUD propio de logs: las notificaciones individuales las genera el backend, el frontend solo lee el historial y edita la plantilla |
+| `institution` | Perfil de la clínica (nombre, subtítulo, datos legales y de contacto, logo) y sus sedes. Página `/perfil-institucion` (solo `admin`); la marca se ve en la barra lateral y en el inicio de sesión. Ver [Perfil institucional](#perfil-institucional) |
 | `reports` | Reportería derivada (sin datos propios ni CRUD): KPIs de agenda, productividad por profesional, tratamientos e inventario, con selector de periodo global y exportación CSV en navegador. Página `/reportes` (solo `admin`). El dashboard `/` consume los mismos hooks, así portada y reportes nunca se contradicen |
+
+### Perfil institucional
+
+Conectado a la API con el plan 2 (2026-11-21, módulo `institution` del conmutador). Recurso con el estándar: `institution.contract.ts`, `.http.ts`, `.mock.ts`, `.api.ts` y `.queries.ts`.
+
+- **Lectura:** `GET /institution/profile` (los tres roles, con sesión) con React Query (`institutionKeys.profile`, 5 min de `staleTime`). `useInstitutionProfile()` conserva su forma (`hooks/use-institution-profile.ts` reexporta desde `institution.queries.ts`) y devuelve los valores por defecto mientras llega; como `placeholderData` usa la marca ya leída en el login.
+- **Sin sesión:** el login, recuperar contraseña y solicitar acceso usan `usePublicInstitution()` → `GET /institution/public` (`{ name, subtitle, logoText, logoImage }`).
+- **Mensajería:** `useSavedInstitutionName()` y `fetchSavedInstitutionName()` (fuera de React, en `prepare-appointment-message.ts`) leen el `name` del perfil.
+- **Guardar:** `useSaveInstitutionProfile()` → `PUT /institution/profile` con el perfil **completo**, sedes incluidas, porque el `PUT` lo reemplaza todo. Con la respuesta, `setQueryData` del perfil y de la marca pública: la barra lateral cambia sin recargar.
+- **Pantalla:** `institution-profile-page.tsx` espera el perfil (esqueleto mientras llega) y monta el formulario con él. Los errores del `400` van a su campo (`ruc`, `website`, `email`…); los de sedes y logo, al mensaje general. "Cancelar" vuelve al último perfil confirmado.
+- **Sedes:** cada operación (crear, editar, borrar) guarda el perfil confirmado con la lista nueva. Una sede nueva se envía con `id: ""` (`null` en el `PUT`) y el servidor le da su UUID; la lista se reemplaza por la que devuelve. Se muestra `branchLabel(branch)`: el nombre, o el `label` de la API ("Sede N") si no tiene.
+- **Logo:** la API acepta PNG, JPG o WebP de hasta ~500 KB, no SVG. `institution.http.ts` lo pasa por `fitImage(logo, logoLimits)` (`shared/lib/fit-image.ts`): si no cumple, lo reduce y lo recodifica en WebP, así un SVG llega como imagen de píxeles.
+- **Demostración (`institution.mock.ts`):** el perfil vive en `localStorage` (`clinicapp.institution-profile`). El mock expone además `local` (lectura síncrona con `useSyncExternalStore` y aviso entre pestañas por el evento `storage`), y los hooks lo usan en lugar de React Query. Al guardar, el mock pone los ids de las sedes nuevas (`branch-<n>`), como el servidor. Los mensajes "en este navegador" solo se muestran en demostración (`MOCK-ONLY`).
 
 ### Agenda de citas: consultorios, bloqueos y no-show
 
@@ -217,7 +231,7 @@ Conectada a la API con el plan 1 (2026-11-21, módulo `auth` del conmutador). El
   - si otra petición ya renovó el token mientras esta viajaba, solo se reintenta;
   - si la renovación falla, `clearSession()` y `ProtectedRoute` lleva al login recordando la pantalla (`state.from`).
 - **Cerrar sesión:** `useLogout` llama a `POST /auth/logout` (borra la cookie). Si falla, la sesión local se cierra igual. `clearSession` también vacía la caché de React Query.
-- **Mi perfil:** `updateUserProfile` es asíncrono y llama a `PUT /auth/me/profile`; el perfil llega en `user.profile` del login y del refresh. La API solo acepta fotos PNG, JPG, WebP o GIF de hasta 400 000 caracteres: `auth.http.ts` pasa la foto por `fitAvatarImage` (`lib/avatar-image.ts`), que la deja igual si cumple o la reduce a 512 px (o 256 px) y la recodifica en WebP. Antes de completar el perfil, guardar solo una foto da el `400` "El nombre completo es obligatorio": primero se guarda el nombre.
+- **Mi perfil:** `updateUserProfile` es asíncrono y llama a `PUT /auth/me/profile`; el perfil llega en `user.profile` del login y del refresh. La API solo acepta fotos PNG, JPG, WebP o GIF de hasta 400 000 caracteres: `auth.http.ts` pasa la foto por `fitImage(foto, avatarLimits)` (`shared/lib/fit-image.ts`), que la deja igual si cumple o la reduce a 512 px (o 256 px) y la recodifica en WebP. Antes de completar el perfil, guardar solo una foto da el `400` "El nombre completo es obligatorio": primero se guarda el nombre.
 - **Recuperar contraseña** (`/recuperar-contrasena`): `POST /auth/password-recovery` (siempre `202`). La pantalla responde lo mismo exista o no el correo.
 - **Restablecer contraseña** (`/restablecer-contrasena?token=…`, pública): el back arma el enlace con `{Auth:FrontendBaseUrl}/restablecer-contrasena?token=`. Pide la contraseña dos veces (8 a 128 caracteres) y envía `POST /auth/password-reset`. Con `204` lleva al login con el aviso "Contraseña actualizada"; con el `400` de enlace vencido o usado ofrece "Solicitar uno nuevo".
 - **Solicitar acceso** (`/solicitar-acceso`): `POST /auth/access-requests` con `{ email, fullName, institution, message }` (`prepareAccessRequest` une nombres y apellidos).
@@ -324,6 +338,9 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 
 **Auth**
 - ✅ Conectado (plan 1): `POST /auth/login`, `/auth/refresh`, `/auth/logout`, `PUT /auth/me/profile`, `POST /auth/password-recovery`, `/auth/password-reset` y `/auth/access-requests`.
+
+**Institución**
+- ✅ Conectado (plan 2): `GET /institution/public`, `GET /institution/profile` y `PUT /institution/profile`.
 
 **Pacientes**
 - `GET /patients` (query: `page`, `pageSize`, `search`)

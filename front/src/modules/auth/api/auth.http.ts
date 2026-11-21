@@ -3,7 +3,7 @@ import { apiPost, apiPut } from "@/shared/lib/http"
 import { ApiError } from "@/shared/types/common"
 
 import type { AuthApi } from "./auth.contract"
-import { fitAvatarImage } from "../lib/avatar-image"
+import { avatarLimits, fitImage } from "@/shared/lib/fit-image"
 import { roles, type AuthUser, type LoginResponse, type Role } from "../types/auth.types"
 
 type AuthUserDto = components["schemas"]["AuthUserDto"]
@@ -45,7 +45,7 @@ export const httpAuthApi: AuthApi = {
     await apiPost("/auth/logout")
   },
   async updateProfile(profile) {
-    const avatarImage = await fitAvatarImage(profile.avatarImage)
+    const avatarImage = await fitImage(profile.avatarImage, avatarLimits)
     return toAuthUser(await apiPut<AuthUserDto>("/auth/me/profile", { ...profile, avatarImage }))
   },
   async requestPasswordRecovery(email) {

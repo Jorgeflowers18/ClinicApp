@@ -1,6 +1,6 @@
 import { appointmentsApi } from "@/modules/appointments/api/appointments.api"
 import { patientsApi } from "@/modules/patients/api/patients.api"
-import { readSavedInstitutionName } from "@/modules/institution/types/institution.types"
+import { fetchSavedInstitutionName } from "@/modules/institution/api/institution.queries"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { ApiError } from "@/shared/types/common"
 import { notificationsApi } from "../api/notifications.api"
@@ -14,8 +14,8 @@ export async function prepareAppointmentMessage(appointmentId: string, type: Not
   const actor = useAuthStore.getState().user
   if (!actor || !["admin", "recepcion"].includes(actor.role)) throw new ApiError("No tienes permiso para gestionar Mensajería.", 403)
   if (!appointmentId) throw new ApiError("Selecciona una cita para generar el recordatorio.", 422, [{ field: "appointmentId", message: "Selecciona una cita para generar el recordatorio." }])
-  const [appointment, template, professionals] = await Promise.all([
-    appointmentsApi.get(appointmentId), notificationsApi.getTemplate(), appointmentsApi.listProfessionals(),
+  const [appointment, template, professionals, institutionName] = await Promise.all([
+    appointmentsApi.get(appointmentId), notificationsApi.getTemplate(), appointmentsApi.listProfessionals(), fetchSavedInstitutionName(),
   ])
   const patient = await patientsApi.get(appointment.patientId)
   const current = useAuthStore.getState().user
@@ -25,7 +25,7 @@ export async function prepareAppointmentMessage(appointmentId: string, type: Not
   if (type === "recordatorio_cita" && !hasActiveAppointmentStatus(appointment)) throw new ApiError("Esta cita ya no está activa para un recordatorio. Revisa su estado en el calendario.", 422, [{ field: "appointmentId", message: "Esta cita ya no está activa para un recordatorio." }])
   if (!patient.notificationsEnabled) throw new ApiError("El paciente tiene las notificaciones deshabilitadas.", 422, [{ field: "patientId", message: "El paciente tiene las notificaciones deshabilitadas." }])
   const result = resolveAppointmentMessage(template.message, {
-    institutionName: readSavedInstitutionName(), appointment, patient,
+    institutionName, appointment, patient,
     professional: professionals.find(item => item.id === appointment.professionalId),
   })
   if (!result.complete) throw new ApiError(result.issues[0].message, 422, result.issues)

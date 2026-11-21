@@ -6,18 +6,44 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { PageHeader } from "@/shared/components/page-header"
+import { env } from "@/shared/lib/env"
+import { getErrorMessage } from "@/shared/lib/error-message"
+import { ApiError } from "@/shared/types/common"
+import { readConfirmedInstitutionProfile, useEditableInstitutionProfile, useSaveInstitutionProfile } from "../api/institution.queries"
 import { InstitutionBranches } from "../components/institution-branches"
 import { InstitutionLogoControls } from "../components/institution-logo-controls"
-import { readInstitutionProfile, type InstitutionBranch, type InstitutionProfile, writeInstitutionProfile } from "../types/institution.types"
+import type { InstitutionBranch, InstitutionProfile } from "../types/institution.types"
 import styles from "./institution-profile-page.module.css"
 
-type TextField = Exclude<keyof InstitutionProfile, "branches" | "logoImage" | "logoText">
-type FieldErrors = Partial<Record<"name" | "email", string>>
+type TextField = Exclude<keyof InstitutionProfile, "branches" | "logoImage" | "logoText" | "updatedAt">
+type FieldErrors = Partial<Record<TextField, string>>
+const textFields: readonly string[] = ["name", "subtitle", "legalName", "ruc", "phone", "email", "address", "website", "notes", "hours"]
+
+const usesApi = env.usesApi("institution")
+
+/** Los errores del `400` del servidor que son de un campo del formulario; el resto (sedes, logo) va al mensaje general. */
+function serverFieldErrors(error: unknown): FieldErrors {
+  if (!(error instanceof ApiError)) return {}
+  return Object.fromEntries((error.fieldErrors ?? []).filter(({ field }) => textFields.includes(field)).map(({ field, message }) => [field, message]))
+}
 
 export function InstitutionProfilePage() {
-  const [profile, setProfile] = useState<InstitutionProfile>(readInstitutionProfile)
+  const { profile, error } = useEditableInstitutionProfile()
+  if (profile) return <InstitutionProfileForm initial={profile} />
+  return <div className={styles.page}>
+    <PageHeader title="Perfil institucional" description="Administra la información y la identidad de tu institución." />
+    {error
+      ? <p role="alert" className={styles.error}>{getErrorMessage(error)}</p>
+      : <div role="status" aria-label="Cargando el perfil institucional" className={styles.columns}><Skeleton className="h-96 w-full" /><Skeleton className="h-96 w-full" /></div>}
+  </div>
+}
+
+function InstitutionProfileForm({ initial }: { initial: InstitutionProfile }) {
+  const save = useSaveInstitutionProfile()
+  const [profile, setProfile] = useState<InstitutionProfile>(initial)
   const [savedProfile, setSavedProfile] = useState(profile)
   const savedRef = useRef(profile)
   const savingRef = useRef(false)
@@ -27,7 +53,7 @@ export function InstitutionProfilePage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [readingImage, setReadingImage] = useState(false)
   const [saved, setSaved] = useState(false)
-  const dirty = (Object.keys(profile) as (keyof InstitutionProfile)[]).some((key) => key !== "branches" && profile[key] !== savedProfile[key])
+  const dirty = (Object.keys(profile) as (keyof InstitutionProfile)[]).some((key) => key !== "branches" && key !== "updatedAt" && profile[key] !== savedProfile[key])
 
   const handleFieldChange = (key: TextField, value: string) => {
     setProfile((current) => ({ ...current, [key]: value }))
@@ -36,43 +62,53 @@ export function InstitutionProfilePage() {
   }
 
   // Sede operations persist only confirmed institutional fields, preserving the main draft.
-  const handleCommitBranches = (branches: InstitutionBranch[]) => {
-    const next = { ...savedRef.current, branches }
-    writeInstitutionProfile(next)
+  // El PUT reemplaza todo el perfil: se envía el último confirmado con las sedes nuevas.
+  const handleCommitBranches = async (branches: InstitutionBranch[]) => {
+    const next = await save.mutateAsync({ ...savedRef.current, branches })
     savedRef.current = next
     setSavedProfile(next)
-    setProfile((current) => ({ ...current, branches }))
+    // La lista vuelve del servidor, con los ids de las sedes nuevas.
+    setProfile((current) => ({ ...current, branches: next.branches }))
   }
 
-  const handleSave = (event: FormEvent<HTMLFormElement>) => {
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (savingRef.current || readingImage) return
     const email = event.currentTarget.elements.namedItem("email") as HTMLInputElement
+    const form = event.currentTarget
     const errors: FieldErrors = {}
     if (!profile.name.trim()) errors.name = "Introduce el nombre de la clínica o institución."
     if (email.validity.typeMismatch) errors.email = "Introduce un correo electrónico válido."
     setFieldErrors(errors)
+    const focusFirst = (found: FieldErrors) => {
+      const first = textFields.find((key) => found[key as TextField])
+      form.querySelector<HTMLElement>('[name="' + first + '"]')?.focus()
+    }
     if (Object.keys(errors).length) {
-      event.currentTarget.querySelector<HTMLInputElement>('[name="' + (errors.name ? "name" : "email") + '"]')?.focus()
+      focusFirst(errors)
       return
     }
     savingRef.current = true
     setSaving(true)
     try {
-      const next = { ...profile, branches: savedRef.current.branches }
-      writeInstitutionProfile(next)
+      const next = await save.mutateAsync({ ...profile, branches: savedRef.current.branches })
       savedRef.current = next
       setSavedProfile(next)
       setProfile(next)
       setSaveError(""); setSaved(true)
       toast.success("Perfil de la institución actualizado")
-    } catch {
-      setSaveError("No se pudieron guardar los cambios en este navegador. Tus cambios siguen en el formulario. Inténtalo de nuevo.")
+    } catch (error) {
+      const fields = serverFieldErrors(error)
+      setFieldErrors(fields)
+      if (Object.keys(fields).length) focusFirst(fields)
+      setSaveError(usesApi
+        ? getErrorMessage(error)
+        : /* MOCK-ONLY */ "No se pudieron guardar los cambios en este navegador. Tus cambios siguen en el formulario. Inténtalo de nuevo.")
     } finally { savingRef.current = false; setSaving(false) }
   }
 
   const handleCancel = () => {
-    const confirmed = readInstitutionProfile()
+    const confirmed = readConfirmedInstitutionProfile() ?? savedRef.current
     savedRef.current = confirmed
     setProfile(confirmed); setSavedProfile(confirmed)
     setFieldErrors({}); setSaveError(""); setSaved(false)
@@ -111,7 +147,7 @@ export function InstitutionProfilePage() {
             {field("website", "Sitio web", "https://tuinstitucion.com")}
             <div className={styles.field}>
               <label htmlFor="institution-profile-notes">Descripción</label>
-              <Textarea id="institution-profile-notes" rows={3} value={profile.notes} placeholder="Describe los servicios y el enfoque de tu institución."
+              <Textarea id="institution-profile-notes" name="notes" rows={3} value={profile.notes} placeholder="Describe los servicios y el enfoque de tu institución."
                 onChange={(event) => handleFieldChange("notes", event.target.value)} />
             </div>
           </CardContent>
@@ -162,7 +198,7 @@ export function InstitutionProfilePage() {
     <InstitutionBranches branches={profile.branches} onCommit={handleCommitBranches} />
     {saveError && <p role="alert" className={styles.error}>{saveError}</p>}
     <div className={styles.actions}>
-      <div><p className={styles.hint}>Los cambios se guardan en este navegador.</p>
+      <div>{!usesApi && /* MOCK-ONLY */ <p className={styles.hint}>Los cambios se guardan en este navegador.</p>}
         {dirty ? <p className={styles.pending} role="status">Cambios sin guardar</p> : saved && <p className={styles.hint} role="status">Cambios guardados</p>}
       </div>
       <div className={styles.buttons}>

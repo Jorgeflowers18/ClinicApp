@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { HeaderThemeSwitch } from "@/app/layout/header-theme-switch"
-import { useInstitutionProfile } from "@/modules/institution/hooks/use-institution-profile"
+import { usePublicInstitution } from "@/modules/institution/hooks/use-institution-profile"
 import { InstitutionLogo } from "@/shared/components/brand-logo"
 
 import "../auth.css"
@@ -16,7 +16,7 @@ export function AuthLayout({ title, description, children, wide = false }: {
   children: ReactNode
   wide?: boolean
 }) {
-  const institution = useInstitutionProfile()
+  const institution = usePublicInstitution()
   const heading = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
