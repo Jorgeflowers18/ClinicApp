@@ -648,12 +648,14 @@ Catálogos de la agenda. **No se borran:** se desactivan (`active: false`), porq
 
 ```json
 {
-  "id": "0199…", "patientId": "0199…", "professionalId": "0199…",
+  "id": "0199…", "patientId": "0199…", "patientName": "María Pérez", "professionalId": "0199…",
   "treatmentId": null, "roomId": "0199…",
   "start": "2026-12-01T14:00:00Z", "end": "2026-12-01T14:30:00Z",
   "status": "programada", "notes": "Control", "createdAt": "2026-11-17T20:00:00Z"
 }
 ```
+
+`patientName` ("Nombres Apellidos", también si el paciente está dado de baja) viene en la lista, el detalle y las respuestas de crear, editar y cambiar estado: la agenda muestra los nombres sin cargar a todos los pacientes. Se pide con una sola consulta por respuesta.
 
 **Body de `POST` y `PUT`** (`appointmentSchema`): `{ patientId, professionalId, treatmentId?, roomId?, date, startTime, endTime, notes? }`.
 - `treatmentId` y `roomId` aceptan `""` o `null` cuando no se eligen.

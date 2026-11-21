@@ -81,7 +81,7 @@ export function useGlobalAlerts(userId: string, role: Role) {
     queryKey: [...patientsKeys.lists(), "global-alerts", userId],
     queryFn: ({ signal }) => fetchAllPages(patientsApi.list, signal), ...options,
   })
-  const appointments = useQuery({ queryKey: appointmentsKeys.lists(), queryFn: appointmentsApi.list, ...options })
+  const appointments = useQuery({ queryKey: appointmentsKeys.lists(), queryFn: ({ signal }) => appointmentsApi.list(undefined, signal), ...options })
   const inventory = useQuery({
     queryKey: [...inventoryKeys.lists(), "global-alerts", userId], enabled: canManage,
     queryFn: ({ signal }) => fetchAllPages(inventoryApi.list, signal), ...options,

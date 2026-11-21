@@ -4,10 +4,14 @@ using ClinicApp.Api.Common;
 
 namespace ClinicApp.Api.Modules.Appointments;
 
-/// <summary>Cita: la forma de <c>Appointment</c> del frontend. <c>start</c> y <c>end</c> en ISO UTC.</summary>
+/// <summary>
+/// Cita: la forma de <c>Appointment</c> del frontend. <c>start</c> y <c>end</c> en ISO UTC. <c>PatientName</c>
+/// ("Nombres Apellidos") evita que la agenda tenga que cargar a todos los pacientes para mostrar sus nombres.
+/// </summary>
 public record AppointmentDto(
     Guid Id,
     Guid PatientId,
+    string PatientName,
     Guid ProfessionalId,
     Guid? TreatmentId,
     Guid? RoomId,
@@ -17,8 +21,8 @@ public record AppointmentDto(
     string? Notes,
     DateTime CreatedAt)
 {
-    public static AppointmentDto FromEntity(Appointment appointment) => new(
-        appointment.Id, appointment.PatientId, appointment.ProfessionalId, appointment.TreatmentId, appointment.RoomId,
+    public static AppointmentDto FromEntity(Appointment appointment, string patientName) => new(
+        appointment.Id, appointment.PatientId, patientName, appointment.ProfessionalId, appointment.TreatmentId, appointment.RoomId,
         appointment.Start, appointment.End, appointment.Status, appointment.Notes, appointment.CreatedAt);
 }
 

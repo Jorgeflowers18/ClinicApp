@@ -23,11 +23,24 @@ export interface Professional {
   specialty: string
   /** Registro profesional (por ejemplo, el del MSP / Senescyt). Vacío si no se registró. */
   registrationNumber: string
+  /** Un profesional inactivo no se ofrece en los selectores, pero sus citas siguen mostrando su nombre. */
+  active: boolean
+  /** La cuenta de usuario vinculada (para el profesional por defecto de una atención). */
+  userId: string | null
 }
 
 export interface Room {
   id: string
   name: string
+  active: boolean
+}
+
+/**
+ * Lo que un selector ofrece: solo los activos, más el valor ya elegido aunque se haya desactivado (al editar
+ * una cita de un profesional inactivo, el campo no queda vacío).
+ */
+export function selectable<T extends { id: string; active: boolean }>(items: T[] | undefined, currentId?: string | null): T[] {
+  return (items ?? []).filter((item) => item.active || item.id === currentId)
 }
 
 export const appointmentSchema = z
@@ -51,6 +64,8 @@ export type AppointmentFormValues = z.infer<typeof appointmentSchema>
 export interface Appointment {
   id: string
   patientId: string
+  /** "Nombres Apellidos", lo trae la API; en demostración se busca en la lista de pacientes. */
+  patientName?: string
   professionalId: string
   treatmentId?: string
   roomId?: string

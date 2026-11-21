@@ -16,7 +16,7 @@ El orden importa: las pantallas se cruzan por id (una cita apunta a un paciente,
 | 1 | ✅ Hecho (2026-11-21). `auth`: sesión, renovación, perfil, recuperación y solicitud de acceso | 0 | No |
 | 2 | ✅ Hecho (2026-11-21). `institution`: perfil de la clínica, marca y sedes | 1 | ✅ `subtitle` (`53b1d64`) |
 | 3 | ✅ Hecho (2026-11-21). `patients` | 1 | ✅ `documentType`, teléfono opcional, filtros y lista de dados de baja (`a5f633a`) |
-| 4 | [`04-agenda.md`](./04-agenda.md): profesionales, consultorios, citas y bloqueos | 3 | No |
+| 4 | ✅ Hecho (2026-11-21). Agenda: profesionales, consultorios, citas y bloqueos | 3 | ✅ `patientName` en las citas (este plan) |
 | 5 | [`05-treatments.md`](./05-treatments.md): catálogo y tratamientos realizados | 3 | No |
 | 6 | [`06-inventory.md`](./06-inventory.md) | 4 (responsables de esterilización) | No |
 | 7 | [`07-clinical-history.md`](./07-clinical-history.md): historia, atenciones, adjuntos y archivo clínico | 3, 4, 5 | ✅ Archivo clínico (`9dd2426`) y registro de la atención en una transacción (`fad02ef`) |

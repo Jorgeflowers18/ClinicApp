@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { applyServerFieldErrors } from "@/shared/lib/field-issues"
 
 import { useCreateScheduleBlock, useProfessionals, useRooms } from "../api/appointments.queries"
-import { scheduleBlockSchema, type ScheduleBlockFormValues } from "../types/appointment.types"
+import { scheduleBlockSchema, selectable, type ScheduleBlockFormValues } from "../types/appointment.types"
 import { ScheduleFormDialog } from "./schedule-form-dialog"
 
 interface ScheduleBlockFormDialogProps {
@@ -31,6 +32,8 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
     control,
     handleSubmit,
     reset,
+    getValues,
+    setError,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ScheduleBlockFormValues>({
     resolver: zodResolver(scheduleBlockSchema),
@@ -62,7 +65,9 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
       toast.success("Bloqueo de horario creado")
       onOpenChange(false)
     } catch (error) {
-      toast.error(getErrorMessage(error))
+      // Un bloqueo sobre una cita (409) llega con errors.startTime: queda en el campo, además del aviso.
+      // Si el servidor señala un campo, el mensaje queda solo en el campo; si no, en un aviso.
+      if (!applyServerFieldErrors({ getValues, setError }, error).length) toast.error(getErrorMessage(error))
     }
   }
 
@@ -78,12 +83,12 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
                 control={control}
                 name="professionalId"
                 render={({ field }) => (
-                  <Select items={Object.fromEntries((professionals ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries(selectable(professionals, field.value).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="professionalId" className="w-full">
                       <SelectValue placeholder="Selecciona un profesional..." />
                     </SelectTrigger>
                     <SelectContent className="clinic-schedule-options">
-                      {professionals?.map((professional) => (
+                      {selectable(professionals, field.value).map((professional) => (
                         <SelectItem key={professional.id} value={professional.id}>
                           {professional.name} · {professional.specialty}
                         </SelectItem>
@@ -100,12 +105,12 @@ export function ScheduleBlockFormDialog({ open, onOpenChange, initialSlot }: Sch
                 control={control}
                 name="roomId"
                 render={({ field }) => (
-                  <Select items={Object.fromEntries((rooms ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries(selectable(rooms, field.value).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="roomId" className="w-full" aria-invalid={!!errors.roomId}>
                       <SelectValue placeholder="Selecciona un consultorio..." />
                     </SelectTrigger>
                     <SelectContent className="clinic-schedule-options">
-                      {rooms?.map((room) => (
+                      {selectable(rooms, field.value).map((room) => (
                         <SelectItem key={room.id} value={room.id}>
                           {room.name}
                         </SelectItem>

@@ -122,6 +122,15 @@ Conectado a la API con el plan 2 (2026-11-21, módulo `institution` del conmutad
 
 ### Agenda de citas: consultorios, bloqueos y no-show
 
+**Conectada a la API con el plan 4 (2026-11-21, módulo `agenda` del conmutador).** Recurso con el estándar: `appointments.contract.ts` (dos contratos: `AppointmentsApi` para citas y bloqueos, y `AgendaCatalogsApi` para profesionales y consultorios), `.http.ts`, `.mock.ts` y `.api.ts`. `appointmentsApi` sigue exponiendo `listProfessionals` y `listRooms`, que ya usan otros módulos.
+
+- **Por rango:** el calendario pide solo los días visibles: `GET /appointments?from&to` y `GET /schedule-blocks?from&to` (`visibleRange` en `appointments-calendar-page.tsx`: el mes con sus semanas completas, la semana de lunes a domingo o el día). La clave de la consulta incluye el rango y `keepPreviousData` evita el parpadeo al navegar. Sin rango se piden **todas**: queda solo para las alertas globales y la vista previa de mensajería, que reemplaza el plan 8.
+- **Hora:** el formulario envía `date`, `startTime` y `endTime` en hora de la clínica y el servidor los convierte a UTC con su zona (`America/Guayaquil`). La respuesta trae `start` y `end` en UTC, y el calendario los muestra en la zona del navegador: un equipo con otra zona vería la agenda corrida.
+- **Choques y estados:** los valida el servidor (`409` con `errors.startTime` y los mismos 4 mensajes; transiciones de estado con `409` si no se permiten). `appointments.http.ts` no repite esas reglas.
+- **Notificaciones:** al crear o cancelar una cita, el servidor registra la notificación en la misma transacción. El frontend solo refresca el historial (`refreshNotifications` en `appointments.queries.ts`). En demostración, el registro lo hace `appointments.mock.ts`.
+- **Nombre del paciente:** cada cita de la API trae `patientName` (agregado al back en este plan), así el calendario no depende de tener cargados a todos los pacientes. En demostración se sigue buscando en la primera página de pacientes.
+- **Activos e inactivos:** `GET /professionals` y `GET /rooms` traen también los inactivos (`active`), para mostrar el nombre en citas antiguas. Los selectores (cita, bloqueo, motivo de la atención y ciclo de esterilización) usan `selectable(lista, valorActual)`: solo los activos, más el ya elegido.
+
 - **Consultorios:** catálogo simple (`Room { id, name }`), mismo patrón que `Professional` (mock plano, sin CRUD propio, expuesto vía `useRooms()`). `Appointment.roomId` es opcional. Se decidió deliberadamente no construir un módulo de administración de consultorios en esta iteración; si el negocio necesita administrarlos desde la UI (equipamiento, estado, sede), coordinar con el ítem 10 del backlog (administración institucional/sedes) para no duplicar trabajo.
 - **Duración estimada:** al elegir un tratamiento en el formulario de cita, la hora de fin se autocompleta sumando `Treatment.durationMinutes` a la hora de inicio (`appointment-form-dialog.tsx`). Sigue siendo editable manualmente después.
 - **Bloqueos de horario (`ScheduleBlock`):** bloqueos puntuales (sin recurrencia) de un profesional y/o un consultorio, con motivo obligatorio. Viven en los mismos archivos que `Appointment` (`appointment.types.ts`, `appointments.api.ts`, etc.) porque la validación de choques es bidireccional entre citas y bloqueos. Se crean/eliminan desde el botón "Bloquear horario" en `/citas`; se muestran en el calendario con estilo rayado distintivo y no abren el diálogo de detalle de cita al hacer clic (abren una confirmación de eliminación).
@@ -358,16 +367,8 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - ✅ Conectado (plan 3): `GET /patients` (`page`, `pageSize`, `search`, `status`, `gender`, `registeredFrom`, `registeredTo`, `deleted`), `GET /patients/:id`, `POST /patients`, `PUT /patients/:id`, `DELETE /patients/:id` y `POST /patients/:id/restore`.
 
 **Citas**
-- `GET /appointments` (idealmente con filtro de rango de fechas)
-- `GET /appointments/:id`
-- `POST /appointments` (el backend debe validar disponibilidad del profesional y del consultorio, y disparar la notificación de confirmación)
-- `PUT /appointments/:id`
-- `PATCH /appointments/:id/status` (al pasar a `cancelada` el backend debe disparar la notificación de cancelación; `no_asistio` es un valor válido más de estado)
-- `GET /professionals`
-- `GET /rooms` — catálogo de consultorios
-- `GET /schedule-blocks` — bloqueos de horario vigentes
-- `POST /schedule-blocks` (el backend debe validar que no se solape con una cita ya agendada)
-- `DELETE /schedule-blocks/:id`
+- ✅ Conectado (plan 4): `GET /appointments?from&to` (o `?patientId=`), `GET /appointments/:id`, `POST /appointments`, `PUT /appointments/:id`, `PATCH /appointments/:id/status`, `GET /professionals`, `GET /rooms`, `GET /schedule-blocks?from&to`, `POST /schedule-blocks` y `DELETE /schedule-blocks/:id`.
+- Pendiente en el frontend: pantallas de administración de profesionales y consultorios (`POST`/`PUT /professionals` y `/rooms`).
 
 **Historia clínica odontológica** (solo roles `admin` y `medico`, validado en el backend y no solo en el frontend; las respuestas siguen `modules/clinical-history/types/clinical-history.types.ts`)
 - `GET /clinical-history/encounters` (query: `page`, `pageSize`, `search` — paciente, motivo o diagnóstico —, `patientId`, `professionalId`) — lista global paginada de `EncounterListItem`

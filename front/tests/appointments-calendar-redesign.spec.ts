@@ -102,14 +102,15 @@ async function openOverflowFor(page: Page, date: string) {
   const header = monthOf(page).locator(`.clinic-month-date[data-date="${date}"]`)
   // RBC briefly replaces week rows while measuring after a viewport change.
   await expect(async () => { await header.scrollIntoViewIfNeeded() }).toPass({ timeout: 15000 })
-  const cell = await header.boundingBox()
   const more = monthOf(page).locator(".rbc-show-more")
-  const index = await more.evaluateAll((buttons, bounds) => buttons.findIndex((button) => {
+  // La agenda se pide por rango visible: al cambiar de mes, las citas llegan un momento después.
+  const findIndex = async () => more.evaluateAll((buttons, bounds) => buttons.findIndex((button) => {
     const rect = button.getBoundingClientRect()
     return rect.left >= bounds!.x - 7 && rect.left < bounds!.x + bounds!.width
       && rect.top > bounds!.y && rect.top < bounds!.y + 128
-  }), cell)
-  expect(index, `Overflow button for ${date}`).toBeGreaterThanOrEqual(0)
+  }), await header.boundingBox())
+  await expect.poll(findIndex, { message: `Overflow button for ${date}`, timeout: 15000 }).toBeGreaterThanOrEqual(0)
+  const index = await findIndex()
   await more.nth(index).click()
   await expect(page.locator(".rbc-overlay")).toBeVisible()
   return page.locator(".rbc-overlay")

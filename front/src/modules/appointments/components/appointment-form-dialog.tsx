@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { applyServerFieldErrors } from "@/shared/lib/field-issues"
 import { usePatient, usePatientsList } from "@/modules/patients/api/patients.queries"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
 
@@ -20,7 +21,7 @@ import {
   useRooms,
   useUpdateAppointment,
 } from "../api/appointments.queries"
-import { appointmentSchema, type AppointmentFormValues } from "../types/appointment.types"
+import { appointmentSchema, selectable, type AppointmentFormValues } from "../types/appointment.types"
 import type { Appointment } from "../types/appointment.types"
 import { ScheduleFormDialog } from "./schedule-form-dialog"
 
@@ -58,6 +59,7 @@ export function AppointmentFormDialog({
     reset,
     getValues,
     setValue,
+    setError,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<AppointmentFormValues>({
     resolver: zodResolver(appointmentSchema),
@@ -126,7 +128,9 @@ export function AppointmentFormDialog({
       }
       onOpenChange(false)
     } catch (error) {
-      toast.error(getErrorMessage(error))
+      // Un choque de horario (409) llega con errors.startTime: queda en el campo, además del aviso.
+      // Si el servidor señala un campo, el mensaje queda solo en el campo; si no, en un aviso.
+      if (!applyServerFieldErrors({ getValues, setError }, error).length) toast.error(getErrorMessage(error))
     }
   }
 
@@ -168,12 +172,12 @@ export function AppointmentFormDialog({
                 control={control}
                 name="professionalId"
                 render={({ field }) => (
-                  <Select items={Object.fromEntries((professionals ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries(selectable(professionals, field.value).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="professionalId" className="w-full">
                       <SelectValue placeholder="Selecciona un profesional..." />
                     </SelectTrigger>
                     <SelectContent className="clinic-schedule-options">
-                      {professionals?.map((professional) => (
+                      {selectable(professionals, field.value).map((professional) => (
                         <SelectItem key={professional.id} value={professional.id}>
                           {professional.name} · {professional.specialty}
                         </SelectItem>
@@ -217,12 +221,12 @@ export function AppointmentFormDialog({
                 control={control}
                 name="roomId"
                 render={({ field }) => (
-                  <Select items={Object.fromEntries((rooms ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries(selectable(rooms, field.value).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="roomId" className="w-full">
                       <SelectValue placeholder="Selecciona un consultorio..." />
                     </SelectTrigger>
                     <SelectContent className="clinic-schedule-options">
-                      {rooms?.map((room) => (
+                      {selectable(rooms, field.value).map((room) => (
                         <SelectItem key={room.id} value={room.id}>
                           {room.name}
                         </SelectItem>

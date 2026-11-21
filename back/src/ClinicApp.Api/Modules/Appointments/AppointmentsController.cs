@@ -45,7 +45,8 @@ public class AppointmentsController(
             : appointments.OrderBy(appointment => appointment.Start).ThenBy(appointment => appointment.Id);
 
         var list = await ordered.ToListAsync(cancellationToken);
-        return list.Select(AppointmentDto.FromEntity).ToList();
+        var names = await PatientNamesAsync(list.Select(appointment => appointment.PatientId), cancellationToken);
+        return list.Select(appointment => AppointmentDto.FromEntity(appointment, names.GetValueOrDefault(appointment.PatientId, ""))).ToList();
     }
 
     /// <summary>GET /api/appointments/{id}</summary>
@@ -53,7 +54,7 @@ public class AppointmentsController(
     public async Task<ActionResult<AppointmentDto>> Get(Guid id, CancellationToken cancellationToken)
     {
         var appointment = await db.Appointments.AsNoTracking().FirstOrDefaultAsync(entry => entry.Id == id, cancellationToken);
-        return appointment is null ? AppointmentNotFound() : AppointmentDto.FromEntity(appointment);
+        return appointment is null ? AppointmentNotFound() : await ToDtoAsync(appointment, cancellationToken);
     }
 
     /// <summary>POST /api/appointments → 201 (programada). 409 si el horario choca.</summary>
@@ -84,7 +85,7 @@ public class AppointmentsController(
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return CreatedAtAction(nameof(Get), new { id = appointment.Id }, AppointmentDto.FromEntity(appointment));
+        return CreatedAtAction(nameof(Get), new { id = appointment.Id }, await ToDtoAsync(appointment, cancellationToken));
     }
 
     /// <summary>PUT /api/appointments/{id}. Solo citas programadas o confirmadas; no choca consigo misma.</summary>
@@ -116,7 +117,7 @@ public class AppointmentsController(
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return AppointmentDto.FromEntity(appointment);
+        return await ToDtoAsync(appointment, cancellationToken);
     }
 
     /// <summary>
@@ -133,7 +134,7 @@ public class AppointmentsController(
             .FirstOrDefaultAsync(cancellationToken);
         if (appointment is null) return AppointmentNotFound();
 
-        if (appointment.Status == request.Status) return AppointmentDto.FromEntity(appointment);
+        if (appointment.Status == request.Status) return await ToDtoAsync(appointment, cancellationToken);
 
         if (!AppointmentStatuses.CanChange(appointment.Status, request.Status))
         {
@@ -153,7 +154,23 @@ public class AppointmentsController(
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return AppointmentDto.FromEntity(appointment);
+        return await ToDtoAsync(appointment, cancellationToken);
+    }
+
+    /// <summary>"Nombres Apellidos" de cada paciente, en una sola consulta (también los dados de baja).</summary>
+    private async Task<Dictionary<Guid, string>> PatientNamesAsync(IEnumerable<Guid> patientIds, CancellationToken cancellationToken)
+    {
+        var ids = patientIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+        return await db.Patients.AsNoTracking()
+            .Where(patient => ids.Contains(patient.Id))
+            .ToDictionaryAsync(patient => patient.Id, patient => patient.FirstName + " " + patient.LastName, cancellationToken);
+    }
+
+    private async Task<AppointmentDto> ToDtoAsync(Appointment appointment, CancellationToken cancellationToken)
+    {
+        var names = await PatientNamesAsync([appointment.PatientId], cancellationToken);
+        return AppointmentDto.FromEntity(appointment, names.GetValueOrDefault(appointment.PatientId, ""));
     }
 
     /// <summary>Datos ya validados de una cita (ids convertidos y horas en UTC).</summary>

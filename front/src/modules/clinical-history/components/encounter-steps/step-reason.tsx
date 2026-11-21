@@ -1,10 +1,11 @@
-import { Controller, useFormContext } from "react-hook-form"
+import { Controller, useFormContext, useWatch } from "react-hook-form"
 
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
+import { selectable } from "@/modules/appointments/types/appointment.types"
 
 import type { AppointmentOption } from "../../hooks/use-patient-appointment-options"
 import { NO_APPOINTMENT } from "../../hooks/use-patient-appointment-options"
@@ -35,9 +36,11 @@ export function StepReason({ appointmentOptions }: StepReasonProps) {
     formState: { errors },
   } = useFormContext<EncounterFormValues>()
   const { data: professionals } = useProfessionals()
+  const professionalId = useWatch({ control, name: "professionalId" })
 
+  // Solo activos, más el ya elegido (por ejemplo, el de una cita de un profesional que se desactivó).
   const professionalItems: Record<string, string> = Object.fromEntries(
-    (professionals ?? []).map((item) => [item.id, item.name])
+    selectable(professionals, professionalId).map((item) => [item.id, item.name])
   )
   const appointmentItems: Record<string, string> = {
     [NO_APPOINTMENT]: "Sin cita vinculada",

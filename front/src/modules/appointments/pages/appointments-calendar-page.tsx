@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Calendar, dateFnsLocalizer, type SlotInfo, type View } from "react-big-calendar"
-import { addDays, format, getDay, isSameDay, parse, startOfDay, startOfWeek } from "date-fns"
+import { addDays, endOfMonth, endOfWeek, format, getDay, isSameDay, parse, startOfDay, startOfMonth, startOfWeek } from "date-fns"
 import { es } from "date-fns/locale"
 import { Plus, Slash } from "lucide-react"
 import { toast } from "sonner"
@@ -48,6 +48,14 @@ const localizer = dateFnsLocalizer({
 })
 
 const ALL_PROFESSIONALS = ALL_CALENDAR_PROFESSIONALS
+
+/** Los días que muestra el calendario: el mes con sus semanas completas, la semana (de lunes) o el día. */
+function visibleRange(date: Date, view: View) {
+  const day = (value: Date) => format(value, "yyyy-MM-dd")
+  if (view === "month") return { from: day(startOfWeek(startOfMonth(date), { weekStartsOn: 1 })), to: day(endOfWeek(endOfMonth(date), { weekStartsOn: 1 })) }
+  if (view === "day") return { from: day(date), to: day(date) }
+  return { from: day(startOfWeek(date, { weekStartsOn: 1 })), to: day(endOfWeek(date, { weekStartsOn: 1 })) }
+}
 const calendarComponents = {
   toolbar: AppointmentsToolbar,
   month: { dateHeader: MonthDateHeader, event: MonthEvent },
@@ -62,20 +70,21 @@ export function AppointmentsCalendarPage() {
   const [specialtyFilter, setSpecialtyFilter] = useState<string>(ALL_CALENDAR_SPECIALTIES)
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null)
 
-  const { data: appointments, isLoading, isError, error } = useAppointmentsList()
-  const { data: scheduleBlocks } = useScheduleBlocksList()
-  const { data: professionals } = useProfessionals()
-  const { data: rooms } = useRooms()
-  const { data: patientsPage, isLoading: patientsLoading } = usePatientsList({ page: 1, pageSize: 100 })
-  const { data: treatments } = useActiveTreatments()
-  const deleteScheduleBlock = useDeleteScheduleBlock()
-
   const [view, setView] = useState<View>("week")
   // Compact layouts render the selected calendar view, so resizing keeps the
   // user's choice. Event, date, selection and form handlers remain shared.
   const mobileAgendaView = view === "day" ? "day" : "week"
   const [date, setDate] = useState(new Date())
   const goToToday = useCallback(() => setDate(startOfDay(new Date())), [])
+  // Solo se piden las citas y los bloqueos de los días visibles.
+  const range = useMemo(() => visibleRange(date, view), [date, view])
+  const { data: appointments, isLoading, isError, error } = useAppointmentsList(range)
+  const { data: scheduleBlocks } = useScheduleBlocksList(range)
+  const { data: professionals } = useProfessionals()
+  const { data: rooms } = useRooms()
+  const { data: patientsPage, isLoading: patientsLoading } = usePatientsList({ page: 1, pageSize: 100 })
+  const { data: treatments } = useActiveTreatments()
+  const deleteScheduleBlock = useDeleteScheduleBlock()
   const [formOpen, setFormOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>(undefined)
   const [blockFormOpen, setBlockFormOpen] = useState(false)
@@ -83,7 +92,9 @@ export function AppointmentsCalendarPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [blockToDelete, setBlockToDelete] = useState<ScheduleBlock | null>(null)
 
-  function patientName(patientId: string) {
+  function patientName(patientId: string, known?: string) {
+    // La API trae el nombre en la cita; la demostración lo busca en la lista de pacientes.
+    if (known) return known
     const patient = patientsPage?.items.find((item) => item.id === patientId)
     return patient ? `${patient.firstName} ${patient.lastName}` : "Paciente"
   }
@@ -113,7 +124,7 @@ export function AppointmentsCalendarPage() {
       .map((appointment) => ({
         kind: "appointment",
         id: appointment.id,
-        title: `${patientName(appointment.patientId)} · ${appointmentStatusLabels[appointment.status]}`,
+        title: `${patientName(appointment.patientId, appointment.patientName)} · ${appointmentStatusLabels[appointment.status]}`,
         start: new Date(appointment.start),
         end: new Date(appointment.end),
         resource: appointment,
@@ -170,7 +181,7 @@ export function AppointmentsCalendarPage() {
             </div>
             <div className="min-w-0 flex-1 space-y-1">
               <p className="break-words font-medium">
-                {isBlock ? event.resource.reason : patientName(event.resource.patientId)}
+                {isBlock ? event.resource.reason : patientName(event.resource.patientId, event.resource.patientName)}
               </p>
               <p className="break-words text-sm text-muted-foreground">
                 {isBlock
@@ -373,7 +384,7 @@ export function AppointmentsCalendarPage() {
         open={!!selectedAppointment}
         onOpenChange={(open) => !open && setSelectedAppointment(null)}
         appointment={selectedAppointment}
-        patientName={selectedAppointment ? patientName(selectedAppointment.patientId) : ""}
+        patientName={selectedAppointment ? patientName(selectedAppointment.patientId, selectedAppointment.patientName) : ""}
         professionalName={selectedAppointment ? professionalName(selectedAppointment.professionalId) : ""}
         treatmentName={selectedAppointment ? treatmentName(selectedAppointment.treatmentId) : undefined}
         roomName={selectedAppointment ? roomName(selectedAppointment.roomId) : undefined}

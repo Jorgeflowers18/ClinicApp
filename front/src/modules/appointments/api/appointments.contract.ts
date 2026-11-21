@@ -1,0 +1,45 @@
+import type {
+  Appointment,
+  AppointmentFormValues,
+  AppointmentStatus,
+  Professional,
+  Room,
+  ScheduleBlock,
+  ScheduleBlockFormValues,
+} from "../types/appointment.types"
+
+/** Días de la clínica, `YYYY-MM-DD`, inclusivos. */
+export interface DateRange {
+  from: string
+  to: string
+}
+
+/**
+ * Agenda: citas y bloqueos. `appointments.http.ts` lo cumple con la API y `appointments.mock.ts` con los
+ * datos de demostración; `appointments.api.ts` elige con `env.usesApi("agenda")`.
+ *
+ * Los choques (profesional, consultorio y bloqueos) los valida quien guarda: el servidor responde `409` con
+ * `errors.startTime`. Las notificaciones de la cita (confirmación y cancelación) también las registra el
+ * servidor, en la misma transacción: no están en el contrato.
+ */
+export interface AppointmentsApi {
+  /** Con `range`, solo las citas que empiezan en esos días. Sin él, todas (evitarlo con la API). */
+  list(range?: DateRange, signal?: AbortSignal): Promise<Appointment[]>
+  /** De la más reciente a la más antigua. */
+  listByPatient(patientId: string, signal?: AbortSignal): Promise<Appointment[]>
+  get(id: string, signal?: AbortSignal): Promise<Appointment>
+  create(values: AppointmentFormValues): Promise<Appointment>
+  /** Solo citas programadas o confirmadas (`409` si no). */
+  update(id: string, values: AppointmentFormValues): Promise<Appointment>
+  /** Las transiciones las valida el servidor (`409` si no se permite). */
+  updateStatus(id: string, status: AppointmentStatus): Promise<Appointment>
+  listScheduleBlocks(range?: DateRange, signal?: AbortSignal): Promise<ScheduleBlock[]>
+  createScheduleBlock(values: ScheduleBlockFormValues): Promise<ScheduleBlock>
+  removeScheduleBlock(id: string): Promise<void>
+}
+
+/** Catálogos de la agenda. Traen también los inactivos: los selectores muestran solo los activos. */
+export interface AgendaCatalogsApi {
+  listProfessionals(signal?: AbortSignal): Promise<Professional[]>
+  listRooms(signal?: AbortSignal): Promise<Room[]>
+}

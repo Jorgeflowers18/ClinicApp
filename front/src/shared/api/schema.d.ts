@@ -3386,6 +3386,7 @@ export interface components {
             id: string;
             /** Format: uuid */
             patientId: string;
+            patientName: string;
             /** Format: uuid */
             professionalId: string;
             /** Format: uuid */

@@ -26,7 +26,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 
 ## Pendientes al cerrar los planes (2026-11-17)
 
-Los 9 planes están implementados, más lo que pidió el frontend el 2026-11-20 (91 endpoints, 256 pruebas: [`docs/pruebas.md`](./docs/pruebas.md)). Lo que queda, en orden de importancia. El detalle de cada punto está en la sección del módulo en [`backlog.md`](./backlog.md).
+Los 9 planes están implementados, más lo que pidió el frontend el 2026-11-20 (91 endpoints, 258 pruebas: [`docs/pruebas.md`](./docs/pruebas.md)). Lo que queda, en orden de importancia. El detalle de cada punto está en la sección del módulo en [`backlog.md`](./backlog.md).
 
 **1. Decisiones de la clínica:**
 - **Canal y proveedor de notificaciones** (SMS o WhatsApp). Hasta elegirlo, en producción no se envía ni se registra nada.
@@ -54,7 +54,8 @@ Los 9 planes están implementados, más lo que pidió el frontend el 2026-11-20 
 - **Del plan 1 (auth), hecho el 2026-11-21:** sesión con refresh y token solo en memoria, renovación ante el `401`, "Mi perfil", recuperar y restablecer contraseña y solicitar acceso, conectados. Quedan del lado del back: el proveedor de correo (el enlace de recuperación solo sale en el log), la pantalla para revisar las solicitudes de acceso y la gestión de usuarios (ya listados arriba).
 - **Del plan 2 (institution), hecho el 2026-11-21:** perfil, marca pública y sedes con UUID del servidor, conectados. El logo se recodifica a WebP en el navegador si no es PNG, JPG o WebP (o pesa más de ~500 KB). Pendiente de la clínica: si una sede puede quedar sin nombre (hoy se muestra "Sede N").
 - **Del plan 3 (patients), hecho el 2026-11-21:** lista con filtros del back, alta y edición con errores por campo, baja lógica (`deletedAt`) y reactivación, y la vista de dados de baja para el admin. "Dar de baja" está en el menú de la ficha (no en el de la lista). Pendientes: la búsqueda del back no incluye el correo; confirmar con la clínica que el teléfono sea opcional.
-- **Pruebas E2E que ya fallaban:** `form-actions.spec.ts` (4) espera `data-form-actions` en `/perfil-institucion` y en el editor de sedes, y esas pantallas nunca lo tuvieron. Son del mismo commit incompleto `3e72a03` que `form-validation` y `messaging-identity`.
+- **Del plan 4 (agenda), hecho el 2026-11-21:** citas y bloqueos por rango visible, choques y estados validados por el back, sin registro de notificaciones desde el front, selectores solo con activos y `patientName` en cada cita (back, con prueba). Pendientes: pantallas de administración de profesionales y consultorios (front; el back ya tiene los endpoints) y mostrar la agenda con la zona de la clínica si algún equipo tiene otra zona. Los detalles están en `front/docs/planes-implementacion/12-campos-sin-conectar.md`.
+- **Pruebas E2E que ya fallaban antes de los planes** (no tocan código de los planes): `form-validation.spec.ts` (8) y `messaging-identity.spec.ts` (7), del commit incompleto `3e72a03`; `form-actions.spec.ts` (4), que espera `data-form-actions` en `/perfil-institucion` y en el editor de sedes, que nunca lo tuvieron; `calendar-single-date-today.spec.ts:104` (2), que espera el periodo como "9 noviembre – 15 noviembre 2026" cuando `calendar-period.ts` da "9–15 de noviembre de 2026"; y `calendar-views-visual.spec.ts:42` (2), que espera `--event-color: #5350cc`.
 - **CORS de las pruebas E2E:** `Cors:AllowedOrigins` de desarrollo solo tiene `http://localhost:5173`; las E2E contra la API real (plan 11) necesitan `http://127.0.0.1:5175`.
 
 **4. Infraestructura:** despliegue en el Droplet (nginx, `systemd`, migraciones y respaldos que **incluyan la carpeta de adjuntos**): `tutorial/fase-0.md` § 5.9.
