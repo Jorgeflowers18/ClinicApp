@@ -138,6 +138,15 @@ Conectado a la API con el plan 2 (2026-11-21, módulo `institution` del conmutad
 - **No-show:** nuevo estado `no_asistio` en `AppointmentStatus`, con su propio botón "Marcar inasistencia" en `AppointmentDetailDialog` y su propia clase CSS en el calendario (distinta de "cancelada": borde punteado en vez de tachado).
 - **Filtro por profesional:** selector en `/citas` (estado local, no query param — a diferencia del filtro `?pacienteId=` que sí se enlaza desde el detalle de paciente) que filtra tanto citas como bloqueos mostrados en el calendario.
 
+### Tratamientos
+
+Conectado a la API con el plan 5 (2026-11-21, módulo `treatments`). Recurso con el estándar: `treatments.contract.ts`, `.http.ts`, `.mock.ts` y `.api.ts`.
+
+- **Catálogo:** `GET /treatments` (paginado), `GET /treatments?active=true` (todos los activos, sin paginar, para los selectores), `GET`, `POST`, `PUT` y `DELETE /treatments/:id`. El esquema Zod usa los límites del back: duración de 5 a 1440 minutos, precio hasta 99 999 999,99 y hasta 50 insumos.
+- **Borrar uno usado:** el `409` ("ya se usó") abre un diálogo que ofrece **desactivarlo** (`useDeactivateTreatment`), en lugar de un error.
+- **Realizados:** `GET /treatments/:id/assignments` y `GET /treatment-assignments?patientId=`. `POST /treatment-assignments` sigue en el contrato, pero con la API la historia clínica registra los realizados dentro de `…/encounters/register` (plan 7).
+- **Insumos:** el descuento al registrar un realizado lo hace el servidor (FEFO). En demostración lo hace `treatments.mock.ts` llamando a `registerMockConsumption` del mock de inventario.
+
 ### Inventario: lotes, compras y esterilización
 
 - **Tipo de insumo:** `InventoryItem.kind` distingue `consumible` de `instrumental` (instrumental esterilizable). El listado de insumos muestra un badge "Instrumental" solo para estos últimos.
@@ -381,6 +390,7 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - Los endpoints clásicos `GET/POST/PUT /clinical-history` y `GET /clinical-history/:id` ya no se usan.
 
 **Tratamientos**
+- ✅ Conectado (plan 5): `GET /treatments` (y `?active=true`), `GET`, `POST`, `PUT` y `DELETE /treatments/:id`, `GET /treatments/:id/assignments`, `GET /treatment-assignments?patientId=` y `POST /treatment-assignments`.
 - `GET /treatments`
 - `GET /treatments?active=true`
 - `GET /treatments/:id`

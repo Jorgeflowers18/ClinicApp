@@ -23,8 +23,9 @@ import { useTableQueryState } from "@/shared/hooks/use-table-query-state"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { formatCurrency } from "@/shared/lib/number"
 import { queryClient } from "@/shared/lib/query-client"
+import { ApiError } from "@/shared/types/common"
 
-import { treatmentsKeys, useDeleteTreatment } from "../api/treatments.queries"
+import { treatmentsKeys, useDeactivateTreatment, useDeleteTreatment } from "../api/treatments.queries"
 import { useTreatmentCatalog } from "../hooks/use-treatment-options"
 import { TreatmentFormDialog } from "../components/treatment-form-dialog"
 import { TreatmentStatus } from "../components/treatment-status"
@@ -78,7 +79,10 @@ export function TreatmentsListPage() {
     </>
   }
   const deleteTreatment = useDeleteTreatment()
+  const deactivateTreatment = useDeactivateTreatment()
   const [treatmentToDelete, setTreatmentToDelete] = useState<Treatment | null>(null)
+  // Un tratamiento usado en citas, realizados o historias no se borra (409): se ofrece desactivarlo.
+  const [treatmentInUse, setTreatmentInUse] = useState<Treatment | null>(null)
 
   const columns: DataTableColumn<Treatment>[] = [
     {
@@ -135,6 +139,24 @@ export function TreatmentsListPage() {
       onSuccess: () => {
         toast.success("Tratamiento eliminado")
         setTreatmentToDelete(null)
+      },
+      onError: (err) => {
+        if (err instanceof ApiError && err.status === 409) {
+          setTreatmentInUse(treatmentToDelete)
+          setTreatmentToDelete(null)
+          return
+        }
+        toast.error(getErrorMessage(err))
+      },
+    })
+  }
+
+  function handleDeactivate() {
+    if (!treatmentInUse) return
+    deactivateTreatment.mutate(treatmentInUse, {
+      onSuccess: () => {
+        toast.success("Tratamiento desactivado")
+        setTreatmentInUse(null)
       },
       onError: (err) => toast.error(getErrorMessage(err)),
     })
@@ -194,6 +216,16 @@ export function TreatmentsListPage() {
         destructive
         isLoading={deleteTreatment.isPending}
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={!!treatmentInUse}
+        onOpenChange={(open) => !open && setTreatmentInUse(null)}
+        title="Este tratamiento ya se usó"
+        description={`"${treatmentInUse?.name}" está en citas, tratamientos realizados o historias clínicas, así que no se puede eliminar. ¿Deseas desactivarlo? Dejará de ofrecerse, y sus registros se conservan.`}
+        confirmLabel="Desactivar"
+        isLoading={deactivateTreatment.isPending}
+        onConfirm={handleDeactivate}
       />
     </div>
   )

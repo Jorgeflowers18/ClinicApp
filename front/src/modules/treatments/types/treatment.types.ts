@@ -9,10 +9,11 @@ export const treatmentSchema = z.object({
   name: z.string().min(2, "Mínimo 2 caracteres"),
   category: z.string().min(2, "Mínimo 2 caracteres"),
   description: z.string().optional(),
-  durationMinutes: z.coerce.number().int().min(5, "Mínimo 5 minutos"),
-  price: z.coerce.number().min(0, "El precio no puede ser negativo"),
+  // Los mismos límites que la API (`TreatmentRequest`).
+  durationMinutes: z.coerce.number().int().min(5, "Mínimo 5 minutos").max(1440, "Máximo 1440 minutos (24 horas)"),
+  price: z.coerce.number().min(0, "El precio no puede ser negativo").max(99_999_999.99, "El precio es demasiado alto"),
   active: z.boolean(),
-  consumption: z.array(consumptionSchema),
+  consumption: z.array(consumptionSchema).max(50, "Máximo 50 insumos por tratamiento"),
 })
 
 export type TreatmentFormValues = z.infer<typeof treatmentSchema>
