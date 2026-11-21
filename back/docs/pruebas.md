@@ -61,6 +61,7 @@ Todos desde la carpeta `back/`.
 | `finance` | `Integration/FinanceTests.cs` | Suma de todas las asignaciones, pago parcial y completo, anulación (sin motivo, dos veces), saldo excedido, tratamiento no realizado, fecha futura, pagos simultáneos que no superan el saldo, redondeo (3 × 33,33), resúmenes de tratamiento y de paciente, 400 con varios pacientes, médico sin acceso y estado de la fila |
 | `reports` | `Unit/ReportPeriodTests.cs` | Periodo inclusivo en hora de la clínica, periodos inválidos y etiquetas de los días ("lun 12") |
 | | `Integration/ReportsTests.cs` | Datos conocidos en marzo de 2031: resumen, agenda por día de la clínica (también una cita a las 23:30), estados, ocupación con bloqueo recortado y "Sin consultorio", productividad, tratamientos con ingreso estimado; inventario del día; roles y periodo inválido |
+| `openapi` | `Integration/OpenApiTests.cs` | El documento OpenAPI declara los números solo como `integer`/`number` (sin `string` ni `pattern`), para que los tipos generados en el frontend no queden como `number | string` |
 
 ## Problemas comunes
 

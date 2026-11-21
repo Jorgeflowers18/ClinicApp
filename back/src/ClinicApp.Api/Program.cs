@@ -148,7 +148,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database");
 
 // Descripción OpenAPI de todos los endpoints (/openapi/v1.json).
-builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+    options.AddSchemaTransformer<NumericSchemaTransformer>(); // números solo como números (no "integer | string")
+});
 
 var app = builder.Build();
 

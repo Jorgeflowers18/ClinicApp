@@ -16,6 +16,8 @@ Estado al **2026-11-20**: **91 endpoints implementados**:
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
 
+**Documento OpenAPI** (`/openapi/v1.json`, solo en desarrollo): de él salen los tipos del frontend (`npm run api:types` en `front/`). Los números se documentan solo como `integer`/`number` (`Common/NumericSchemaTransformer.cs`), aunque la API también acepte un número escrito como texto al leer una petición.
+
 ## 1. Reglas comunes
 
 ### URL base
