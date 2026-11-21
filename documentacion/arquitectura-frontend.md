@@ -86,7 +86,7 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 | Módulo | Contenido |
 |---|---|
 | `auth` | Login, store de sesión (Zustand), rutas protegidas por autenticación y por rol |
-| `patients` | CRUD completo: listado con búsqueda/paginación, formulario, detalle con tabs (citas, tratamientos, historial) |
+| `patients` | CRUD completo: listado con búsqueda/paginación, formulario, detalle con tabs (citas, tratamientos, historial), baja lógica y reactivación. Ver [Pacientes](#pacientes) |
 | `appointments` | Calendario visual (mes/semana/día) con `react-big-calendar`, crear/editar/reprogramar cita, cambio de estado (incluye no-show), validación de disponibilidad de profesional y consultorio, bloqueos puntuales de horario, filtro por profesional |
 | `treatments` | Catálogo de tratamientos, consumo de insumos por tratamiento (relación con inventario), tratamientos realizados a pacientes (se registran desde la atención de la historia clínica; el detalle muestra "Pacientes que recibieron este tratamiento") |
 | `clinical-history` | Historia clínica odontológica única por paciente: historia editable con guardado confirmado (odontograma y periodontograma, tratamientos propuestos del catálogo, consentimiento de datos, fotos y documentos) más atenciones inmutables, indicadores periodontales y exportación. Lista global de atenciones en `/historial-clinico` e historia del paciente en `/historial-clinico/paciente/:patientId`. Acceso restringido a roles `admin` y `medico`. Ver [Historia clínica odontológica](#historia-clínica-odontológica) |
@@ -94,6 +94,18 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 | `notifications` | Registro (`NotificationLog`) de notificaciones enviadas a pacientes (recordatorio/confirmación/cancelación de cita, por email o SMS). Página `/notificaciones` con editor de la plantilla predeterminada (`NotificationTemplate`, con variables insertables) y reporte del historial con filtro por nombre/identificación del paciente y rango de fechas. Consumido también desde `appointments` para mostrar si el cliente ya fue notificado de una cita puntual. Sin CRUD propio de logs: las notificaciones individuales las genera el backend, el frontend solo lee el historial y edita la plantilla |
 | `institution` | Perfil de la clínica (nombre, subtítulo, datos legales y de contacto, logo) y sus sedes. Página `/perfil-institucion` (solo `admin`); la marca se ve en la barra lateral y en el inicio de sesión. Ver [Perfil institucional](#perfil-institucional) |
 | `reports` | Reportería derivada (sin datos propios ni CRUD): KPIs de agenda, productividad por profesional, tratamientos e inventario, con selector de periodo global y exportación CSV en navegador. Página `/reportes` (solo `admin`). El dashboard `/` consume los mismos hooks, así portada y reportes nunca se contradicen |
+
+### Pacientes
+
+Conectado a la API con el plan 3 (2026-11-21, módulo `patients` del conmutador). Recurso con el estándar: `patients.contract.ts`, `.http.ts`, `.mock.ts` y `.api.ts`; `patients.mock-data.ts` sigue siendo la semilla de la demostración (otros mocks la leen hasta los planes 8 y 10).
+
+- **Lista:** `GET /patients?page&pageSize&search&status&gender&registeredFrom&registeredTo`. La búsqueda del servidor cubre nombres, documento, teléfono y N.° de historia (no el correo). Los cuatro contadores piden `pageSize: 1` con su `status` y leen `totalItems`. Las consultas pasan el `signal` de React Query.
+- **Ficha:** `GET /patients/:id`, que también devuelve a un paciente dado de baja (`deletedAt`).
+- **Alta y edición:** `POST` y `PUT /patients/:id`. El N.° de historia (`HC-000001`…) lo asigna el servidor. Los errores por campo del `400` y el `409` de documento repetido (`errors.documentId`) se marcan en el formulario. El mapeo de `patients.http.ts` convierte `documentType: null` en `undefined`.
+- **Desactivar ≠ dar de baja:** "Desactivar paciente" cambia el estado del tratamiento a `inactivo` (sigue en la lista y cuenta en "Inactivos"). "Dar de baja" (`DELETE /patients/:id`, admin y recepción) es la baja lógica: el paciente sale de la lista y se conservan sus citas, historia, tratamientos y pagos.
+- **Dado de baja:** la ficha muestra el aviso "Paciente dado de baja" sin Editar, Agendar ni acciones (el servidor respondería `409`). El admin ve "Reactivar paciente" (`POST /patients/:id/restore`).
+- **Vista de dados de baja (solo admin):** en Filtros avanzados, "Ver solo pacientes dados de baja" → `GET /patients?deleted=true` con los mismos filtros, del más reciente en darse de baja al más antiguo. Cada fila tiene "Reactivar".
+- **Demostración (`patients.mock.ts`):** la baja pone `deletedAt` igual que el servidor (antes ponía `treatmentStatus: "inactivo"`), la lista excluye a los dados de baja y `restore` los reactiva.
 
 ### Perfil institucional
 
@@ -343,11 +355,7 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - ✅ Conectado (plan 2): `GET /institution/public`, `GET /institution/profile` y `PUT /institution/profile`.
 
 **Pacientes**
-- `GET /patients` (query: `page`, `pageSize`, `search`)
-- `GET /patients/:id`
-- `POST /patients`
-- `PUT /patients/:id`
-- `DELETE /patients/:id`
+- ✅ Conectado (plan 3): `GET /patients` (`page`, `pageSize`, `search`, `status`, `gender`, `registeredFrom`, `registeredTo`, `deleted`), `GET /patients/:id`, `POST /patients`, `PUT /patients/:id`, `DELETE /patients/:id` y `POST /patients/:id/restore`.
 
 **Citas**
 - `GET /appointments` (idealmente con filtro de rango de fechas)

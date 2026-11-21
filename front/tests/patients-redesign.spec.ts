@@ -240,7 +240,7 @@ test("scheduling from the patient reuses the appointment form and refreshes the 
   expect(await page.evaluate(async () => { const path = "/src/modules/appointments/api/appointments.api.ts"; const { appointmentsApi } = await import(path); const appointments = await appointmentsApi.listByPatient("pat_5"); return appointments.some((item: { start: string }) => item.start.startsWith("2026-12-10")) })).toBe(true)
 })
 
-test("patient API validation is atomic for duplicate edits and legacy removal remains logical", async ({ page }) => {
+test("patient API validation is atomic for duplicate edits and removal is a logical soft delete", async ({ page }) => {
   await page.goto("/login")
   const result = await page.evaluate(async () => {
     const apiPath = "/src/modules/patients/api/patients.api.ts", typesPath = "/src/modules/patients/types/patient.types.ts"
@@ -258,9 +258,10 @@ test("patient API validation is atomic for duplicate edits and legacy removal re
     await patientsApi.remove("pat_1")
     const retained = await patientsApi.get("pat_1")
     const total = (await patientsApi.list({ pageSize: 100 })).totalItems
-    return { duplicateStatus, invalidStatus, unchangedAfterFailure, status: retained.treatmentStatus, sameNumber: retained.clinicalRecordNumber === original.clinicalRecordNumber, total, relationsUnchanged: related === JSON.stringify({ appointments: mockAppointments, assignments: mockTreatmentAssignments }), financesUnchanged: finances === JSON.stringify(await financeApi.getPatientSummary("pat_1")) }
+    // La baja pone `deletedAt` (como la API): conserva el estado del tratamiento y saca al paciente de la lista.
+    return { duplicateStatus, invalidStatus, unchangedAfterFailure, statusKept: retained.treatmentStatus === original.treatmentStatus, removed: Boolean(retained.deletedAt), sameNumber: retained.clinicalRecordNumber === original.clinicalRecordNumber, total, relationsUnchanged: related === JSON.stringify({ appointments: mockAppointments, assignments: mockTreatmentAssignments }), financesUnchanged: finances === JSON.stringify(await financeApi.getPatientSummary("pat_1")) }
   })
-  expect(result).toEqual({ duplicateStatus: 409, invalidStatus: 400, unchangedAfterFailure: true, status: "inactivo", sameNumber: true, total: 5, relationsUnchanged: true, financesUnchanged: true })
+  expect(result).toEqual({ duplicateStatus: 409, invalidStatus: 400, unchangedAfterFailure: true, statusKept: true, removed: true, sameNumber: true, total: 4, relationsUnchanged: true, financesUnchanged: true })
 })
 
 for (const role of ["admin", "medico", "recepcion"]) {

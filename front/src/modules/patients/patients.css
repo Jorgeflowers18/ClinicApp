@@ -254,3 +254,8 @@
   .patient-section-panel { animation-duration: 0s !important; transition-duration: 0s !important; }
   .patient-edit-dialog[data-slot="dialog-content"] { animation: none; transition: none; }
 }
+.patient-removed-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--warning); border-radius: var(--radius-card); background: var(--warning-surface); color: var(--foreground); }
+.patient-removed-notice p { display: flex; align-items: flex-start; gap: 10px; margin: 0; }
+.patient-removed-notice svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+.patient-deleted-filter { display: flex; align-items: center; gap: 8px; align-self: end; min-height: 40px; }
+.patient-advanced-filters .patient-deleted-filter label { display: inline; margin: 0; color: var(--foreground); font-size: 14px; }

@@ -12,18 +12,19 @@ export const patientsKeys = {
   detail: (id: string) => [...patientsKeys.all, "detail", id] as const,
 }
 
-export function usePatientsList(query: PatientsQuery) {
+export function usePatientsList(query: PatientsQuery, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: patientsKeys.list(query),
-    queryFn: () => patientsApi.list(query),
+    queryFn: ({ signal }) => patientsApi.list(query, signal),
     placeholderData: keepPreviousData,
+    ...options,
   })
 }
 
 export function usePatient(id: string | undefined) {
   return useQuery({
     queryKey: patientsKeys.detail(id ?? ""),
-    queryFn: () => patientsApi.get(id as string),
+    queryFn: ({ signal }) => patientsApi.get(id as string, signal),
     enabled: Boolean(id),
   })
 }
@@ -52,6 +53,16 @@ export function useDeletePatient() {
     mutationFn: (id: string) => patientsApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: patientsKeys.all })
+    },
+  })
+}
+
+export function useRestorePatient() {
+  return useMutation({
+    mutationFn: (id: string) => patientsApi.restore(id),
+    onSuccess: (patient) => {
+      queryClient.setQueryData(patientsKeys.detail(patient.id), patient)
+      queryClient.invalidateQueries({ queryKey: patientsKeys.lists() })
     },
   })
 }

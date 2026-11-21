@@ -1,8 +1,10 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import { CalendarDays, Mail, Phone, Plus, SlidersHorizontal, UsersRound, UserRoundCheck, UserRoundX, UserRoundSearch } from "lucide-react"
 import { ResetFiltersButton } from "@/shared/components/reset-filters-button"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
@@ -13,7 +15,8 @@ import { useTableQueryState } from "@/shared/hooks/use-table-query-state"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { formatDateTime } from "@/shared/lib/date"
 import { AppointmentFormDialog } from "@/modules/appointments/components/appointment-form-dialog"
-import { usePatientsList } from "../api/patients.queries"
+import { useAuthStore } from "@/modules/auth/store/auth-store"
+import { usePatientsList, useRestorePatient } from "../api/patients.queries"
 import { genderOptions, treatmentStatusOptions, type Patient, type PatientsQuery } from "../types/patient.types"
 import { PatientInitials, PatientStatus } from "../components/patient-status"
 import { PatientActions, PatientActionsProvider } from "../components/patient-actions"
@@ -28,13 +31,21 @@ export function PatientsListPage() {
   const [advanced, setAdvanced] = useState(false)
   const [schedulePatient, setSchedulePatient] = useState<Patient | null>(null)
   const [editor, setEditor] = useState<PatientEditor | null>(null)
+  const isAdmin = useAuthStore(state => state.user?.role === "admin")
+  const restore = useRestorePatient()
   const query = usePatientsList({ page, pageSize, search: debouncedSearch, ...filters })
   const total = usePatientsList({ page: 1, pageSize: 1 })
   const active = usePatientsList({ page: 1, pageSize: 1, status: "activo" })
   const followUp = usePatientsList({ page: 1, pageSize: 1, status: "en seguimiento" })
   const inactive = usePatientsList({ page: 1, pageSize: 1, status: "inactivo" })
   const hasFilters = !!search || Object.values(filters).some(Boolean)
-  const advancedCount = [filters.gender, filters.registeredFrom, filters.registeredTo].filter(Boolean).length
+  const advancedCount = [filters.gender, filters.registeredFrom, filters.registeredTo, filters.deleted].filter(Boolean).length
+  async function reactivate(patient: Patient) {
+    try {
+      await restore.mutateAsync(patient.id)
+      toast.success(`${patient.firstName} ${patient.lastName} fue reactivado`)
+    } catch (error) { toast.error(getErrorMessage(error)) }
+  }
   const invalidRange = !!filters.registeredFrom && !!filters.registeredTo && filters.registeredFrom > filters.registeredTo
   function changeFilters(update: Partial<typeof filters>) { setFilters(current => ({ ...current, ...update })); setPage(1) }
   function clear() { setSearch(""); setFilters({}); setPage(1) }
@@ -44,7 +55,10 @@ export function PatientsListPage() {
     { key: "email", header: "Correo", cell: patient => <span className="patient-contact"><Mail aria-hidden="true" />{patient.email || "—"}</span> },
     { key: "treatmentStatus", header: "Estado", cell: patient => <PatientStatus status={patient.treatmentStatus} /> },
     { key: "createdAt", header: "Registrado", cell: patient => <span className="patient-contact"><CalendarDays aria-hidden="true" />{formatDateTime(patient.createdAt, { year: "numeric", month: "short", day: "2-digit" })}</span> },
-    { key: "actions", header: "Acciones", className: "w-12 text-right", cell: patient => <PatientActions patient={patient} onSchedule={() => setSchedulePatient(patient)} onEdit={trigger => setEditor({ mode: "edit", patient, returnFocus: trigger })} /> },
+    { key: "actions", header: "Acciones", className: "w-12 text-right", cell: patient => patient.deletedAt
+      // Dado de baja: solo se reactiva (no se edita ni se agenda).
+      ? <Button variant="outline" size="sm" disabled={restore.isPending} onClick={event => { event.stopPropagation(); void reactivate(patient) }} aria-label={`Reactivar a ${patient.firstName} ${patient.lastName}`}>Reactivar</Button>
+      : <PatientActions patient={patient} onSchedule={() => setSchedulePatient(patient)} onEdit={trigger => setEditor({ mode: "edit", patient, returnFocus: trigger })} /> },
   ]
   return <PatientActionsProvider><div className="clinic-pilot clinic-pilot-page clinic-patients-page space-y-4">
     <PageHeader className="clinic-pilot-header" title="Pacientes" description="Gestiona la información y el seguimiento de tus pacientes."
@@ -73,13 +87,14 @@ export function PatientsListPage() {
       </Select></div>
       <div><label htmlFor="patient-registered-from">Registrado desde</label><Input id="patient-registered-from" type="date" value={filters.registeredFrom ?? ""} max={filters.registeredTo} onChange={event => changeFilters({ registeredFrom: event.target.value || undefined })} /></div>
       <div><label htmlFor="patient-registered-to">Registrado hasta</label><Input id="patient-registered-to" type="date" value={filters.registeredTo ?? ""} min={filters.registeredFrom} onChange={event => changeFilters({ registeredTo: event.target.value || undefined })} /></div>
+      {isAdmin && <div className="patient-deleted-filter"><Checkbox id="patient-deleted-filter" checked={!!filters.deleted} onCheckedChange={checked => changeFilters({ deleted: checked === true || undefined })} /><label htmlFor="patient-deleted-filter">Ver solo pacientes dados de baja</label></div>}
       {invalidRange && <p role="alert">La fecha final debe ser igual o posterior a la inicial.</p>}
     </div>
-    <p className="patient-list-order">Más recientes primero</p>
+    <p className="patient-list-order">{filters.deleted ? "Dados de baja · más recientes primero" : "Más recientes primero"}</p>
     <div aria-busy={query.isFetching}>
       <DataTable columns={columns} data={invalidRange ? [] : query.data?.items ?? []} getRowId={row => row.id} isLoading={query.isLoading} isError={query.isError} errorMessage={getErrorMessage(query.error)}
         onRowClick={row => navigate(`/pacientes/${row.id}`)} getRowLabel={row => `Abrir detalles del paciente ${row.firstName} ${row.lastName}`}
-        emptyTitle={hasFilters ? "Sin coincidencias" : "Sin pacientes"} emptyDescription={hasFilters ? "Prueba con otros criterios o limpia los filtros." : "Registra tu primer paciente para comenzar."} className="clinic-patients-table" />
+        emptyTitle={filters.deleted ? "Sin pacientes dados de baja" : hasFilters ? "Sin coincidencias" : "Sin pacientes"} emptyDescription={hasFilters ? "Prueba con otros criterios o limpia los filtros." : "Registra tu primer paciente para comenzar."} className="clinic-patients-table" />
     </div>
     {query.data && !invalidRange && <PaginationBar page={query.data.page} pageSize={query.data.pageSize} totalItems={query.data.totalItems} totalPages={query.data.totalPages} onPageChange={setPage} />}
     {schedulePatient && <AppointmentFormDialog open onOpenChange={open => !open && setSchedulePatient(null)} initialPatientId={schedulePatient.id} />}

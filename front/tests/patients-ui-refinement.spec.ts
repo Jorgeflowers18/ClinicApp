@@ -150,7 +150,8 @@ for (const theme of ["light", "dark"]) {
         const menu = page.getByRole("menu", { name: "Acciones del paciente Valentina Suárez", exact: true })
         await expect(menu).toBeVisible()
         await expect(menu).toHaveCSS("width", "280px")
-        await expect(menu.getByRole("menuitem")).toHaveCount(5)
+        // La ficha suma "Dar de baja" (admin y recepción); la lista no.
+        await expect(menu.getByRole("menuitem")).toHaveCount(route === "/pacientes" ? 5 : 6)
         await expect(menu.getByRole("separator")).toHaveCount(1)
         expect(await menu.evaluate(node => !!node.closest('[data-slot="table-container"], article, .patient-information-card'))).toBe(false)
         for (const item of await menu.getByRole("menuitem").all()) {
