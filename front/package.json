@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test:e2e": "playwright test",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "api:types": "npx -y openapi-typescript@7.13.0 http://localhost:5000/openapi/v1.json -o src/shared/api/schema.d.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

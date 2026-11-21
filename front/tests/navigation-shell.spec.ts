@@ -270,15 +270,15 @@ for (const role of ["admin", "recepcion", "medico"]) {
 test("alert aggregation covers all pages, excludes irrelevant events and respects cancellation", async ({ page }) => {
   await page.goto("/login")
   const result = await page.evaluate(async () => {
-    const module = await import(/* @vite-ignore */ "/src/modules/notifications/components/use-global-alerts.ts")
+    const module = await import(/* @vite-ignore */ "/src/shared/lib/pagination.ts")
     const calls: number[] = []
-    const rows = await module.collectAlertPages(async (query: { page: number }) => {
+    const rows = await module.fetchAllPages(async (query: { page: number }) => {
       calls.push(query.page)
       return { items: [{ id: `row-${query.page}` }, { id: "shared" }], page: query.page, pageSize: 100, totalItems: 103, totalPages: 3 }
     }, new AbortController().signal)
     const controller = new AbortController(); controller.abort()
     let aborted = false
-    try { await module.collectAlertPages(() => { throw new Error("Should not fetch") }, controller.signal) } catch (error) { aborted = (error as Error).name === "AbortError" }
+    try { await module.fetchAllPages(() => { throw new Error("Should not fetch") }, controller.signal) } catch (error) { aborted = (error as Error).name === "AbortError" }
     return { calls, ids: rows.map((row: { id: string }) => row.id), aborted }
   })
   expect(result).toEqual({ calls: [1, 2, 3], ids: ["row-1", "shared", "row-2", "row-3"], aborted: true })

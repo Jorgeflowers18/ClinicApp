@@ -67,6 +67,23 @@ export function readInstitutionProfile(): InstitutionProfile {
   }
 }
 
+/**
+ * Nombre institucional **guardado** (no el borrador ni el valor por defecto): la mensajería solo usa un nombre
+ * que el administrador confirmó. Sin perfil guardado, o con el nombre vacío, devuelve null.
+ * En el plan 2 (institution) pasa a leerse de GET /institution/profile.
+ */
+export function readSavedInstitutionName(): string | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(INSTITUTION_PROFILE_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<InstitutionProfile>
+    return typeof parsed.name === "string" && parsed.name.trim() ? parsed.name.trim() : null
+  } catch {
+    return null
+  }
+}
+
 export function writeInstitutionProfile(profile: InstitutionProfile) {
   if (typeof window === "undefined") {
     return

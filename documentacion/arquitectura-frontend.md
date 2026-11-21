@@ -215,16 +215,25 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 
 ## Comunicación con la API
 
-Todo el tráfico HTTP pasa por `shared/lib/http.ts` (instancia única de Axios):
+Todo el tráfico HTTP pasa por `shared/lib/http.ts` (instancia única de Axios). Actualizado el 2026-11-20 con el plan 0 de `front/docs/planes-implementacion/`:
 
+- **`withCredentials: true`:** el navegador manda y guarda la cookie `httpOnly` de renovación (`clinicapp_refresh`, ruta `/api/auth`). El CORS del back permite credenciales.
 - **Interceptor de request:** agrega `Authorization: Bearer <token>` desde el store de auth.
 - **Interceptor de response:**
-  - `401` → limpia la sesión y redirige a `/login`.
-  - Cualquier error se normaliza a `ApiError` (`shared/types/common.ts`), extrayendo `errors: Record<string, string[]>` del formato `ValidationProblemDetails` estándar de ASP.NET Core (`400`) hacia una lista plana de `{ field, message }` que los formularios pueden mostrar.
+  - Las peticiones canceladas (`signal`) se dejan pasar tal cual: no son errores para el usuario.
+  - `401` → llama al manejador configurable (`setUnauthorizedHandler`). Por defecto limpia la sesión y redirige a `/login`. El plan 1 (auth) lo reemplaza para renovar la sesión con `POST /auth/refresh` y reintentar la petición.
+  - Cualquier otro error pasa por `normalizeProblem` (`shared/lib/api-problem.ts`) y sale como **un único `ApiError`** (`shared/types/common.ts`):
+    - `message`, `status` y `fieldErrors` (lista plana `{ field, message }`), como antes;
+    - además, `kind` (`validation`, `conflict`, `authentication`, `communication`, `internal`…), `code` y `traceId`.
+
+    Acepta el `ValidationProblemDetails` de ASP.NET (`errors` como diccionario) y el formato de `back/ClinicApp.ErrorHandling` (`code`, `errors` como lista). Nunca muestra el detalle de un `500`. Un cuerpo de error en `Blob` (descargas) se lee como JSON.
+- **`ApiError` desde un mock:** el constructor no cambió, `new ApiError(mensaje, status, fieldErrors?)`. `kind` y `code` se calculan solos a partir del `status`.
+- **Helpers:** las implementaciones reales usan `apiGet`, `apiPost`, `apiPut`, `apiPatch`, `apiDelete`, `apiBlob` (descargas) y `apiForm` (multipart). Devuelven directamente los datos y aceptan `{ params, signal, headers }`.
+- **Listados completos:** `fetchAllPages(list, signal?, pageSize = 100)` (`shared/lib/pagination.ts`) lee todas las páginas de un recurso, quita repetidos por id y respeta la cancelación. Reemplazó las tres copias que había en `use-treatment-options.ts`, `use-inventory-catalog.ts` y `use-global-alerts.ts` (`collectAlertPages`). Úsalo solo para catálogos que deben estar completos.
 
 ### Patrón mock ↔ real
 
-Cada `*.api.ts` exporta un objeto (`patientsApi`, `inventoryApi`, etc.) cuyas funciones se resuelven en tiempo de módulo según `env.useMockApi` (`VITE_USE_MOCK_API`, ver `.env.example`):
+**Hoy** cada `*.api.ts` exporta un objeto (`patientsApi`, `inventoryApi`, etc.) cuyas funciones se resuelven en tiempo de módulo según `env.useMockApi` (`VITE_USE_MOCK_API`, ver `.env.example`):
 
 ```ts
 export const patientsApi = {
@@ -233,7 +242,31 @@ export const patientsApi = {
 }
 ```
 
-Las funciones `*Real` ya están escritas contra los endpoints esperados (ver más abajo) y quedan listas para activarse con solo cambiar la variable de entorno — no requieren tocar páginas ni hooks de React Query. Todas están marcadas con `// TODO: conectar a endpoint real -> MÉTODO /ruta`.
+**Conmutador por módulo:** `env.usesApi(módulo)` responde si un módulo ya usa la API:
+- es `true` para todos con `VITE_USE_MOCK_API=false`;
+- con el modo mock activo, es `true` solo para los módulos listados en `VITE_API_MODULES` (por ejemplo `VITE_API_MODULES=auth,institution`).
+
+Así los módulos se conectan de a uno, en el orden de `front/docs/planes-implementacion/README.md`. Los nombres válidos están en `apiModules` (`shared/lib/env.ts`). Un módulo solo se pasa a la API cuando ya lo están los que necesita: citas reales con pacientes mock dan `400`.
+
+**Estándar de recurso de API** (se adopta en cada módulo al conectarlo, según su plan):
+
+```
+modules/patients/api/
+  patients.contract.ts   interfaz PatientsApi: los métodos que usan los hooks
+  patients.http.ts       implementación real: solo llamadas api* + mapeo DTO → modelo
+  patients.mock.ts       implementación de demostración (las funciones *Mock actuales)
+  patients.mock-data.ts  datos de demostración
+  patients.api.ts        export const patientsApi: PatientsApi = env.usesApi("patients") ? httpPatientsApi : mockPatientsApi
+  patients.queries.ts    hooks de React Query: queryFn: ({ signal }) => patientsApi.list(query, signal)
+```
+
+Reglas:
+1. Pantallas y hooks importan solo `<módulo>Api` o los hooks; nunca `*.http.ts` ni `*.mock.ts`.
+2. `*.http.ts` no repite reglas de negocio del mock (choques de citas, FEFO, saldos): valida el servidor.
+3. Las conversiones (`null` → `undefined`, campos calculados) se hacen en el mapeo de `*.http.ts`, no en las pantallas.
+4. Los efectos que hace el servidor (notificaciones, descuento de stock) no están en el contrato: si el mock los necesita, los hace dentro de su implementación.
+
+No es una fábrica genérica de CRUD: cada módulo escribe sus métodos; se estandariza la forma del archivo y el manejo de la red.
 
 ### Código solo-mock
 
@@ -257,13 +290,16 @@ El código que solo existe para simular el backend queda marcado para poder borr
 
 ### Tipado end-to-end con la API .NET
 
-Cuando el backend exponga su esquema OpenAPI/Swagger, genera tipos con:
+Los DTO de la API se generan desde el OpenAPI del back (solo en desarrollo, `http://localhost:5000/openapi/v1.json`) en `src/shared/api/schema.d.ts`. Con el back levantado:
 
 ```bash
-npx openapi-typescript@latest https://localhost:5001/swagger/v1/swagger.json -o src/shared/types/api.gen.ts
+npm run api:types
 ```
 
-(`openapi-typescript` no está instalado como dependencia fija para evitar conflictos de peer-dependencies con la versión de TypeScript del proyecto; se ejecuta puntualmente con `npx`.)
+- El archivo generado se sube al repositorio, para que el proyecto compile sin el back. Se regenera cada vez que cambia un endpoint: si el back cambia un campo, el frontend deja de compilar en vez de fallar en la pantalla.
+- Uso en un `*.http.ts`: `import type { components } from "@/shared/api/schema"` y `type PatientDto = components["schemas"]["PatientDto"]`.
+- `openapi-typescript` (versión fija `7.13.0`) se ejecuta con `npx` y **no** es dependencia del proyecto: todas sus versiones piden `typescript@^5` y el proyecto usa TypeScript 6. Instalarlo exigiría `--legacy-peer-deps`.
+- **Números:** salen como `number`. El back acepta números escritos como texto (configuración JSON por defecto de ASP.NET), pero su documento OpenAPI los declara solo como números (`back/src/ClinicApp.Api/Common/NumericSchemaTransformer.cs`, commit `024cb45`).
 
 ## Endpoints que el backend .NET debe exponer
 
@@ -404,9 +440,12 @@ Ver `front/.env.example`:
 ```
 VITE_API_BASE_URL=http://localhost:5000/api
 VITE_USE_MOCK_API=true
+VITE_API_MODULES=
 ```
 
-Cambia `VITE_USE_MOCK_API=false` cuando el backend .NET esté disponible y accesible en `VITE_API_BASE_URL`.
+- **`VITE_USE_MOCK_API=false`:** todos los módulos usan la API en `VITE_API_BASE_URL`.
+- **`VITE_API_MODULES`:** con el modo mock activo, conecta solo los módulos listados (`auth,institution,…`; ver § Patrón mock ↔ real).
+- **Pruebas locales:** `front/.env` está versionado. Para probar la conexión sin cambiarlo, crea `front/.env.local`, que git ignora (`*.local`).
 
 ## Decisiones pendientes / próximos pasos sugeridos
 

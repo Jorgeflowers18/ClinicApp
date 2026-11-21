@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react"
-import { initialInstitutionProfile, INSTITUTION_PROFILE_CHANGED, INSTITUTION_PROFILE_STORAGE_KEY, readInstitutionProfile } from "../types/institution.types"
+import { initialInstitutionProfile, INSTITUTION_PROFILE_CHANGED, INSTITUTION_PROFILE_STORAGE_KEY, readInstitutionProfile, readSavedInstitutionName } from "../types/institution.types"
 
 let lastRaw: string | null | undefined
 let lastProfile = initialInstitutionProfile
@@ -29,4 +29,12 @@ function subscribe(onChange: () => void) {
 /** Subscribe to the existing local record, without creating a second source of truth. */
 export function useInstitutionProfile() {
   return useSyncExternalStore(subscribe, getSnapshot, () => initialInstitutionProfile)
+}
+
+/**
+ * Nombre institucional guardado (o null si no se configuró), con la misma suscripción que la marca:
+ * se actualiza al guardar el perfil, también desde otra pestaña. Los cambios sin guardar no lo afectan.
+ */
+export function useSavedInstitutionName() {
+  return useSyncExternalStore(subscribe, readSavedInstitutionName, () => null)
 }

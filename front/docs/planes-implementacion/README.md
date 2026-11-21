@@ -2,6 +2,8 @@
 
 Estado al **2026-11-20**. El backend tiene los **91 endpoints** listos (`back/docs/endpoints-api.md`), incluido todo lo que estos planes le pedían al back. El frontend sigue funcionando con los mocks (`VITE_USE_MOCK_API=true`). Estos planes describen, módulo por módulo, qué mocks se apagan y cómo se reemplaza cada uno por la llamada real.
 
+Donde un plan dice **"estándar del plan 0"**, el estándar está en `documentacion/arquitectura-frontend.md` § "Patrón mock ↔ real": `*.contract.ts`, `*.http.ts`, `*.mock.ts` y `*.api.ts` con `env.usesApi(módulo)`, los helpers `api*` de `shared/lib/http.ts`, `fetchAllPages` y los tipos de `src/shared/api/schema.d.ts` (`npm run api:types`).
+
 **Flujo de trabajo:** un plan por módulo. Al terminarlo se hace el commit, se registra el cambio en `documentacion/arquitectura-frontend.md` y se borra el plan. Lo que quede pendiente se anota en `back/backlog-desgloce.md` § "Pendientes al cerrar los planes".
 
 ## Orden
@@ -10,7 +12,7 @@ El orden importa: las pantallas se cruzan por id (una cita apunta a un paciente,
 
 | # | Plan | Necesita | Cambios en el back |
 |---|---|---|---|
-| 0 | [`00-base-cliente-api.md`](./00-base-cliente-api.md): compilación, cliente HTTP, errores, estándar de recurso y conmutador por módulo | — | No |
+| 0 | ✅ Hecho (2026-11-21). Base: compilación, cliente HTTP, errores, estándar de recurso y conmutador por módulo | — | ✅ OpenAPI con números solo como números (`024cb45`) |
 | 1 | [`01-auth.md`](./01-auth.md): sesión, renovación, perfil, recuperación y solicitud de acceso | 0 | No |
 | 2 | [`02-institution.md`](./02-institution.md): perfil de la clínica, marca y sedes | 1 | ✅ `subtitle` (`53b1d64`) |
 | 3 | [`03-patients.md`](./03-patients.md) | 1 | ✅ `documentType`, teléfono opcional, filtros y lista de dados de baja (`a5f633a`) |
@@ -29,7 +31,7 @@ Los planes 5 y 6 se pueden hacer en paralelo con el 4.
 
 ## Hallazgos de la revisión del frontend (2026-11-20)
 
-1. **El frontend no compila.** `npx tsc -b` da 2 errores: `useSavedInstitutionName` (`notification-message-preview.tsx:13`) y `readSavedInstitutionName` (`prepare-appointment-message.ts:3`) no existen. El commit `3e72a03` ("Actualiza ClinicApp") solo agregó archivos nuevos; los cambios que esos archivos necesitaban en `institution` no se subieron. Se corrige en el plan 0, antes que nada.
+1. **El frontend no compila.** `npx tsc -b` da 2 errores: `useSavedInstitutionName` (`notification-message-preview.tsx:13`) y `readSavedInstitutionName` (`prepare-appointment-message.ts:3`) no existen. El commit `3e72a03` ("Actualiza ClinicApp") solo agregó archivos nuevos; los cambios que esos archivos necesitaban en `institution` no se subieron. ✅ Corregido en el plan 0.
 2. **El back recibió un proyecto nuevo, `back/ClinicApp.ErrorHandling`,** con otro formato de error (`code`, `errors` como lista). La API no lo referencia, así que hoy no cambia nada. El plan 0 deja el frontend preparado para los dos formatos; adoptarlo en la API es otra decisión.
 3. **El frontend había avanzado más que el contrato del back** en cuatro puntos. Los tres primeros ya están en el back:
    - el tipo de documento del paciente y los filtros de la lista;

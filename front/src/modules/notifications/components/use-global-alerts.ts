@@ -10,7 +10,8 @@ import type { InventoryItem } from "@/modules/inventory/types/inventory.types"
 import { patientsApi } from "@/modules/patients/api/patients.api"
 import { patientsKeys } from "@/modules/patients/api/patients.queries"
 import type { Patient } from "@/modules/patients/types/patient.types"
-import type { PageQuery, Paginated, Role } from "@/shared/types/common"
+import type { Role } from "@/shared/types/common"
+import { fetchAllPages } from "@/shared/lib/pagination"
 import { notificationsApi } from "../api/notifications.api"
 import { notificationsKeys } from "../api/notifications.queries"
 import type { NotificationLog } from "../types/notification.types"
@@ -23,18 +24,6 @@ export type GlobalAlert = {
   title: string; detail: string; meta?: string; to: string; important: boolean
 }
 
-export async function collectAlertPages<T extends { id: string }>(fetchPage: (query: PageQuery) => Promise<Paginated<T>>, signal: AbortSignal): Promise<T[]> {
-  const items: T[] = []
-  let totalPages = 1
-  for (let page = 1; page <= totalPages; page++) {
-    signal.throwIfAborted()
-    const result = await fetchPage({ page, pageSize: 100 })
-    signal.throwIfAborted()
-    items.push(...result.items)
-    totalPages = result.totalPages
-  }
-  return [...new Map(items.map((item) => [item.id, item])).values()]
-}
 
 export function buildGlobalAlerts({ patients, appointments, inventory, deliveries, now }: {
   patients: Patient[]; appointments: Appointment[]; inventory: InventoryItem[]; deliveries: NotificationLog[]; now: Date
@@ -90,16 +79,16 @@ export function useGlobalAlerts(userId: string, role: Role) {
   const options = { staleTime: 60_000, refetchInterval: 300_000 }
   const patients = useQuery({
     queryKey: [...patientsKeys.lists(), "global-alerts", userId],
-    queryFn: ({ signal }) => collectAlertPages(patientsApi.list, signal), ...options,
+    queryFn: ({ signal }) => fetchAllPages(patientsApi.list, signal), ...options,
   })
   const appointments = useQuery({ queryKey: appointmentsKeys.lists(), queryFn: appointmentsApi.list, ...options })
   const inventory = useQuery({
     queryKey: [...inventoryKeys.lists(), "global-alerts", userId], enabled: canManage,
-    queryFn: ({ signal }) => collectAlertPages(inventoryApi.list, signal), ...options,
+    queryFn: ({ signal }) => fetchAllPages(inventoryApi.list, signal), ...options,
   })
   const deliveries = useQuery({
     queryKey: [...notificationsKeys.lists(), "global-alerts", userId], enabled: canManage,
-    queryFn: ({ signal }) => collectAlertPages(notificationsApi.list, signal), ...options,
+    queryFn: ({ signal }) => fetchAllPages(notificationsApi.list, signal), ...options,
   })
   const alerts = useMemo(() => buildGlobalAlerts({ patients: patients.data ?? [], appointments: appointments.data ?? [],
     inventory: canManage ? inventory.data ?? [] : [], deliveries: canManage ? deliveries.data ?? [] : [], now,
