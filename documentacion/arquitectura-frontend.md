@@ -204,14 +204,31 @@ Esta estructura es intencionalmente repetitiva entre módulos: se prioriza que c
 
 ## Autenticación y autorización
 
-- **Login:** `modules/auth/pages/login-page.tsx` usa React Hook Form + Zod. Al autenticar, `useLogin` (TanStack Query mutation) guarda `{ accessToken, user }` en el store de Zustand (`modules/auth/store/auth-store.ts`).
-- **Token en memoria:** el access token **no se persiste** en `localStorage` para reducir superficie de robo por XSS. Al recargar la página se pierde, tal como ocurrirá en producción hasta que el backend exponga `/auth/me` respaldado por una cookie `httpOnly` de refresh.
-  - *Excepción solo en modo mock:* mientras `VITE_USE_MOCK_API=true`, la sesión se guarda en `sessionStorage` únicamente para comodidad de desarrollo (evitar reloguear en cada recarga). Este comportamiento está aislado y comentado en `auth-store.ts`, y debe eliminarse (o simplemente dejará de activarse) al conectar el backend real.
+Conectada a la API con el plan 1 (2026-11-21, módulo `auth` del conmutador). El recurso sigue el estándar de § Patrón mock ↔ real: `auth.contract.ts`, `auth.http.ts`, `auth.mock.ts` y `auth.api.ts`.
+
+- **Login:** `modules/auth/pages/login-page.tsx` usa React Hook Form + Zod. `useLogin` llama a `POST /auth/login` y guarda `{ accessToken, user }` en el store de Zustand (`modules/auth/store/auth-store.ts`). El servidor deja además la cookie `httpOnly` de renovación `clinicapp_refresh`. Los errores (`401` credenciales, `403` cuenta desactivada, `429` demasiados intentos) se muestran con su mensaje.
+- **Token solo en memoria:** el access token (15 min) nunca se guarda en `localStorage` ni `sessionStorage`, para que un XSS no pueda llevárselo.
+- **Estado de la sesión:** el store tiene `status`: `checking` (al cargar con la API, mientras se pregunta al servidor), `authenticated` o `anonymous`. Con `checking`, `ProtectedRoute` y el login muestran "Comprobando la sesión…" (`session-checking.tsx`) en lugar de mandar al login antes de tiempo.
+- **Arranque y renovación (`modules/auth/lib/session.ts`):** `startSession()` se llama una vez en `main.tsx`. Con la API:
+  - instala el manejador de `401` de `http.ts` (`setUnauthorizedHandler`);
+  - restaura la sesión con `POST /auth/refresh`: con `200` hay sesión, con `401` no.
+- **Ante un `401`** de cualquier endpoint, salvo `/auth/login`, `/auth/refresh` y `/auth/logout`:
+  - `renewSession()` llama a `POST /auth/refresh` **una sola vez** aunque fallen varias peticiones a la vez (promesa compartida), y la petición original se reintenta una vez con el token nuevo;
+  - si otra petición ya renovó el token mientras esta viajaba, solo se reintenta;
+  - si la renovación falla, `clearSession()` y `ProtectedRoute` lleva al login recordando la pantalla (`state.from`).
+- **Cerrar sesión:** `useLogout` llama a `POST /auth/logout` (borra la cookie). Si falla, la sesión local se cierra igual. `clearSession` también vacía la caché de React Query.
+- **Mi perfil:** `updateUserProfile` es asíncrono y llama a `PUT /auth/me/profile`; el perfil llega en `user.profile` del login y del refresh. La API solo acepta fotos PNG, JPG, WebP o GIF de hasta 400 000 caracteres: `auth.http.ts` pasa la foto por `fitAvatarImage` (`lib/avatar-image.ts`), que la deja igual si cumple o la reduce a 512 px (o 256 px) y la recodifica en WebP. Antes de completar el perfil, guardar solo una foto da el `400` "El nombre completo es obligatorio": primero se guarda el nombre.
+- **Recuperar contraseña** (`/recuperar-contrasena`): `POST /auth/password-recovery` (siempre `202`). La pantalla responde lo mismo exista o no el correo.
+- **Restablecer contraseña** (`/restablecer-contrasena?token=…`, pública): el back arma el enlace con `{Auth:FrontendBaseUrl}/restablecer-contrasena?token=`. Pide la contraseña dos veces (8 a 128 caracteres) y envía `POST /auth/password-reset`. Con `204` lleva al login con el aviso "Contraseña actualizada"; con el `400` de enlace vencido o usado ofrece "Solicitar uno nuevo".
+- **Solicitar acceso** (`/solicitar-acceso`): `POST /auth/access-requests` con `{ email, fullName, institution, message }` (`prepareAccessRequest` une nombres y apellidos).
+- **`AuthUser.professionalId`:** el profesional de la agenda que corresponde al usuario, o `null`.
 - **Rutas protegidas:** `modules/auth/components/protected-route.tsx` es un layout-route de React Router:
+  - Comprobando la sesión → "Comprobando la sesión…".
   - Sin sesión → redirige a `/login`.
+  - Sin perfil completo → `/perfil-usuario`.
   - Con sesión pero rol no permitido (`allowedRoles`) → redirige a `/403`.
-- **Roles:** `admin`, `recepcion`, `medico` (ver `modules/auth/types/auth.types.ts`). El menú lateral (`app/nav-config.ts`) también filtra ítems por rol, así que un usuario sin permiso ni siquiera ve el enlace — la ruta protegida es la barrera real, el menú es solo UX.
-- **Cuentas mock:** `admin@clinica.com` / `admin123`, `recepcion@clinica.com` / `recepcion123`, `medico@clinica.com` / `medico123`.
+- **Roles:** `admin`, `recepcion`, `medico` (ver `modules/auth/types/auth.types.ts`). Un rol que el front no conoce se rechaza al leer la sesión. El menú lateral (`app/nav-config.ts`) también filtra ítems por rol, así que un usuario sin permiso ni siquiera ve el enlace — la ruta protegida es la barrera real, el menú es solo UX.
+- **Modo demostración (`auth.mock.ts`):** cuentas `admin@clinica.com` / `admin123`, `recepcion@clinica.com` / `recepcion123`, `medico@clinica.com` / `medico123` (las mismas que crea el `UserSeeder` del back en desarrollo). La sesión se guarda en `sessionStorage` (`clinicapp.mock-session`) y "Mi perfil" en `localStorage` (`clinicapp.mock-profile.<id>`), a través de `sessionCache` del contrato; con la API, `sessionCache` no guarda nada. Recuperar, restablecer y solicitar acceso responden sin salir del navegador.
 
 ## Comunicación con la API
 
@@ -221,7 +238,7 @@ Todo el tráfico HTTP pasa por `shared/lib/http.ts` (instancia única de Axios).
 - **Interceptor de request:** agrega `Authorization: Bearer <token>` desde el store de auth.
 - **Interceptor de response:**
   - Las peticiones canceladas (`signal`) se dejan pasar tal cual: no son errores para el usuario.
-  - `401` → llama al manejador configurable (`setUnauthorizedHandler`). Por defecto limpia la sesión y redirige a `/login`. El plan 1 (auth) lo reemplaza para renovar la sesión con `POST /auth/refresh` y reintentar la petición.
+  - `401` → llama al manejador configurable (`setUnauthorizedHandler`). Por defecto limpia la sesión y redirige a `/login`. Con la API, `auth/lib/session.ts` lo reemplaza para renovar la sesión con `POST /auth/refresh` y reintentar la petición (§ Autenticación y autorización).
   - Cualquier otro error pasa por `normalizeProblem` (`shared/lib/api-problem.ts`) y sale como **un único `ApiError`** (`shared/types/common.ts`):
     - `message`, `status` y `fieldErrors` (lista plana `{ field, message }`), como antes;
     - además, `kind` (`validation`, `conflict`, `authentication`, `communication`, `internal`…), `code` y `traceId`.
@@ -306,9 +323,7 @@ npm run api:types
 Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 
 **Auth**
-- `POST /auth/login`
-- `POST /auth/logout`
-- `GET /auth/me` *(pendiente de agregar — necesario para restaurar sesión vía cookie httpOnly)*
+- ✅ Conectado (plan 1): `POST /auth/login`, `/auth/refresh`, `/auth/logout`, `PUT /auth/me/profile`, `POST /auth/password-recovery`, `/auth/password-reset` y `/auth/access-requests`.
 
 **Pacientes**
 - `GET /patients` (query: `page`, `pageSize`, `search`)
@@ -450,7 +465,6 @@ VITE_API_MODULES=
 ## Decisiones pendientes / próximos pasos sugeridos
 
 - Reemplazar los `Select` simples de paciente/profesional/insumo (alimentados con hasta 100 registros) por un combobox con búsqueda asíncrona cuando el volumen real de datos lo justifique.
-- Implementar `GET /auth/me` + cookie httpOnly de refresh en el backend para restaurar sesión sin re-login en cada carga.
 - Definir el almacenamiento real de los adjuntos clínicos (hoy se guardan en IndexedDB del navegador): servicio de archivos, límites, antivirus y retención.
 - Exponer `professionalId` en `GET /auth/me` para que el profesional por defecto de una atención no dependa de comparar nombres (`hooks/use-default-professional.ts`).
 - Mover el registro de la atención (guardar historia, tratamientos realizados, atención y cita completada) a una única transacción de `POST /clinical-history/patients/:patientId/encounters`; hoy lo coordina el frontend (`useRegisterEncounter`).

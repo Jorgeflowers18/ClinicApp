@@ -52,7 +52,6 @@
 .auth-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 6px; border-radius: 3px; color: var(--foreground); font-weight: 500; text-decoration: none; transition: color 160ms; }
 .auth-link:hover { color: var(--primary); text-decoration: underline; text-underline-offset: 4px; }
 .auth-navigation { color: var(--muted-foreground); text-align: center; font-size: 13px; }
-.auth-unavailable-action { display: flex; flex-direction: column; gap: 10px; }
 .auth-notice { display: flex; align-items: flex-start; gap: 8px; padding: 9px 10px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--muted); color: var(--muted-foreground); font-size: 13px; line-height: 20px; }
 .auth-notice > svg { flex-shrink: 0; margin-top: 2px; }
 .auth-notice-error { color: var(--destructive); border-color: color-mix(in srgb, var(--destructive) 35%, var(--border)); background: color-mix(in srgb, var(--destructive) 5%, var(--card)); }

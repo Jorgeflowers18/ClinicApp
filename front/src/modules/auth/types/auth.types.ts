@@ -17,6 +17,8 @@ export interface AuthUser {
   name: string
   email: string
   role: Role
+  /** El profesional de la agenda que corresponde a este usuario, si lo hay. */
+  professionalId: string | null
   profile: UserProfile | null
 }
 
@@ -26,9 +28,25 @@ export interface LoginResponse {
   user: AuthUser
 }
 
+export interface AuthSession {
+  accessToken: string
+  user: AuthUser
+}
+
 export const loginSchema = z.object({
   email: z.string().email("Ingresa un correo válido"),
   password: z.string().min(1, "La contraseña es obligatoria"),
 })
 
 export type LoginFormValues = z.infer<typeof loginSchema>
+
+/** Contraseña nueva: los mismos límites que la API (8 a 128 caracteres). */
+export const passwordResetSchema = z.object({
+  password: z.string().min(8, "Mínimo 8 caracteres").max(128, "Máximo 128 caracteres"),
+  confirmation: z.string(),
+}).refine((values) => values.password === values.confirmation, {
+  path: ["confirmation"],
+  message: "Las contraseñas no coinciden",
+})
+
+export type PasswordResetFormValues = z.infer<typeof passwordResetSchema>

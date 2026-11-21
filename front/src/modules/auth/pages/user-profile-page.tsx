@@ -158,7 +158,7 @@ export function UserProfilePage() {
 
         <div className={styles.notice}>
           <Info aria-hidden="true" />
-          <div><p>Tu perfil quedará asociado a tu cuenta y se mostrará en la interfaz.</p><p className={styles.persistenceNote}>{env.useMockApi ? "Modo de demostración: los cambios confirmados se guardan en este navegador." : "El guardado del perfil todavía no está disponible en esta conexión."}</p></div>
+          <div><p>Tu perfil quedará asociado a tu cuenta y se mostrará en la interfaz.</p><p className={styles.persistenceNote}>{env.usesApi("auth") ? "Los cambios confirmados se guardan en tu cuenta y se ven desde cualquier equipo." : "Modo de demostración: los cambios confirmados se guardan en este navegador."}</p></div>
         </div>
       </div>
     </div>

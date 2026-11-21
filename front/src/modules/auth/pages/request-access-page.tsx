@@ -1,26 +1,37 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { LoaderCircle } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { Link, useLocation } from "react-router-dom"
 
+import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { getErrorMessage } from "@/shared/lib/error-message"
 
-import { AuthLayout, AuthUnavailableAction } from "../components/auth-layout"
+import { useAccessRequest } from "../api/auth.queries"
+
+import { AuthLayout, AuthNotice } from "../components/auth-layout"
 import type { AccessRequestFormValues } from "../types/access-form.types"
 import { accessRequestDetailsSchema, type AccessRequestFields } from "../lib/access-request-form"
 
 export function RequestAccessPage() {
   const location = useLocation()
-  const { register, formState: { errors } } = useForm<AccessRequestFields, unknown, AccessRequestFormValues>({
+  const request = useAccessRequest()
+  const { register, handleSubmit, formState: { errors } } = useForm<AccessRequestFields, unknown, AccessRequestFormValues>({
     resolver: zodResolver(accessRequestDetailsSchema),
     mode: "onTouched",
     defaultValues: { firstName: "", lastName: "", email: "", institution: "", message: "" },
   })
 
+  function onSubmit(values: AccessRequestFormValues) {
+    if (request.isPending) return
+    request.mutate(values)
+  }
+
   return (
     <AuthLayout title="Solicitar acceso" description="Completa tus datos para solicitar acceso a la plataforma." wide>
-      <form className="auth-form" noValidate onSubmit={(event) => event.preventDefault()} aria-describedby="auth-description auth-unavailable">
+      <form className="auth-form" noValidate onSubmit={(event) => { void handleSubmit(onSubmit)(event) }} aria-describedby="auth-description" aria-busy={request.isPending}>
         <FieldGroup className="auth-request-fields">
           <Field data-invalid={!!errors.firstName}>
             <FieldLabel htmlFor="request-name" data-required="true"><span id="request-name-label">Nombres</span></FieldLabel>
@@ -71,7 +82,14 @@ export function RequestAccessPage() {
             <Textarea id="request-message" rows={3} placeholder="Cuéntanos brevemente para qué necesitas acceso" {...register("message")} />
           </Field>
         </FieldGroup>
-        <AuthUnavailableAction label="Enviar solicitud" explanation="El envío de solicitudes aún no está disponible." />
+        {request.isSuccess && (
+          <AuthNotice id="auth-result">Recibimos tu solicitud. El administrador de la clínica la revisará y te escribirá al correo indicado.</AuthNotice>
+        )}
+        {request.isError && <AuthNotice id="auth-result" error>{getErrorMessage(request.error)}</AuthNotice>}
+        <Button type="submit" className="auth-submit" disabled={request.isPending || request.isSuccess}>
+          {request.isPending && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
+          {request.isPending ? "Enviando..." : "Enviar solicitud"}
+        </Button>
         <p className="auth-navigation">
           ¿Ya tienes acceso?{" "}
           <Link className="auth-link" to="/login" state={location.state}>Iniciar sesión</Link>

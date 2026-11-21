@@ -13,7 +13,7 @@ El orden importa: las pantallas se cruzan por id (una cita apunta a un paciente,
 | # | Plan | Necesita | Cambios en el back |
 |---|---|---|---|
 | 0 | ✅ Hecho (2026-11-21). Base: compilación, cliente HTTP, errores, estándar de recurso y conmutador por módulo | — | ✅ OpenAPI con números solo como números (`024cb45`) |
-| 1 | [`01-auth.md`](./01-auth.md): sesión, renovación, perfil, recuperación y solicitud de acceso | 0 | No |
+| 1 | ✅ Hecho (2026-11-21). `auth`: sesión, renovación, perfil, recuperación y solicitud de acceso | 0 | No |
 | 2 | [`02-institution.md`](./02-institution.md): perfil de la clínica, marca y sedes | 1 | ✅ `subtitle` (`53b1d64`) |
 | 3 | [`03-patients.md`](./03-patients.md) | 1 | ✅ `documentType`, teléfono opcional, filtros y lista de dados de baja (`a5f633a`) |
 | 4 | [`04-agenda.md`](./04-agenda.md): profesionales, consultorios, citas y bloqueos | 3 | No |

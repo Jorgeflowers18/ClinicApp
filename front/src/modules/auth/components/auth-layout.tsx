@@ -57,17 +57,6 @@ export function AuthLayout({ title, description, children, wide = false }: {
   )
 }
 
-export function AuthUnavailableAction({ label, explanation }: { label: string; explanation: string }) {
-  return (
-    <div className="auth-unavailable-action">
-      <AuthNotice id="auth-unavailable">{explanation}</AuthNotice>
-      <Button type="submit" className="auth-submit" disabled aria-describedby="auth-unavailable">
-        {label}
-      </Button>
-    </div>
-  )
-}
-
 export function AuthNotice({ children, error = false, id }: { children: ReactNode; error?: boolean; id?: string }) {
   const Icon = error ? CircleAlert : Info
   return <p id={id} className={"auth-notice" + (error ? " auth-notice-error" : "")} role={error ? "alert" : "note"}>

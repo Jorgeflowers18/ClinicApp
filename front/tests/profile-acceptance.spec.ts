@@ -322,26 +322,61 @@ test("CA-29 per-user records survive a new login without leaking into another ac
   await expect(avatar(page, "header").locator("img")).toHaveAttribute("src", originalImage)
 })
 
-test("server persistence is explicitly unavailable and never reports a simulated upload or deletion", async ({ page }) => {
-  const writes: string[] = []
-  page.on("request", (request) => { if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method())) writes.push(request.url()) })
-  await page.route((url) => url.pathname === "/src/shared/lib/env.ts", (route) => route.fulfill({ contentType: "application/javascript", body: 'export const env = {useMockApi:false,apiBaseUrl:"http://localhost:5000/api"}' }))
+test("with the API the profile is saved in the account, the session survives a reload and nothing is stored in the browser", async ({ page }) => {
+  // Solo `auth` usa la API (simulada aquí con rutas de Playwright); el resto de la app sigue en demostración.
+  await page.route((url) => url.pathname === "/src/shared/lib/env.ts", (route) => route.fulfill({ contentType: "application/javascript",
+    body: 'export const apiModules = []; export const env = { apiBaseUrl: "http://localhost:5000/api", useMockApi: true, usesApi: (module) => module === "auth" }' }))
+  let profile: Record<string, unknown> = { fullName: "Ana Morales", title: "Directora", specialty: "", bio: "", avatarColor: "#7c3aed", avatarImage: null }
+  let signedIn = false
+  const saved: Array<Record<string, unknown>> = []
+  const user = () => ({ id: "3f7d1c52-8a4e-4f0b-9d6a-0c1e2b3a4d5f", name: "Ana Morales", email: "admin@clinica.com", role: "admin", professionalId: null, profile })
+  await page.route("http://localhost:5000/api/auth/**", async (route) => {
+    const request = route.request()
+    const headers = { "Access-Control-Allow-Origin": request.headers().origin ?? "*", "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Allow-Headers": "authorization,content-type", "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE" }
+    const reply = (status: number, body?: unknown) => route.fulfill({ status, headers, contentType: "application/json", body: body === undefined ? "" : JSON.stringify(body) })
+    const path = new URL(request.url()).pathname
+    if (request.method() === "OPTIONS") return reply(204)
+    if (path.endsWith("/auth/login")) { signedIn = true; return reply(200, { accessToken: "token-1", expiresIn: 900, user: user() }) }
+    if (path.endsWith("/auth/refresh")) return signedIn ? reply(200, { accessToken: "token-2", expiresIn: 900, user: user() }) : reply(401, { status: 401, title: "Tu sesión expiró. Inicia sesión de nuevo" })
+    if (path.endsWith("/auth/logout")) { signedIn = false; return reply(204) }
+    if (path.endsWith("/auth/me/profile") && request.method() === "PUT") {
+      expect(request.headers().authorization).toMatch(/^Bearer token-/)
+      profile = request.postDataJSON(); saved.push(profile)
+      return reply(200, user())
+    }
+    return reply(404)
+  })
+
   await page.goto("/login")
-  await page.evaluate(async ({ image }) => {
-    const source = performance.getEntriesByType("resource").map((entry) => entry.name).find((name) => new URL(name).pathname === "/src/modules/auth/store/auth-store.ts")!
-    const { useAuthStore } = await import(source)
-    useAuthStore.getState().setSession("isolated-fixture", { id: "server-fixture", name: "Ana Morales", email: "fixture@example.test", role: "admin", profile: { fullName: "Ana Morales", title: "", specialty: "", bio: "", avatarColor: "#7c3aed", avatarImage: image } })
-  }, { image: originalImage })
+  await page.locator("#email").fill("admin@clinica.com")
+  await page.locator("#password").fill("una-contraseña")
+  await page.getByRole("button", { name: "Ingresar", exact: true }).click()
+  await expect(page.locator(".clinic-app-header")).toBeVisible()
   await navigateUserMenu(page)
-  await expect(page.getByText("El guardado del perfil todavía no está disponible en esta conexión.")).toBeVisible()
+  await expect(page.getByText("Los cambios confirmados se guardan en tu cuenta y se ven desde cualquier equipo.")).toBeVisible()
+
+  // El SVG no es un formato que acepte la API: se envía recodificado.
   await chooseImage(page)
   await preview(page).getByRole("button", { name: "Confirmar fotografía", exact: true }).click()
-  await expect(preview(page).getByRole("alert")).toContainText("no está disponible")
-  await allImages(page, originalImage)
-  await preview(page).getByRole("button", { name: "Cancelar", exact: true }).click()
-  await openDelete(page)
-  await deletion(page).getByRole("button", { name: "Eliminar fotografía", exact: true }).click()
-  await expect(deletion(page).getByRole("alert")).toContainText("no está disponible")
-  await allImages(page, originalImage)
-  expect(writes).toEqual([])
+  await expect(preview(page)).toHaveCount(0)
+  expect(saved).toHaveLength(1)
+  expect(String(saved[0].avatarImage)).toMatch(/^data:image\/(webp|jpeg);base64,/)
+  expect(saved[0]).toMatchObject({ fullName: "Ana Morales", title: "Directora", avatarColor: "#7c3aed" })
+  await expect(avatar(page).locator("img")).toHaveAttribute("src", String(saved[0].avatarImage))
+
+  // Al recargar, la sesión vuelve con `POST /auth/refresh`; el token nunca estuvo en el navegador.
+  await page.reload()
+  await expect(page.getByRole("heading", { name: "Mi perfil", exact: true })).toBeVisible()
+  await expect(avatar(page).locator("img")).toHaveAttribute("src", String(saved[0].avatarImage))
+  const storage = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))
+  expect(storage).not.toContain("token-")
+  expect(storage).not.toContain("clinicapp.mock-session")
+  expect(storage).not.toContain("clinicapp.mock-profile")
+
+  // Cerrar sesión borra la cookie del servidor: al recargar ya no hay sesión.
+  await logoutFromHeader(page)
+  await expect(page).toHaveURL(/\/login$/)
+  await page.reload()
+  await expect(page.getByRole("button", { name: "Ingresar", exact: true })).toBeVisible()
 })
