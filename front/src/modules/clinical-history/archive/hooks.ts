@@ -8,7 +8,7 @@ import type { ArchiveCatalog } from "./types"
 
 export const archiveMutationKey = ["clinical-file-write"] as const
 const catalogKey = ["clinical-history", "archive-catalog"] as const
-export function useArchiveCatalog() { return useQuery({ queryKey: catalogKey, queryFn: archiveApi.catalog }) }
+export function useArchiveCatalog() { return useQuery({ queryKey: catalogKey, queryFn: ({ signal }) => archiveApi.catalog(signal) }) }
 export function publishCatalog(catalog: ArchiveCatalog) { queryClient.setQueryData(catalogKey, catalog) }
 export function useArchiveWrite(patientId: string) {
   return useMutation({
@@ -31,7 +31,7 @@ export function useBlobUrl(blob: Blob | null | undefined) {
   return useSyncExternalStore(source.subscribe, source.snapshot, () => "")
 }
 export function useOriginal(patientId: string, file: DentalAttachment) {
-  return useQuery({ queryKey: clinicalHistoryKeys.file(patientId, file.id), queryFn: () => archiveApi.original(patientId, file.id), staleTime: Infinity, retry: false })
+  return useQuery({ queryKey: clinicalHistoryKeys.file(patientId, file.id), queryFn: ({ signal }) => archiveApi.original(patientId, file.id, signal), staleTime: Infinity, retry: false })
 }
 export function useVisibleThumbnail(patientId: string, id: string, image: boolean) {
   const ref = useRef<HTMLDivElement>(null)
@@ -41,6 +41,6 @@ export function useVisibleThumbnail(patientId: string, id: string, image: boolea
     const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect() } }, { rootMargin: "120px" })
     observer.observe(ref.current); return () => observer.disconnect()
   }, [image])
-  const query = useQuery({ queryKey: ["clinical-history", "thumbnail", patientId, id], queryFn: () => archiveApi.thumbnail(patientId, id), enabled: image && visible, staleTime: Infinity, retry: false })
+  const query = useQuery({ queryKey: ["clinical-history", "thumbnail", patientId, id], queryFn: ({ signal }) => archiveApi.thumbnail(patientId, id, signal), enabled: image && visible, staleTime: Infinity, retry: false })
   return { ref, query, url: useBlobUrl(query.data) }
 }

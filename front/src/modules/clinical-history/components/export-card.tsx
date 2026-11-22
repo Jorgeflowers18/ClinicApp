@@ -110,7 +110,7 @@ export function ExportCard({ context, getCurrentHistory, captureOdontogramImage,
           ofreciendo su propio informe PDF, imágenes, SVG y FHIR. Las fotos y los documentos originales se descargan
           desde su ficha.
           {/* MOCK-ONLY */}
-          {env.useMockApi &&
+          {!env.usesApi("clinical-history") &&
             " En modo demostración la historia vive en este navegador: la «Historia completa JSON» sirve de respaldo."}
         </p>
       </CardContent>

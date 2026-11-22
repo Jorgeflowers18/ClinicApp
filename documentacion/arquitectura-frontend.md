@@ -181,6 +181,13 @@ Conectado a la API con el plan 5 (2026-11-21, módulo `treatments`). Recurso con
 
 ### Historia clínica odontológica
 
+**Conectada a la API con el plan 7 (2026-11-21, módulo `clinical-history`).** Recursos con el estándar: `clinical-history.contract.ts`, `.http.ts`, `.mock.ts` (IndexedDB, semillas y migraciones) y `.api.ts`; el archivo clínico, en `archive/archive.contract.ts`, `archive.http.ts`, `archive.mock.ts` y `archive/api.ts` (el selector). Con la API no se abre IndexedDB.
+
+- **Registro de la atención:** `clinicalHistoryApi.registerEncounter` → `POST …/patients/:patientId/encounters/register`, una sola transacción (tratamientos realizados con sus insumos, atención, historia y cita). Reintentar con el mismo `encounter.id` no duplica. El registro por pasos que se describe más abajo ("Secuencia de registro") queda solo en `clinical-history.mock.ts`.
+- **`references`:** `GET /clinical-history/patients/:id` trae los nombres de tratamientos y profesionales que usa la historia, también los inactivos; `record-workspace.tsx` los usa al imprimir cuando el catálogo cargado no los tiene.
+- **Profesional por defecto:** `user.professionalId` (plan 1) y, si no hay, la coincidencia por nombre.
+- **Archivo clínico con la API:** cada operación es una llamada que devuelve la historia o el catálogo; el SHA-256, los duplicados (`409` en `errors.file`) y los vínculos los resuelve el servidor. Adjuntar arma un `FormData` (`file`, los campos del borrador y un `tagIds` por etiqueta). Las miniaturas se generan en el navegador desde el original. Un original borrado por el protocolo de conservación (`410`) muestra "El archivo ya no está disponible".
+
 Ítem 6 del backlog. Reemplaza al "historial clínico clásico" (formularios `clinical-history-{form,detail}-page.tsx`, retirados) y homologa el odontograma, que antes guardaba en IndexedDB sin API ni React Query.
 
 **Ítem 13 (completado; los planes por sección se retiraron de [`backlog/`](../backlog/README.md) y quedan en el historial de git):** el modelo de visitas `borrador → cerrada` se reemplazó por una historia editable más atenciones inmutables. Lo que sigue describe el estado actual.
@@ -380,6 +387,8 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 **Citas**
 - ✅ Conectado (plan 4): `GET /appointments?from&to` (o `?patientId=`), `GET /appointments/:id`, `POST /appointments`, `PUT /appointments/:id`, `PATCH /appointments/:id/status`, `GET /professionals`, `GET /rooms`, `GET /schedule-blocks?from&to`, `POST /schedule-blocks` y `DELETE /schedule-blocks/:id`.
 - Pendiente en el frontend: pantallas de administración de profesionales y consultorios (`POST`/`PUT /professionals` y `/rooms`).
+
+- ✅ Conectada (plan 7): historia, registro de la atención (`…/encounters/register`), notas, adjuntos y archivo clínico (catálogo, adjuntar, editar, archivar y restaurar).
 
 **Historia clínica odontológica** (solo roles `admin` y `medico`, validado en el backend y no solo en el frontend; las respuestas siguen `modules/clinical-history/types/clinical-history.types.ts`)
 - `GET /clinical-history/encounters` (query: `page`, `pageSize`, `search` — paciente, motivo o diagnóstico —, `patientId`, `professionalId`) — lista global paginada de `EncounterListItem`

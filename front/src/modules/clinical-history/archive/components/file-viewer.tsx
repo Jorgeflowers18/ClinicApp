@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { formatDateOnly } from "@/shared/lib/date"
 import type { DentalAttachment } from "../../types/clinical-history.types"
 import { useBlobUrl, useOriginal } from "../hooks"
-import { initialTransform, downloadOriginal, toggleFullscreen } from "../lib/viewer"
+import { initialTransform, downloadOriginal, isGone, toggleFullscreen } from "../lib/viewer"
 import { bytesLabel, fileCategory, fileName, fileTypeLabel, isClinicalImage } from "../lib/classification"
 import { IconAction } from "./controls"
 import { ImageSurface } from "./image-surface"
@@ -16,7 +16,10 @@ import styles from "../archive.module.css"
 function PdfPreview({ patientId, file }: { patientId: string; file: DentalAttachment }) {
   const query = useOriginal(patientId, file), url = useBlobUrl(query.data)
   if (query.isPending) return <p role="status">Cargando documento original…</p>
-  if (query.isError) return <div role="alert">No se pudo cargar el PDF.<Button variant="outline" onClick={() => void query.refetch()}>Reintentar</Button></div>
+  // 410: el protocolo de conservación ya borró el original; reintentar no sirve.
+  if (query.isError) return isGone(query.error)
+    ? <div role="alert">El archivo ya no está disponible: se eliminó según el protocolo de conservación.</div>
+    : <div role="alert">No se pudo cargar el PDF.<Button variant="outline" onClick={() => void query.refetch()}>Reintentar</Button></div>
   return <div className={styles.pdf}>
     <p className={styles.hint}>Vista PDF del navegador. Si no se visualiza, utiliza Descargar original para abrirlo localmente.</p>
     {url && <object

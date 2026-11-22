@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useBlobUrl, useOriginal } from "../hooks"
+import { isGone } from "../lib/viewer"
 import type { ImageTransform } from "../lib/viewer"
 import type { DentalAttachment } from "../../types/clinical-history.types"
 import { fileName } from "../lib/classification"
@@ -34,7 +35,9 @@ export function ImageSurface({ patientId, file, transform, onChange, onDimension
     onPointerCancel={() => { drag.current = null }}
   >
 
-    {query.isPending ? <p role="status">Cargando original…</p> : query.isError || broken ? <div role="alert">
+    {query.isPending ? <p role="status">Cargando original…</p> : query.isError && isGone(query.error) ? <div role="alert">
+      <p>El archivo ya no está disponible: se eliminó según el protocolo de conservación.</p>
+    </div> : query.isError || broken ? <div role="alert">
       <p>No se pudo leer esta imagen original.</p>
       <Button variant="outline" onClick={() => { setBroken(false); void query.refetch() }}>Reintentar</Button>
     </div> : url && <img

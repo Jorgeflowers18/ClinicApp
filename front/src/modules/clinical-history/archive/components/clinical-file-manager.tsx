@@ -85,16 +85,16 @@ function PatientArchive({ patientId }: { patientId: string }) {
       <div className={styles.actions}>
         <Button
           variant="outline"
-          disabled={!env.useMockApi}
           onClick={() => setCatalogOpen(true)}
         ><FolderCog />Categorías</Button>
-        <Button disabled={!env.useMockApi} onClick={() => setUpload(true)}><Upload />Adjuntar archivos</Button>
+        <Button onClick={() => setUpload(true)}><Upload />Adjuntar archivos</Button>
       </div>
     </header>
 
-    <p className={styles.demo}>
-      {env.useMockApi ? "Demostración local: utiliza solo datos de prueba. Los archivos se guardan en este navegador y no se sincronizan con un servidor." : "Consulta de originales desde la API existente. La API aún no admite la edición de metadatos, categorías ni el archivado."}
-    </p>
+    {/* MOCK-ONLY */}
+    {!env.usesApi("clinical-history") && <p className={styles.demo}>
+      Demostración local: utiliza solo datos de prueba. Los archivos se guardan en este navegador y no se sincronizan con un servidor.
+    </p>}
 
     <dl className={styles.metrics}>
       <div>
@@ -193,7 +193,7 @@ function PatientArchive({ patientId }: { patientId: string }) {
         view={view}
         selected={selectedFiles.map(file => file.id)}
         options={options}
-        writable={env.useMockApi}
+        writable
         onSelect={select}
         onPreview={(file, fullscreen) => setViewer({ id: file.id, fullscreen })}
         onEdit={setEdit}

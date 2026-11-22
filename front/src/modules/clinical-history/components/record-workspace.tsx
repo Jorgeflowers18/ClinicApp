@@ -138,7 +138,7 @@ export function RecordWorkspace({
   onShowEncounter,
 }: RecordWorkspaceProps) {
   const navigate = useNavigate()
-  const { record, encounters } = history
+  const { record, encounters, references } = history
   const patientName = `${patient.firstName} ${patient.lastName}`
   const { data: professionals } = useProfessionals()
   // Catálogo completo (incluye inactivos) para nombrar los tratamientos en los documentos.
@@ -327,8 +327,9 @@ export function RecordWorkspace({
     patientName,
     documentId: patient.documentId,
     professionals: professionals ?? [],
-    professionalName: (encounter) => resolveProfessionalName(encounter, professionals),
-    treatmentName: (treatmentId, fallback) => (treatmentId && treatmentById.get(treatmentId)?.name) || fallback,
+    // `references` (API) cubre a los inactivos y a los que no están en la primera página del catálogo.
+    professionalName: (encounter) => references?.professionals[encounter.professionalId]?.name ?? resolveProfessionalName(encounter, professionals),
+    treatmentName: (treatmentId, fallback) => (treatmentId && (treatmentById.get(treatmentId)?.name ?? references?.treatments[treatmentId]?.name)) || fallback,
   }
 
   return (
@@ -337,7 +338,7 @@ export function RecordWorkspace({
         <RecordHeader patient={patient} record={record} onBack={goBack} onRegisterEncounter={() => openRegister(null)} />
 
         {/* MOCK-ONLY */}
-        {env.useMockApi && (
+        {!env.usesApi("clinical-history") && (
           <p role="note" className="clinic-demo-notice">
             <Info aria-hidden="true" className="size-4 shrink-0" />
             <span>

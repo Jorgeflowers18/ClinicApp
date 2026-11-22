@@ -26,7 +26,7 @@ export interface ArchiveCategory {
   id: string; name: string; description: string; color: string; archivedAt: string | null; version: number
 }
 export interface ArchiveTag { id: string; name: string; version: number }
-export interface ArchiveCatalog { id: "local-institution"; revision: number; categories: ArchiveCategory[]; tags: ArchiveTag[] }
+export interface ArchiveCatalog { id: string; revision: number; categories: ArchiveCategory[]; tags: ArchiveTag[] }
 
 export type ClinicalFileDraft = Pick<ClinicalFileMetadata, "displayName" | "clinicalType" | "studyDate" | "categoryId" | "tagIds" | "professionalId" | "encounterId" | "treatmentId" | "examRequestId" | "zone" | "notes">
 export const emptyFileDraft = (): ClinicalFileDraft => ({ displayName: "", clinicalType: "", studyDate: null, categoryId: null, tagIds: [], professionalId: null, encounterId: null, treatmentId: null, examRequestId: null, zone: "", notes: "" })

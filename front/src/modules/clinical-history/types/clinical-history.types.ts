@@ -307,9 +307,17 @@ export interface ClinicalEncounter extends EncounterFormValues {
 }
 
 /** Historia clínica completa de un paciente, con las atenciones de la más antigua a la más reciente. */
+/** Nombres de tratamientos y profesionales que usa la historia, también los inactivos (solo con la API). */
+export interface ClinicalReferences {
+  treatments: Record<string, { name: string; category: string; active: boolean }>
+  professionals: Record<string, { name: string; specialty: string; registrationNumber: string; active: boolean }>
+}
+
 export interface PatientClinicalHistory {
   record: ClinicalRecord
   encounters: ClinicalEncounter[]
+  /** Con la API, para mostrar e imprimir nombres aunque no estén en los catálogos cargados. */
+  references?: ClinicalReferences
 }
 
 export type EncounterListItem = Pick<
