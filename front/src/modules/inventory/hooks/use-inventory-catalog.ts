@@ -7,7 +7,9 @@ import { inventoryKeys } from "../api/inventory.queries"
 export function useInventoryCatalog() {
   return useQuery({
     queryKey: [...inventoryKeys.lists(), "complete-catalog"],
-    queryFn: ({ signal }) => fetchAllPages(inventoryApi.list, signal),
+    // Sin `signal`: es un catálogo completo y compartido. Cancelarlo al desmontar (el doble montaje de
+    // StrictMode en desarrollo) solo obliga a leer de nuevo todas sus páginas.
+    queryFn: () => fetchAllPages(inventoryApi.list),
     staleTime: 30_000,
   })
 }

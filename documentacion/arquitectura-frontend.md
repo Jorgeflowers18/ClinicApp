@@ -149,6 +149,8 @@ Conectado a la API con el plan 5 (2026-11-21, módulo `treatments`). Recurso con
 
 ### Inventario: lotes, compras y esterilización
 
+**Conectado a la API con el plan 6 (2026-11-21, módulo `inventory`).** Recurso con el estándar: `inventory.contract.ts`, `.http.ts`, `.mock.ts` y `.api.ts`. Lo que sigue describe la pantalla; el stock, los lotes, el FEFO y la recepción de órdenes los calcula el servidor (`inventory.http.ts` no repite esas reglas; `inventory.mock.ts` las simula para la demostración). `registerConsumption` salió del contrato: el consumo clínico lo descuenta el servidor al registrar el tratamiento realizado. Los formularios marcan los errores del servidor por campo con `applyServerFieldErrors` (`use-inventory-submit.ts`), incluidas las rutas de lista como `lines[0].itemId`. El mapeo usa `withoutNulls` (`shared/lib/dto.ts`) para los campos opcionales que la API devuelve como `null`.
+
 - **Tipo de insumo:** `InventoryItem.kind` distingue `consumible` de `instrumental` (instrumental esterilizable). El listado de insumos muestra un badge "Instrumental" solo para estos últimos.
 - **Lotes y vencimiento por lote (`StockLot`):** cada entrada de stock (compra o ajuste manual) crea su propio lote con cantidad restante y vencimiento opcional — un insumo puede tener varios lotes con vencimientos distintos. Las salidas se consumen por **FEFO** (primero en vencer, primero en salir): `consumeFefo` en `inventory.api.ts` recorre los lotes del insumo ordenados por vencimiento ascendente (sin vencimiento al final) y genera un `StockMovement` por cada lote tocado. El consumo automático (ver más abajo) **no bloquea si el stock no alcanza** — consume lo disponible y se detiene, a diferencia del movimiento manual de salida que sí valida no superar el stock disponible antes de ejecutarse.
 - **Compras / órdenes de compra (`PurchaseOrder`):** estado pendiente/recibida/cancelada, con líneas de insumo/cantidad/costo/vencimiento esperado. `supplierId` referencia a un `Supplier` del catálogo de proveedores (ver abajo). Al "recibir" una orden se generan automáticamente los lotes y movimientos de entrada de cada línea (`receivePurchaseOrder`), reemplazando el registro manual para compras. Las órdenes son inmutables una vez creadas: al hacer clic en una fila de la pestaña Compras se abre el mismo `PurchaseOrderFormDialog` de "Nueva orden" con la prop `order`, que lo pone en modo solo lectura (campos deshabilitados, sin agregar/quitar líneas, botón "Cerrar") — se reutiliza el formulario en vez de duplicar una vista de detalle.
@@ -402,6 +404,7 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - `POST /treatment-assignments` (body: `treatmentId`, `patientId`, `date`, `tooth`, `sourceEncounterId`, `sourceKey`) — registra un tratamiento realizado ya completado y descuenta sus insumos; idempotente por `sourceKey`: si ya existe, devuelve la asignación existente; `404` si el tratamiento no existe y `400` si está inactivo
 
 **Inventario**
+- ✅ Conectado (plan 6): insumos, movimientos, lotes, proveedores, órdenes de compra (recibir y cancelar) y ciclos de esterilización.
 - `GET /inventory/items`
 - `GET /inventory/items/:id`
 - `POST /inventory/items` (incluye `kind: "consumible" | "instrumental"`)

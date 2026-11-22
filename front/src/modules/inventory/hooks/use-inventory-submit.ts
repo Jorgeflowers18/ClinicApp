@@ -3,6 +3,7 @@ import { toast } from "sonner"
 import type { FieldValues, Path, UseFormReturn } from "react-hook-form"
 import { ApiError } from "@/shared/types/common"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { applyServerFieldErrors } from "@/shared/lib/field-issues"
 
 export function useInventorySubmit<T extends FieldValues>(form: UseFormReturn<T>, action: (values: T) => Promise<unknown>, message: string, reveal?: (field: string) => void) {
   const locked = useRef(false)
@@ -17,10 +18,11 @@ export function useInventorySubmit<T extends FieldValues>(form: UseFormReturn<T>
       close()
     } catch(error) {
       form.setError("root.server", { message: getErrorMessage(error) })
-      if(error instanceof ApiError && error.fieldErrors?.length) {
-        error.fieldErrors.forEach(({ field, message }) => form.setError(field as Path<T>, { type: "server", message }))
-        if(reveal) reveal(error.fieldErrors[0].field)
-        else form.setFocus(error.fieldErrors[0].field as Path<T>)
+      // `applyServerFieldErrors` lleva `lines[0].itemId` a la ruta del formulario (`lines.0.itemId`) y solo marca campos que existen.
+      const issues = error instanceof ApiError ? applyServerFieldErrors(form, error) : []
+      if(issues.length) {
+        if(reveal) reveal(issues[0].field)
+        else form.setFocus(issues[0].field as Path<T>)
       }
       toast.error(getErrorMessage(error))
     } finally { locked.current = false }

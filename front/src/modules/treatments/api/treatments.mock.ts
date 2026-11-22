@@ -1,6 +1,6 @@
 import { mockDelay, nextId, paginate } from "@/shared/lib/mock"
 import { ApiError } from "@/shared/types/common"
-import { inventoryApi } from "@/modules/inventory/api/inventory.api"
+import { registerMockConsumption } from "@/modules/inventory/api/inventory.mock"
 
 import type { TreatmentsApi } from "./treatments.contract"
 import { mockTreatmentAssignments, mockTreatments } from "./treatments.mock-data"
@@ -84,7 +84,7 @@ export const mockTreatmentsApi: TreatmentsApi = {
     mockTreatmentAssignments.push(assignment)
 
     for (const entry of treatment.consumption) {
-      await inventoryApi.registerConsumption({
+      await registerMockConsumption({
         itemId: entry.itemId,
         quantity: entry.quantity,
         reason: `Consumo clínico — ${treatment.name}`,

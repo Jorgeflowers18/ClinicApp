@@ -9,7 +9,9 @@ import { treatmentsKeys } from "../api/treatments.queries"
 export function useTreatmentCatalog() {
   return useQuery({
     queryKey: [...treatmentsKeys.lists(), "complete-catalog"],
-    queryFn: ({ signal }) => fetchAllPages(treatmentsApi.list, signal),
+    // Sin `signal`: es un catálogo completo y compartido. Cancelarlo al desmontar (el doble montaje de
+    // StrictMode en desarrollo) solo obliga a leer de nuevo todas sus páginas.
+    queryFn: () => fetchAllPages(treatmentsApi.list),
     staleTime: 30_000,
   })
 }
@@ -17,7 +19,9 @@ export function useTreatmentCatalog() {
 export function useTreatmentInventory() {
   return useQuery({
     queryKey: [...inventoryKeys.lists(), "treatment-options"],
-    queryFn: ({ signal }) => fetchAllPages(inventoryApi.list, signal),
+    // Sin `signal`: es un catálogo completo y compartido. Cancelarlo al desmontar (el doble montaje de
+    // StrictMode en desarrollo) solo obliga a leer de nuevo todas sus páginas.
+    queryFn: () => fetchAllPages(inventoryApi.list),
     staleTime: 30_000,
   })
 }
