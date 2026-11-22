@@ -1,6 +1,6 @@
 import { mockDelay, nextId } from "@/shared/lib/mock"
 import { ApiError } from "@/shared/types/common"
-import { notificationsApi } from "@/modules/notifications/api/notifications.api"
+import { logMockAppointmentEvent } from "@/modules/notifications/api/notifications.mock"
 
 import type { AgendaCatalogsApi, AppointmentsApi, DateRange } from "./appointments.contract"
 import { mockAppointments, mockProfessionals, mockRooms, mockScheduleBlocks } from "./appointments.mock-data"
@@ -64,7 +64,7 @@ function find(id: string): number {
 
 /** Como el servidor, que la registra en la misma transacción de la cita. */
 async function notify(appointment: Appointment, type: "confirmacion_cita" | "cancelacion_cita") {
-  await notificationsApi.logAppointmentEvent({ patientId: appointment.patientId, appointmentId: appointment.id, type })
+  await logMockAppointmentEvent({ patientId: appointment.patientId, appointmentId: appointment.id, type })
 }
 
 export const mockAppointmentsApi: AppointmentsApi = {

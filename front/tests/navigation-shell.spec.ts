@@ -210,7 +210,8 @@ for (const theme of ["light", "dark"] as const) {
     await expect(bell(page)).toHaveAttribute("aria-label", /\d+ sin leer/)
     await page.evaluate(async () => {
       const resource = performance.getEntriesByType("resource").findLast((entry) => new URL(entry.name).pathname === "/src/modules/inventory/api/inventory.api.ts")
-      const { inventoryApi } = await import(/* @vite-ignore */ resource!.name)
+      // El búfer de Resource Timing guarda 250 entradas: si el módulo no aparece, se importa por su ruta.
+      const { inventoryApi } = await import(/* @vite-ignore */ resource?.name ?? "/src/modules/inventory/api/inventory.api.ts")
       const original = inventoryApi.list
       Object.assign(window, { restoreAlertSource: () => { inventoryApi.list = original } })
       inventoryApi.list = async () => { throw new Error("Source unavailable") }

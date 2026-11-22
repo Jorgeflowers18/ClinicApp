@@ -173,6 +173,12 @@ Conectado a la API con el plan 5 (2026-11-21, módulo `treatments`). Recurso con
 
 ### Notificaciones a pacientes
 
+**Conectadas a la API con el plan 8 (2026-11-21, módulo `notifications`).** Recurso con el estándar: `notifications.contract.ts`, `.http.ts`, `.mock.ts` y `.api.ts`. `logAppointmentEvent` salió del contrato: el servidor crea las notificaciones de las citas; en demostración las crea `appointments.mock.ts` con `logMockAppointmentEvent`.
+
+- **Centro de alertas:** con la API, **una sola petición** cada 5 minutos, `GET /alerts` (`alertsFromSnapshot` en `use-global-alerts.ts`), con los mismos ids de alerta para conservar las leídas. En demostración se siguen armando desde las listas de cada módulo.
+- **Historial:** cada fila trae `patientName` y `message`; con la API no se leen los pacientes. El historial completo se sigue leyendo en el navegador para los indicadores y filtros (pendiente: paginar en el servidor).
+- **Vista previa de mensajería:** con la agenda en la API, pide solo las citas de hoy a 30 días.
+
 - **Preferencia por paciente:** `Patient` tiene un campo `notificationsEnabled: boolean`, editable como switch en `modules/patients/pages/patient-form-page.tsx` (crear y editar). El backend debe crear los pacientes con `notificationsEnabled: true` por defecto.
 - **Estado de una cita puntual:** `AppointmentDetailDialog` (`modules/appointments/components/appointment-detail-dialog.tsx`) consulta `useAppointmentNotifications(appointmentId)` del módulo `notifications` para mostrar si el paciente ya fue notificado de esa cita (y cuándo). Es un ejemplo del patrón ya usado en `appointments-calendar-page.tsx` de importar hooks de otro módulo de dominio directamente en vez de duplicar lógica.
 - **Reporte:** `modules/notifications/pages/notifications-report-page.tsx` lista el historial completo (`GET /notifications`), paginado y filtrable por nombre/identificación del paciente y por rango de fechas (`dateFrom`/`dateTo`). Restringido a los roles `admin` y `recepcion` (mismo criterio de acceso que `inventory`, ajustar si el negocio lo requiere distinto).
@@ -434,6 +440,7 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - `POST /inventory/sterilization-cycles`
 
 **Notificaciones**
+- ✅ Conectado (plan 8): `GET /notifications` (historial y `?appointmentId=`), `GET` y `PUT /notifications/template`, y `GET /alerts`.
 - `GET /notifications` (query: `page`, `pageSize`, `search` — nombre o identificación del paciente —, `dateFrom`, `dateTo`) — reporte de notificaciones enviadas
 - `GET /notifications?appointmentId=:id` — notificaciones asociadas a una cita puntual, usado para mostrar si el paciente ya fue notificado
 - `GET /notifications/template` — plantilla predeterminada de notificación (mensaje con variables sin reemplazar, ej. `[nombre del cliente]`)

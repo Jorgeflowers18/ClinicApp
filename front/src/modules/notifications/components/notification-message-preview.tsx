@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { addDays, format } from "date-fns"
 import { Link } from "react-router-dom"
 import { Eye, RefreshCw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -32,7 +33,9 @@ function MessageIssues({ issues, patientId }: { issues: MessageIssue[]; patientI
 function AppointmentMessagePreview({ message, institutionName, selectedId, onSelect }: {
   message: string; institutionName: string | null; selectedId: string; onSelect: (id: string) => void
 }) {
-  const appointments = useAppointmentsList(), professionals = useProfessionals()
+  // Con la API, solo las citas de hoy a 30 días (no la agenda completa); la demostración las tiene todas en memoria.
+  const range = useMemo(() => env.usesApi("agenda") ? { from: format(new Date(), "yyyy-MM-dd"), to: format(addDays(new Date(), 30), "yyyy-MM-dd") } : undefined, [])
+  const appointments = useAppointmentsList(range), professionals = useProfessionals()
   const { patients } = useMessagingCatalog()
   const [search, setSearch] = useState("")
   const records = appointments.data ?? []
@@ -41,13 +44,13 @@ function AppointmentMessagePreview({ message, institutionName, selectedId, onSel
   const names = new Map((patients.data ?? []).map(patient => [patient.id, `${patient.firstName} ${patient.lastName}`.trim()]))
   const items = Object.fromEntries(records.map(item => {
     const date = appointmentDateTime(item.start)
-    return [item.id, `${names.get(item.patientId) ?? "Paciente no disponible"} · ${date ? `${date.date} · ${date.time}` : "Fecha no disponible"}`]
+    return [item.id, `${item.patientName || names.get(item.patientId) || "Paciente no disponible"} · ${date ? `${date.date} · ${date.time}` : "Fecha no disponible"}`]
   }))
   const filtered = records.filter(item => `${items[item.id]} ${item.id}`.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()
     .includes(search.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim()))
   const professional = professionals.data?.find(item => item.id === appointment?.professionalId)
   const result = resolveAppointmentMessage(message, { institutionName, appointment, patient: selectedPatient.data, professional })
-  const loading = appointments.isPending || patients.isPending || professionals.isPending || Boolean(appointment && selectedPatient.isPending)
+  const loading = appointments.isPending || patients.isLoading || professionals.isPending || Boolean(appointment && selectedPatient.isPending)
   const failed = appointments.isError || patients.isError || professionals.isError || Boolean(appointment && selectedPatient.isError)
   const refreshing = appointments.isFetching || professionals.isFetching || Boolean(appointment && selectedPatient.isFetching)
   return <>
@@ -102,6 +105,6 @@ export function NotificationMessagePreview({ message }: { message: string }) {
       <p className="messaging-preview-body" data-message-body>{example.message}</p>
       <MessageIssues issues={example.issues.filter(issue => issue.field !== "institutionName")} />
     </> : <AppointmentMessagePreview message={message} institutionName={institutionName} selectedId={appointmentId} onSelect={setAppointmentId} />}
-    <p className="messaging-hint">{mode === "example" ? "Paciente, fecha y profesional de ejemplo. " : env.useMockApi ? "Cita del entorno de demostración. " : ""}Esta vista previa no envía mensajes.</p>
+    <p className="messaging-hint">{mode === "example" ? "Paciente, fecha y profesional de ejemplo. " : !env.usesApi("agenda") ? "Cita del entorno de demostración. " : ""}Esta vista previa no envía mensajes.</p>
   </section>
 }

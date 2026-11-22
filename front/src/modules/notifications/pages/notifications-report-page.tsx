@@ -42,7 +42,8 @@ export function NotificationsReportPage() {
   const filtered = [...records].sort((a,b) => b.sentAt.localeCompare(a.sentAt)).filter(row => {
     if (selectedId) return row.id === selectedId
     const patient = patientMap.get(row.patientId)
-    const searchable = patient ? [patient.firstName, patient.lastName, patient.documentId].join(" ").toLowerCase() : ""
+    // Con la API no se leen los pacientes: se busca por el nombre que trae cada notificación.
+    const searchable = (patient ? [patient.firstName, patient.lastName, patient.documentId].join(" ") : row.patientName ?? "").toLowerCase()
     return (!query || searchable.includes(query)) && (channel === "all" || row.channel === channel) && (status === "all" || row.status === status) && (type === "all" || row.type === type) &&
       (!dateFrom || row.sentAt >= dateFrom) && (!dateTo || row.sentAt <= dateTo + "T23:59:59.999Z") && (!selectedId || row.id === selectedId)
   })
@@ -55,7 +56,7 @@ export function NotificationsReportPage() {
   }
   function change(set: (value: string) => void) { return (value: string | null) => { set(value ?? "all"); table.setPage(1) } }
   const columns: DataTableColumn<NotificationLog>[] = [
-    { key: "patient", header: "Paciente", cell: row => { const patient = patientMap.get(row.patientId), name = patient ? patient.firstName + " " + patient.lastName : patients.isPending ? "Cargando paciente…" : "Paciente no disponible"; return <div className="messaging-patient"><Avatar aria-hidden="true"><AvatarFallback>{patient ? [patient.firstName[0],patient.lastName[0]].join("") : "?"}</AvatarFallback></Avatar><div><p>{name}</p><small>{patient?.documentId ?? "—"}</small></div></div> } },
+    { key: "patient", header: "Paciente", cell: row => { const patient = patientMap.get(row.patientId), name = row.patientName || (patient ? patient.firstName + " " + patient.lastName : patients.isLoading ? "Cargando paciente…" : "Paciente no disponible"), initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join(""); return <div className="messaging-patient"><Avatar aria-hidden="true"><AvatarFallback>{patient || row.patientName ? initials : "?"}</AvatarFallback></Avatar><div><p>{name}</p><small>{patient?.documentId ?? "—"}</small></div></div> } },
     { key: "type", header: "Tipo", cell: row => notificationTypeLabels[row.type] },
     { key: "channel", header: "Canal", cell: row => <MessageChannel channel={row.channel} /> },
     { key: "sentAt", header: "Fecha de envío", cell: row => <time dateTime={row.sentAt} title={formatDateTime(row.sentAt)}>{formatDateTime(row.sentAt, { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</time> },
@@ -93,7 +94,7 @@ export function NotificationsReportPage() {
         {activeFilters.length > 0 && <div className="messaging-active-filters" aria-label="Filtros activos">{activeFilters.map(label => <Badge variant="outline" key={label}>{label}</Badge>)}{selectedId && <ResetFiltersButton disabled={false} onReset={clearFilters} />}</div>}
         {patients.isError && <Alert variant="destructive"><AlertDescription>No se pudieron consultar los datos de los pacientes. Los registros conservan su estado y fecha.</AlertDescription></Alert>}
         <DataTable className="messaging-history-table" columns={columns} data={filtered.slice((page-1)*table.pageSize,page*table.pageSize)} getRowId={row => row.id} mobileTitleKey="patient"
-          isLoading={messages.isPending || patients.isPending} isError={messages.isError} errorMessage={getErrorMessage(messages.error)} emptyTitle={activeFilters.length ? "Sin mensajes coincidentes" : "Sin mensajes registrados"} emptyDescription={activeFilters.length ? "No hay mensajes con estos criterios." : "Todavía no hay envíos registrados a pacientes."} />
+          isLoading={messages.isPending || patients.isLoading} isError={messages.isError} errorMessage={getErrorMessage(messages.error)} emptyTitle={activeFilters.length ? "Sin mensajes coincidentes" : "Sin mensajes registrados"} emptyDescription={activeFilters.length ? "No hay mensajes con estos criterios." : "Todavía no hay envíos registrados a pacientes."} />
         {!messages.isError && messages.data && <PaginationBar page={page} pageSize={table.pageSize} totalItems={filtered.length} totalPages={totalPages} onPageChange={table.setPage} />}
       </TabsContent>
       <TabsContent value="template" keepMounted className="pt-4">{templateVisited && <NotificationTemplateEditor />}</TabsContent>
