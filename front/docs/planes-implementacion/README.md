@@ -21,7 +21,7 @@ El orden importa: las pantallas se cruzan por id (una cita apunta a un paciente,
 | 6 | ✅ Hecho (2026-11-21). `inventory` | 4 (responsables de esterilización) | No |
 | 7 | ✅ Hecho (2026-11-21). `clinical-history`: historia, atenciones, adjuntos y archivo clínico | 3, 4, 5 | ✅ Archivo clínico (`9dd2426`) y registro de la atención en una transacción (`fad02ef`) |
 | 8 | ✅ Hecho (2026-11-22). `notifications`: plantilla, historial, mensajería y alertas | 2, 3, 4 | ✅ `GET /alerts`, y `patientName` y `message` en el historial (`d0aeeed`) |
-| 9 | [`09-finance.md`](./09-finance.md): cartera, resúmenes y pagos | 3, 5 | No |
+| 9 | ✅ Hecho (2026-11-22). `finance`: cartera, resúmenes y pagos | 3, 5 | No |
 | 10 | [`10-reports-dashboard.md`](./10-reports-dashboard.md): reportes e Inicio | 4–9 | No |
 | 11 | [`11-cierre.md`](./11-cierre.md): apagar el modo mock por defecto, pruebas E2E reales y limpieza | todos | No |
 

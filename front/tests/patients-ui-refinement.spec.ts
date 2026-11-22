@@ -228,6 +228,12 @@ for (const role of ["medico", "recepcion"]) {
   test(`financial detail respects existing role boundaries for ${role}`, async ({ page }) => {
     await login(page, "dark", role)
     await page.goto("/pacientes/pat_5")
+    // Los montos son solo de admin y recepción: el médico no tiene la pestaña (la API le respondería 403).
+    if (role === "medico") {
+      await expect(page.locator(".patient-detail-tabs")).toBeVisible()
+      await expect(page.getByRole("tab", { name: "Finanzas", exact: true })).toHaveCount(0)
+      return
+    }
     await selectTab(page, "Finanzas")
     await expect(page.locator(".patient-financial-summary dd")).toHaveCount(4)
     await expect(page.getByRole("button", { name: "Ver cartera financiera", exact: true })).toHaveCount(role === "recepcion" ? 1 : 0)

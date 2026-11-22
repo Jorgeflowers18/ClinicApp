@@ -169,7 +169,8 @@ export function getTreatmentFinancialSummary(treatmentId: string, patientId?: st
   const installments = mockInstallments.filter((item) => item.treatmentId === treatmentId && item.patientId === resolvedPatientId)
   const insurance = mockInsuranceCoverage.find((item) => item.treatmentId === treatmentId && item.patientId === resolvedPatientId) ?? null
   const invoice = mockInvoices.find((item) => item.treatmentId === treatmentId && item.patientId === resolvedPatientId) ?? null
-  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0)
+  // Como el servidor: un pago anulado no cuenta.
+  const totalPaid = payments.filter((payment) => payment.status === "registrado").reduce((sum, payment) => sum + payment.amount, 0)
   // Valor cobrado en la atención más reciente de este tratamiento (o el precio del catálogo si no tiene).
   const latestAssignment = mockTreatmentAssignments
     .filter((assignment) => assignment.treatmentId === treatmentId && assignment.patientId === resolvedPatientId)

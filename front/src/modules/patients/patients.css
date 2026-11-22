@@ -259,3 +259,5 @@
 .patient-removed-notice svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
 .patient-deleted-filter { display: flex; align-items: center; gap: 8px; align-self: end; min-height: 40px; }
 .patient-advanced-filters .patient-deleted-filter label { display: inline; margin: 0; color: var(--foreground); font-size: 14px; }
+.patient-ledger-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.patient-void-reason { display: block; margin-top: 4px; color: var(--muted-foreground); font-size: 12px; }

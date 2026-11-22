@@ -1,4 +1,5 @@
 import { ClinicalFileManager } from "@/modules/clinical-history/archive/components/clinical-file-manager"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { CalendarDays, CalendarClock, CheckCheck, ChevronDown, CircleAlert, Clock3, FileText, ReceiptText, Stethoscope, UserRound, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,8 @@ import { appointmentStatusLabels } from "@/modules/appointments/types/appointmen
 import { useTreatment, usePatientAssignments } from "@/modules/treatments/api/treatments.queries"
 import { assignmentStatusLabels } from "@/modules/treatments/types/treatment.types"
 import { usePatientFinancialSummary, useTreatmentFinancialSummary } from "@/modules/finance/api/finance.queries"
+import { RegisterPaymentDialog, VoidPaymentDialog } from "@/modules/finance/components/payment-dialogs"
+import type { FinancialPayment } from "@/modules/finance/types/finance.types"
 import { useClinicalHistory } from "@/modules/clinical-history/api/clinical-history.queries"
 import { dataConsentStatusLabels } from "@/modules/clinical-history/types/clinical-history.types"
 import { resolveProfessionalName } from "@/modules/clinical-history/lib/record"
@@ -63,17 +66,22 @@ const financialStatusLabels: Record<string, string> = { registrado: "Registrado"
 
 function PatientTreatmentLedger({ patientId, treatmentId }: { patientId: string; treatmentId: string }) {
   const query = useTreatmentFinancialSummary(treatmentId, patientId)
+  const [paying, setPaying] = useState(false)
+  const [voiding, setVoiding] = useState<FinancialPayment | null>(null)
   if (query.isLoading) return <Skeleton className="h-14 w-full" />
   if (query.isError || !query.data) return <div role="alert" className="patient-source-error">No se pudieron cargar los movimientos.<Button variant="outline" onClick={() => query.refetch()}>Reintentar</Button></div>
   const data = query.data
   return <details className="patient-ledger"><summary><ReceiptText aria-hidden="true" /><span>{data.treatmentName}</span><small>{data.payments.length} {data.payments.length === 1 ? "pago" : "pagos"}</small><ChevronDown aria-hidden="true" /></summary><div className="patient-ledger-content">
-    <h3>Pagos registrados</h3><DataTable className="patient-related-table patient-money-table" data={data.payments} getRowId={row => row.id} emptyTitle="Sin pagos registrados" emptyDescription="Los pagos aparecerán cuando se registren en Finanzas." columns={[
+    <div className="patient-ledger-actions"><h3>Pagos registrados</h3>{data.pendingBalance > 0 && <Button size="sm" onClick={() => setPaying(true)}>Registrar pago</Button>}</div><DataTable className="patient-related-table patient-money-table" data={data.payments} getRowId={row => row.id} emptyTitle="Sin pagos registrados" emptyDescription="Los pagos aparecerán cuando se registren en Finanzas." columns={[
       { key: "date", header: "Fecha", cell: row => formatDateOnly(row.date) },
       { key: "concept", header: "Concepto", cell: () => data.treatmentName },
       { key: "reference", header: "Comprobante", cell: row => row.reference || "No registrado" },
       { key: "amount", header: "Valor", className: "text-right", cell: row => formatCurrency(row.amount) },
-      { key: "status", header: "Estado", cell: row => <PatientStateBadge status={row.status}>{financialStatusLabels[row.status]}</PatientStateBadge> },
+      { key: "status", header: "Estado", cell: row => <><PatientStateBadge status={row.status}>{financialStatusLabels[row.status]}</PatientStateBadge>{row.voidReason && <small className="patient-void-reason">{row.voidReason}</small>}</> },
+      { key: "actions", header: "Acciones", className: "w-12 text-right", cell: row => row.status === "registrado" ? <Button size="sm" variant="ghost" aria-label={`Anular pago de ${formatCurrency(row.amount)} del ${formatDateOnly(row.date)}`} onClick={() => setVoiding(row)}>Anular</Button> : null },
     ]} />
+    {paying && <RegisterPaymentDialog open onClose={() => setPaying(false)} patientId={patientId} treatmentId={treatmentId} treatmentName={data.treatmentName} pendingBalance={data.pendingBalance} />}
+    <VoidPaymentDialog payment={voiding} onClose={() => setVoiding(null)} />
     {data.installments.length > 0 && <><h3>Cuotas y vencimientos</h3><DataTable className="patient-related-table patient-money-table" data={data.installments} getRowId={row => row.id} columns={[
       { key: "number", header: "Cuota", cell: row => row.number },
       { key: "due", header: "Vencimiento", cell: row => formatDateOnly(row.dueDate) },

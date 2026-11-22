@@ -147,6 +147,15 @@ Conectado a la API con el plan 5 (2026-11-21, módulo `treatments`). Recurso con
 - **Realizados:** `GET /treatments/:id/assignments` y `GET /treatment-assignments?patientId=`. `POST /treatment-assignments` sigue en el contrato, pero con la API la historia clínica registra los realizados dentro de `…/encounters/register` (plan 7).
 - **Insumos:** el descuento al registrar un realizado lo hace el servidor (FEFO). En demostración lo hace `treatments.mock.ts` llamando a `registerMockConsumption` del mock de inventario.
 
+### Finanzas
+
+Conectadas a la API con el plan 9 (2026-11-21, módulo `finance`; etapa A: saldos y pagos, sin cuotas, seguros ni factura). Recurso con el estándar: `finance.contract.ts`, `.http.ts`, `.mock.ts` y `.api.ts`.
+
+- **Cartera:** `GET /finance/portfolio`. **Resumen por tratamiento y paciente:** `GET /finance/treatments/:id/summary?patientId=` (el `patientId` es obligatorio). **Paciente:** `GET /finance/patients/:id/summary`.
+- **Solo admin y recepción:** el médico no ve la pestaña Finanzas del paciente ni la tarjeta del detalle del tratamiento (la API le respondería `403`).
+- **Detalle del tratamiento:** `useTreatmentPortfolio` suma las filas de la cartera de ese tratamiento (valor realizado, pagado y pendiente de todos sus pacientes).
+- **Pagos:** en la pestaña Finanzas del paciente, cada tratamiento tiene "Registrar pago" (`POST /finance/payments`: fecha no futura, monto de 0,01 hasta el saldo, método, comprobante y observaciones; el `409` llega en `errors.amount`) y cada pago registrado, "Anular" (`POST /finance/payments/:id/void` con un motivo de 3 a 300). Un pago anulado muestra su motivo y no cuenta en el saldo (también en demostración).
+
 ### Inventario: lotes, compras y esterilización
 
 **Conectado a la API con el plan 6 (2026-11-21, módulo `inventory`).** Recurso con el estándar: `inventory.contract.ts`, `.http.ts`, `.mock.ts` y `.api.ts`. Lo que sigue describe la pantalla; el stock, los lotes, el FEFO y la recepción de órdenes los calcula el servidor (`inventory.http.ts` no repite esas reglas; `inventory.mock.ts` las simula para la demostración). `registerConsumption` salió del contrato: el consumo clínico lo descuenta el servidor al registrar el tratamiento realizado. Los formularios marcan los errores del servidor por campo con `applyServerFieldErrors` (`use-inventory-submit.ts`), incluidas las rutas de lista como `lines[0].itemId`. El mapeo usa `withoutNulls` (`shared/lib/dto.ts`) para los campos opcionales que la API devuelve como `null`.

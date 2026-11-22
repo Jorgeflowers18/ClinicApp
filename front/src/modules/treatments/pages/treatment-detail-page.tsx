@@ -15,7 +15,7 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { patientsApi } from "@/modules/patients/api/patients.api"
 import { patientsKeys } from "@/modules/patients/api/patients.queries"
-import { useTreatmentFinancialSummary } from "@/modules/finance/api/finance.queries"
+import { useTreatmentPortfolio } from "@/modules/finance/api/finance.queries"
 import { useTreatment, useTreatmentAssignments } from "../api/treatments.queries"
 import { useTreatmentInventory } from "../hooks/use-treatment-options"
 import { TreatmentFormDialog } from "../components/treatment-form-dialog"
@@ -37,7 +37,9 @@ export function TreatmentDetailPage() {
   const { data: treatment } = treatmentQuery
   const assignments = useTreatmentAssignments(id)
   const inventory = useTreatmentInventory()
-  const financial = useTreatmentFinancialSummary(id)
+  // Montos solo para admin y recepción (el médico recibe 403): la suma de la cartera de todos sus pacientes.
+  const canSeeFinance = useAuthStore(state => state.user?.role === "admin" || state.user?.role === "recepcion")
+  const financial = useTreatmentPortfolio(id, { enabled: canSeeFinance })
   const [editing, setEditing] = useState(false)
   const returnFocus = useRef<HTMLElement | null>(null)
   const canOpenHistory = useAuthStore(state => state.user?.role === "admin" || state.user?.role === "medico")
@@ -70,11 +72,9 @@ export function TreatmentDetailPage() {
 
   const summary = financial.data
   const amounts = summary ? [
-    { label: "Valor tratamiento", value: summary.totalValue },
-    { label: "Seguro", value: summary.insuranceCovered },
-    { label: "Responsabilidad paciente", value: summary.patientResponsibility },
-    { label: "Pagado", value: summary.totalPaid, tone: "paid" },
-    { label: "Pendiente", value: summary.pendingBalance, tone: summary.pendingBalance > 0 ? "pending" : undefined },
+    { label: "Valor realizado", value: summary.total },
+    { label: "Pagado", value: summary.paid, tone: "paid" },
+    { label: "Pendiente", value: summary.pending, tone: summary.pending > 0 ? "pending" : undefined },
   ] : []
 
   return <div className="treatment-detail">
@@ -108,12 +108,12 @@ export function TreatmentDetailPage() {
               </ul>}
       </section>
     </Card>
-    <Card><CardHeader><CardTitle>Resumen financiero</CardTitle></CardHeader><CardContent>
+    {canSeeFinance && <Card><CardHeader><CardTitle>Resumen financiero</CardTitle><CardDescription>De todos los pacientes que lo recibieron.</CardDescription></CardHeader><CardContent>
       {financial.isPending ? <Skeleton className="h-16 w-full" />
         : financial.isError ? <Alert variant="destructive"><AlertTitle>No se pudo cargar el resumen financiero</AlertTitle><AlertDescription>{getErrorMessage(financial.error)}</AlertDescription></Alert>
-          : summary ? <dl className="treatment-financial-values">{amounts.map(amount => <div key={amount.label} data-tone={amount.tone}><dt>{amount.label}</dt><dd>{formatCurrency(amount.value)}</dd></div>)}</dl>
+          : summary?.patients ? <dl className="treatment-financial-values">{amounts.map(amount => <div key={amount.label} data-tone={amount.tone}><dt>{amount.label}</dt><dd>{formatCurrency(amount.value)}</dd></div>)}</dl>
             : <p className="treatment-empty">Sin información financiera disponible.</p>}
-    </CardContent></Card>
+    </CardContent></Card>}
     <Card><CardHeader><CardTitle>Pacientes que recibieron este tratamiento</CardTitle><CardDescription>Los tratamientos se registran desde la atención en la historia clínica del paciente.</CardDescription></CardHeader><CardContent>
         <DataTable className={"treatment-recipients" + (!assignments.isPending && !assignments.isError && received.length === 0 ? " treatment-empty-table" : "")} columns={columns} mobileTitleKey="patient" data={received} getRowId={row => row.id}
         isLoading={assignments.isPending} isError={assignments.isError} errorMessage={getErrorMessage(assignments.error)}

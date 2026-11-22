@@ -64,7 +64,8 @@ export function PatientDetailPage() {
       { value: "citas", label: <><CalendarDays />Citas</>, accessibleLabel: "Citas" },
       ...(clinical ? [{ value: "historial", label: <><ClipboardList />Historial clínico</>, accessibleLabel: "Historial clínico" }] : []),
       { value: "tratamientos", label: <><Stethoscope />Tratamientos</>, accessibleLabel: "Tratamientos" },
-      { value: "finanzas", label: <><Wallet />Finanzas</>, accessibleLabel: "Finanzas" },
+      // Finanzas: solo admin y recepción (el médico recibe 403 de la API).
+      ...(role === "admin" || role === "recepcion" ? [{ value: "finanzas", label: <><Wallet />Finanzas</>, accessibleLabel: "Finanzas" }] : []),
       { value: "documentos", label: <><FolderOpen />Archivo clínico</>, accessibleLabel: "Archivo clínico" },
     ]}>
       <TabsContent value="resumen"><div className="patient-information-grid">
@@ -82,7 +83,7 @@ export function PatientDetailPage() {
       <TabsContent value="citas"><PatientAppointments patientId={patient.id} /></TabsContent>
       {clinical && <TabsContent value="historial"><div className="patient-clinical-tab"><PatientClinicalSummary patientId={patient.id} /></div></TabsContent>}
       <TabsContent value="tratamientos"><PatientTreatments patientId={patient.id} canReadClinical={clinical} /></TabsContent>
-      <TabsContent value="finanzas"><PatientFinances patientId={patient.id} canOpenPortfolio={role === "admin" || role === "recepcion"} /></TabsContent>
+      {(role === "admin" || role === "recepcion") && <TabsContent value="finanzas"><PatientFinances patientId={patient.id} canOpenPortfolio /></TabsContent>}
       <TabsContent value="documentos">{clinical ? <PatientDocuments patientId={patient.id} /> : <PatientEmptyState icon={ShieldCheck} title="Los documentos clínicos requieren un perfil clínico autorizado." description={`Consentimiento informado registrado: ${patient.consentSigned ? "Firmado" : "No firmado"}.`} />}</TabsContent>
     </PatientTabs>
     {scheduling && <AppointmentFormDialog open onOpenChange={setScheduling} initialPatientId={patient.id} />}

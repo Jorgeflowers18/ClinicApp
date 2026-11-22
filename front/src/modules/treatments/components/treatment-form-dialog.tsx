@@ -116,7 +116,7 @@ function TreatmentEditor({ treatment, onDirtyChange, onSavingChange, onCancel, o
     try {
       if(treatment) {
         await updateTreatment.mutateAsync(values)
-        if(values.price !== treatment.price) void queryClient.invalidateQueries({ queryKey: financeKeys.treatment(treatment.id) })
+        if(values.price !== treatment.price) void queryClient.invalidateQueries({ queryKey: financeKeys.all })
       }
       else await createTreatment.mutateAsync(values)
       toast.success(treatment ? "Tratamiento actualizado" : "Tratamiento creado")

@@ -1,7 +1,8 @@
-import { getPatientFinancialSummary, getTreatmentFinancialSummary, buildPortfolioRows } from "./finance.mock-data"
+import { env } from "@/shared/lib/env"
 
-export const financeApi = {
-  listPortfolio: async () => buildPortfolioRows(),
-  getTreatmentSummary: async (treatmentId: string, patientId?: string) => getTreatmentFinancialSummary(treatmentId, patientId),
-  getPatientSummary: async (patientId: string) => getPatientFinancialSummary(patientId),
-}
+import type { FinanceApi } from "./finance.contract"
+import { httpFinanceApi } from "./finance.http"
+import { mockFinanceApi } from "./finance.mock"
+
+/** La única elección entre la API y la demostración para este módulo. */
+export const financeApi: FinanceApi = env.usesApi("finance") ? httpFinanceApi : mockFinanceApi

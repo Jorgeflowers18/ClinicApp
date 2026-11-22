@@ -50,7 +50,10 @@ async function snapshot(page: Page) {
   return page.evaluate(async () => {
     const a = "/src/modules/treatments/api/treatments.mock-data.ts", b = "/src/modules/inventory/api/inventory.api.ts", c = "/src/modules/finance/api/finance.api.ts"
     const [{ mockTreatmentAssignments }, { inventoryApi }, { financeApi }] = await Promise.all([import(a), import(b), import(c)])
-    return JSON.parse(JSON.stringify({ assignments: mockTreatmentAssignments, inventory: await inventoryApi.list({ page: 1, pageSize: 1000 }), finance: await financeApi.getTreatmentSummary("trt_2") }))
+    // El detalle del tratamiento suma las filas de la cartera de todos sus pacientes.
+    const rows = (await financeApi.listPortfolio()).filter((row: { treatmentId: string }) => row.treatmentId === "trt_2")
+    const sum = (key: string) => rows.reduce((total: number, row: Record<string, number>) => total + row[key], 0)
+    return JSON.parse(JSON.stringify({ assignments: mockTreatmentAssignments, inventory: await inventoryApi.list({ page: 1, pageSize: 1000 }), finance: { total: sum("total"), paid: sum("paid"), pending: sum("pending") } }))
   })
 }
 async function close(page: Page) {
@@ -144,7 +147,7 @@ for (const theme of ["light", "dark"]) {
     await editor(page).getByRole("button", { name: "Guardar cambios", exact: true }).click()
     await expect(editor(page)).toHaveCount(0)
     const afterPriceEdit = await snapshot(page)
-    const expectedAmounts = [afterPriceEdit.finance.totalValue, afterPriceEdit.finance.insuranceCovered, afterPriceEdit.finance.patientResponsibility, afterPriceEdit.finance.totalPaid, afterPriceEdit.finance.pendingBalance].map(value => new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(value))
+    const expectedAmounts = [afterPriceEdit.finance.total, afterPriceEdit.finance.paid, afterPriceEdit.finance.pending].map(value => new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(value))
     await expect(page.locator('.treatment-financial-values dd')).toHaveText(expectedAmounts)
     expect(afterPriceEdit.assignments).toEqual(before.assignments)
     expect(afterPriceEdit.inventory).toEqual(before.inventory)
@@ -225,7 +228,7 @@ for (const theme of ["light", "dark"]) {
     await expect(page.getByRole("heading", { name: "Ajuste de ortodoncia", exact: true })).toBeVisible()
     const before = await snapshot(page)
     const amounts = await page.evaluate(() => [...document.querySelectorAll('.treatment-financial-values dd')].map(n => n.textContent))
-    const expected = [before.finance.totalValue, before.finance.insuranceCovered, before.finance.patientResponsibility, before.finance.totalPaid, before.finance.pendingBalance].map(value => new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(value))
+    const expected = [before.finance.total, before.finance.paid, before.finance.pending].map(value => new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(value))
     expect(amounts).toEqual(expected)
     await expect(page.getByRole("progressbar", { name: "Sesiones realizadas", exact: true })).toHaveAttribute("aria-valuenow", "5")
     await expect(page.getByText("5 de 12 sesiones", { exact: true }).filter({ visible: true })).toBeVisible()
