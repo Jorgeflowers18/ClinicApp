@@ -31,7 +31,7 @@ export function ReportsPage() {
 
       <PeriodSelector value={state} onChange={setState} />
 
-      {env.useMockApi && (
+      {!env.usesApi("reports") && (
         <Alert className="report-demo">
           <Info className="size-4" />
           <AlertTitle>Datos de demostración</AlertTitle>

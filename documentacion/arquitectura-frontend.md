@@ -171,6 +171,8 @@ Conectadas a la API con el plan 9 (2026-11-21, módulo `finance`; etapa A: saldo
 
 ### Reportes y dashboard
 
+**Conectados a la API con el plan 10 (2026-11-21, módulo `reports`).** Recurso con el estándar: `reports.contract.ts`, `.http.ts` (`GET /reports/summary|agenda|productivity|treatments|inventory?from&to`, sin mapeo porque el back usa las formas de `report.types.ts`), `.mock.ts` (los cálculos en el navegador que se describen abajo) y `.api.ts`. Las consultas pasan el `signal`: cambiar de periodo cancela la anterior.
+
 - **Sin mock-data propio:** `modules/reports/api/reports.api.ts` no tiene `reports.mock-data.ts`. Toda la reportería se deriva en memoria, en solo lectura, de los `mock*` de `appointments`, `treatments`, `inventory`, `patients` y `notifications` (mismo precedente que `notifications.api.ts` leyendo `mockPatients`). Con backend real la agregación es SQL del lado del servidor vía `GET /reports/*`; el navegador no agrega nada.
 - **Periodo:** `ReportPeriod { from, to }` en `YYYY-MM-DD`, inclusivo, hora local. Presets en `reports/lib/period.ts`: `semana`/`mes`/`año` usan el fin de calendario (incluyen citas futuras ya programadas; la etiqueta es "citas en el periodo", no "realizadas"), `últimos 30 días` es rodante hasta hoy. Campo de fecha que filtra cada entidad: citas → `start`, pacientes nuevos → `createdAt`, asignaciones → `startDate` (fecha pura, se parsea con `parseLocalDate` para evitar el desfase UTC), órdenes de compra y movimientos → `createdAt`, notificaciones → `sentAt`.
 - **KPIs puntuales vs por periodo:** `patientsTotal`, `activeTreatments` y `criticalStockItems` ignoran el periodo (son el estado actual); el resto filtra. `noShowRate = noShow / (completadas + noShow)`; `completionRate = completadas / (programadas − canceladas)`.
@@ -454,6 +456,8 @@ Extraídos de los comentarios `TODO` en cada `*.api.ts`:
 - `GET /notifications?appointmentId=:id` — notificaciones asociadas a una cita puntual, usado para mostrar si el paciente ya fue notificado
 - `GET /notifications/template` — plantilla predeterminada de notificación (mensaje con variables sin reemplazar, ej. `[nombre del cliente]`)
 - `PUT /notifications/template` — actualiza el mensaje de la plantilla predeterminada (body: `{ message: string }`)
+
+- ✅ Conectado (plan 10): `GET /reports/summary`, `/agenda`, `/productivity`, `/treatments` e `/inventory` con `from` y `to`.
 
 **Reportes** (solo rol `admin`; `from`/`to` en `YYYY-MM-DD`, inclusivos, zona horaria de la clínica; las respuestas siguen las interfaces de `modules/reports/types/report.types.ts`)
 - `GET /reports/summary?from&to`
