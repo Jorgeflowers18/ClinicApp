@@ -1,5 +1,21 @@
 # Plan 11 — Cierre: la API por defecto, pruebas reales y limpieza
 
+## Estado al 2026-11-22
+
+Los planes 0 a 10 están terminados. Con `VITE_USE_MOCK_API=false`, la app completa se probó contra la API en las 10 pantallas principales, sin errores (recorrido de los tres roles por partes: login, paciente, cita, historia y atención con tratamiento, pago, notificaciones, reportes y logout).
+
+**Hecho de este plan:**
+- `front/README.md`: cómo levantar con el back, las variables y las pruebas.
+- `documentacion/arquitectura-frontend.md`: el estándar de recurso, el conmutador, la sesión con refresh y cada módulo conectado.
+- Ningún componente usa `env.useMockApi`: los avisos de demostración dependen de `env.usesApi(módulo)`.
+
+**Espera una decisión (A o B, abajo):** hoy los mocks se importan de forma estática, así que `vite build` con `VITE_USE_MOCK_API=false` **incluye los datos de demostración en `dist/`**, entre ellos las contraseñas de las cuentas de prueba (`admin123`…). No son credenciales reales, pero no deberían publicarse. Con la opción A hay que pasar a `import()` dinámico en cada `<módulo>.api.ts`; con la B, borrar los mocks.
+
+**Pendiente:**
+- `.env` por defecto con `VITE_USE_MOCK_API=false`: se cambia junto con la decisión, porque las 530 pruebas E2E actuales corren en modo demostración.
+- Proyecto de Playwright `api` contra una base `clinicapp_e2e`, y `http://127.0.0.1:5175` en `Cors:AllowedOrigins` de desarrollo.
+- Producción: `Cors__AllowedOrigins__0` y `Auth__FrontendBaseUrl` con la URL pública.
+
 ## Objetivo
 
 Cuando los planes 0 a 10 estén terminados:
