@@ -29,7 +29,6 @@
 .finance-status { background: var(--secondary); color: var(--muted-foreground); border: 0; font-size: 11px; }
 .finance-status[data-state="al_dia"] { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success); }
 .finance-status[data-state="parcial"] { background: color-mix(in srgb, var(--warning) 12%, transparent); color: var(--warning); }
-.finance-status[data-state="vencida"] { background: color-mix(in srgb, var(--destructive) 12%, transparent); color: var(--destructive); }
 .finance-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .finance-amount:not([data-positive]) { color: var(--muted-foreground); }
 .finance-amount[data-positive][data-kind="total"] { color: var(--foreground); }
@@ -43,15 +42,12 @@
 .finance-portfolio-heading h3 { min-width: 0; font-size: 14px; }
 .finance-portfolio-heading > [data-slot="badge"] { flex-shrink: 0; }
 .finance-treatment-name { color: var(--muted-foreground); font-size: 13px; padding-left: 38px; margin-top: -3px; overflow-wrap: anywhere; }
-.finance-primary-amounts, .finance-secondary-amounts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.finance-primary-amounts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
 .finance-primary-amounts { margin-top: 12px; }
-.finance-primary-amounts dt, .finance-secondary-amounts dt { color: var(--muted-foreground); font-size: 12px; }
+.finance-primary-amounts dt { color: var(--muted-foreground); font-size: 12px; }
 .finance-primary-amounts dd { font-size: 15px; font-weight: 600; margin-top: 4px; }
-.finance-secondary-amounts { margin-top: 10px; }
-.finance-secondary-amounts dd { font-size: 12px; margin-top: 3px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .finance-portfolio-empty { padding: 24px 16px; color: var(--muted-foreground); font-size: 14px; text-align: center; }
 .finance-portfolio-count { padding: 8px 16px 0; font-size: 12px; color: var(--muted-foreground); }
-@container finance-content (min-width: 62rem) { .finance-metrics { grid-template-columns: repeat(var(--finance-kpis, 4), minmax(0,1fr)); } }
 @container finance-content (max-width: 34rem) {
   .finance-module .clinic-kpi-card > [data-slot="card-content"] { display: block; position: relative; min-height: 104px; }
   .finance-module .clinic-kpi-copy > .clinic-kpi-label, .finance-module .clinic-kpi-copy > div:first-child { min-height: 44px; }

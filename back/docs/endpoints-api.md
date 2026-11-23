@@ -971,7 +971,7 @@ Todos con `?from=YYYY-MM-DD&to=YYYY-MM-DD`, **obligatorios e inclusivos**, en ho
 | | `patientsNewInPeriod` | Pacientes creados en el periodo |
 | | `appointmentsInPeriod`, `appointmentsCompleted`, `appointmentsNoShow` | Citas que empiezan en el periodo: todas, completadas y no asistió |
 | | `noShowRate` | `noShow / (completadas + noShow)`; 0 si no hay |
-| | `activeTreatments` | Tratamientos realizados `en_progreso` (la API solo registra completados: será 0 salvo en datos importados) |
+| | `treatmentsPerformed` | Tratamientos realizados `completado` con fecha en el periodo (como "Realizados" del reporte de tratamientos). Reemplazó a `activeTreatments` el 2026-11-23 |
 | | `criticalStockItems` | Insumos con `stock <= minStock` |
 | | `notificationsSent` | Notificaciones `enviada` en el periodo |
 | Agenda | `byDay` | Todos los días del periodo, también los vacíos, con `label` como el mock ("lun 12"). Agrupa por el **día de la clínica**: una cita a las 23:30 en Ecuador cuenta en ese día, aunque en UTC ya sea el siguiente. |

@@ -4514,7 +4514,7 @@ export interface components {
             /** Format: double */
             noShowRate: number;
             /** Format: int32 */
-            activeTreatments: number;
+            treatmentsPerformed: number;
             /** Format: int32 */
             criticalStockItems: number;
             /** Format: int32 */

@@ -1,7 +1,7 @@
 import { ClinicalFileManager } from "@/modules/clinical-history/archive/components/clinical-file-manager"
-import { useState, type CSSProperties } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { CalendarDays, CalendarClock, CheckCheck, ChevronDown, CircleAlert, Clock3, FileText, ReceiptText, Stethoscope, UserRound, Wallet } from "lucide-react"
+import { CalendarDays, CheckCheck, ChevronDown, Clock3, ReceiptText, Stethoscope, UserRound, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DataTable } from "@/shared/components/data-table"
@@ -14,7 +14,6 @@ import { useTreatment, usePatientAssignments } from "@/modules/treatments/api/tr
 import { assignmentStatusLabels } from "@/modules/treatments/types/treatment.types"
 import { usePatientFinancialSummary, useTreatmentFinancialSummary } from "@/modules/finance/api/finance.queries"
 import { RegisterPaymentDialog, VoidPaymentDialog } from "@/modules/finance/components/payment-dialogs"
-import { showDueDates } from "@/modules/finance/lib/due-dates"
 import type { FinancialPayment } from "@/modules/finance/types/finance.types"
 import { useClinicalHistory } from "@/modules/clinical-history/api/clinical-history.queries"
 import { dataConsentStatusLabels } from "@/modules/clinical-history/types/clinical-history.types"
@@ -63,7 +62,7 @@ export function PatientTreatments({ patientId, canReadClinical }: { patientId: s
   </div>
 }
 
-const financialStatusLabels: Record<string, string> = { registrado: "Registrado", anulado: "Anulado", reversado: "Reversado", pendiente: "Pendiente", parcial: "Parcial", pagada: "Pagada", vencida: "Vencida", cancelada: "Cancelada", borrador: "Borrador", emitida: "Emitida", autorizada: "Autorizada", anulada: "Anulada" }
+const paymentStatusLabels: Record<FinancialPayment["status"], string> = { registrado: "Registrado", anulado: "Anulado" }
 
 function PatientTreatmentLedger({ patientId, treatmentId }: { patientId: string; treatmentId: string }) {
   const query = useTreatmentFinancialSummary(treatmentId, patientId)
@@ -78,19 +77,11 @@ function PatientTreatmentLedger({ patientId, treatmentId }: { patientId: string;
       { key: "concept", header: "Concepto", cell: () => data.treatmentName },
       { key: "reference", header: "Comprobante", cell: row => row.reference || "No registrado" },
       { key: "amount", header: "Valor", className: "text-right", cell: row => formatCurrency(row.amount) },
-      { key: "status", header: "Estado", cell: row => <><PatientStateBadge status={row.status}>{financialStatusLabels[row.status]}</PatientStateBadge>{row.voidReason && <small className="patient-void-reason">{row.voidReason}</small>}</> },
+      { key: "status", header: "Estado", cell: row => <><PatientStateBadge status={row.status}>{paymentStatusLabels[row.status] ?? row.status}</PatientStateBadge>{row.voidReason && <small className="patient-void-reason">{row.voidReason}</small>}</> },
       { key: "actions", header: "Acciones", className: "w-12 text-right", cell: row => row.status === "registrado" ? <Button size="sm" variant="ghost" aria-label={`Anular pago de ${formatCurrency(row.amount)} del ${formatDateOnly(row.date)}`} onClick={() => setVoiding(row)}>Anular</Button> : null },
     ]} />
     {paying && <RegisterPaymentDialog open onClose={() => setPaying(false)} patientId={patientId} treatmentId={treatmentId} treatmentName={data.treatmentName} pendingBalance={data.pendingBalance} />}
     <VoidPaymentDialog payment={voiding} onClose={() => setVoiding(null)} />
-    {data.installments.length > 0 && <><h3>Cuotas y vencimientos</h3><DataTable className="patient-related-table patient-money-table" data={data.installments} getRowId={row => row.id} columns={[
-      { key: "number", header: "Cuota", cell: row => row.number },
-      { key: "due", header: "Vencimiento", cell: row => formatDateOnly(row.dueDate) },
-      { key: "amount", header: "Valor", className: "text-right", cell: row => formatCurrency(row.amount) },
-      { key: "balance", header: "Pendiente", className: "text-right", cell: row => formatCurrency(row.balance) },
-      { key: "status", header: "Estado", cell: row => <PatientStateBadge status={row.status}>{financialStatusLabels[row.status]}</PatientStateBadge> },
-    ]} /></>}
-    {data.invoice && <div className="patient-invoice"><FileText aria-hidden="true" /><div><h3>Factura {data.invoice.number}</h3><p>{formatDateOnly(data.invoice.issueDate)}</p></div><strong>{formatCurrency(data.invoice.total)}</strong><PatientStateBadge status={data.invoice.status}>{financialStatusLabels[data.invoice.status]}</PatientStateBadge></div>}
   </div></details>
 }
 
@@ -108,16 +99,15 @@ export function PatientFinances({ patientId, canOpenPortfolio }: { patientId: st
   if (query.isLoading) return <Skeleton className="h-28 w-full" />
   if (query.isError || !query.data) return <div role="alert" className="patient-source-error">No se pudo cargar el resumen financiero.<Button variant="outline" onClick={() => query.refetch()}>Reintentar</Button></div>
   const data = query.data
-  // "Total vencido" y "Próximo vencimiento" esperan la etapa B de finanzas (finance/lib/due-dates.ts).
+  // Sin "Total vencido" ni "Próximo vencimiento": dependen del financiamiento de cada clínica (ítem 8 del backlog).
   const amounts = [
     { label: "Total tratamientos", value: String(data.totalTreatments), icon: Stethoscope, tone: "neutral" },
     { label: "Total pagado", value: formatCurrency(data.totalPaid), icon: CheckCheck, tone: "success" },
     { label: "Total pendiente", value: formatCurrency(data.totalPending), icon: Clock3, tone: "warning" },
-    ...(showDueDates ? [{ label: "Total vencido", value: formatCurrency(data.totalOverdue), icon: CircleAlert, tone: data.totalOverdue > 0 ? "danger" : "neutral" }] : []),
   ]
-  return <div className="patient-related-tab"><div className="patient-tab-heading"><h2><Wallet aria-hidden="true" />Información financiera</h2>{canOpenPortfolio && <Button variant="outline" onClick={() => navigate("/finanzas")}>Ver cartera financiera</Button>}</div><dl className="patient-financial-summary" style={{ "--summary-columns": amounts.length } as CSSProperties}>
+  return <div className="patient-related-tab"><div className="patient-tab-heading"><h2><Wallet aria-hidden="true" />Información financiera</h2>{canOpenPortfolio && <Button variant="outline" onClick={() => navigate("/finanzas")}>Ver cartera financiera</Button>}</div><dl className="patient-financial-summary">
     {amounts.map(({ label, value, icon: Icon, tone }) => <div key={label} data-tone={tone}><Icon aria-hidden="true" /><div><dt>{label}</dt><dd>{value}</dd></div></div>)}
-  </dl>{showDueDates && <p className="patient-next-due"><CalendarClock aria-hidden="true" />Próximo vencimiento: <strong>{data.nextDueDate ? formatDateOnly(data.nextDueDate) : "Sin vencimientos pendientes"}</strong></p>}{canOpenPortfolio && <PatientFinancialMovements patientId={patientId} />}</div>
+  </dl>{canOpenPortfolio && <PatientFinancialMovements patientId={patientId} />}</div>
 }
 
 export function PatientDocuments({ patientId }: { patientId: string }) {

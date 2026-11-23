@@ -51,7 +51,8 @@ public class ReportQueries(AppDbContext db, ClinicClock clock)
             AppointmentsCompleted: completed,
             AppointmentsNoShow: noShow,
             NoShowRate: Ratio(noShow, completed + noShow),
-            ActiveTreatments: await db.TreatmentAssignments.CountAsync(assignment => assignment.Status == AssignmentStatuses.EnProgreso, cancellationToken),
+            TreatmentsPerformed: await db.TreatmentAssignments.CountAsync(assignment =>
+                assignment.Status == AssignmentStatuses.Completado && assignment.StartDate >= period.From && assignment.StartDate <= period.To, cancellationToken),
             CriticalStockItems: await db.InventoryItems.CountAsync(item => item.Stock <= item.MinStock, cancellationToken),
             NotificationsSent: await db.NotificationLogs.CountAsync(log =>
                 log.Status == NotificationStatuses.Enviada && log.SentAt >= period.StartUtc && log.SentAt < period.EndUtc, cancellationToken));

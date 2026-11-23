@@ -13,16 +13,27 @@ const toPayment = (dto: Schemas["FinancialPaymentDto"]): FinancialPayment => ({
   voidReason: dto.voidReason ?? undefined,
 })
 
-const toRow = (dto: Schemas["FinancialPortfolioRowDto"]): FinancialPortfolioRow => ({ ...dto, status: dto.status as FinancialPortfolioRow["status"] })
+// La API también trae vencido, próximo vencimiento, mora, cuotas, seguro y factura (siempre en 0 o vacíos):
+// no se leen. Dependen del financiamiento de cada clínica (ítem 8 del backlog).
+const toRow = (dto: Schemas["FinancialPortfolioRowDto"]): FinancialPortfolioRow => ({
+  patientId: dto.patientId,
+  patientName: dto.patientName,
+  treatmentId: dto.treatmentId,
+  treatmentName: dto.treatmentName,
+  total: dto.total,
+  paid: dto.paid,
+  pending: dto.pending,
+  status: dto.status === "al_dia" ? "al_dia" : "parcial",
+})
 
-// Etapa A: el back responde cuotas vacías y sin seguro ni factura.
 const toSummary = (dto: Schemas["FinancialSummaryDto"]): FinancialSummary => ({
-  ...dto,
+  treatmentId: dto.treatmentId,
   patientId: dto.patientId ?? "",
+  treatmentName: dto.treatmentName,
+  totalValue: dto.totalValue,
+  totalPaid: dto.totalPaid,
+  pendingBalance: dto.pendingBalance,
   payments: dto.payments.map(toPayment),
-  installments: [],
-  insurance: null,
-  invoice: null,
 })
 
 export const httpFinanceApi: FinanceApi = {
@@ -33,7 +44,8 @@ export const httpFinanceApi: FinanceApi = {
     return toSummary(await apiGet<Schemas["FinancialSummaryDto"]>(`/finance/treatments/${treatmentId}/summary`, { params: { patientId }, signal }))
   },
   async getPatientSummary(patientId, signal) {
-    return apiGet<Schemas["PatientFinancialSummaryDto"]>(`/finance/patients/${patientId}/summary`, { signal })
+    const dto = await apiGet<Schemas["PatientFinancialSummaryDto"]>(`/finance/patients/${patientId}/summary`, { signal })
+    return { patientId: dto.patientId, totalTreatments: dto.totalTreatments, totalPaid: dto.totalPaid, totalPending: dto.totalPending, paymentCount: dto.paymentCount }
   },
   async registerPayment(values) {
     const body: Schemas["PaymentRequest"] = { ...values, reference: values.reference || null, observations: values.observations || null }

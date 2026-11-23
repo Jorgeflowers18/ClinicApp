@@ -2,9 +2,13 @@ namespace ClinicApp.Api.Modules.Reports;
 
 // Formas de respuesta de front/src/modules/reports/types/report.types.ts.
 
+/// <summary>
+/// <c>PatientsTotal</c> y <c>CriticalStockItems</c> son el estado actual; el resto, del periodo.
+/// <c>TreatmentsPerformed</c>: tratamientos realizados (completados) con fecha en el periodo, igual que en el reporte de tratamientos.
+/// </summary>
 public record ReportsSummary(
     int PatientsTotal, int PatientsNewInPeriod, int AppointmentsInPeriod, int AppointmentsCompleted, int AppointmentsNoShow,
-    double NoShowRate, int ActiveTreatments, int CriticalStockItems, int NotificationsSent);
+    double NoShowRate, int TreatmentsPerformed, int CriticalStockItems, int NotificationsSent);
 
 public record AgendaDayRow(string Date, string Label, int Total, int Completadas, int NoShow, int Canceladas);
 

@@ -7,22 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { DataTableColumn } from "@/shared/components/data-table"
 import { SearchInput } from "@/shared/components/search-input"
 import { ResponsiveFilterBar } from "@/shared/components/responsive-filter-bar"
-import { formatDateOnly } from "@/shared/lib/date"
 import { formatCurrency } from "@/shared/lib/number"
-import { showDueDates } from "../lib/due-dates"
 import type { FinancialPortfolioRow } from "../types/finance.types"
 
-// Sin la etapa B de finanzas no hay vencimientos: ni estado "Vencida", ni vencido, próximo vencimiento o mora
-// (la API daría siempre 0 y null; lib/due-dates.ts).
-const statusLabels: Partial<Record<FinancialPortfolioRow["status"], string>> = showDueDates
-  ? { al_dia: "Al día", parcial: "Parcial", vencida: "Vencida" }
-  : { al_dia: "Al día", parcial: "Parcial" }
-const balanceLabels: Record<string, string> = showDueDates
-  ? { all: "Todos los saldos", pending: "Con pendiente", overdue: "Con vencido" }
-  : { all: "Todos los saldos", pending: "Con pendiente" }
-const dueKeys = ["overdue", "nextDueDate", "daysLate"]
+// Sin vencimientos, mora ni estado "Vencida": dependen del financiamiento de cada clínica (ítem 8 del backlog).
+const statusLabels: Record<FinancialPortfolioRow["status"], string> = { al_dia: "Al día", parcial: "Parcial" }
+const balanceLabels: Record<string, string> = { all: "Todos los saldos", pending: "Con pendiente" }
 function PortfolioStatus({ row }: { row: FinancialPortfolioRow }) {
-  return <Badge className="finance-status" data-state={row.status}>{statusLabels[row.status] ?? row.status}</Badge>
+  return <Badge className="finance-status" data-state={row.status}>{statusLabels[row.status]}</Badge>
 }
 function PatientIdentity({ row }: { row: FinancialPortfolioRow }) {
   const initials = row.patientName.trim().split(/\s+/).slice(0, 2).map(name => name[0]).join("")
@@ -31,20 +23,16 @@ function PatientIdentity({ row }: { row: FinancialPortfolioRow }) {
 function Amount({ value, kind }: { value: number; kind: string }) {
   return <span className="finance-amount" data-kind={kind} data-positive={value > 0 || undefined}>{formatCurrency(value)}</span>
 }
-const allColumns: DataTableColumn<FinancialPortfolioRow>[] = [
+const columns: DataTableColumn<FinancialPortfolioRow>[] = [
   { key: "patientName", header: "Paciente", cell: row => <PatientIdentity row={row} /> },
   { key: "treatmentName", header: "Tratamiento", cell: row => row.treatmentName },
-  ...(["total", "paid", "pending", "overdue"] as const).map((key, index) => ({
-    key, header: ["Total", "Pagado", "Pendiente", "Vencido"][index],
+  ...(["total", "paid", "pending"] as const).map((key, index) => ({
+    key, header: ["Total", "Pagado", "Pendiente"][index],
     cell: (row: FinancialPortfolioRow) => <Amount value={row[key]} kind={key} />,
   })),
-  { key: "nextDueDate", header: "Próximo venc.", cell: row => row.nextDueDate ? formatDateOnly(row.nextDueDate, { year: "numeric", month: "short", day: "numeric" }) : "—" },
-  { key: "daysLate", header: "Días mora", cell: row => row.daysLate },
   { key: "status", header: "Estado", cell: row => <PortfolioStatus row={row} /> },
 ]
-const columns = allColumns.filter(column => showDueDates || !dueKeys.includes(column.key))
 const primaryColumns = columns.filter(column => ["total", "paid", "pending"].includes(column.key))
-const dueColumns = columns.filter(column => dueKeys.includes(column.key))
 
 export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
   const [search, setSearch] = useState("")
@@ -54,7 +42,7 @@ export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
   const filtered = rows.filter(row =>
     (!query || [row.patientName, row.treatmentName].join(" ").toLocaleLowerCase().includes(query)) &&
     (status === "all" || row.status === status) &&
-    (balance === "all" || (balance === "pending" ? row.pending > 0 : row.overdue > 0)))
+    (balance === "all" || row.pending > 0))
   const count = Number(status !== "all") + Number(balance !== "all") + Number(Boolean(query))
   const clear = () => { setSearch(""); setStatus("all"); setBalance("all") }
   const filters = (prefix: string) => <div className="finance-filter-fields">
@@ -90,7 +78,6 @@ export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
           <div className="finance-portfolio-heading"><h3 id={id}><PatientIdentity row={row} /></h3><PortfolioStatus row={row} /></div>
           <p className="finance-treatment-name">{row.treatmentName}</p>
           <dl className="finance-primary-amounts">{primaryColumns.map(column => <div key={column.key}><dt>{column.header}</dt><dd>{column.cell(row)}</dd></div>)}</dl>
-          {dueColumns.length > 0 && <dl className="finance-secondary-amounts">{dueColumns.map(column => <div key={column.key}><dt>{column.header}</dt><dd>{column.cell(row)}</dd></div>)}</dl>}
         </article></li>
       })}
     </ul>

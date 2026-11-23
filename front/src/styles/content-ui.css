@@ -86,7 +86,7 @@
 .clinic-pagination :is(p, span) { font-size: 13px; font-variant-numeric: tabular-nums; }
 .clinic-admin-canvas [data-slot="table-head"] { height: 42px; font-size: 13px; font-weight: 590; }
 .clinic-admin-canvas [data-slot="table-cell"] { font-variant-numeric: tabular-nums; }
-.clinic-finance-table :is([data-column="total"], [data-column="paid"], [data-column="pending"], [data-column="overdue"], [data-column="daysLate"]) { text-align: right; font-variant-numeric: tabular-nums; }
+.clinic-finance-table :is([data-column="total"], [data-column="paid"], [data-column="pending"]) { text-align: right; font-variant-numeric: tabular-nums; }
 @media (min-width: 1024px) {
   .clinic-admin-canvas form [data-slot="input"][type="number"] { max-width: 14rem; }
 }
