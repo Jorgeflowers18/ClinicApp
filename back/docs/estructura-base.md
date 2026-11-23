@@ -167,7 +167,7 @@ erDiagram
 | `id` | `uuid` PK | | |
 | `user_id` | `uuid` FK → `users` (cascade) | | Índice |
 | `token_hash` | `varchar(64)` | | SHA-256 del token del enlace. Único. |
-| `created_at`, `expires_at` | `timestamptz` | | Vida: 60 minutos (`Auth:PasswordResetMinutes`) |
+| `created_at`, `expires_at` | `timestamptz` | | Vida: 60 minutos para la recuperación (`Auth:PasswordResetMinutes`); 72 horas para el enlace que genera el admin (`Auth:InvitationHours`) |
 | `used_at` | `timestamptz` | sí | Un solo uso. Al pedir un enlace nuevo, los anteriores se invalidan. |
 
 ### `access_requests`
@@ -667,7 +667,7 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 |---|---|---|
 | `ConnectionStrings:Default` | Desarrollo: `appsettings.Development.json`. Producción: variable de entorno. | Cadena de conexión de PostgreSQL |
 | `Auth:Issuer`, `Auth:Audience` | `appsettings.json` | `clinicapp` |
-| `Auth:AccessTokenMinutes`, `Auth:RefreshTokenDays`, `Auth:PasswordResetMinutes` | `appsettings.json` | 15, 7, 60 |
+| `Auth:AccessTokenMinutes`, `Auth:RefreshTokenDays`, `Auth:PasswordResetMinutes`, `Auth:InvitationHours` | `appsettings.json` | 15, 7, 60, 72 |
 | `Auth:SigningKey` | Desarrollo: `appsettings.Development.json`. Producción: variable de entorno. | Al menos 32 caracteres. La API no arranca sin ella. |
 | `Auth:FrontendBaseUrl` | Igual que la anterior | URL del frontend, para armar el enlace de recuperación de contraseña |
 | `Cors:AllowedOrigins` | `appsettings*.json` | Orígenes del frontend (con cookies: `AllowCredentials`) |

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
 import { SearchInput } from "@/shared/components/search-input"
 import { getErrorMessage } from "@/shared/lib/error-message"
+import { useUsers } from "@/modules/auth/api/users.queries"
 
 import { useProfessionals, useRooms } from "../api/appointments.queries"
 import type { Professional, Room } from "../types/appointment.types"
@@ -34,13 +35,16 @@ function useEditor<T>() {
 /** Profesionales: nombre, especialidad, registro y activo. Solo admin. */
 export function ProfessionalsAdmin() {
   const query = useProfessionals()
+  const users = useUsers()
+  const userName = (id: string) => users.data?.find((user) => user.id === id)?.name ?? "Vinculada"
   const editor = useEditor<Professional>()
   const [search, setSearch] = useState("")
   const rows = (query.data ?? []).filter((item) => matches(search, item.name, item.specialty, item.registrationNumber))
   const columns: DataTableColumn<Professional>[] = [
     { key: "name", header: "Profesional", cell: (item) => <div><p className="font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{item.specialty}</p></div> },
     { key: "registrationNumber", header: "Registro", cell: (item) => item.registrationNumber || "—" },
-    { key: "userId", header: "Cuenta", cell: (item) => item.userId ? "Vinculada" : "Sin cuenta" },
+    // La cuenta se vincula desde la pestaña Usuarios.
+    { key: "userId", header: "Cuenta", cell: (item) => item.userId ? userName(item.userId) : "Sin cuenta" },
     { key: "active", header: "Estado", cell: (item) => statusBadge(item.active) },
   ]
   return <div className="space-y-4">

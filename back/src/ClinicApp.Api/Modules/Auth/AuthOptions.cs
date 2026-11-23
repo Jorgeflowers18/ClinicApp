@@ -27,6 +27,12 @@ public sealed class AuthOptions
     /// <summary>Vida del enlace de recuperación de contraseña.</summary>
     public int PasswordResetMinutes { get; init; } = 60;
 
+    /// <summary>
+    /// Vida del enlace que genera el admin (cuenta nueva o "Generar enlace nuevo"). Más larga que la de
+    /// recuperación: el admin se lo pasa a la persona por su cuenta.
+    /// </summary>
+    public int InvitationHours { get; init; } = 72;
+
     /// <summary>URL del frontend, para armar el enlace de recuperación de contraseña.</summary>
     public string FrontendBaseUrl { get; init; } = "";
 

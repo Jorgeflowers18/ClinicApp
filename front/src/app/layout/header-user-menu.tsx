@@ -7,9 +7,9 @@ import { useLogout } from "@/modules/auth/api/auth.queries"
 import { UserAvatar } from "@/modules/auth/components/user-avatar"
 import { userDisplayName } from "@/modules/auth/components/user-identity"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
+import { roleLabels } from "@/modules/auth/types/user-admin.types"
 import styles from "./header-user-menu.module.css"
 
-const roleLabels = { admin: "Administrador", recepcion: "Recepción", medico: "Personal médico" }
 
 export function HeaderUserMenu() {
   const user = useAuthStore((state) => state.user)

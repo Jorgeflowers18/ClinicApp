@@ -45,7 +45,7 @@ export function ProfessionalFormDialog({ open, onOpenChange, professional }: Pro
 
   async function onSubmit(values: ProfessionalFormValues) {
     try {
-      // Se conserva el usuario vinculado: esta pantalla no lo cambia.
+      // Se conserva el usuario vinculado: se cambia desde la pestaña Usuarios.
       const saved = await save.mutateAsync({ id: professional?.id, values, userId: professional?.userId ?? null })
       const deactivated = professional?.active && !values.active
       const future = saved.futureAppointments ?? 0

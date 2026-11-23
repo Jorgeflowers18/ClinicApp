@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { apiAs, createPatient, inDays, login, ok, unique } from "./helpers/api"
 
-// Plan 12, punto 3.2: el admin crea, edita y desactiva profesionales y consultorios.
+// Plan 12, puntos 3.2 y 3.3: el admin gestiona profesionales, consultorios y cuentas de usuario.
 // Los nombres empiezan con "Zz" para quedar al final: las demás pruebas toman el primer activo.
 
 test("el admin crea un profesional y al desactivarlo ve cuántas citas futuras tiene", async ({ page }) => {
@@ -13,6 +13,7 @@ test("el admin crea un profesional y al desactivarlo ve cuántas citas futuras t
   await page.getByRole("button", { name: /Menú de usuario/ }).click()
   await page.getByRole("menuitem", { name: "Administración" }).click()
   await expect(page).toHaveURL(/\/administracion$/)
+  await page.getByRole("tab", { name: "Profesionales" }).click()
 
   await page.getByRole("button", { name: "Nuevo profesional", exact: true }).click()
   await page.locator("#professionalName").fill(name)
@@ -71,4 +72,70 @@ test("recepción no ve ni entra a Administración", async ({ page }) => {
   await page.keyboard.press("Escape")
   await page.goto("/administracion")
   await expect(page).toHaveURL(/\/403$/)
+})
+
+test("el admin crea una cuenta, la persona elige su contraseña con el enlace y al desactivarla ya no entra", async ({ page, browser }) => {
+  const api = await apiAs("admin")
+  const stamp = unique()
+  const name = `Zz Recepción E2E ${stamp}`
+  const email = `recepcion.${stamp}@clinica.com`
+  const password = "contrasena-e2e-1"
+
+  await login(page, "admin")
+  await page.goto("/administracion")
+  await page.getByRole("button", { name: "Nueva cuenta", exact: true }).click()
+  await page.locator("#userName").fill(name)
+  await page.locator("#userEmail").fill(email)
+  await page.getByRole("button", { name: "Crear cuenta" }).click()
+
+  // El enlace se muestra una sola vez; el servidor lo arma con su URL del front, aquí se usa la ruta.
+  const url = await page.locator("#passwordLinkUrl").inputValue()
+  expect(url).toContain("/restablecer-contrasena?token=")
+  await page.getByRole("button", { name: "Listo" }).click()
+  await expect(page.getByText(name).filter({ visible: true }).first()).toBeVisible()
+
+  const person = await browser.newContext()
+  const tab = await person.newPage()
+  const link = new URL(url)
+  await tab.goto(link.pathname + link.search)
+  await tab.locator("#reset-password").fill(password)
+  await tab.locator("#reset-confirmation").fill(password)
+  await tab.getByRole("button", { name: "Guardar contraseña" }).click()
+  await expect(tab).toHaveURL(/\/login/)
+  await tab.locator("#email").fill(email)
+  await tab.locator("#password").fill(password)
+  await tab.getByRole("button", { name: "Ingresar", exact: true }).click()
+  // Primer ingreso: completa su perfil, con el nombre que le puso el admin.
+  await expect(tab.getByRole("heading", { name: "Completa tu perfil" })).toBeVisible()
+  await expect(tab.getByText(name).first()).toBeVisible()
+  await person.close()
+
+  // Desactivarla: ya no puede iniciar sesión.
+  await page.getByLabel(`Editar cuenta: ${name}`).filter({ visible: true }).first().click()
+  await page.getByRole("switch", { name: /Cuenta activa/ }).click()
+  await page.getByRole("button", { name: "Guardar cambios" }).click()
+  await expect(page.getByText("Cuenta actualizada")).toBeVisible()
+
+  const users: Array<{ email: string; active: boolean }> = await ok(await api.get("users"))
+  expect(users.find((user) => user.email === email)).toMatchObject({ active: false })
+
+  const again = await browser.newContext()
+  const retry = await again.newPage()
+  await retry.goto("/login")
+  await retry.locator("#email").fill(email)
+  await retry.locator("#password").fill(password)
+  await retry.getByRole("button", { name: "Ingresar", exact: true }).click()
+  // El 403 de la cuenta desactivada: el login muestra el detalle del servidor.
+  await expect(retry.getByRole("alert").filter({ hasText: "Comunícate con el administrador de la clínica." })).toBeVisible()
+  await expect(retry).toHaveURL(/\/login/)
+  await again.close()
+})
+
+test("el admin no puede quitarse el rol ni desactivar su propia cuenta", async ({ page }) => {
+  await login(page, "admin")
+  await page.goto("/administracion")
+  await page.getByLabel("Editar cuenta: Ana Morales").filter({ visible: true }).first().click()
+  await expect(page.getByRole("switch", { name: /Cuenta activa/ })).toBeDisabled()
+  await expect(page.locator("#userRole")).toBeDisabled()
+  await expect(page.getByText("No puedes desactivar tu propia cuenta ni quitarte el rol de administrador.")).toBeVisible()
 })

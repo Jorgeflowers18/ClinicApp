@@ -1,8 +1,9 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-22**: **93 endpoints implementados**:
+Estado al **2026-11-22**: **97 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
+- 4 de `users` (gestión de usuarios, solo admin);
 - 9 de `treatments` (catálogo y tratamientos realizados);
 - 19 de `inventory`;
 - 6 de `patients`;
@@ -42,6 +43,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `inventory`: leer insumos (`GET /inventory/items` y `GET /inventory/items/:id`) | los tres |
 | `inventory`: todo lo demás | `admin`, `recepcion` |
 | `patients` | los tres; dar de baja: `admin` y `recepcion`; reactivar: `admin` |
+| `users` | `admin` |
 | `professionals`, `rooms` | leer: los tres; crear y editar: `admin` |
 | `appointments`, `schedule-blocks` | los tres |
 | `clinical-history` | `admin`, `medico` |
@@ -108,6 +110,10 @@ La respuesta tiene esta forma:
 | `POST` | `/api/auth/password-recovery` | público | `202` |
 | `POST` | `/api/auth/password-reset` | público | `204` |
 | `POST` | `/api/auth/access-requests` | público | `202` |
+| `GET` | `/api/users` | admin | `200` lista |
+| `POST` | `/api/users` | admin | `201` usuario + enlace |
+| `PUT` | `/api/users/:id` | admin | `200` |
+| `POST` | `/api/users/:id/password-link` | admin | `200` enlace |
 | `GET` | `/api/treatments` | los tres | `200` paginado o lista |
 | `GET` | `/api/treatments/:id` | los tres | `200` |
 | `POST` | `/api/treatments` | los tres | `201` |
@@ -221,7 +227,7 @@ Público. Responde `Healthy` (`200`) si la API llega a la base de datos, o `Unhe
 }
 ```
 
-`profile` es `null` hasta que el usuario completa "Mi perfil". `professionalId` es el profesional vinculado al usuario (lo asigna el admin con `PUT /api/professionals/:id`, campo `userId`), o `null`.
+`profile` es `null` hasta que el usuario completa "Mi perfil". `professionalId` es el profesional vinculado al usuario (lo asigna el admin con `PUT /api/users/:id`, campo `professionalId`, o con `PUT /api/professionals/:id`, campo `userId`), o `null`.
 
 ### `POST /api/auth/login` — público
 
@@ -294,6 +300,32 @@ Si la cuenta existe y está activa:
 - `message`: hasta 1000.
 
 **`202`:** la solicitud queda guardada como `pendiente`. Todavía no hay pantalla ni endpoint para revisarlas.
+
+### Gestión de usuarios (`users`) — solo admin
+
+Recepción y el médico reciben `403`. Las cuentas no se borran: se desactivan.
+
+**Usuario:** `{ id, name, email, role, professionalId, professionalName, active, createdAt, lastLoginAt }`. Nunca trae la contraseña ni su hash. `professionalName` es el nombre del profesional vinculado, o `null`.
+
+| Endpoint | Respuesta |
+|---|---|
+| `GET /api/users` | `200` todas las cuentas, también las inactivas, sin paginar, por nombre |
+| `POST /api/users` | `201` `{ user, passwordLink: { url, expiresAt } }` |
+| `PUT /api/users/:id` | `200` usuario |
+| `POST /api/users/:id/password-link` | `200` `{ url, expiresAt }` |
+
+**Body de `POST` y `PUT`:** `{ name, email, role, professionalId }`, y en `PUT` además `active`.
+- `name`: obligatorio, de 3 a 120.
+- `email`: obligatorio, válido, hasta 254. Se guarda en minúsculas. Repetido (sin distinguir mayúsculas): `409` `errors.email` "Ya existe una cuenta con ese correo".
+- `role`: `admin`, `recepcion` o `medico`. Otro: `400` `errors.role` "Elige un rol válido".
+- `professionalId`: opcional. Inexistente: `400` `errors.professionalId`. Ya vinculado a otra cuenta: `409` `errors.professionalId` "Ese profesional ya tiene una cuenta". `null` desvincula.
+
+**Contraseña:** una cuenta nueva no tiene contraseña usable. El `url` (`<FrontendBaseUrl>/restablecer-contrasena?token=…`) es de un solo uso, vale `Auth:InvitationHours` (72 horas) y se usa con `POST /api/auth/password-reset`. El admin se lo pasa a la persona mientras no haya proveedor de correo. Generar un enlace nuevo invalida el anterior. Una cuenta desactivada: `409` `errors.active`, y tampoco puede usar un enlace que ya tenía.
+
+**Reglas del `PUT`:**
+- El admin no puede desactivarse ni quitarse el rol a sí mismo: `409` `errors.active` "No puedes desactivar tu propia cuenta" o `errors.role` "No puedes quitarte el rol de administrador".
+- Siempre queda al menos un admin activo: `409` "Debe quedar al menos un administrador activo". Con la regla anterior solo se alcanza si quien llama ya perdió el rol y su access token aún no vence.
+- Desactivar o cambiar el rol cierra las sesiones de esa cuenta (revoca sus tokens de refresh). El access token que ya tenga sigue valiendo hasta 15 minutos (decisión aceptada).
 
 ## 5. `treatments`
 
@@ -957,7 +989,7 @@ Todos con `?from=YYYY-MM-DD&to=YYYY-MM-DD`, **obligatorios e inclusivos**, en ho
 | Módulo | Responsable | Estado |
 |---|---|---|
 | Base (errores, paginación, salud, CORS, configuración, logs) | Jorge Flores | ✅ Hecho |
-| `auth` | Jorge Flores | ✅ Endpoints hechos. Faltan el proveedor de correo, la gestión de usuarios, la revisión de solicitudes de acceso y la limpieza de tokens viejos. |
+| `auth` | Jorge Flores | ✅ Endpoints hechos. Gestión de usuarios hecha (`api/users`). Faltan el proveedor de correo, la revisión de solicitudes de acceso y la limpieza de tokens viejos. |
 | `treatments` | Jorge Flores | ✅ Catálogo, insumos y tratamientos realizados |
 | `inventory` | Jorge Flores | ✅ Los 18 endpoints |
 | `clinical-history` | Jorge Flores | ✅ Los 7 endpoints de la historia, con versiones, adjuntos y referencias, , el registro de la atención en una transacción y los 9 del archivo clínico. |

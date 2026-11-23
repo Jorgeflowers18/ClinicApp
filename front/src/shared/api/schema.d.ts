@@ -2836,6 +2836,154 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UserDto"][];
+                        "application/json": components["schemas"]["UserDto"][];
+                        "text/json": components["schemas"]["UserDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UserCreateRequest"];
+                    "text/json": components["schemas"]["UserCreateRequest"];
+                    "application/*+json": components["schemas"]["UserCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UserCreatedDto"];
+                        "application/json": components["schemas"]["UserCreatedDto"];
+                        "text/json": components["schemas"]["UserCreatedDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UserUpdateRequest"];
+                    "text/json": components["schemas"]["UserUpdateRequest"];
+                    "application/*+json": components["schemas"]["UserUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UserDto"];
+                        "application/json": components["schemas"]["UserDto"];
+                        "text/json": components["schemas"]["UserDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{id}/password-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PasswordLinkDto"];
+                        "application/json": components["schemas"]["PasswordLinkDto"];
+                        "text/json": components["schemas"]["PasswordLinkDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/appointments": {
         parameters: {
             query?: never;
@@ -4094,6 +4242,11 @@ export interface components {
             location?: string;
             character?: string;
         };
+        PasswordLinkDto: {
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         PasswordRecoveryRequest: {
             email: string;
         };
@@ -4604,6 +4757,32 @@ export interface components {
             date?: string;
             professionalId?: string;
         };
+        UserCreatedDto: {
+            user: components["schemas"]["UserDto"];
+            passwordLink: components["schemas"]["PasswordLinkDto"];
+        };
+        UserCreateRequest: {
+            name: string;
+            email: string;
+            role: string;
+            /** Format: uuid */
+            professionalId?: null | string;
+        };
+        UserDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: string;
+            role: string;
+            /** Format: uuid */
+            professionalId: null | string;
+            professionalName: null | string;
+            active: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastLoginAt: null | string;
+        };
         UserProfileDto: {
             fullName: string;
             title: string;
@@ -4619,6 +4798,14 @@ export interface components {
             bio?: null | string;
             avatarColor: string;
             avatarImage?: null | string;
+        };
+        UserUpdateRequest: {
+            active?: boolean;
+            name: string;
+            email: string;
+            role: string;
+            /** Format: uuid */
+            professionalId?: null | string;
         };
         Vitals: {
             bloodPressure?: string;

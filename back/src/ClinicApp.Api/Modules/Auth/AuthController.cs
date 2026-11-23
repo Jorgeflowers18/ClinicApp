@@ -188,25 +188,9 @@ public sealed class AuthController(
 
         if (user is not null)
         {
-            var now = DateTime.UtcNow;
-
             // Solo vale el último enlace enviado.
-            await db.PasswordResetTokens
-                .Where(t => t.UserId == user.Id && t.UsedAt == null)
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.UsedAt, now), cancellationToken);
-
-            var rawToken = TokenService.NewOpaqueToken();
-            db.PasswordResetTokens.Add(new PasswordResetToken
-            {
-                Id = Guid.CreateVersion7(),
-                UserId = user.Id,
-                TokenHash = TokenService.Hash(rawToken),
-                CreatedAt = now,
-                ExpiresAt = now.AddMinutes(options.PasswordResetMinutes),
-            });
-            await db.SaveChangesAsync(cancellationToken);
-
-            var link = $"{options.FrontendBaseUrl.TrimEnd('/')}/restablecer-contrasena?token={rawToken}";
+            var link = (await db.CreatePasswordLinkAsync(
+                options, user.Id, TimeSpan.FromMinutes(options.PasswordResetMinutes), cancellationToken)).Url;
             await emailSender.SendAsync(
                 user.Email,
                 "Restablecer tu contraseña de ClinicApp",
@@ -301,9 +285,7 @@ public sealed class AuthController(
     }
 
     private Task RevokeAllSessionsAsync(Guid userId, CancellationToken cancellationToken) =>
-        db.RefreshTokens
-            .Where(t => t.UserId == userId && t.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, DateTime.UtcNow), cancellationToken);
+        db.RevokeAllSessionsAsync(userId, cancellationToken);
 
     private async Task<User?> FindCurrentUserAsync(CancellationToken cancellationToken)
     {

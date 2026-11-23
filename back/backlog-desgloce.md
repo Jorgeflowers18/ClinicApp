@@ -42,7 +42,7 @@ Los 9 planes están implementados, más lo que pidió el frontend el 2026-11-20 
 - Comando de importación de pacientes (cuando se respondan las preguntas).
 - Proveedor real de notificaciones (`INotificationSender`) y de correo para la recuperación de contraseña (hoy solo se escriben en el log).
 - Última visita del paciente calculada desde las atenciones.
-- Gestión de usuarios (crear, asignar rol, desactivar) y revisión de las solicitudes de acceso.
+- Revisión de las solicitudes de acceso (la gestión de usuarios se hizo el 2026-11-22, plan 12 punto 3.3: `api/users`).
 - Limpieza de tokens de sesión vencidos.
 - Etapa B de finanzas; ingresos reales en el reporte de tratamientos.
 - Antivirus de adjuntos.
@@ -51,7 +51,7 @@ Los 9 planes están implementados, más lo que pidió el frontend el 2026-11-20 
 
 **3. Frontend, para consumir la API:** **los planes 0 a 11 están hechos (2026-11-22)**; queda el 12 (`front/docs/planes-implementacion/12-campos-sin-conectar.md`: lo que aún no está conectado, con lo que le toca al back). Antes eran los 12 planes de [`front/docs/planes-implementacion/`](../front/docs/planes-implementacion/README.md), en orden. Lo que esos planes pedían al back ya está hecho (subtítulo de la institución, filtros y tipo de documento de pacientes, archivo clínico digital, registro de la atención en una transacción y alertas del día). Incluyen la sesión con refresh, el estándar de recurso de API, los pares Mock/Real que faltan (`institution` y `finance`), las pantallas nuevas (profesionales y consultorios, pagos, pacientes dados de baja) y los ajustes por módulo. El plan 0 está hecho: el frontend compila, el cliente HTTP normaliza los errores, existía el conmutador `VITE_API_MODULES` (se quitó con el modo demostración en el plan 11) y los tipos se generan desde OpenAPI. La conversión `[0]` → `.0` ya la hace `shared/lib/field-issues.ts`. Quedó del plan 0:
 - **Pruebas unitarias en el front** (Vitest) para `normalizeProblem` y los mapeos: hoy solo hay Playwright. Decidir si se agregan.
-- **Del plan 1 (auth), hecho el 2026-11-21:** sesión con refresh y token solo en memoria, renovación ante el `401`, "Mi perfil", recuperar y restablecer contraseña y solicitar acceso, conectados. Quedan del lado del back: el proveedor de correo (el enlace de recuperación solo sale en el log), la pantalla para revisar las solicitudes de acceso y la gestión de usuarios (ya listados arriba).
+- **Del plan 1 (auth), hecho el 2026-11-21:** sesión con refresh y token solo en memoria, renovación ante el `401`, "Mi perfil", recuperar y restablecer contraseña y solicitar acceso, conectados. Quedan del lado del back: el proveedor de correo (el enlace de recuperación solo sale en el log), y la pantalla para revisar las solicitudes de acceso (listada arriba). La gestión de usuarios se hizo con el plan 12, punto 3.3.
 - **Del plan 2 (institution), hecho el 2026-11-21:** perfil, marca pública y sedes con UUID del servidor, conectados. El logo se recodifica a WebP en el navegador si no es PNG, JPG o WebP (o pesa más de ~500 KB). Pendiente de la clínica: si una sede puede quedar sin nombre (hoy se muestra "Sede N").
 - **Del plan 3 (patients), hecho el 2026-11-21:** lista con filtros del back, alta y edición con errores por campo, baja lógica (`deletedAt`) y reactivación, y la vista de dados de baja para el admin. "Dar de baja" está en el menú de la ficha (no en el de la lista). Pendientes: la búsqueda del back no incluye el correo; confirmar con la clínica que el teléfono sea opcional.
 - **Del plan 4 (agenda), hecho el 2026-11-21:** citas y bloqueos por rango visible, choques y estados validados por el back, sin registro de notificaciones desde el front, selectores solo con activos y `patientName` en cada cita (back, con prueba). Pendiente: mostrar la agenda con la zona de la clínica si algún equipo tiene otra zona. Los detalles están en `front/docs/planes-implementacion/12-campos-sin-conectar.md`.
@@ -134,7 +134,9 @@ Siguen por definir:
 - [ ] Proveedor de correo para la recuperación de contraseña (el mismo de `notifications`).
 - [ ] Despliegue en el Droplet (nginx, servicio `systemd`, migraciones y respaldos): `tutorial/fase-0.md` § 5.9.
 
-**Por definir:** pantalla de gestión de usuarios; quién revisa las solicitudes de acceso.
+**Hecho (2026-11-22):** gestión de usuarios (`api/users`, solo admin) con su pestaña en `/administracion`: crear con un enlace de un solo uso para elegir la contraseña, rol, profesional vinculado y desactivar.
+
+**Por definir:** quién revisa las solicitudes de acceso.
 
 ## `inventory` ✅
 
