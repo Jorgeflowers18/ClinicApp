@@ -9,11 +9,20 @@ import { SearchInput } from "@/shared/components/search-input"
 import { ResponsiveFilterBar } from "@/shared/components/responsive-filter-bar"
 import { formatDateOnly } from "@/shared/lib/date"
 import { formatCurrency } from "@/shared/lib/number"
+import { showDueDates } from "../lib/due-dates"
 import type { FinancialPortfolioRow } from "../types/finance.types"
 
-const statusLabels = { al_dia: "Al día", parcial: "Parcial", vencida: "Vencida" }
+// Sin la etapa B de finanzas no hay vencimientos: ni estado "Vencida", ni vencido, próximo vencimiento o mora
+// (la API daría siempre 0 y null; lib/due-dates.ts).
+const statusLabels: Partial<Record<FinancialPortfolioRow["status"], string>> = showDueDates
+  ? { al_dia: "Al día", parcial: "Parcial", vencida: "Vencida" }
+  : { al_dia: "Al día", parcial: "Parcial" }
+const balanceLabels: Record<string, string> = showDueDates
+  ? { all: "Todos los saldos", pending: "Con pendiente", overdue: "Con vencido" }
+  : { all: "Todos los saldos", pending: "Con pendiente" }
+const dueKeys = ["overdue", "nextDueDate", "daysLate"]
 function PortfolioStatus({ row }: { row: FinancialPortfolioRow }) {
-  return <Badge className="finance-status" data-state={row.status}>{statusLabels[row.status]}</Badge>
+  return <Badge className="finance-status" data-state={row.status}>{statusLabels[row.status] ?? row.status}</Badge>
 }
 function PatientIdentity({ row }: { row: FinancialPortfolioRow }) {
   const initials = row.patientName.trim().split(/\s+/).slice(0, 2).map(name => name[0]).join("")
@@ -22,7 +31,7 @@ function PatientIdentity({ row }: { row: FinancialPortfolioRow }) {
 function Amount({ value, kind }: { value: number; kind: string }) {
   return <span className="finance-amount" data-kind={kind} data-positive={value > 0 || undefined}>{formatCurrency(value)}</span>
 }
-const columns: DataTableColumn<FinancialPortfolioRow>[] = [
+const allColumns: DataTableColumn<FinancialPortfolioRow>[] = [
   { key: "patientName", header: "Paciente", cell: row => <PatientIdentity row={row} /> },
   { key: "treatmentName", header: "Tratamiento", cell: row => row.treatmentName },
   ...(["total", "paid", "pending", "overdue"] as const).map((key, index) => ({
@@ -33,6 +42,9 @@ const columns: DataTableColumn<FinancialPortfolioRow>[] = [
   { key: "daysLate", header: "Días mora", cell: row => row.daysLate },
   { key: "status", header: "Estado", cell: row => <PortfolioStatus row={row} /> },
 ]
+const columns = allColumns.filter(column => showDueDates || !dueKeys.includes(column.key))
+const primaryColumns = columns.filter(column => ["total", "paid", "pending"].includes(column.key))
+const dueColumns = columns.filter(column => dueKeys.includes(column.key))
 
 export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
   const [search, setSearch] = useState("")
@@ -53,9 +65,9 @@ export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
       </Select>
     </div>
     <div><Label htmlFor={prefix + "PortfolioBalance"}>Saldo</Label>
-      <Select value={balance} items={{ all: "Todos los saldos", pending: "Con pendiente", overdue: "Con vencido" }} onValueChange={value => setBalance(value ?? "all")}>
+      <Select value={balance} items={balanceLabels} onValueChange={value => setBalance(value ?? "all")}>
         <SelectTrigger id={prefix + "PortfolioBalance"}><SelectValue /></SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}><SelectItem value="all">Todos los saldos</SelectItem><SelectItem value="pending">Con pendiente</SelectItem><SelectItem value="overdue">Con vencido</SelectItem></SelectContent>
+        <SelectContent alignItemWithTrigger={false}>{Object.entries(balanceLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
       </Select>
     </div>
   </div>
@@ -77,8 +89,8 @@ export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
         return <li key={id}><article aria-labelledby={id}>
           <div className="finance-portfolio-heading"><h3 id={id}><PatientIdentity row={row} /></h3><PortfolioStatus row={row} /></div>
           <p className="finance-treatment-name">{row.treatmentName}</p>
-          <dl className="finance-primary-amounts">{columns.slice(2, 5).map(column => <div key={column.key}><dt>{column.header}</dt><dd>{column.cell(row)}</dd></div>)}</dl>
-          <dl className="finance-secondary-amounts">{columns.slice(5, 8).map(column => <div key={column.key}><dt>{column.header}</dt><dd>{column.cell(row)}</dd></div>)}</dl>
+          <dl className="finance-primary-amounts">{primaryColumns.map(column => <div key={column.key}><dt>{column.header}</dt><dd>{column.cell(row)}</dd></div>)}</dl>
+          {dueColumns.length > 0 && <dl className="finance-secondary-amounts">{dueColumns.map(column => <div key={column.key}><dt>{column.header}</dt><dd>{column.cell(row)}</dd></div>)}</dl>}
         </article></li>
       })}
     </ul>

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react"
 import { ArrowUpRight, CreditCard, DollarSign, ReceiptText, ShieldCheck } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
@@ -10,6 +11,7 @@ import { KpiCard } from "@/modules/reports/components/kpi-card"
 
 import { useFinancialPortfolio } from "../api/finance.queries"
 import { ActivePortfolio } from "../components/active-portfolio"
+import { showDueDates } from "../lib/due-dates"
 import "../finance.css"
 
 export function FinancePage() {
@@ -25,7 +27,7 @@ export function FinancePage() {
     <div className="finance-module space-y-4">
       <PageHeader
         title="Finanzas"
-        description="Gestiona la cartera, pagos y seguros."
+        description={showDueDates ? "Gestiona la cartera, pagos y seguros." : "Gestiona la cartera y los pagos."}
         actions={
           <Button variant="outline" onClick={() => navigate("/tratamientos")}>
             <ArrowUpRight aria-hidden="true" className="size-4" />
@@ -35,11 +37,14 @@ export function FinancePage() {
       />
 
       {isError ? <Alert variant="destructive"><AlertDescription>No se pudo cargar la información financiera. Vuelve a intentarlo más tarde.</AlertDescription></Alert> : <>
-      <div className="finance-metrics">
+      <div className="finance-metrics" style={{ "--finance-kpis": showDueDates ? 4 : 2 } as CSSProperties}>
         <KpiCard label="Cobrado este mes" value={formatCurrency(totalPaid)} icon={DollarSign} iconTone="success" isLoading={isLoading} hintMode="popover" hint="El importe disponible corresponde a todos los pagos registrados en la cartera; actualmente no está limitado al mes en curso." />
         <KpiCard label="Total pendiente" value={formatCurrency(totalPending)} icon={CreditCard} iconTone="warning" isLoading={isLoading} />
-        <KpiCard label="Total vencido" value={formatCurrency(totalOverdue)} icon={ReceiptText} iconTone={totalOverdue > 0 ? "destructive" : "neutral"} isLoading={isLoading} />
-        <KpiCard label="Seguros pendientes" value={dueSoon} icon={ShieldCheck} isLoading={isLoading} hintMode="popover" hint="El contador disponible corresponde a tratamientos con un próximo vencimiento registrado. No representa una confirmación de cobertura ni de deuda de una aseguradora." />
+        {/* Sin la etapa B de finanzas no hay vencimientos ni seguros: la API daría siempre $0 (lib/due-dates.ts). */}
+        {showDueDates && <>
+          <KpiCard label="Total vencido" value={formatCurrency(totalOverdue)} icon={ReceiptText} iconTone={totalOverdue > 0 ? "destructive" : "neutral"} isLoading={isLoading} />
+          <KpiCard label="Seguros pendientes" value={dueSoon} icon={ShieldCheck} isLoading={isLoading} hintMode="popover" hint="El contador disponible corresponde a tratamientos con un próximo vencimiento registrado. No representa una confirmación de cobertura ni de deuda de una aseguradora." />
+        </>}
       </div>
 
       <Card className="finance-portfolio-card">

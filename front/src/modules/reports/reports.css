@@ -62,3 +62,4 @@
   .reports-module .clinic-kpi-copy button[data-slot="button"] { min-width: 44px; min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .report-custom-dates { transition: none; } }
+.report-period-error { margin-top: 8px; color: var(--destructive); font-size: 13px; }

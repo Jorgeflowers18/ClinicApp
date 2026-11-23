@@ -25,10 +25,10 @@ Ningún selector ni lista depende ya de "los primeros 100" ni pide cada paciente
 |---|---|---|---|---|
 | 2.1 | Ficha del paciente, "Última visita" | `lastVisitAt` | El back lo guarda tal cual, sin calcularlo. El front lo calcula con `usePatientLastVisit` (citas e historia), solo para admin y médico. | **Back:** calcularlo desde las atenciones (ya está en `back/backlog-desgloce.md`). |
 | 2.2 | Inicio, tarjeta "Tratamientos activos" | `summary.activeTreatments` | La API solo registra tratamientos completados (una sesión), así que con datos reales siempre da 0. | **Decisión de diseño:** cambiarla por "Tratamientos realizados en el periodo" (**back:** campo nuevo en `GET /reports/summary`). |
-| 2.3 | Finanzas: "Total vencido", "Próximo vencimiento", cuotas, seguro y factura | `overdue`, `nextDueDate`, `installments`, `insurance`, `invoice` | La API responde 0, `null` y listas vacías hasta la etapa B. Las secciones ya se ocultan cuando vienen vacías, pero "Total vencido" muestra $0 y "Próximo vencimiento", "Sin vencimientos pendientes". | **Decisión de la clínica** (ítem 8: cuotas, seguros y factura electrónica). Mientras tanto, **front:** ocultar "Total vencido" y "Próximo vencimiento" con la API. |
+| 2.3 | Finanzas: "Total vencido", "Próximo vencimiento", cuotas, seguro y factura | `overdue`, `nextDueDate`, `installments`, `insurance`, `invoice` | La API responde 0, `null` y listas vacías hasta la etapa B. Las secciones ya se ocultan cuando vienen vacías, pero "Total vencido" muestra $0 y "Próximo vencimiento", "Sin vencimientos pendientes". | **Decisión de la clínica** (ítem 8: cuotas, seguros y factura electrónica). ✅ **Front, hecho (2026-11-22):** `finance/lib/due-dates.ts` (`showDueDates = false`) oculta "Total vencido", "Seguros pendientes", las columnas Vencido, Próximo venc. y Días mora, el estado y el filtro "Vencida", y en la ficha "Total vencido" y "Próximo vencimiento". Al llegar la etapa B, poner `true`. |
 | 2.4 | Reporte de tratamientos | `estimatedRevenue` | Es una estimación (precio × realizados), no lo cobrado. | **Back:** ingresos reales desde los pagos (etapa B de finanzas). |
 | 2.5 | Historial de notificaciones, columna Paciente | La cédula debajo del nombre | La API trae `patientName` pero no la cédula: con la API se muestra "—". | **Back:** sumar `patientDocumentId` a la notificación, o **front:** quitar la segunda línea. |
-| 2.6 | Lista de pacientes, buscador | El texto dice "nombre, documento, teléfono o correo" | La API busca por nombres, documento, teléfono y N.° de historia, **no por correo**. | **Front:** cambiar el texto, o **back:** buscar también por correo. |
+| 2.6 | Lista de pacientes, buscador | El texto dice "nombre, documento, teléfono o correo" | La API busca por nombres, documento, teléfono y N.° de historia, **no por correo**. | ✅ **Front, hecho (2026-11-22):** el texto dice "nombre, documento, teléfono o N.° de historia". Si la clínica quiere buscar por correo, sumarlo en el back. |
 
 ## 3. Controles deshabilitados o sin pantalla
 
@@ -46,7 +46,7 @@ Ningún selector ni lista depende ya de "los primeros 100" ni pide cada paciente
 | # | Qué | Qué hace falta |
 |---|---|---|
 | 4.1 | La agenda muestra las horas en la zona del **navegador**; el back guarda en la zona de la clínica (`America/Guayaquil`). Un equipo con otra zona vería la agenda corrida. | **Front:** formatear con la zona de la clínica (necesita adaptar `react-big-calendar`). Bajo riesgo mientras todos los equipos estén en Ecuador. |
-| 4.2 | Reportes: un periodo inválido (más de 366 días) da `400`, que hoy se muestra como error genérico. | **Front:** mostrarlo junto al selector de periodo. |
+| 4.2 | Reportes: un periodo inválido (más de 366 días) da `400`, que hoy se muestra como error genérico. | ✅ **Front, hecho (2026-11-22):** `periodError` (`reports/lib/period.ts`, las mismas reglas del back) muestra el error junto a las fechas, con el campo marcado; las pestañas siguen con el último periodo válido y no se pide el inválido. Un `400` del servidor con `errors.from`/`errors.to` se muestra igual. |
 | 4.3 | `GET /notifications` responde `IActionResult`: el OpenAPI no trae su forma y el front la declara a mano (`notifications.http.ts`). | **Back:** `ProducesResponseType` para que salga en los tipos generados. |
 | 4.4 | `PageQuery` del back publica `SafePage` y `SafePageSize` como parámetros en el OpenAPI. | **Back:** ocultarlos (`[BindNever]` o propiedades no públicas). |
 | 4.5 | Alertas leídas, vista del archivo clínico y tema se guardan en el navegador. | Es intencional (preferencias del navegador). Opcional: guardarlas por usuario en el back. |
@@ -54,7 +54,7 @@ Ningún selector ni lista depende ya de "los primeros 100" ni pide cada paciente
 ## Orden sugerido
 
 1. ~~Punto 1 completo~~ ✅ (2026-11-22).
-2. 2.3, 2.6 y 4.2 (cambios chicos del front).
+2. ~~2.3, 2.6 y 4.2~~ ✅ (2026-11-22).
 3. 3.2 y 3.3 (pantallas de administración).
 4. Lo que espera decisiones: 2.2, 2.3 (etapa B), 3.1 y 3.6.
 

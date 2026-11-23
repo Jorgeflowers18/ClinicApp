@@ -51,7 +51,7 @@
 .finance-secondary-amounts dd { font-size: 12px; margin-top: 3px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .finance-portfolio-empty { padding: 24px 16px; color: var(--muted-foreground); font-size: 14px; text-align: center; }
 .finance-portfolio-count { padding: 8px 16px 0; font-size: 12px; color: var(--muted-foreground); }
-@container finance-content (min-width: 62rem) { .finance-metrics { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+@container finance-content (min-width: 62rem) { .finance-metrics { grid-template-columns: repeat(var(--finance-kpis, 4), minmax(0,1fr)); } }
 @container finance-content (max-width: 34rem) {
   .finance-module .clinic-kpi-card > [data-slot="card-content"] { display: block; position: relative; min-height: 104px; }
   .finance-module .clinic-kpi-copy > .clinic-kpi-label, .finance-module .clinic-kpi-copy > div:first-child { min-height: 44px; }

@@ -1,5 +1,5 @@
 import { ClinicalFileManager } from "@/modules/clinical-history/archive/components/clinical-file-manager"
-import { useState } from "react"
+import { useState, type CSSProperties } from "react"
 import { useNavigate } from "react-router-dom"
 import { CalendarDays, CalendarClock, CheckCheck, ChevronDown, CircleAlert, Clock3, FileText, ReceiptText, Stethoscope, UserRound, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import { useTreatment, usePatientAssignments } from "@/modules/treatments/api/tr
 import { assignmentStatusLabels } from "@/modules/treatments/types/treatment.types"
 import { usePatientFinancialSummary, useTreatmentFinancialSummary } from "@/modules/finance/api/finance.queries"
 import { RegisterPaymentDialog, VoidPaymentDialog } from "@/modules/finance/components/payment-dialogs"
+import { showDueDates } from "@/modules/finance/lib/due-dates"
 import type { FinancialPayment } from "@/modules/finance/types/finance.types"
 import { useClinicalHistory } from "@/modules/clinical-history/api/clinical-history.queries"
 import { dataConsentStatusLabels } from "@/modules/clinical-history/types/clinical-history.types"
@@ -107,14 +108,16 @@ export function PatientFinances({ patientId, canOpenPortfolio }: { patientId: st
   if (query.isLoading) return <Skeleton className="h-28 w-full" />
   if (query.isError || !query.data) return <div role="alert" className="patient-source-error">No se pudo cargar el resumen financiero.<Button variant="outline" onClick={() => query.refetch()}>Reintentar</Button></div>
   const data = query.data
-  return <div className="patient-related-tab"><div className="patient-tab-heading"><h2><Wallet aria-hidden="true" />Información financiera</h2>{canOpenPortfolio && <Button variant="outline" onClick={() => navigate("/finanzas")}>Ver cartera financiera</Button>}</div><dl className="patient-financial-summary">
-    {[
-      { label: "Total tratamientos", value: String(data.totalTreatments), icon: Stethoscope, tone: "neutral" },
-      { label: "Total pagado", value: formatCurrency(data.totalPaid), icon: CheckCheck, tone: "success" },
-      { label: "Total pendiente", value: formatCurrency(data.totalPending), icon: Clock3, tone: "warning" },
-      { label: "Total vencido", value: formatCurrency(data.totalOverdue), icon: CircleAlert, tone: data.totalOverdue > 0 ? "danger" : "neutral" },
-    ].map(({ label, value, icon: Icon, tone }) => <div key={label} data-tone={tone}><Icon aria-hidden="true" /><div><dt>{label}</dt><dd>{value}</dd></div></div>)}
-  </dl><p className="patient-next-due"><CalendarClock aria-hidden="true" />Próximo vencimiento: <strong>{data.nextDueDate ? formatDateOnly(data.nextDueDate) : "Sin vencimientos pendientes"}</strong></p>{canOpenPortfolio && <PatientFinancialMovements patientId={patientId} />}</div>
+  // "Total vencido" y "Próximo vencimiento" esperan la etapa B de finanzas (finance/lib/due-dates.ts).
+  const amounts = [
+    { label: "Total tratamientos", value: String(data.totalTreatments), icon: Stethoscope, tone: "neutral" },
+    { label: "Total pagado", value: formatCurrency(data.totalPaid), icon: CheckCheck, tone: "success" },
+    { label: "Total pendiente", value: formatCurrency(data.totalPending), icon: Clock3, tone: "warning" },
+    ...(showDueDates ? [{ label: "Total vencido", value: formatCurrency(data.totalOverdue), icon: CircleAlert, tone: data.totalOverdue > 0 ? "danger" : "neutral" }] : []),
+  ]
+  return <div className="patient-related-tab"><div className="patient-tab-heading"><h2><Wallet aria-hidden="true" />Información financiera</h2>{canOpenPortfolio && <Button variant="outline" onClick={() => navigate("/finanzas")}>Ver cartera financiera</Button>}</div><dl className="patient-financial-summary" style={{ "--summary-columns": amounts.length } as CSSProperties}>
+    {amounts.map(({ label, value, icon: Icon, tone }) => <div key={label} data-tone={tone}><Icon aria-hidden="true" /><div><dt>{label}</dt><dd>{value}</dd></div></div>)}
+  </dl>{showDueDates && <p className="patient-next-due"><CalendarClock aria-hidden="true" />Próximo vencimiento: <strong>{data.nextDueDate ? formatDateOnly(data.nextDueDate) : "Sin vencimientos pendientes"}</strong></p>}{canOpenPortfolio && <PatientFinancialMovements patientId={patientId} />}</div>
 }
 
 export function PatientDocuments({ patientId }: { patientId: string }) {

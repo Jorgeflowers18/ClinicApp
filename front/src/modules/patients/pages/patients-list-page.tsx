@@ -72,7 +72,7 @@ export function PatientsListPage() {
       ].map(({ label, source, icon: Icon, tone }) => <div key={label} className="patient-statistic" data-tone={tone}><span><Icon aria-hidden="true" /></span><div><strong>{source.isLoading || source.isError ? "—" : source.data?.totalItems ?? "—"}</strong><p>{label}</p></div></div>)}
     </div>
     <div className="patient-toolbar">
-      <SearchInput value={search} onChange={setSearch} ariaLabel="Buscar pacientes" placeholder="Buscar por nombre, documento, teléfono o correo…" className="clinic-patients-search" />
+      <SearchInput value={search} onChange={setSearch} ariaLabel="Buscar pacientes" placeholder="Buscar por nombre, documento, teléfono o N.° de historia…" className="clinic-patients-search" />
       <div className="patient-status-filter"><label htmlFor="patient-status-filter">Estado</label>
         <Select items={{ all: "Todos", ...Object.fromEntries(treatmentStatusOptions.map(option => [option.value, option.label])) }} value={filters.status ?? "all"} onValueChange={value => changeFilters({ status: value === "all" ? undefined : value as Patient["treatmentStatus"] })}>
           <SelectTrigger id="patient-status-filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{treatmentStatusOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>

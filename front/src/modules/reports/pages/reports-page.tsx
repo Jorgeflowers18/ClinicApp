@@ -10,8 +10,9 @@ import { InventoryReportTab } from "../components/inventory-report-tab"
 import { PeriodSelector } from "../components/period-selector"
 import { ProductivityReportTab } from "../components/productivity-report-tab"
 import { TreatmentsReportTab } from "../components/treatments-report-tab"
-import { getPresetPeriod } from "../lib/period"
-import type { ReportPeriodState } from "../types/report.types"
+import { useReportsSummary } from "../api/reports.queries"
+import { getPresetPeriod, periodError, serverPeriodError } from "../lib/period"
+import type { ReportPeriod, ReportPeriodState } from "../types/report.types"
 import "../reports.css"
 
 export function ReportsPage() {
@@ -19,6 +20,19 @@ export function ReportsPage() {
     preset: "last30",
     period: getPresetPeriod("last30"),
   })
+  // Las pestañas usan el último periodo válido: uno inválido (más de 366 días, o la fecha final antes de la
+  // inicial) no se pide al servidor y su error queda junto al selector.
+  const [applied, setApplied] = useState<ReportPeriod>(state.period)
+  const invalid = periodError(state.period)
+  // Misma consulta que la pestaña Agenda (se comparte la caché): si el servidor rechaza el periodo, su mensaje
+  // también va junto al selector.
+  const summary = useReportsSummary(applied)
+  const error = invalid ?? serverPeriodError(summary.error)
+
+  function changePeriod(next: ReportPeriodState) {
+    setState(next)
+    if (!periodError(next.period)) setApplied(next.period)
+  }
 
   return (
     <div className="reports-module space-y-4">
@@ -27,7 +41,7 @@ export function ReportsPage() {
         description="Indicadores de agenda, productividad, tratamientos e inventario."
       />
 
-      <PeriodSelector value={state} onChange={setState} />
+      <PeriodSelector value={state} onChange={changePeriod} error={error} />
 
       <AdaptiveTabs
         variant="line"
@@ -40,16 +54,16 @@ export function ReportsPage() {
         ]}
       >
         <TabsContent value="agenda" className="pt-4">
-          <AgendaReportTab period={state.period} />
+          <AgendaReportTab period={applied} />
         </TabsContent>
         <TabsContent value="productividad" className="pt-4">
-          <ProductivityReportTab period={state.period} />
+          <ProductivityReportTab period={applied} />
         </TabsContent>
         <TabsContent value="tratamientos" className="pt-4">
-          <TreatmentsReportTab period={state.period} />
+          <TreatmentsReportTab period={applied} />
         </TabsContent>
         <TabsContent value="inventario" className="pt-4">
-          <InventoryReportTab period={state.period} />
+          <InventoryReportTab period={applied} />
         </TabsContent>
       </AdaptiveTabs>
     </div>
