@@ -2,7 +2,14 @@ import type { components } from "@/shared/api/schema"
 import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/shared/lib/http"
 
 import type { AgendaCatalogsApi, AppointmentsApi } from "./appointments.contract"
-import type { Appointment, AppointmentFormValues, ScheduleBlock, ScheduleBlockFormValues } from "../types/appointment.types"
+import type {
+  Appointment,
+  AppointmentFormValues,
+  ProfessionalFormValues,
+  RoomFormValues,
+  ScheduleBlock,
+  ScheduleBlockFormValues,
+} from "../types/appointment.types"
 
 type AppointmentDto = components["schemas"]["AppointmentDto"]
 type AppointmentRequest = components["schemas"]["AppointmentRequest"]
@@ -10,6 +17,9 @@ type ScheduleBlockDto = components["schemas"]["ScheduleBlockDto"]
 type ScheduleBlockRequest = components["schemas"]["ScheduleBlockRequest"]
 type ProfessionalDto = components["schemas"]["ProfessionalDto"]
 type RoomDto = components["schemas"]["RoomDto"]
+type ProfessionalRequest = components["schemas"]["ProfessionalRequest"]
+type ProfessionalUpdateDto = components["schemas"]["ProfessionalUpdateDto"]
+type RoomRequest = components["schemas"]["RoomRequest"]
 
 export const toAppointment = (dto: AppointmentDto): Appointment => ({
   id: dto.id,
@@ -89,4 +99,27 @@ export const httpAgendaCatalogsApi: AgendaCatalogsApi = {
   async listRooms(signal) {
     return (await apiGet<RoomDto[]>("/rooms", { signal })).map((dto) => ({ ...dto }))
   },
+  async createProfessional(values) {
+    return { ...(await apiPost<ProfessionalDto>("/professionals", toProfessionalRequest(values, null))) }
+  },
+  async updateProfessional(id, values, userId) {
+    return { ...(await apiPut<ProfessionalUpdateDto>(`/professionals/${id}`, toProfessionalRequest(values, userId))) }
+  },
+  async createRoom(values) {
+    return { ...(await apiPost<RoomDto>("/rooms", toRoomRequest(values))) }
+  },
+  async updateRoom(id, values) {
+    return { ...(await apiPut<RoomDto>(`/rooms/${id}`, toRoomRequest(values))) }
+  },
 }
+
+// El PUT reemplaza el usuario vinculado: sin `userId` lo desvincularía, por eso se manda el que ya tenía.
+const toProfessionalRequest = (values: ProfessionalFormValues, userId: string | null): ProfessionalRequest => ({
+  name: values.name.trim(),
+  specialty: values.specialty.trim(),
+  registrationNumber: values.registrationNumber.trim() || null,
+  active: values.active,
+  userId,
+})
+
+const toRoomRequest = (values: RoomFormValues): RoomRequest => ({ name: values.name.trim(), active: values.active })

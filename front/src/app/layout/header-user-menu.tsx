@@ -1,4 +1,4 @@
-import { Building2, ChevronDown, LogOut, UserRound } from "lucide-react"
+import { Building2, ChevronDown, LogOut, Settings2, UserRound } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -36,6 +36,7 @@ export function HeaderUserMenu() {
       <DropdownMenuSeparator />
       {link("/perfil-usuario", "Mi perfil", <UserRound />)}
       {user?.role === "admin" && link("/perfil-institucion", "Perfil institucional", <Building2 />)}
+      {user?.role === "admin" && link("/administracion", "Administración", <Settings2 />)}
       <DropdownMenuSeparator />
       <DropdownMenuItem disabled={logout.isPending} onClick={() => { if (!logout.isPending) logout.mutate() }}>
         <LogOut />{logout.isPending ? "Cerrando sesión…" : "Cerrar sesión"}

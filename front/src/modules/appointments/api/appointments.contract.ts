@@ -3,7 +3,10 @@ import type {
   AppointmentFormValues,
   AppointmentStatus,
   Professional,
+  ProfessionalFormValues,
+  ProfessionalUpdateResult,
   Room,
+  RoomFormValues,
   ScheduleBlock,
   ScheduleBlockFormValues,
 } from "../types/appointment.types"
@@ -37,8 +40,17 @@ export interface AppointmentsApi {
   removeScheduleBlock(id: string): Promise<void>
 }
 
-/** Catálogos de la agenda. Traen también los inactivos: los selectores muestran solo los activos. */
+/**
+ * Catálogos de la agenda. Traen también los inactivos: los selectores muestran solo los activos.
+ * Crear y editar es solo del admin (`403` si no). No se borran: se desactivan.
+ */
 export interface AgendaCatalogsApi {
   listProfessionals(signal?: AbortSignal): Promise<Professional[]>
   listRooms(signal?: AbortSignal): Promise<Room[]>
+  createProfessional(values: ProfessionalFormValues): Promise<Professional>
+  /** `userId` es el usuario vinculado que se conserva (o `null` para desvincularlo). */
+  updateProfessional(id: string, values: ProfessionalFormValues, userId: string | null): Promise<ProfessionalUpdateResult>
+  /** Un consultorio activo con el mismo nombre responde `409` con `errors.name`. */
+  createRoom(values: RoomFormValues): Promise<Room>
+  updateRoom(id: string, values: RoomFormValues): Promise<Room>
 }

@@ -5,7 +5,14 @@ import { notificationsKeys } from "@/modules/notifications/api/notifications.que
 
 import { appointmentsApi } from "./appointments.api"
 import type { DateRange } from "./appointments.contract"
-import type { Appointment, AppointmentFormValues, ScheduleBlockFormValues } from "../types/appointment.types"
+import type {
+  Appointment,
+  AppointmentFormValues,
+  Professional,
+  ProfessionalFormValues,
+  RoomFormValues,
+  ScheduleBlockFormValues,
+} from "../types/appointment.types"
 
 export const appointmentsKeys = {
   all: ["appointments"] as const,
@@ -121,6 +128,28 @@ export function useDeleteScheduleBlock() {
     mutationFn: (id: string) => appointmentsApi.removeScheduleBlock(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: appointmentsKeys.scheduleBlocks })
+    },
+  })
+}
+
+/** Pantalla de administración (solo admin): crear y editar profesionales y consultorios. */
+export function useSaveProfessional() {
+  return useMutation({
+    // Al editar, la respuesta trae además `futureAppointments`.
+    mutationFn: ({ id, values, userId }: { id?: string; values: ProfessionalFormValues; userId?: string | null }): Promise<Professional & { futureAppointments?: number }> =>
+      id ? appointmentsApi.updateProfessional(id, values, userId ?? null) : appointmentsApi.createProfessional(values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: appointmentsKeys.professionals })
+    },
+  })
+}
+
+export function useSaveRoom() {
+  return useMutation({
+    mutationFn: ({ id, values }: { id?: string; values: RoomFormValues }) =>
+      id ? appointmentsApi.updateRoom(id, values) : appointmentsApi.createRoom(values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: appointmentsKeys.rooms })
     },
   })
 }

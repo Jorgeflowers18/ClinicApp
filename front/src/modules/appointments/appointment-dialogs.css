@@ -30,3 +30,10 @@
   .clinic-schedule-times { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .clinic-schedule-form > [data-form-actions] { padding-inline: 16px; }
 }
+
+/* Formularios cortos de la pantalla de administración (profesional, consultorio). */
+.clinic-catalog-dialog[data-slot="dialog-content"] { width: min(560px, calc(100vw - 48px)); }
+.clinic-catalog-dialog .clinic-schedule-fields[data-slot="field-group"] { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 767px) {
+  .clinic-catalog-dialog[data-slot="dialog-content"] { width: 100vw; }
+}

@@ -35,7 +35,7 @@ Ningún selector ni lista depende ya de "los primeros 100" ni pide cada paciente
 | # | Dónde | Qué | Qué hace falta |
 |---|---|---|---|
 | 3.1 | Inicio de sesión | Casilla "Recordarme" deshabilitada ("aún no está disponible") | **Decisión:** con la cookie de renovación la sesión ya sobrevive a la recarga (7 días). O se quita la casilla, o el back acepta `rememberMe` para alargar la cookie. |
-| 3.2 | Agenda | Administrar profesionales y consultorios (nombre, especialidad, registro, activo, usuario vinculado) | El back tiene `POST`/`PUT /professionals` y `/rooms`; **front:** pantalla nueva (admin). Al desactivar, mostrar "Tiene N citas futuras" (`futureAppointments`). |
+| 3.2 | Agenda | Administrar profesionales y consultorios (nombre, especialidad, registro, activo, usuario vinculado) | ✅ **Front, hecho (2026-11-22):** `/administracion` (solo admin, en el menú de usuario) con las pestañas Profesionales y Consultorios: alta, edición y activo. Al desactivar un profesional con citas futuras se avisa "Tiene N citas futuras". El usuario vinculado se conserva al guardar; elegirlo llega con 3.3. |
 | 3.3 | Usuarios | Crear usuarios, asignar rol, desactivar, vincular a un profesional | **Back y front** (está en el backlog). Hoy los usuarios solo salen del `UserSeeder`. |
 | 3.4 | Solicitudes de acceso | Se envían (`POST /auth/access-requests`) pero nadie las ve | **Back:** listado y aprobación; **front:** pantalla para el admin. |
 | 3.5 | Recuperar contraseña | El enlace solo sale en el log del back | **Back:** proveedor de correo real. |
@@ -55,7 +55,7 @@ Ningún selector ni lista depende ya de "los primeros 100" ni pide cada paciente
 
 1. ~~Punto 1 completo~~ ✅ (2026-11-22).
 2. ~~2.3, 2.6 y 4.2~~ ✅ (2026-11-22).
-3. 3.2 y 3.3 (pantallas de administración).
+3. ~~3.2~~ ✅ (2026-11-22) y 3.3 (usuarios: falta el back).
 4. Lo que espera decisiones: 2.2, 2.3 (etapa B), 3.1 y 3.6.
 
 ## Terminado

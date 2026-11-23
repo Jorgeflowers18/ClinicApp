@@ -29,6 +29,7 @@ import { FinancePage } from "@/modules/finance/pages/finance-page"
 import { ReportsPage } from "@/modules/reports/pages/reports-page"
 
 import { AppLayout } from "./layout/app-layout"
+import { AdministrationPage } from "./pages/administration-page"
 import { DashboardPage } from "./pages/dashboard-page"
 import { ForbiddenPage } from "./pages/forbidden-page"
 import { NotFoundPage } from "./pages/not-found-page"
@@ -108,6 +109,7 @@ export function AppRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route path="/perfil-institucion" element={<InstitutionProfilePage />} />
+            <Route path="/administracion" element={<AdministrationPage />} />
             <Route path="/reportes" element={<ReportsPage />} />
           </Route>
         </Route>
