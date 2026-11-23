@@ -40,6 +40,9 @@ export const httpNotificationsApi: NotificationsApi = {
     const page = await apiGet<Paginated<NotificationLogDto>>("/notifications", { params: query, signal })
     return { ...page, items: page.items.map(toLog) }
   },
+  async getSummary(signal) {
+    return apiGet<components["schemas"]["NotificationSummaryDto"]>("/notifications/summary", { signal })
+  },
   async listByAppointment(appointmentId, signal) {
     return (await apiGet<NotificationLogDto[]>("/notifications", { params: { appointmentId }, signal })).map(toLog)
   },

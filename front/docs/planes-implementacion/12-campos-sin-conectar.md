@@ -6,16 +6,18 @@ Después de los planes 0 a 10, cada pantalla lee y guarda en la API. Esta lista 
 
 Cada punto dice qué se ve hoy, por qué no está conectado y qué hace falta (front, back o una decisión).
 
-## 1. Lecturas que no escalan (urgente antes de importar los 820 pacientes)
+## 1. Lecturas que no escalan — ✅ hecho (2026-11-22)
 
-| # | Pantalla | Qué pasa hoy | Qué hace falta |
-|---|---|---|---|
-| 1.1 | Nueva cita y editar cita (`appointment-form-dialog.tsx`) | El selector de paciente carga solo los **primeros 100** (`usePatientsList({ pageSize: 100 })`). El paciente 101 no se puede elegir. | **Front:** selector con búsqueda en el servidor (`GET /patients?search=`), con el paciente actual precargado (`usePatient`). |
-| 1.2 | Lista de atenciones `/historial-clinico` | El nombre del paciente de cada fila sale de los primeros 100 pacientes. | **Back:** `patientName` en `EncounterListItemDto` (como ya se hizo en las citas). **Front:** usarlo. |
-| 1.3 | Detalle del tratamiento, "Pacientes que recibieron este tratamiento" | Una petición `GET /patients/:id` por cada paciente de la tabla. | **Back:** `patientName` en `TreatmentAssignmentDto`. **Front:** usarlo y quitar el `useQueries`. |
-| 1.4 | Historial de notificaciones `/notificaciones` | Lee **todo** el historial (`fetchAllPages`) para calcular los 4 indicadores y filtrar por canal, estado y tipo en el navegador. | **Back:** filtros `channel`, `status` y `type` en `GET /notifications`, y un resumen con los 4 indicadores. **Front:** paginar en el servidor. |
-| 1.5 | Archivo clínico: nombres de tratamientos | `clinical-file-manager.tsx` resuelve los nombres con la primera página de 100 del catálogo. | **Front:** usar `references.treatments` de la historia (ya llega con la API). |
-| 1.6 | Selectores de insumos (tratamientos, órdenes, esterilización) | `fetchAllPages` junta páginas de 100. Funciona, pero con muchos insumos son varias peticiones. | **Back:** un listado liviano para selectores (`?all=true` o `/inventory/items/options`). |
+Ningún selector ni lista depende ya de "los primeros 100" ni pide cada paciente por separado:
+
+- **1.1** Nueva cita y editar cita, y el filtro de paciente de `/historial-clinico`: `PatientCombobox` (`modules/patients/components/patient-combobox.tsx`) busca en el servidor (`GET /patients?search=`, 20 resultados) y lee aparte al paciente elegido. El calendario ya no carga pacientes: cada cita trae `patientName`.
+- **1.2** `patientName` en `EncounterListItemDto` (back, con prueba); la lista de atenciones lo usa.
+- **1.3** `patientName` y `treatmentName` en `TreatmentAssignmentDto` (back, con prueba); el detalle del tratamiento ya no hace un `GET /patients/:id` por fila.
+- **1.4** `GET /notifications` filtra por `channel`, `status`, `type` e `id`, y `GET /notifications/summary` da los indicadores (back, con pruebas); la página pagina en el servidor y ya no lee todo el historial.
+- **1.5** El archivo clínico nombra los tratamientos con `treatmentName` del tratamiento realizado. La historia (`record-workspace`, `treatment-plan-tab`) usa el catálogo completo (`useTreatmentCatalog`) en vez de la primera página de 100.
+- **1.6** `GET /inventory/items/options` (back, con prueba): todos los insumos, solo `{ id, name, unit, kind }`. Lo usan los selectores de tratamientos, órdenes de compra y esterilización (`useInventoryOptions`).
+
+**Queda (no urgente):** la pestaña Insumos y "Stock crítico" de Inventario siguen leyendo el catálogo completo con `fetchAllPages` (necesitan stock, costo y proveedor, y filtran en el navegador); y el catálogo de tratamientos completo (`useTreatmentCatalog`) también se junta en páginas de 100. Con pocos cientos de registros alcanza; si crecen, paginar y filtrar en el servidor.
 
 ## 2. Campos que se muestran sin dato real
 
@@ -51,8 +53,8 @@ Cada punto dice qué se ve hoy, por qué no está conectado y qué hace falta (f
 
 ## Orden sugerido
 
-1. Punto 1 completo (sin él, la app no sirve con los pacientes reales).
-2. 1.5, 2.3, 2.6 y 4.2 (cambios chicos del front).
+1. ~~Punto 1 completo~~ ✅ (2026-11-22).
+2. 2.3, 2.6 y 4.2 (cambios chicos del front).
 3. 3.2 y 3.3 (pantallas de administración).
 4. Lo que espera decisiones: 2.2, 2.3 (etapa B), 3.1 y 3.6.
 

@@ -23,7 +23,7 @@ El orden importa: las pantallas se cruzan por id (una cita apunta a un paciente,
 | 8 | ✅ Hecho (2026-11-22). `notifications`: plantilla, historial, mensajería y alertas | 2, 3, 4 | ✅ `GET /alerts`, y `patientName` y `message` en el historial (`d0aeeed`) |
 | 9 | ✅ Hecho (2026-11-22). `finance`: cartera, resúmenes y pagos | 3, 5 | No |
 | 10 | ✅ Hecho (2026-11-22). `reports`: reportes e Inicio | 4–9 | No |
-| 12 | [`12-campos-sin-conectar.md`](./12-campos-sin-conectar.md): campos, selectores y controles que aún no usan datos reales | 0–10 | Sí (varios puntos) |
+| 12 | [`12-campos-sin-conectar.md`](./12-campos-sin-conectar.md): campos, selectores y controles que aún no usan datos reales. **Punto 1 hecho** (2026-11-22): lecturas que no escalaban | 0–10 | Sí (varios puntos) |
 
 **El back ya no bloquea ningún plan:** lo que los planes 2, 3, 7 y 8 le pedían está implementado, con pruebas, y documentado en `back/docs/endpoints-api.md`. Queda una sola decisión de la clínica que afecta al frontend: si el teléfono del paciente es opcional. La API ya lo acepta vacío.
 

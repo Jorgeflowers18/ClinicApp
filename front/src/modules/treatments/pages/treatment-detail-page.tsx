@@ -1,6 +1,5 @@
 import { useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { useQueries } from "@tanstack/react-query"
 import { ArrowLeft, Banknote, Clock, FileText, Package, Pencil, Wallet } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -13,11 +12,10 @@ import { formatDateOnly } from "@/shared/lib/date"
 import { formatCurrency } from "@/shared/lib/number"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
-import { patientsApi } from "@/modules/patients/api/patients.api"
-import { patientsKeys } from "@/modules/patients/api/patients.queries"
+import { getProfileInitials } from "@/modules/auth/components/profile-initials"
 import { useTreatmentPortfolio } from "@/modules/finance/api/finance.queries"
 import { useTreatment, useTreatmentAssignments } from "../api/treatments.queries"
-import { useTreatmentInventory } from "../hooks/use-treatment-options"
+import { useInventoryOptions } from "@/modules/inventory/hooks/use-inventory-options"
 import { TreatmentFormDialog } from "../components/treatment-form-dialog"
 import { TreatmentSessionProgress } from "../components/treatment-session-progress"
 import { TreatmentStatus } from "../components/treatment-status"
@@ -36,7 +34,7 @@ export function TreatmentDetailPage() {
   const treatmentQuery = useTreatment(id)
   const { data: treatment } = treatmentQuery
   const assignments = useTreatmentAssignments(id)
-  const inventory = useTreatmentInventory()
+  const inventory = useInventoryOptions()
   // Montos solo para admin y recepción (el médico recibe 403): la suma de la cartera de todos sus pacientes.
   const canSeeFinance = useAuthStore(state => state.user?.role === "admin" || state.user?.role === "recepcion")
   const financial = useTreatmentPortfolio(id, { enabled: canSeeFinance })
@@ -44,8 +42,6 @@ export function TreatmentDetailPage() {
   const returnFocus = useRef<HTMLElement | null>(null)
   const canOpenHistory = useAuthStore(state => state.user?.role === "admin" || state.user?.role === "medico")
   const received = [...(assignments.data ?? [])].sort((a, b) => b.startDate.localeCompare(a.startDate))
-  const patientIds = [...new Set(received.map(item => item.patientId))]
-  const patients = useQueries({ queries: patientIds.map(patientId => ({ queryKey: patientsKeys.detail(patientId), queryFn: () => patientsApi.get(patientId) })) })
 
   if(treatmentQuery.isPending) return <div className="space-y-4"><Skeleton className="h-10 w-72" /><Skeleton className="h-48 w-full" /></div>
   if(!treatment) return <Alert variant="destructive"><AlertTitle>No se pudo cargar el tratamiento</AlertTitle><AlertDescription>{getErrorMessage(treatmentQuery.error)}</AlertDescription></Alert>
@@ -53,9 +49,9 @@ export function TreatmentDetailPage() {
   const columns: DataTableColumn<TreatmentAssignment>[] = [
     {
       key: "patient", header: "Paciente", cell: row => {
-        const query = patients[patientIds.indexOf(row.patientId)], patient = query?.data
-        const name = patient ? patient.firstName + " " + patient.lastName : query?.isPending ? "Cargando paciente…" : "Paciente no disponible"
-        const initials = patient ? ((patient.firstName[0] ?? "") + (patient.lastName[0] ?? "")).toUpperCase() : "?"
+        // El nombre viene en cada tratamiento realizado: no se pide cada paciente por separado.
+        const name = row.patientName || "Paciente no disponible"
+        const initials = getProfileInitials(row.patientName) || "?"
         return <div className="treatment-recipient"><Avatar size="sm" aria-hidden="true"><AvatarFallback>{initials}</AvatarFallback></Avatar><span className="font-medium">{name}</span></div>
       }
     },

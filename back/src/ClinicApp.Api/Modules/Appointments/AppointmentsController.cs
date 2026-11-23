@@ -1,6 +1,7 @@
 using ClinicApp.Api.Common;
 using ClinicApp.Api.Data;
 using ClinicApp.Api.Modules.Auth;
+using ClinicApp.Api.Modules.Patients;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -157,15 +158,8 @@ public class AppointmentsController(
         return await ToDtoAsync(appointment, cancellationToken);
     }
 
-    /// <summary>"Nombres Apellidos" de cada paciente, en una sola consulta (también los dados de baja).</summary>
-    private async Task<Dictionary<Guid, string>> PatientNamesAsync(IEnumerable<Guid> patientIds, CancellationToken cancellationToken)
-    {
-        var ids = patientIds.Distinct().ToList();
-        if (ids.Count == 0) return [];
-        return await db.Patients.AsNoTracking()
-            .Where(patient => ids.Contains(patient.Id))
-            .ToDictionaryAsync(patient => patient.Id, patient => patient.FirstName + " " + patient.LastName, cancellationToken);
-    }
+    private Task<Dictionary<Guid, string>> PatientNamesAsync(IEnumerable<Guid> patientIds, CancellationToken cancellationToken) =>
+        db.PatientNamesAsync(patientIds, cancellationToken);
 
     private async Task<AppointmentDto> ToDtoAsync(Appointment appointment, CancellationToken cancellationToken)
     {

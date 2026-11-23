@@ -9,7 +9,7 @@ import { useProfessionals } from "@/modules/appointments/api/appointments.querie
 import { selectable } from "@/modules/appointments/types/appointment.types"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { useCreateSterilizationCycle } from "../api/inventory.queries"
-import { useInventoryCatalog } from "../hooks/use-inventory-catalog"
+import { useInventoryOptions } from "../hooks/use-inventory-options"
 import { useInventoryAccordion } from "../hooks/use-inventory-accordion"
 import { useInventorySubmit } from "../hooks/use-inventory-submit"
 import { sterilizationCycleSchema, sterilizationResultLabels, sterilizationResults, type SterilizationCycleFormValues } from "../types/inventory.types"
@@ -20,7 +20,7 @@ import { InventorySections } from "./inventory-sections"
 interface Props { open: boolean; onOpenChange: (open: boolean) => void }
 export function SterilizationCycleFormDialog(props: Props) { return props.open ? <CycleEditor onClose={() => props.onOpenChange(false)} /> : null }
 function CycleEditor({ onClose }: { onClose: () => void }) {
-  const inventory = useInventoryCatalog(), professionals = useProfessionals(), create = useCreateSterilizationCycle()
+  const inventory = useInventoryOptions(), professionals = useProfessionals(), create = useCreateSterilizationCycle()
   const instruments = (inventory.data ?? []).filter(item => item.kind === "instrumental")
   const form = useForm<SterilizationCycleFormValues>({ resolver: zodResolver(sterilizationCycleSchema), shouldUnregister: false, shouldFocusError: false, defaultValues: { itemIds: [], performedAt: new Date().toISOString().slice(0, 10), result: "aprobado", responsibleProfessionalId: "", notes: "" } })
   const selected = useWatch({ control: form.control, name: "itemIds" })

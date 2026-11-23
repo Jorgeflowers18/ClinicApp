@@ -323,7 +323,10 @@ export interface PatientClinicalHistory {
 export type EncounterListItem = Pick<
   ClinicalEncounter,
   "id" | "patientId" | "date" | "professionalId" | "legacyProfessionalName" | "reason" | "diagnoses" | "nextVisit"
->
+> & {
+  /** "Nombres Apellidos" del paciente; lo trae la API en cada fila. */
+  patientName: string
+}
 
 export interface EncounterListQuery extends PageQuery {
   patientId?: string

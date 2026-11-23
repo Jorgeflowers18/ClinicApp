@@ -11,7 +11,7 @@
 // conexión apunta a otra base o a otro servidor, el script se niega a correr: nunca puede tocar la base de
 // desarrollo (`clinicapp`), la de las pruebas del back (`clinicapp_test`) ni la de producción.
 import { spawn, spawnSync } from "node:child_process"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -19,7 +19,8 @@ import { fileURLToPath } from "node:url"
 const DATABASE = "clinicapp_e2e"
 const API_PORT = 5100
 const WEB_PORT = 5185
-const front = resolve(dirname(fileURLToPath(import.meta.url)), "..")
+// Ruta real del disco: en Windows, "c:\…" y "C:\…" son la misma carpeta pero Vite las trataría como módulos distintos.
+const front = realpathSync.native(resolve(dirname(fileURLToPath(import.meta.url)), ".."))
 const back = resolve(front, "../back")
 const apiProject = resolve(back, "src/ClinicApp.Api")
 
@@ -50,7 +51,7 @@ function run(command, args, options = {}) {
 
 function start(command, args, env) {
   const child = spawn(command, args, { cwd: front, env: { ...process.env, ...env }, shell: isWindows, stdio: ["ignore", "pipe", "pipe"] })
-  child.stdout.on("data", () => {})
+  child.stdout.on("data", (chunk) => { if (process.env.E2E_VERBOSE) process.stdout.write(chunk) })
   child.stderr.on("data", (chunk) => { if (process.env.E2E_VERBOSE) process.stderr.write(chunk) })
   children.push(child)
   return child
@@ -112,18 +113,26 @@ async function waitFor(url, label, timeoutMs = 120_000) {
 /**
  * Abre la app antes de las pruebas: Vite optimiza las dependencias en la primera carga y no durante las pruebas.
  * Si la optimización termina a mitad de la carga, la página puede quedar en blanco: se reintenta recargando.
+ * Si no carga, muestra los errores de la página y lo que se ve en ella.
  */
 async function warmUp(url, attempts = 3) {
   const { chromium } = await import("@playwright/test")
   const browser = await chromium.launch({ channel: "chrome" })
   try {
     const page = await browser.newPage()
+    const problems = []
+    page.on("pageerror", (error) => problems.push(`error: ${error.message}`))
+    page.on("console", (message) => { if (message.type() === "error") problems.push(`consola: ${message.text()}`) })
+    page.on("requestfailed", (request) => problems.push(`petición fallida: ${request.url()} (${request.failure()?.errorText})`))
     for (let attempt = 1; ; attempt++) {
       try {
         await page.goto(url)
         await page.locator("#email").waitFor({ timeout: 60_000 })
         return
       } catch (error) {
+        for (const problem of problems.splice(0, 10)) console.log(`E2E:   ${problem}`)
+        const shown = await page.evaluate(() => `${location.pathname} · ${document.body.innerText.replace(/\s+/g, " ").slice(0, 200)}`).catch(() => "")
+        console.log(`E2E:   la página muestra: ${shown || "(nada)"}`)
         if (attempt >= attempts) throw error
         console.log(`E2E: la app aún no carga (intento ${attempt} de ${attempts}), se recarga…`)
       }
@@ -150,6 +159,8 @@ try {
     Notifications__Provider: "log",
     Logging__LogLevel__Default: "Warning",
   })
+  // Caché de dependencias nueva en cada corrida (ver scripts/vite.e2e.config.ts).
+  rmSync(join(front, "node_modules", ".vite-e2e"), { recursive: true, force: true, maxRetries: 5 })
   start("npx", ["vite", "--config", "scripts/vite.e2e.config.ts", "--host", "127.0.0.1", "--port", String(WEB_PORT), "--strictPort"], {
     VITE_API_BASE_URL: `http://127.0.0.1:${API_PORT}/api`,
   })

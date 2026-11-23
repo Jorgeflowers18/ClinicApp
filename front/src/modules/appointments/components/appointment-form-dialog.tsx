@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { applyServerFieldErrors } from "@/shared/lib/field-issues"
-import { usePatient, usePatientsList } from "@/modules/patients/api/patients.queries"
+import { PatientCombobox } from "@/modules/patients/components/patient-combobox"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
 
 import {
@@ -41,10 +41,6 @@ export function AppointmentFormDialog({
   initialPatientId,
 }: AppointmentFormDialogProps) {
   const isEditMode = Boolean(appointment)
-  const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
-  const { data: initialPatient } = usePatient(initialPatientId)
-  const patientOptions = initialPatient && !patientsPage?.items.some(patient => patient.id === initialPatient.id)
-    ? [initialPatient, ...(patientsPage?.items ?? [])] : patientsPage?.items ?? []
   const { data: professionals } = useProfessionals()
   const { data: rooms } = useRooms()
   const { data: treatments } = useActiveTreatments()
@@ -149,18 +145,8 @@ export function AppointmentFormDialog({
                 control={control}
                 name="patientId"
                 render={({ field }) => (
-                  <Select items={Object.fromEntries(patientOptions.map(patient => [patient.id, `${patient.firstName} ${patient.lastName}`]))} value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="patientId" className="w-full">
-                      <SelectValue placeholder="Selecciona un paciente..." />
-                    </SelectTrigger>
-                    <SelectContent className="clinic-schedule-options">
-                      {patientOptions.map((patient) => (
-                        <SelectItem key={patient.id} value={patient.id}>
-                          {patient.firstName} {patient.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <PatientCombobox id="patientId" value={field.value} onChange={field.onChange} invalid={!!errors.patientId}
+                    placeholder="Busca por nombre, documento o N.° de historia…" />
                 )}
               />
               <FieldError errors={errors.patientId ? [errors.patientId] : undefined} />

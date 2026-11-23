@@ -7,7 +7,7 @@ import { formatDateOnly, formatDateTime } from "@/shared/lib/date"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { usePatient } from "@/modules/patients/api/patients.queries"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
-import { usePatientAssignments, useTreatmentsList } from "@/modules/treatments/api/treatments.queries"
+import { usePatientAssignments } from "@/modules/treatments/api/treatments.queries"
 import { useClinicalHistory } from "../../api/clinical-history.queries"
 import type { DentalAttachment } from "../../types/clinical-history.types"
 import { archiveApi } from "../api"
@@ -33,14 +33,14 @@ export function ClinicalFileManager({ patientId }: { patientId: string }) {
   return <PatientArchive key={`${patientId}:${user.id}`} patientId={patientId} />
 }
 function PatientArchive({ patientId }: { patientId: string }) {
-  const history = useClinicalHistory(patientId), patient = usePatient(patientId), catalogQuery = useArchiveCatalog(), professionalsQuery = useProfessionals(), assignments = usePatientAssignments(patientId), treatmentsQuery = useTreatmentsList({ page: 1, pageSize: 100 })
+  const history = useClinicalHistory(patientId), patient = usePatient(patientId), catalogQuery = useArchiveCatalog(), professionalsQuery = useProfessionals(), assignments = usePatientAssignments(patientId)
   const [filters, setFilters] = useState(emptyFilters), [page, setPage] = useState(1), [selected, setSelected] = useState<string[]>([]), [view, setView] = useState(() => { try { return localStorage.getItem("clinicapp.archive-view") === "list" ? "list" : "gallery" } catch { return "gallery" } })
   const [upload, setUpload] = useState(false), [catalogOpen, setCatalogOpen] = useState(false), [edit, setEdit] = useState<DentalAttachment | null>(null), [viewer, setViewer] = useState<{ id: string; fullscreen?: boolean } | null>(null), [compare, setCompare] = useState(false), [confirm, setConfirm] = useState<DentalAttachment | null>(null), [error, setError] = useState("")
   const write = useArchiveWrite(patientId)
   const files = history.data?.record.patientId === patientId ? history.data.record.attachments : []
   const catalog = catalogQuery.data ?? emptyArchiveCatalog()
   const professionals = useMemo(() => Object.fromEntries((professionalsQuery.data ?? []).map(item => [item.id, item.name])), [professionalsQuery.data])
-  const treatments = useMemo(() => Object.fromEntries((assignments.data ?? []).filter(item => item.patientId === patientId).map(item => [item.id, `${treatmentsQuery.data?.items.find(row => row.id === item.treatmentId)?.name ?? "Tratamiento registrado"} · ${item.startDate}`])), [assignments.data, treatmentsQuery.data, patientId])
+  const treatments = useMemo(() => Object.fromEntries((assignments.data ?? []).filter(item => item.patientId === patientId).map(item => [item.id, `${item.treatmentName || "Tratamiento registrado"} · ${item.startDate}`])), [assignments.data, patientId])
   const filtered = selectClinicalFiles(files, filters, catalog, professionals)
   const selectedFiles = filtered.filter(file => selected.includes(file.id))
   const lastPage = Math.max(1, Math.ceil(filtered.length / 24)), currentPage = Math.min(page, lastPage), visible = filtered.slice((currentPage - 1) * 24, currentPage * 24)
@@ -132,10 +132,10 @@ function PatientArchive({ patientId }: { patientId: string }) {
       treatments={treatments}
     />
 
-    {(professionalsQuery.isError || assignments.isError || treatmentsQuery.isError) && <p role="alert" className={styles.hint}>No se pudieron cargar algunos vínculos. Los archivos se conservan.<Button
+    {(professionalsQuery.isError || assignments.isError) && <p role="alert" className={styles.hint}>No se pudieron cargar algunos vínculos. Los archivos se conservan.<Button
       size="sm"
       variant="ghost"
-      onClick={() => { void professionalsQuery.refetch(); void assignments.refetch(); void treatmentsQuery.refetch() }}
+      onClick={() => { void professionalsQuery.refetch(); void assignments.refetch() }}
     >Reintentar vínculos</Button></p>}
 
     <div className={styles.resultsHeading}>

@@ -398,6 +398,8 @@ public class ClinicalHistoryTests(ApiFactory api)
 
         var byPatient = await medico.GetJson($"/api/clinical-history/encounters?patientId={patient.Id()}");
         Assert.Equal([second.Id(), first.Id()], byPatient!["items"]!.AsArray().Select(item => item.Id()));
+        // Cada fila trae el nombre del paciente: la lista no depende de "los primeros 100" pacientes.
+        Assert.All(byPatient["items"]!.AsArray(), item => Assert.Equal($"Lucía {lastName}", item.Str("patientName")));
 
         async Task<int> Count(string search) =>
             (await medico.GetJson($"/api/clinical-history/encounters?search={Uri.EscapeDataString(search)}"))!["totalItems"]!.GetValue<int>();

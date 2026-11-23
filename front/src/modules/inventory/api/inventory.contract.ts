@@ -2,6 +2,7 @@ import type { PageQuery, Paginated } from "@/shared/types/common"
 
 import type {
   InventoryItem,
+  InventoryItemOption,
   InventoryItemFormValues,
   MovementFormValues,
   PurchaseOrder,
@@ -22,6 +23,8 @@ import type {
  */
 export interface InventoryApi {
   list(query: PageQuery, signal?: AbortSignal): Promise<Paginated<InventoryItem>>
+  /** Todos los insumos en una sola petición, para los selectores (tratamientos, compras, esterilización). */
+  listOptions(signal?: AbortSignal): Promise<InventoryItemOption[]>
   get(id: string, signal?: AbortSignal): Promise<InventoryItem>
   create(values: InventoryItemFormValues): Promise<InventoryItem>
   update(id: string, values: InventoryItemFormValues): Promise<InventoryItem>

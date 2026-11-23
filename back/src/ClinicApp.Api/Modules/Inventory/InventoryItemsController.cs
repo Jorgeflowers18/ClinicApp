@@ -43,6 +43,17 @@ public class InventoryItemsController(AppDbContext db, StockService stock) : Con
             page.Page, page.PageSize, page.TotalItems, page.TotalPages);
     }
 
+    /// <summary>
+    /// GET /api/inventory/items/options → todos los insumos, sin paginar y por nombre, con solo
+    /// <c>{ id, name, unit, kind }</c>: una sola petición para los selectores en vez de juntar páginas de 100.
+    /// </summary>
+    [HttpGet("options")]
+    public async Task<List<InventoryItemOptionDto>> Options(CancellationToken cancellationToken) =>
+        await db.InventoryItems.AsNoTracking()
+            .OrderBy(item => item.Name).ThenBy(item => item.Id)
+            .Select(item => new InventoryItemOptionDto(item.Id, item.Name, item.Unit, item.Kind))
+            .ToListAsync(cancellationToken);
+
     /// <summary>GET /api/inventory/items/{id}</summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<InventoryItemDto>> Get(Guid id, CancellationToken cancellationToken)

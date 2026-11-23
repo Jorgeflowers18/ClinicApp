@@ -21,10 +21,12 @@ import { formatDateTime } from "@/shared/lib/date"
 import { formatPercent } from "@/shared/lib/number"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { KpiCard } from "@/modules/reports/components/kpi-card"
+import { getProfileInitials } from "@/modules/auth/components/profile-initials"
+import type { NotificationLogQuery } from "../api/notifications.api"
+import { useNotificationsList, useNotificationsSummary } from "../api/notifications.queries"
 import { MessageChannel, MessageStatus } from "../components/message-status"
 import { NotificationTemplateEditor } from "../components/notification-template-editor"
-import { useMessagingCatalog } from "../hooks/use-messaging-catalog"
-import { notificationChannelLabels, notificationTypeLabels, type NotificationLog } from "../types/notification.types"
+import { notificationChannelLabels, notificationTypeLabels, type NotificationChannel, type NotificationLog, type NotificationStatus, type NotificationType } from "../types/notification.types"
 import "../messaging.css"
 
 const statuses = { enviada: "Enviado", fallida: "Fallido" }
@@ -36,18 +38,18 @@ export function NotificationsReportPage() {
   const table = useTableQueryState()
   const [channel, setChannel] = useState("all"), [status, setStatus] = useState("all"), [type, setType] = useState("all")
   const [dateFrom, setDateFrom] = useState(""), [dateTo, setDateTo] = useState(""), [filterOpen, setFilterOpen] = useState(false)
-  const { messages } = useMessagingCatalog(), selectedId = params.get("envio") ?? ""
-  const records = messages.data ?? []
-  const query = table.debouncedSearch.trim().toLowerCase()
-  const filtered = [...records].sort((a,b) => b.sentAt.localeCompare(a.sentAt)).filter(row => {
-    if (selectedId) return row.id === selectedId
-    // Se busca por el nombre que trae cada notificación.
-    const searchable = (row.patientName ?? "").toLowerCase()
-    return (!query || searchable.includes(query)) && (channel === "all" || row.channel === channel) && (status === "all" || row.status === status) && (type === "all" || row.type === type) &&
-      (!dateFrom || row.sentAt >= dateFrom) && (!dateTo || row.sentAt <= dateTo + "T23:59:59.999Z") && (!selectedId || row.id === selectedId)
-  })
-  const totalPages = Math.max(1, Math.ceil(filtered.length / table.pageSize)), page = Math.min(table.page, totalPages)
-  const sent = records.filter(row => row.status === "enviada").length, failed = records.filter(row => row.status === "fallida").length
+  const selectedId = params.get("envio") ?? ""
+  // El servidor filtra (nombre o cédula, canal, estado, tipo y días de la clínica) y pagina; el enlace de una
+  // alerta (?envio=) trae solo esa notificación.
+  const query: NotificationLogQuery = selectedId ? { page: 1, pageSize: table.pageSize, id: selectedId } : {
+    page: table.page, pageSize: table.pageSize, search: table.debouncedSearch.trim() || undefined,
+    channel: channel === "all" ? undefined : channel as NotificationChannel,
+    status: status === "all" ? undefined : status as NotificationStatus,
+    type: type === "all" ? undefined : type as NotificationType,
+    dateFrom: dateFrom || undefined, dateTo: dateTo || undefined,
+  }
+  const messages = useNotificationsList(query), summary = useNotificationsSummary()
+  const total = summary.data?.total ?? 0, sent = summary.data?.sent ?? 0, failed = summary.data?.failed ?? 0
   const activeFilters = selectedId ? ["Mensaje seleccionado"] : [table.search.trim() ? "Búsqueda: " + table.search.trim() : "", channel !== "all" ? "Canal: " + notificationChannelLabels[channel as keyof typeof notificationChannelLabels] : "", status !== "all" ? "Estado: " + statuses[status as keyof typeof statuses] : "", type !== "all" ? "Tipo: " + notificationTypeLabels[type as keyof typeof notificationTypeLabels] : "", dateFrom ? "Desde: " + dateFrom : "", dateTo ? "Hasta: " + dateTo : ""].filter(Boolean)
   function clearFilters() {
     table.setSearch(""); table.setPage(1); setChannel("all"); setStatus("all"); setType("all"); setDateFrom(""); setDateTo(""); setFilterOpen(false)
@@ -55,7 +57,7 @@ export function NotificationsReportPage() {
   }
   function change(set: (value: string) => void) { return (value: string | null) => { set(value ?? "all"); table.setPage(1) } }
   const columns: DataTableColumn<NotificationLog>[] = [
-    { key: "patient", header: "Paciente", cell: row => { const name = row.patientName || "Paciente no disponible", initials = row.patientName ? name.split(/s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("") : "?"; return <div className="messaging-patient"><Avatar aria-hidden="true"><AvatarFallback>{initials}</AvatarFallback></Avatar><div><p>{name}</p></div></div> } },
+    { key: "patient", header: "Paciente", cell: row => { const name = row.patientName || "Paciente no disponible", initials = getProfileInitials(row.patientName ?? "") || "?"; return <div className="messaging-patient"><Avatar aria-hidden="true"><AvatarFallback>{initials}</AvatarFallback></Avatar><div><p>{name}</p></div></div> } },
     { key: "type", header: "Tipo", cell: row => notificationTypeLabels[row.type] },
     { key: "channel", header: "Canal", cell: row => <MessageChannel channel={row.channel} /> },
     { key: "sentAt", header: "Fecha de envío", cell: row => <time dateTime={row.sentAt} title={formatDateTime(row.sentAt)}>{formatDateTime(row.sentAt, { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</time> },
@@ -63,11 +65,11 @@ export function NotificationsReportPage() {
   ]
   return <div className="messaging-module space-y-4">
     <PageHeader title="Mensajería" description="Gestiona los mensajes, recordatorios y comunicaciones con tus pacientes" />
-    {messages.isError ? <Alert variant="destructive"><AlertDescription>No se pudieron consultar los mensajes. Los indicadores no están disponibles.</AlertDescription></Alert> : <div className="messaging-metrics">
-      <KpiCard label="Mensajes registrados" value={records.length} icon={MessagesSquare} iconTone="neutral" isLoading={messages.isPending} />
-      <KpiCard label="Mensajes enviados" value={sent} icon={CheckCheck} iconTone="success" isLoading={messages.isPending} />
-      <KpiCard label="Mensajes fallidos" value={failed} icon={MailWarning} iconTone={failed > 0 ? "destructive" : "neutral"} isLoading={messages.isPending} />
-      <KpiCard label="Tasa de envío exitoso" value={records.length ? formatPercent(sent / records.length) : "—"} icon={ChartNoAxesColumnIncreasing} isLoading={messages.isPending} />
+    {summary.isError ? <Alert variant="destructive"><AlertDescription>No se pudieron consultar los indicadores de mensajes.</AlertDescription></Alert> : <div className="messaging-metrics">
+      <KpiCard label="Mensajes registrados" value={total} icon={MessagesSquare} iconTone="neutral" isLoading={summary.isPending} />
+      <KpiCard label="Mensajes enviados" value={sent} icon={CheckCheck} iconTone="success" isLoading={summary.isPending} />
+      <KpiCard label="Mensajes fallidos" value={failed} icon={MailWarning} iconTone={failed > 0 ? "destructive" : "neutral"} isLoading={summary.isPending} />
+      <KpiCard label="Tasa de envío exitoso" value={total ? formatPercent(sent / total) : "—"} icon={ChartNoAxesColumnIncreasing} isLoading={summary.isPending} />
     </div>}
     <p className="messaging-hint">Todos los registros disponibles. Enviado no significa entregado o leído.</p>
     <AdaptiveTabs value={activeTab} onValueChange={tab => { setSelection({key: location.key, tab}); if(tab === "template") setTemplateVisited(true) }} variant="line" items={[
@@ -91,9 +93,9 @@ export function NotificationsReportPage() {
           <ResetFiltersButton disabled={activeFilters.length === 0} onReset={clearFilters} />
         </div>}
         {activeFilters.length > 0 && <div className="messaging-active-filters" aria-label="Filtros activos">{activeFilters.map(label => <Badge variant="outline" key={label}>{label}</Badge>)}{selectedId && <ResetFiltersButton disabled={false} onReset={clearFilters} />}</div>}
-        <DataTable className="messaging-history-table" columns={columns} data={filtered.slice((page-1)*table.pageSize,page*table.pageSize)} getRowId={row => row.id} mobileTitleKey="patient"
+        <DataTable className="messaging-history-table" columns={columns} data={messages.data?.items ?? []} getRowId={row => row.id} mobileTitleKey="patient"
           isLoading={messages.isPending} isError={messages.isError} errorMessage={getErrorMessage(messages.error)} emptyTitle={activeFilters.length ? "Sin mensajes coincidentes" : "Sin mensajes registrados"} emptyDescription={activeFilters.length ? "No hay mensajes con estos criterios." : "Todavía no hay envíos registrados a pacientes."} />
-        {!messages.isError && messages.data && <PaginationBar page={page} pageSize={table.pageSize} totalItems={filtered.length} totalPages={totalPages} onPageChange={table.setPage} />}
+        {!messages.isError && messages.data && <PaginationBar page={messages.data.page} pageSize={messages.data.pageSize} totalItems={messages.data.totalItems} totalPages={messages.data.totalPages} onPageChange={table.setPage} />}
       </TabsContent>
       <TabsContent value="template" keepMounted className="pt-4">{templateVisited && <NotificationTemplateEditor />}</TabsContent>
     </AdaptiveTabs>

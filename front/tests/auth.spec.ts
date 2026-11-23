@@ -43,7 +43,8 @@ test("un token vencido se renueva solo y la petición se reintenta", async ({ pa
   await expect(page.locator(".clinic-patients-table")).toBeVisible()
   await expect.poll(() => calls.some((call) => call === "200 /api/auth/refresh")).toBe(true)
   expect(calls).toContain("401 /api/patients")
-  expect(calls.filter((call) => call.endsWith("/api/patients") && call.startsWith("200")).length).toBeGreaterThan(0)
+  // El reintento puede responder después de que la tabla ya se ve (con sus filas de carga).
+  await expect.poll(() => calls.filter((call) => call.endsWith("/api/patients") && call.startsWith("200")).length).toBeGreaterThan(0)
 })
 
 test("recuperar contraseña responde igual exista o no el correo, y un enlace falso se rechaza", async ({ page }) => {

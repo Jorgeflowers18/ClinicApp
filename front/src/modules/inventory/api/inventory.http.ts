@@ -6,6 +6,7 @@ import type { Paginated } from "@/shared/types/common"
 import type { InventoryApi } from "./inventory.contract"
 import type {
   InventoryItem,
+  InventoryItemOption,
   MovementType,
   PurchaseOrder,
   PurchaseOrderStatus,
@@ -34,6 +35,10 @@ export const httpInventoryApi: InventoryApi = {
   async list(query, signal) {
     const page = await apiGet<Paginated<ItemDto>>("/inventory/items", { params: query, signal })
     return { ...page, items: page.items.map(toItem) }
+  },
+  async listOptions(signal) {
+    const options = await apiGet<Schemas["InventoryItemOptionDto"][]>("/inventory/items/options", { signal })
+    return options.map((dto): InventoryItemOption => ({ ...dto, kind: dto.kind as InventoryItemOption["kind"] }))
   },
   async get(id, signal) {
     return toItem(await apiGet<ItemDto>(`/inventory/items/${id}`, { signal }))

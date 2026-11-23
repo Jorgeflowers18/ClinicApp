@@ -26,7 +26,7 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 import { ApiError } from "@/shared/types/common"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 import { useUpdatePatient } from "@/modules/patients/api/patients.queries"
-import { useTreatmentsList } from "@/modules/treatments/api/treatments.queries"
+import { useTreatmentCatalog } from "@/modules/treatments/hooks/use-treatment-options"
 import { KpiCard } from "@/modules/reports/components/kpi-card"
 import type { Patient } from "@/modules/patients/types/patient.types"
 
@@ -141,7 +141,7 @@ export function RecordWorkspace({
   const patientName = `${patient.firstName} ${patient.lastName}`
   const { data: professionals } = useProfessionals()
   // Catálogo completo (incluye inactivos) para nombrar los tratamientos en los documentos.
-  const { data: catalog } = useTreatmentsList({ page: 1, pageSize: 100 })
+  const { data: catalog } = useTreatmentCatalog()
   const initialValues = (): WorkspaceValues => ({ ...pickRecordValues(record), patient: pickPatientData(patient) })
   const form = useForm<WorkspaceValues>({
     resolver: zodResolver(workspaceSchema),
@@ -196,7 +196,7 @@ export function RecordWorkspace({
   const indicators = computeChartIndicators(values.chart)
   const last = latestEncounter(encounters)
   const errorTabs = new Set(Object.keys(form.formState.errors).map(tabForField))
-  const treatmentById = new Map((catalog?.items ?? []).map((treatment) => [treatment.id, treatment]))
+  const treatmentById = new Map((catalog ?? []).map((treatment) => [treatment.id, treatment]))
 
   function handleChartReady(ready: boolean) {
     chartReadyRef.current = ready
@@ -326,7 +326,7 @@ export function RecordWorkspace({
     patientName,
     documentId: patient.documentId,
     professionals: professionals ?? [],
-    // `references` (API) cubre a los inactivos y a los que no están en la primera página del catálogo.
+    // `references` (API) cubre a los profesionales y tratamientos que ya no están en los catálogos cargados.
     professionalName: (encounter) => references?.professionals[encounter.professionalId]?.name ?? resolveProfessionalName(encounter, professionals),
     treatmentName: (treatmentId, fallback) => (treatmentId && (treatmentById.get(treatmentId)?.name ?? references?.treatments[treatmentId]?.name)) || fallback,
   }

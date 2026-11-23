@@ -41,7 +41,11 @@ export function assignmentPrice(assignment: Pick<TreatmentAssignment, "price">, 
 export interface TreatmentAssignment {
   id: string
   treatmentId: string
+  /** Nombre del tratamiento en el catálogo; lo trae la API (también para los inactivos). */
+  treatmentName: string
   patientId: string
+  /** "Nombres Apellidos" del paciente; lo trae la API. */
+  patientName: string
   totalSessions: number
   completedSessions: number
   status: AssignmentStatus

@@ -1,11 +1,31 @@
 import type { PageQuery, Paginated } from "@/shared/types/common"
 
-import type { NotificationLog, NotificationTemplate, NotificationTemplateFormValues } from "../types/notification.types"
+import type {
+  NotificationChannel,
+  NotificationLog,
+  NotificationStatus,
+  NotificationTemplate,
+  NotificationTemplateFormValues,
+  NotificationType,
+} from "../types/notification.types"
 
+/** Filtros del historial; los aplica el servidor. `search`: nombre o cédula del paciente. */
 export interface NotificationLogQuery extends PageQuery {
   /** Días de la clínica, `YYYY-MM-DD`, inclusivos. */
   dateFrom?: string
   dateTo?: string
+  channel?: NotificationChannel
+  status?: NotificationStatus
+  type?: NotificationType
+  /** Solo esa notificación (el enlace de una alerta de envío fallido). */
+  id?: string
+}
+
+/** Indicadores de todo el historial (`GET /notifications/summary`), sin leerlo completo. */
+export interface NotificationSummary {
+  total: number
+  sent: number
+  failed: number
 }
 
 /** Lo del día para el centro de alertas, en una sola petición (`GET /alerts`). */
@@ -28,6 +48,7 @@ export interface AlertsSnapshot {
 export interface NotificationsApi {
   list(query: NotificationLogQuery, signal?: AbortSignal): Promise<Paginated<NotificationLog>>
   listByAppointment(appointmentId: string, signal?: AbortSignal): Promise<NotificationLog[]>
+  getSummary(signal?: AbortSignal): Promise<NotificationSummary>
   getTemplate(signal?: AbortSignal): Promise<NotificationTemplate>
   updateTemplate(values: NotificationTemplateFormValues): Promise<NotificationTemplate>
   getAlerts(signal?: AbortSignal): Promise<AlertsSnapshot>

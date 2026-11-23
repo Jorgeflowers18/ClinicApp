@@ -20,6 +20,9 @@ export const inventoryItemSchema = z.object({
 
 export type InventoryItemFormValues = z.infer<typeof inventoryItemSchema>
 
+/** Insumo en los selectores (`GET /inventory/items/options`): todos, sin paginar, solo lo que se muestra. */
+export type InventoryItemOption = Pick<InventoryItem, "id" | "name" | "unit" | "kind">
+
 export interface InventoryItem extends InventoryItemFormValues {
   id: string
   stock: number

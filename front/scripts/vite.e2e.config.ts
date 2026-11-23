@@ -1,11 +1,8 @@
 // Vite de las pruebas E2E: la configuración del proyecto con su propia caché de dependencias. Si compartiera
 // `node_modules/.vite` con el Vite de desarrollo, se reoptimizarían entre sí y la página cargaría dos copias de React.
+// `run-api-e2e.mjs` borra esta caché antes de cada corrida, así nunca se reutiliza una optimización de otra
+// configuración. Las rutas se importan sin carga perezosa, así que el escaneo normal (index.html y odontogram.html)
+// ya encuentra todas las dependencias.
 import config from "../vite.config"
 
-export default {
-  ...config,
-  cacheDir: "node_modules/.vite-e2e",
-  // Todas las pantallas (también las rutas perezosas) desde el inicio: si Vite descubre una dependencia nueva
-  // al navegar, recarga la página en medio de una prueba.
-  optimizeDeps: { entries: ["index.html", "odontogram.html", "src/**/*.tsx"] },
-}
+export default { ...config, cacheDir: "node_modules/.vite-e2e" }

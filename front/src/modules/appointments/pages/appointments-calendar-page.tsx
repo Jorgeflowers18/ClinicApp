@@ -18,7 +18,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { PageHeader } from "@/shared/components/page-header"
 import { getErrorMessage } from "@/shared/lib/error-message"
-import { usePatientsList } from "@/modules/patients/api/patients.queries"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
 
 import {
@@ -82,7 +81,6 @@ export function AppointmentsCalendarPage() {
   const { data: scheduleBlocks } = useScheduleBlocksList(range)
   const { data: professionals } = useProfessionals()
   const { data: rooms } = useRooms()
-  const { data: patientsPage, isLoading: patientsLoading } = usePatientsList({ page: 1, pageSize: 100 })
   const { data: treatments } = useActiveTreatments()
   const deleteScheduleBlock = useDeleteScheduleBlock()
   const [formOpen, setFormOpen] = useState(false)
@@ -91,13 +89,6 @@ export function AppointmentsCalendarPage() {
   const [initialSlot, setInitialSlot] = useState<{ date: string; startTime: string; endTime: string } | undefined>()
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [blockToDelete, setBlockToDelete] = useState<ScheduleBlock | null>(null)
-
-  function patientName(patientId: string, known?: string) {
-    // La API trae el nombre en la cita; la lista de pacientes es solo un respaldo.
-    if (known) return known
-    const patient = patientsPage?.items.find((item) => item.id === patientId)
-    return patient ? `${patient.firstName} ${patient.lastName}` : "Paciente"
-  }
 
   function professionalName(professionalId: string) {
     return professionals?.find((item) => item.id === professionalId)?.name ?? "Profesional"
@@ -124,7 +115,7 @@ export function AppointmentsCalendarPage() {
       .map((appointment) => ({
         kind: "appointment",
         id: appointment.id,
-        title: `${patientName(appointment.patientId, appointment.patientName)} · ${appointmentStatusLabels[appointment.status]}`,
+        title: `${(appointment.patientName || "Paciente")} · ${appointmentStatusLabels[appointment.status]}`,
         start: new Date(appointment.start),
         end: new Date(appointment.end),
         resource: appointment,
@@ -143,7 +134,7 @@ export function AppointmentsCalendarPage() {
 
     return [...appointmentEvents, ...blockEvents]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appointments, scheduleBlocks, patientFilter, professionalFilter, patientsPage, professionals, specialtyFilter])
+  }, [appointments, scheduleBlocks, patientFilter, professionalFilter, professionals, specialtyFilter])
   const dayEvents = events
     .filter((event) => isSameDay(event.start, date))
     .sort((left, right) => left.start.getTime() - right.start.getTime())
@@ -181,7 +172,7 @@ export function AppointmentsCalendarPage() {
             </div>
             <div className="min-w-0 flex-1 space-y-1">
               <p className="break-words font-medium">
-                {isBlock ? event.resource.reason : patientName(event.resource.patientId, event.resource.patientName)}
+                {isBlock ? event.resource.reason : (event.resource.patientName || "Paciente")}
               </p>
               <p className="break-words text-sm text-muted-foreground">
                 {isBlock
@@ -281,7 +272,7 @@ export function AppointmentsCalendarPage() {
         </Alert>
       )}
 
-      {isLoading || patientsLoading ? (
+      {isLoading ? (
         <Skeleton className="min-h-0 w-full flex-1" />
       ) : (
         <CalendarMonthContent date={date} events={events} treatments={treatments} goToToday={goToToday} toolbarHost={toolbarHost}
@@ -384,7 +375,7 @@ export function AppointmentsCalendarPage() {
         open={!!selectedAppointment}
         onOpenChange={(open) => !open && setSelectedAppointment(null)}
         appointment={selectedAppointment}
-        patientName={selectedAppointment ? patientName(selectedAppointment.patientId, selectedAppointment.patientName) : ""}
+        patientName={selectedAppointment ? (selectedAppointment.patientName || "Paciente") : ""}
         professionalName={selectedAppointment ? professionalName(selectedAppointment.professionalId) : ""}
         treatmentName={selectedAppointment ? treatmentName(selectedAppointment.treatmentId) : undefined}
         roomName={selectedAppointment ? roomName(selectedAppointment.roomId) : undefined}

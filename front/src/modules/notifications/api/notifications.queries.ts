@@ -10,6 +10,7 @@ export const notificationsKeys = {
   all: ["notifications"] as const,
   lists: () => [...notificationsKeys.all, "list"] as const,
   list: (query: NotificationLogQuery) => [...notificationsKeys.lists(), query] as const,
+  summary: () => [...notificationsKeys.all, "summary"] as const,
   byAppointment: (appointmentId: string) => [...notificationsKeys.all, "appointment", appointmentId] as const,
   template: () => [...notificationsKeys.all, "template"] as const,
 }
@@ -19,6 +20,13 @@ export function useNotificationsList(query: NotificationLogQuery) {
     queryKey: notificationsKeys.list(query),
     queryFn: ({ signal }) => notificationsApi.list(query, signal),
     placeholderData: keepPreviousData,
+  })
+}
+
+export function useNotificationsSummary() {
+  return useQuery({
+    queryKey: notificationsKeys.summary(),
+    queryFn: ({ signal }) => notificationsApi.getSummary(signal),
   })
 }
 

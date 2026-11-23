@@ -1,0 +1,32 @@
+/* Mismo aspecto que SelectTrigger / SelectContent (components/ui/select.tsx). */
+.group { display: flex; align-items: center; gap: 2px; width: 100%; min-width: 0; height: 44px; padding-inline: 10px 4px; border: 1px solid var(--input); border-radius: calc(var(--radius) * 0.8); background: var(--input-surface); transition: border-color 150ms, box-shadow 150ms; }
+.group:focus-within { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent); }
+.group[data-invalid] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
+.group[data-disabled] { cursor: not-allowed; opacity: 0.5; }
+.input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--foreground); font-size: 1rem; }
+.input::placeholder { color: var(--muted-foreground); }
+.button { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: calc(var(--radius) * 0.6); color: var(--muted-foreground); }
+.button:hover { background: var(--accent); color: var(--accent-foreground); }
+.button svg { width: 16px; height: 16px; pointer-events: none; }
+
+.popup { width: max(var(--anchor-width), 16rem); max-width: min(calc(100vw - 24px), var(--available-width, 100vw)); max-height: min(360px, var(--available-height)); overflow-y: auto; overscroll-behavior: contain; padding: 4px; border-radius: calc(var(--radius) * 0.8); background: var(--popover); color: var(--popover-foreground); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent); }
+.status { display: flex; align-items: center; gap: 6px; color: var(--muted-foreground); font-size: 0.8125rem; }
+.status:not(:empty) { padding: 8px 10px; }
+.spinner { width: 14px; height: 14px; animation: spin 1s linear infinite; }
+.list:empty { display: none; }
+.item { position: relative; display: flex; align-items: center; min-height: 44px; padding: 8px 32px 8px 10px; border-radius: calc(var(--radius) * 0.6); font-size: 0.875rem; cursor: default; user-select: none; outline: none; }
+.item[data-highlighted] { background: var(--accent); color: var(--accent-foreground); }
+.itemText { display: flex; flex-direction: column; min-width: 0; }
+.itemName { overflow-wrap: anywhere; }
+.itemMeta { color: var(--muted-foreground); font-size: 0.75rem; }
+.indicator { position: absolute; right: 8px; display: flex; }
+.indicator svg { width: 16px; height: 16px; }
+
+@media (min-width: 1024px) {
+  .group { height: 32px; }
+  .input { font-size: 0.875rem; }
+  .button { width: 26px; height: 26px; }
+  .item { min-height: 0; padding-block: 4px; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

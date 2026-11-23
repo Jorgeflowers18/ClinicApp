@@ -2,6 +2,7 @@ using ClinicApp.Api.Common;
 using ClinicApp.Api.Data;
 using ClinicApp.Api.Modules.Auth;
 using ClinicApp.Api.Modules.Inventory;
+using ClinicApp.Api.Modules.Patients;
 using ClinicApp.Api.Modules.Treatments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,9 +52,11 @@ public class EncountersController(AppDbContext db, ClinicClock clock, StockServi
             .ThenByDescending(encounter => encounter.CreatedAt)
             .ToPagedResultAsync(query, cancellationToken);
 
+        var names = await db.PatientNamesAsync(page.Items.Select(encounter => encounter.PatientId), cancellationToken);
         return new PagedResult<EncounterListItemDto>(
             page.Items.Select(encounter => new EncounterListItemDto(
-                encounter.Id, encounter.PatientId, encounter.Date.ToString(IsoDateAttribute.Format), encounter.ProfessionalId,
+                encounter.Id, encounter.PatientId, names.GetValueOrDefault(encounter.PatientId, ""),
+                encounter.Date.ToString(IsoDateAttribute.Format), encounter.ProfessionalId,
                 encounter.LegacyProfessionalName, encounter.Reason, encounter.Diagnoses,
                 encounter.NextVisit?.ToString(IsoDateAttribute.Format) ?? "")).ToList(),
             page.Page, page.PageSize, page.TotalItems, page.TotalPages);

@@ -182,9 +182,13 @@ public record ClinicalEncounterDto(
         encounter.CreatedAt);
 }
 
-/// <summary>Una fila de la lista global de atenciones (<c>EncounterListItem</c>).</summary>
+/// <summary>
+/// Una fila de la lista global de atenciones (<c>EncounterListItem</c>), con el nombre del paciente ("Nombres
+/// Apellidos") para no pedir cada paciente por separado.
+/// </summary>
 public record EncounterListItemDto(
-    Guid Id, Guid PatientId, string Date, Guid ProfessionalId, string? LegacyProfessionalName, string Reason, List<Diagnosis> Diagnoses, string NextVisit);
+    Guid Id, Guid PatientId, string PatientName, string Date, Guid ProfessionalId, string? LegacyProfessionalName, string Reason,
+    List<Diagnosis> Diagnoses, string NextVisit);
 
 /// <summary>Nota aclaratoria (<c>EncounterNote</c>).</summary>
 public record EncounterNoteDto(Guid Id, string Text, string AuthorName, DateTime CreatedAt)

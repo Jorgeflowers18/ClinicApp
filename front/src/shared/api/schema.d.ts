@@ -719,6 +719,10 @@ export interface paths {
                     appointmentId?: string;
                     dateFrom?: string;
                     dateTo?: string;
+                    channel?: string;
+                    status?: string;
+                    type?: string;
+                    id?: string;
                 };
                 header?: never;
                 path?: never;
@@ -732,6 +736,43 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["NotificationSummaryDto"];
+                        "application/json": components["schemas"]["NotificationSummaryDto"];
+                        "text/json": components["schemas"]["NotificationSummaryDto"];
+                    };
                 };
             };
         };
@@ -871,6 +912,43 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inventory/items/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["InventoryItemOptionDto"][];
+                        "application/json": components["schemas"]["InventoryItemOptionDto"][];
+                        "text/json": components["schemas"]["InventoryItemOptionDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3712,6 +3790,7 @@ export interface components {
             id: string;
             /** Format: uuid */
             patientId: string;
+            patientName: string;
             date: string;
             /** Format: uuid */
             professionalId: string;
@@ -3894,6 +3973,13 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        InventoryItemOptionDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            unit: string;
+            kind: string;
+        };
         InventoryItemRequest: {
             name: string;
             category: string;
@@ -3950,6 +4036,14 @@ export interface components {
             quantity?: number;
             reason: string;
             expirationDate?: null | string;
+        };
+        NotificationSummaryDto: {
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            sent: number;
+            /** Format: int32 */
+            failed: number;
         };
         NotificationTemplateDto: {
             /** Format: uuid */
@@ -4420,8 +4514,10 @@ export interface components {
             id: string;
             /** Format: uuid */
             treatmentId: string;
+            treatmentName: string;
             /** Format: uuid */
             patientId: string;
+            patientName: string;
             /** Format: int32 */
             totalSessions: number;
             /** Format: int32 */

@@ -37,6 +37,8 @@ test("registrar una atención descuenta insumos, completa la cita y se ve en la 
   expect((await ok(await api.get(`treatment-assignments?patientId=${patient.id}`))).length).toBe(1)
 
   await page.goto("/historial-clinico")
+  // El nombre del paciente sale de la fila (`patientName`), no de una lista de pacientes.
+  await expect(page.getByText(`Historia${stamp} Prueba E2E`).filter({ visible: true }).first()).toBeVisible()
   await page.getByText(`Control ${stamp}`).first().click()
   await expect(page).toHaveURL(new RegExp(`/historial-clinico/paciente/${patient.id}`))
   await expect(page.getByText("Caries dental K02.1").first()).toBeVisible()

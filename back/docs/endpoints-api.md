@@ -1,16 +1,16 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-20**: **91 endpoints implementados**:
+Estado al **2026-11-22**: **93 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
 - 9 de `treatments` (catálogo y tratamientos realizados);
-- 18 de `inventory`;
+- 19 de `inventory`;
 - 6 de `patients`;
 - 7 de `professionals` y `rooms`;
 - 8 de `appointments` y `schedule-blocks`;
 - 17 de `clinical-history` (8 de la historia y 9 del archivo clínico);
 - 3 de `institution`;
-- 4 de `notifications` (con las alertas del día);
+- 5 de `notifications` (con el resumen y las alertas del día);
 - 5 de `finance`;
 - 5 de `reports`.
 
@@ -117,6 +117,7 @@ La respuesta tiene esta forma:
 | `GET` | `/api/treatment-assignments` | los tres | `200` lista |
 | `POST` | `/api/treatment-assignments` | admin, medico | `201` (o `200` si ya existía) |
 | `GET` | `/api/inventory/items` | los tres | `200` paginado |
+| `GET` | `/api/inventory/items/options` | los tres | `200` lista |
 | `GET` | `/api/inventory/items/:id` | los tres | `200` |
 | `POST` | `/api/inventory/items` | admin, recepcion | `201` |
 | `PUT` | `/api/inventory/items/:id` | admin, recepcion | `200` |
@@ -176,6 +177,7 @@ La respuesta tiene esta forma:
 | `GET` | `/api/institution/profile` | los tres | `200` |
 | `PUT` | `/api/institution/profile` | admin | `200` |
 | `GET` | `/api/notifications` | admin, recepcion (con `?appointmentId=`: los tres) | `200` paginado o lista |
+| `GET` | `/api/notifications/summary` | admin, recepcion | `200` |
 | `GET` | `/api/notifications/template` | admin, recepcion | `200` |
 | `GET` | `/api/alerts` | los tres | `200` |
 | `PUT` | `/api/notifications/template` | admin, recepcion | `200` |
@@ -337,7 +339,8 @@ Si la cuenta existe y está activa:
 
 ```json
 {
-  "id": "0199…", "treatmentId": "0199…", "patientId": "0199…",
+  "id": "0199…", "treatmentId": "0199…", "treatmentName": "Endodoncia",
+  "patientId": "0199…", "patientName": "María Pérez",
   "totalSessions": 1, "completedSessions": 1, "status": "completado",
   "startDate": "2026-11-17", "tooth": "26",
   "sourceEncounterId": "8f1c…", "price": 35.00, "sourceKey": "8f1c…:4b2a…"
@@ -391,6 +394,7 @@ El stock **no** se envía: nace en 0 y solo cambia con movimientos.
 | Endpoint | Detalle |
 |---|---|
 | `GET /api/inventory/items?page&pageSize&search` | `200` paginado, ordenado por nombre. `search` busca en nombre, categoría y proveedor. |
+| `GET /api/inventory/items/options` | `200` con **todos** los insumos, sin paginar y por nombre, solo `{ id, name, unit, kind }`: para los selectores (tratamientos, órdenes de compra, esterilización) en una sola petición. Los tres roles. |
 | `GET /api/inventory/items/:id` | `200`, o `404` "Insumo no encontrado" |
 | `POST /api/inventory/items` | `201` con `stock: 0` y `Location`; `400` |
 | `PUT /api/inventory/items/:id` | `200`; `400`, `404`. No cambia el stock. |
@@ -695,7 +699,7 @@ Solo `admin` y `medico` (`403` para `recepcion`). Contrato: `front/src/modules/c
 
 | Endpoint | Detalle |
 |---|---|
-| `GET /api/clinical-history/encounters?page&pageSize&search&patientId&professionalId` | `200` paginado de `EncounterListItem` (`id, patientId, date, professionalId, legacyProfessionalName, reason, diagnoses, nextVisit`), de la más reciente a la más antigua. `search` busca sin tildes en el motivo, los diagnósticos y el nombre o la cédula del paciente. |
+| `GET /api/clinical-history/encounters?page&pageSize&search&patientId&professionalId` | `200` paginado de `EncounterListItem` (`id, patientId, patientName, date, professionalId, legacyProfessionalName, reason, diagnoses, nextVisit`; `patientName` es "Nombres Apellidos"), de la más reciente a la más antigua. `search` busca sin tildes en el motivo, los diagnósticos y el nombre o la cédula del paciente. |
 | `GET /api/clinical-history/patients/:patientId` | `200` `{ record, encounters, references }` (ver abajo); `404` "Paciente no encontrado" |
 | `PUT /api/clinical-history/patients/:patientId` | `200` con la historia guardada y `revision + 1`; `400` por campo; `404`; `409` (revisión vieja, o paciente dado de baja) |
 | `POST /api/clinical-history/patients/:patientId/encounters` | `201` con la atención, o `200` si el `id` ya existía para ese paciente; `400`; `404`; `409` (mismo `id` en otro paciente, cita ya vinculada, paciente dado de baja) |
@@ -861,7 +865,8 @@ El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los v
 | Endpoint | Roles | Detalle |
 |---|---|---|
 | `GET /api/notifications?appointmentId=` | los tres | `200` lista sin paginar de las notificaciones de una cita ("cliente notificado" en el detalle de la cita, que ven todos los roles) |
-| `GET /api/notifications?page&pageSize&search&dateFrom&dateTo` | admin, recepcion | `200` paginado, del envío más reciente al más antiguo. `search`: nombre o cédula del paciente, sin tildes. Fechas `YYYY-MM-DD` inclusivas, en hora de la clínica. `400` con una fecha inválida. |
+| `GET /api/notifications?page&pageSize&search&dateFrom&dateTo&channel&status&type&id` | admin, recepcion | `200` paginado, del envío más reciente al más antiguo. `search`: nombre o cédula del paciente, sin tildes. Fechas `YYYY-MM-DD` inclusivas, en hora de la clínica. `channel` (`email`, `sms`), `status` (`enviada`, `fallida`), `type` (`recordatorio_cita`, `confirmacion_cita`, `cancelacion_cita`). `id`: solo esa notificación (el enlace de una alerta de envío fallido). `400` en su campo con una fecha, canal, estado o tipo inválido. |
+| `GET /api/notifications/summary` | admin, recepcion | `200` `{ total, sent, failed }` de todo el historial (sin las pendientes): los indicadores de la página sin leer el historial completo. |
 | `GET /api/notifications/template` | admin, recepcion | `200` `{ id, message, updatedAt }` |
 | `PUT /api/notifications/template` | admin, recepcion | Body `{ message }` (10 a 1000). `200`; `400`. |
 
