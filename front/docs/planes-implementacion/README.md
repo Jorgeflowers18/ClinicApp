@@ -1,8 +1,8 @@
 # Planes para conectar el frontend con la API
 
-Estado al **2026-11-22**. **Los planes 0 a 10 están hechos:** cada módulo tiene su versión real y su versión de demostración, y con `VITE_USE_MOCK_API=false` la app completa funciona contra la API. Quedan el **plan 11** (cierre: espera la decisión de conservar o eliminar el modo demostración) y el **plan 12** (campos y datos que todavía no están conectados). El `.env` por defecto sigue en modo demostración, porque las pruebas E2E corren así.
+Estado al **2026-11-22**. **Los planes 0 a 11 están hechos:** la app completa funciona contra la API y es la única forma de correrla. El modo demostración se quitó de esta rama (plan 11, opción B) y se conserva en la rama `jf/front-demo-mocks`; las pruebas E2E corren contra el back real con una base `clinicapp_e2e` que se crea y se borra en cada corrida (`front/README.md` § "Pruebas E2E"). Queda el **plan 12** (campos y datos que todavía no están conectados).
 
-Donde un plan dice **"estándar del plan 0"**, el estándar está en `documentacion/arquitectura-frontend.md` § "Patrón mock ↔ real": `*.contract.ts`, `*.http.ts`, `*.mock.ts` y `*.api.ts` con `env.usesApi(módulo)`, los helpers `api*` de `shared/lib/http.ts`, `fetchAllPages` y los tipos de `src/shared/api/schema.d.ts` (`npm run api:types`).
+Donde un plan dice **"estándar del plan 0"**, el estándar está en `documentacion/arquitectura-frontend.md` § "Patrón de recurso de API": `*.contract.ts`, `*.http.ts` y `*.api.ts`, los helpers `api*` de `shared/lib/http.ts`, `fetchAllPages` y los tipos de `src/shared/api/schema.d.ts` (`npm run api:types`).
 
 **Flujo de trabajo:** un plan por módulo. Al terminarlo se hace el commit, se registra el cambio en `documentacion/arquitectura-frontend.md` y se borra el plan. Lo que quede pendiente se anota en `back/backlog-desgloce.md` § "Pendientes al cerrar los planes".
 
@@ -23,7 +23,6 @@ El orden importa: las pantallas se cruzan por id (una cita apunta a un paciente,
 | 8 | ✅ Hecho (2026-11-22). `notifications`: plantilla, historial, mensajería y alertas | 2, 3, 4 | ✅ `GET /alerts`, y `patientName` y `message` en el historial (`d0aeeed`) |
 | 9 | ✅ Hecho (2026-11-22). `finance`: cartera, resúmenes y pagos | 3, 5 | No |
 | 10 | ✅ Hecho (2026-11-22). `reports`: reportes e Inicio | 4–9 | No |
-| 11 | [`11-cierre.md`](./11-cierre.md): apagar el modo mock por defecto, pruebas E2E reales y limpieza. **Parcial:** espera la decisión A/B | todos | CORS de E2E y URLs de producción |
 | 12 | [`12-campos-sin-conectar.md`](./12-campos-sin-conectar.md): campos, selectores y controles que aún no usan datos reales | 0–10 | Sí (varios puntos) |
 
 **El back ya no bloquea ningún plan:** lo que los planes 2, 3, 7 y 8 le pedían está implementado, con pruebas, y documentado en `back/docs/endpoints-api.md`. Queda una sola decisión de la clínica que afecta al frontend: si el teléfono del paciente es opcional. La API ya lo acepta vacío.

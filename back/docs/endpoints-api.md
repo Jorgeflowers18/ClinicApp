@@ -964,12 +964,4 @@ Todos con `?from=YYYY-MM-DD&to=YYYY-MM-DD`, **obligatorios e inclusivos**, en ho
 | `finance` | Jorge Flores | ✅ Etapa A: cartera, resúmenes y pagos. ⏳ Etapa B (cuotas, seguros y factura) espera el ítem 8. |
 | `reports` | Jorge Flores | ✅ Los 5 reportes, agregados en la base |
 
-**Para conectar el frontend** (`VITE_USE_MOCK_API=false`): falta la parte de sesión del frontend, detallada en `backlog.md` § `auth`.
-- `withCredentials: true` en `shared/lib/http.ts`.
-- Llamar a `POST /auth/refresh` al cargar la app.
-- Renovar la sesión ante un `401`.
-- Las funciones `*Real` que faltan en `auth.api.ts`.
-
-Sin eso, la sesión se pierde al recargar la página.
-
-**Lo demás que el frontend debe cambiar** para usar estos endpoints (pares Mock/Real nuevos, pantallas y ajustes por módulo) está en [`backlog-desgloce.md` § Pendientes al cerrar los planes](../backlog-desgloce.md#pendientes-al-cerrar-los-planes-2026-11-17).
+**Frontend:** conectado a todos estos endpoints (planes 0 a 11 del front, 2026-11-22), con la sesión por `POST /auth/refresh` y renovación ante el `401`. Lo que falta está en [`backlog-desgloce.md` § Pendientes al cerrar los planes](../backlog-desgloce.md#pendientes-al-cerrar-los-planes-2026-11-17).

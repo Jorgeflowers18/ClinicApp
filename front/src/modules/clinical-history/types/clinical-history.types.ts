@@ -339,7 +339,7 @@ export interface CreateEncounterInput extends EncounterFormValues {
 
 export interface AddEncounterNoteInput {
   text: string
-  /** Solo para el modo demostración; el backend toma el autor de la sesión. */
+  /** No se envía: el backend toma el autor de la sesión. Se conserva para mostrar el nombre antes de guardar. */
   authorName: string
 }
 

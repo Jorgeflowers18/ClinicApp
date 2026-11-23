@@ -9,24 +9,16 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-### Modo demostración o API
-
-El frontend funciona de dos formas, según `.env` (ver `.env.example`):
-
-| Variable | Valor | Qué hace |
-|---|---|---|
-| `VITE_USE_MOCK_API` | `true` | **Demostración:** todo en el navegador, con datos de ejemplo (cuentas `admin@clinica.com` / `admin123`, `recepcion@clinica.com` / `recepcion123`, `medico@clinica.com` / `medico123`). |
-| `VITE_USE_MOCK_API` | `false` | **API:** todos los módulos usan el back. |
-| `VITE_API_MODULES` | `auth,patients,…` | Con la demostración activa, solo esos módulos usan la API (para conectar de a uno). |
-| `VITE_API_BASE_URL` | `http://localhost:5000/api` | Dirección de la API. |
-
 ### Contra el back
 
-1. Levantar el back (ver [`../back/README.md`](../back/README.md)): la base en Docker (`clinicapp-db`) y la API en `http://localhost:5000`. En desarrollo, el back crea las mismas tres cuentas de prueba.
-2. En `.env.local`: `VITE_USE_MOCK_API=false`.
-3. `npm run dev`. El CORS de desarrollo del back permite `http://localhost:5173` (con credenciales, para la cookie de sesión).
+El frontend siempre usa la API. La única variable es `VITE_API_BASE_URL` (por defecto `http://localhost:5000/api`; ver `.env.example`).
+
+1. Levantar el back (ver [`../back/README.md`](../back/README.md)): la base en Docker (`clinicapp-db`) y la API en `http://localhost:5000`. En desarrollo, el back crea tres cuentas de prueba: `admin@clinica.com` / `admin123`, `recepcion@clinica.com` / `recepcion123` y `medico@clinica.com` / `medico123`.
+2. `npm run dev`. El CORS de desarrollo del back permite `http://localhost:5173` (con credenciales, para la cookie de sesión).
 
 La sesión dura 15 minutos y se renueva sola con la cookie `httpOnly` del back; el token nunca se guarda en el navegador.
+
+El modo demostración (datos de ejemplo en el navegador, sin back) se quitó de esta rama; se conserva en la rama `jf/front-demo-mocks`.
 
 ## Scripts
 
@@ -36,19 +28,37 @@ La sesión dura 15 minutos y se renueva sola con la cookie `httpOnly` del back; 
 | `npm run build` | Compila TypeScript y genera `dist/`. |
 | `npm run lint` | Oxlint. |
 | `npm run api:types` | Regenera `src/shared/api/schema.d.ts` desde el OpenAPI del back (con la API levantada). Hacerlo cada vez que cambie un endpoint. |
-| `npm run test:e2e` | Pruebas de Playwright. Necesitan Vite en `http://127.0.0.1:5175` en modo demostración (`npx vite --host 127.0.0.1 --port 5175`), o `CLINIC_TEST_URL` con otra dirección. |
+| `npm run test:e2e` | Pruebas de Playwright contra la API real, con una base de datos propia que se borra al terminar (abajo). |
 
-**Pruebas E2E:** si se levantan varios Vite a la vez (por ejemplo el de desarrollo y el de pruebas), cada uno debe usar su propia carpeta de caché (`cacheDir`); si comparten `node_modules/.vite`, se reoptimizan entre sí y la página carga dos copias de React. Después de cambiar un archivo con el Vite de pruebas corriendo, reiniciarlo: las pruebas que reemplazan funciones de un módulo (`import("/src/…")`) podrían tocar otra instancia del módulo.
+## Pruebas E2E
+
+```bash
+npm run test:e2e                          # todas
+npm run test:e2e -- tests/auth.spec.ts    # argumentos extra para Playwright
+```
+
+Solo necesitan el contenedor `clinicapp-db` encendido. `scripts/run-api-e2e.mjs` hace todo lo demás:
+
+1. compila la API;
+2. borra `clinicapp_e2e` si quedó de una corrida anterior y la crea con todas las migraciones;
+3. levanta la API en `http://127.0.0.1:5100` (entorno Development: crea las cuentas de prueba, profesionales y consultorios; adjuntos en una carpeta temporal; notificaciones solo al log) y un Vite propio en `http://127.0.0.1:5185`;
+4. corre Playwright (`tests/`);
+5. **siempre** apaga la API y Vite, **borra la base `clinicapp_e2e`** y la carpeta de adjuntos, aunque las pruebas fallen o se corte con Ctrl+C. Después comprueba que la base ya no exista; si no pudo borrarla, lo dice, muestra el comando para hacerlo a mano y termina con error.
+
+**Seguridad:** el nombre de la base es fijo (`clinicapp_e2e`) y el servidor debe ser local (`localhost`, `127.0.0.1` o `::1`); si no, el script no corre. Nunca toca la base de desarrollo (`clinicapp`), la de las pruebas del back (`clinicapp_test`) ni la de producción. Solo se pueden cambiar el puerto y las credenciales locales (`E2E_DB_PORT`, `E2E_DB_USER`, `E2E_DB_PASSWORD`) y el contenedor (`E2E_DB_CONTAINER`). Con `E2E_VERBOSE=1` se ve la salida de la API y de Vite.
+
+Las pruebas crean sus propios datos por la API (pacientes con nombres únicos), así que no dependen del orden ni de datos fijos. Para correr Playwright contra otro servidor ya levantado: `CLINIC_TEST_URL` (front) y `E2E_API_URL` (API) con `npx playwright test`.
+
+El Vite de las pruebas usa su propia caché (`node_modules/.vite-e2e`): si dos Vite comparten `node_modules/.vite`, se reoptimizan entre sí y la página carga dos copias de React.
 
 ## Conectar un recurso nuevo a la API
 
-Cada módulo sigue el mismo estándar (`documentacion/arquitectura-frontend.md` § "Patrón mock ↔ real"):
+Cada módulo sigue el mismo estándar (`documentacion/arquitectura-frontend.md` § "Patrón de recurso de API"):
 
 ```
 modules/<módulo>/api/
   <módulo>.contract.ts   interfaz con los métodos que usan los hooks
   <módulo>.http.ts       llamadas api* + mapeo DTO → modelo (tipos de src/shared/api/schema.d.ts)
-  <módulo>.mock.ts       implementación de demostración
-  <módulo>.api.ts        export const xApi = env.usesApi("<módulo>") ? httpXApi : mockXApi
+  <módulo>.api.ts        export const xApi: XApi = httpXApi
   <módulo>.queries.ts    hooks de React Query (queryFn con signal)
 ```

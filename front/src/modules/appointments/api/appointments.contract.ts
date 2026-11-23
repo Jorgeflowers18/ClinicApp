@@ -15,15 +15,14 @@ export interface DateRange {
 }
 
 /**
- * Agenda: citas y bloqueos. `appointments.http.ts` lo cumple con la API y `appointments.mock.ts` con los
- * datos de demostración; `appointments.api.ts` elige con `env.usesApi("agenda")`.
+ * Agenda: citas y bloqueos. `appointments.http.ts` lo cumple con la API.
  *
  * Los choques (profesional, consultorio y bloqueos) los valida quien guarda: el servidor responde `409` con
  * `errors.startTime`. Las notificaciones de la cita (confirmación y cancelación) también las registra el
  * servidor, en la misma transacción: no están en el contrato.
  */
 export interface AppointmentsApi {
-  /** Con `range`, solo las citas que empiezan en esos días. Sin él, todas (evitarlo con la API). */
+  /** Con `range`, solo las citas que empiezan en esos días. Sin él, todas (evitarlo: con muchos datos es una lectura grande). */
   list(range?: DateRange, signal?: AbortSignal): Promise<Appointment[]>
   /** De la más reciente a la más antigua. */
   listByPatient(patientId: string, signal?: AbortSignal): Promise<Appointment[]>

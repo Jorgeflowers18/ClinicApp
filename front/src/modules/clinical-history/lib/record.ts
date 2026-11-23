@@ -1,11 +1,7 @@
-import type { ZodType } from "zod"
-
-import type { ApiFieldError } from "@/shared/types/common"
 import type { Professional } from "@/modules/appointments/types/appointment.types"
 
 import { medicalAlertLabels, type Allergy, type MedicalAlertKey } from "../types/background.types"
 import {
-  recordFormSchema,
   type ChartSnapshot,
   type ClinicalEncounter,
   type ClinicalRecord,
@@ -82,17 +78,6 @@ export function medicalAlertsOf(source: { alerts: readonly MedicalAlertKey[]; al
       return `Alergia: ${substance || allergy.reaction.trim()}${details.length ? ` (${details.join(", ")})` : ""}`
     }),
   ]
-}
-
-/** Reglas del formulario reutilizadas como validación "del servidor" en el modo demostración. */
-export function validateWith(schema: ZodType, values: unknown): ApiFieldError[] {
-  const result = schema.safeParse(values)
-  if (result.success) return []
-  return result.error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message }))
-}
-
-export function validateRecord(record: ClinicalRecord) {
-  return validateWith(recordFormSchema, pickRecordValues(record))
 }
 
 function normalizeName(value: string) {

@@ -22,7 +22,7 @@ export const appointmentsKeys = {
 }
 
 /**
- * Citas que empiezan en `range` (días de la clínica). Sin rango pide **todas**: solo para la demostración y
+ * Citas que empiezan en `range` (días de la clínica). Sin rango pide **todas**: solo para
  * los usos que el plan 8 reemplaza. `keepPreviousData` evita que el calendario parpadee al navegar.
  */
 export function useAppointmentsList(range?: DateRange) {
@@ -69,8 +69,8 @@ export function useScheduleBlocksList(range?: DateRange) {
 }
 
 /**
- * Al crear o cancelar una cita, quien guarda registra su notificación (el servidor, en la misma transacción;
- * la demostración, en su mock). Aquí solo se refresca el historial de notificaciones.
+ * Al crear o cancelar una cita, el servidor registra su notificación en la misma transacción. Aquí solo se
+ * refresca el historial de notificaciones.
  */
 function refreshNotifications(appointment: Appointment) {
   queryClient.invalidateQueries({ queryKey: notificationsKeys.lists() })

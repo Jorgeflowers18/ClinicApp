@@ -3,8 +3,7 @@ import type { Paginated } from "@/shared/types/common"
 import type { Patient, PatientFormValues, PatientsQuery } from "../types/patient.types"
 
 /**
- * Pacientes. `patients.http.ts` lo cumple con la API y `patients.mock.ts` con los datos de demostración;
- * `patients.api.ts` elige con `env.usesApi("patients")`.
+ * Pacientes. `patients.http.ts` lo cumple con la API.
  */
 export interface PatientsApi {
   /** Sin `deleted`, solo los activos (sin baja). Con `deleted: true` (solo admin), los dados de baja. */

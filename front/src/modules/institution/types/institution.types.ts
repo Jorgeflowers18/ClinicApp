@@ -1,8 +1,8 @@
 export type InstitutionBranch = {
-  /** UUID del servidor. Una sede nueva se envía con `""`: el servidor (o la demostración) le da el id. */
+  /** UUID del servidor. Una sede nueva se envía con `""`: el servidor le da el id. */
   id: string
   name: string
-  /** Lo que se muestra: el nombre, o "Sede N" si no tiene. Lo calcula la API; en demostración no existe. */
+  /** Lo que se muestra: el nombre, o "Sede N" si no tiene. Lo calcula la API. */
   label?: string
   address: string
   phone: string

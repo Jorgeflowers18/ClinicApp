@@ -93,7 +93,7 @@ export function AppointmentsCalendarPage() {
   const [blockToDelete, setBlockToDelete] = useState<ScheduleBlock | null>(null)
 
   function patientName(patientId: string, known?: string) {
-    // La API trae el nombre en la cita; la demostración lo busca en la lista de pacientes.
+    // La API trae el nombre en la cita; la lista de pacientes es solo un respaldo.
     if (known) return known
     const patient = patientsPage?.items.find((item) => item.id === patientId)
     return patient ? `${patient.firstName} ${patient.lastName}` : "Paciente"

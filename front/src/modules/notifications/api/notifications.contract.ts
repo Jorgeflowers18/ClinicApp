@@ -20,8 +20,7 @@ export interface AlertsSnapshot {
 }
 
 /**
- * Notificaciones a pacientes. `notifications.http.ts` lo cumple con la API y `notifications.mock.ts` con los
- * datos de demostración; `notifications.api.ts` elige con `env.usesApi("notifications")`.
+ * Notificaciones a pacientes. `notifications.http.ts` lo cumple con la API.
  *
  * Las notificaciones de las citas las crea el servidor (al crear o cancelar la cita, y los recordatorios):
  * el frontend no las registra.
@@ -31,6 +30,5 @@ export interface NotificationsApi {
   listByAppointment(appointmentId: string, signal?: AbortSignal): Promise<NotificationLog[]>
   getTemplate(signal?: AbortSignal): Promise<NotificationTemplate>
   updateTemplate(values: NotificationTemplateFormValues): Promise<NotificationTemplate>
-  /** Solo con la API; la demostración arma las alertas desde sus listas. */
-  getAlerts?(signal?: AbortSignal): Promise<AlertsSnapshot>
+  getAlerts(signal?: AbortSignal): Promise<AlertsSnapshot>
 }

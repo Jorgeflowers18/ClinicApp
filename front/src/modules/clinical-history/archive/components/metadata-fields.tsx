@@ -91,7 +91,7 @@ export function MetadataFields({ value, onChange, options, part = "all", name = 
         ><Plus />Crear categoría</Button>
       </div>
 
-      <small className={styles.full}>Las categorías y etiquetas se comparten en esta institución de demostración. No cambian el tipo clínico.</small>
+      <small className={styles.full}>Las categorías y etiquetas se comparten en toda la institución. No cambian el tipo clínico.</small>
 
     </>}
 

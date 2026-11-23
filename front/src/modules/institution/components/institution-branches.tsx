@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-import { env } from "@/shared/lib/env"
 import { getErrorMessage } from "@/shared/lib/error-message"
 
 import { branchLabel, type InstitutionBranch } from "../types/institution.types"
@@ -22,9 +21,6 @@ type BranchDraft = Pick<InstitutionBranch, "name" | "address" | "phone" | "hours
 type Editor = { original: InstitutionBranch | null; draft: BranchDraft }
 type Props = { branches: InstitutionBranch[]; onCommit: (branches: InstitutionBranch[]) => Promise<void> }
 
-const usesApi = env.usesApi("institution")
-/** Con la API, el mensaje del servidor; en demostración, el fallo es del almacenamiento del navegador. */
-const failure = (error: unknown, local: string) => usesApi ? getErrorMessage(error) : /* MOCK-ONLY */ local
 
 function BranchActions({ branch, onEdit, onDelete }: {
   branch: InstitutionBranch
@@ -80,7 +76,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
     setBusy(true)
     try {
       const original = editor.original
-      // Una sede nueva va sin id: lo pone el servidor (o la demostración) al guardar.
+      // Una sede nueva va sin id: lo pone el servidor al guardar.
       const next = original
         ? branches.map((branch) => branch.id === original.id ? { ...branch, ...editor.draft } : branch)
         : [...branches, { ...editor.draft, id: "", isMain: branches.length === 0 }]
@@ -89,7 +85,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
       setError("")
       toast.success(editor.original ? "Sede actualizada" : "Sede creada")
     } catch (cause) {
-      setError(failure(cause, "No se pudo guardar la sede en este navegador. Tus datos siguen en el formulario. Inténtalo de nuevo."))
+      setError(getErrorMessage(cause))
     } finally { busyRef.current = false; setBusy(false) }
   }
   const deleteBranch = async () => {
@@ -102,7 +98,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
       setError("")
       toast.success("Sede eliminada")
     } catch (cause) {
-      setError(failure(cause, "No se pudo eliminar la sede en este navegador. La sede se conserva. Inténtalo de nuevo."))
+      setError(getErrorMessage(cause))
     } finally { busyRef.current = false; setBusy(false) }
   }
   const condition = (branch: InstitutionBranch) => branch.isMain

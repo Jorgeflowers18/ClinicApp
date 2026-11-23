@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Después de los planes 0 a 10, cada pantalla lee y guarda en la API. Esta lista reúne lo que **todavía no**: campos que se muestran pero no tienen dato real, controles deshabilitados, y lecturas que funcionan con los datos de demostración pero no con los 820 pacientes reales. Se revisó el 2026-11-22, con todos los planes aplicados y la app probada con `VITE_USE_MOCK_API=false`, buscando en el código `pageSize: 100`, `localStorage`, textos "no disponible" y campos que la API devuelve vacíos.
+Después de los planes 0 a 10, cada pantalla lee y guarda en la API. Esta lista reúne lo que **todavía no**: campos que se muestran pero no tienen dato real, controles deshabilitados, y lecturas que funcionaban con los datos de demostración pero no con los 820 pacientes reales. Se revisó el 2026-11-22, con todos los planes aplicados y la app probada contra la API, buscando en el código `pageSize: 100`, `localStorage`, textos "no disponible" y campos que la API devuelve vacíos.
 
 Cada punto dice qué se ve hoy, por qué no está conectado y qué hace falta (front, back o una decisión).
 

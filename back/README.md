@@ -42,4 +42,4 @@ Ver [`backlog.md`](./backlog.md) para el desglose de TODOs pendientes por módul
 - Chequeo de salud en `GET /api/health`: `Healthy` (200) o `Unhealthy` (503) según si la API llega a la base.
 - En producción la configuración va en variables de entorno (`ConnectionStrings__Default`, `ASPNETCORE_URLS`...), nunca en `appsettings.json`. Ver la lección 5 del tutorial.
 - Recursos: `patients`, `appointments`, `professionals`, `rooms`, `schedule-blocks`, `clinical-history`, `treatments`, `treatment-assignments`, `inventory`, `notifications`, `finance`, `institution`, `reports`.
-- El frontend consume la API mediante `VITE_API_BASE_URL` (ver `../front/.env.example`). Hoy corre con datos mock (`VITE_USE_MOCK_API=true`): la API ya tiene todos los módulos, y lo que falta en el frontend para conectarse está en [`backlog-desgloce.md`](./backlog-desgloce.md#pendientes-al-cerrar-los-planes-2026-11-17).
+- El frontend consume la API mediante `VITE_API_BASE_URL` (ver `../front/.env.example`). Todos los módulos del frontend están conectados a la API; lo que falta está en [`backlog-desgloce.md`](./backlog-desgloce.md#pendientes-al-cerrar-los-planes-2026-11-17).

@@ -28,8 +28,7 @@ export interface RegisterEncounterResult {
 }
 
 /**
- * Historia clínica. `clinical-history.http.ts` lo cumple con la API y `clinical-history.mock.ts` con IndexedDB;
- * `clinical-history.api.ts` elige con `env.usesApi("clinical-history")`.
+ * Historia clínica. `clinical-history.http.ts` lo cumple con la API.
  */
 export interface ClinicalHistoryApi {
   listEncounters(query: EncounterListQuery, signal?: AbortSignal): Promise<Paginated<EncounterListItem>>

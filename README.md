@@ -16,4 +16,4 @@ npm install
 npm run dev
 ```
 
-La app corre en modo mock (`VITE_USE_MOCK_API=true`) hasta que la API en `back/` esté disponible. Cuentas de prueba en la pantalla de login.
+La app usa la API de `back/` (ver `front/README.md`). El modo demostración, sin back, está en la rama `jf/front-demo-mocks`.

@@ -1,11 +1,9 @@
 import { useState } from "react"
-import { Info, CalendarDays, ChartNoAxesCombined, Stethoscope, Package } from "lucide-react"
+import { CalendarDays, ChartNoAxesCombined, Stethoscope, Package } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AdaptiveTabs } from "@/components/ui/adaptive-tabs"
 import { TabsContent } from "@/components/ui/tabs"
 import { PageHeader } from "@/shared/components/page-header"
-import { env } from "@/shared/lib/env"
 
 import { AgendaReportTab } from "../components/agenda-report-tab"
 import { InventoryReportTab } from "../components/inventory-report-tab"
@@ -30,18 +28,6 @@ export function ReportsPage() {
       />
 
       <PeriodSelector value={state} onChange={setState} />
-
-      {!env.usesApi("reports") && (
-        <Alert className="report-demo">
-          <Info className="size-4" />
-          <AlertTitle>Datos de demostración</AlertTitle>
-          <AlertDescription>
-            Las citas y notificaciones de ejemplo son relativas a hoy, pero pacientes, asignaciones de tratamiento y
-            compras están fechados entre noviembre de 2025 y febrero de 2026. Usa "Este año" o un rango personalizado
-            para verlos.
-          </AlertDescription>
-        </Alert>
-      )}
 
       <AdaptiveTabs
         variant="line"

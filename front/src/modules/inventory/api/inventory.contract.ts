@@ -15,10 +15,9 @@ import type {
 } from "../types/inventory.types"
 
 /**
- * Inventario. `inventory.http.ts` lo cumple con la API y `inventory.mock.ts` con los datos de demostración;
- * `inventory.api.ts` elige con `env.usesApi("inventory")`.
+ * Inventario. `inventory.http.ts` lo cumple con la API.
  *
- * El stock, los lotes y el descuento FEFO los calcula quien guarda. El consumo clínico de un tratamiento
+ * El stock, los lotes y el descuento FEFO los calcula el servidor. El consumo clínico de un tratamiento
  * realizado lo descuenta el servidor al registrarlo: no está en el contrato.
  */
 export interface InventoryApi {

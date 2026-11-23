@@ -1,4 +1,3 @@
-import { useSyncExternalStore } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 
 import { useAuthStore } from "@/modules/auth/store/auth-store"
@@ -15,9 +14,6 @@ export const institutionKeys = {
 
 /** El perfil cambia poco: no hace falta pedirlo en cada pantalla. */
 const STALE_TIME = 5 * 60_000
-
-/** Solo en demostración: lectura síncrona de `localStorage`, con aviso entre pestañas. */
-const local = institutionApi.local
 
 const publicPart = ({ name, subtitle, logoText, logoImage }: InstitutionProfile): PublicInstitution => ({ name, subtitle, logoText, logoImage })
 
@@ -43,14 +39,13 @@ function useProfileQuery() {
   })
 }
 
-const useLocalProfile = () => useSyncExternalStore(local!.subscribe, local!.read, () => initialInstitutionProfile)
-const useApiProfile = () => useProfileQuery().data ?? initialInstitutionProfile
-
 /** El perfil guardado, para mostrarlo (barra lateral, mensajería). Mientras llega, los valores por defecto. */
-export const useInstitutionProfile: () => InstitutionProfile = local ? useLocalProfile : useApiProfile
+export function useInstitutionProfile(): InstitutionProfile {
+  return useProfileQuery().data ?? initialInstitutionProfile
+}
 
-const useLocalPublic = () => publicPart(useLocalProfile())
-function useApiPublic(): PublicInstitution {
+/** Nombre y marca para las pantallas sin sesión (inicio de sesión, recuperar contraseña…). */
+export function usePublicInstitution(): PublicInstitution {
   const { data } = useQuery({
     queryKey: institutionKeys.public,
     queryFn: ({ signal }) => institutionApi.getPublic(signal),
@@ -59,34 +54,25 @@ function useApiPublic(): PublicInstitution {
   return data ?? publicPart(initialInstitutionProfile)
 }
 
-/** Nombre y marca para las pantallas sin sesión (inicio de sesión, recuperar contraseña…). */
-export const usePublicInstitution: () => PublicInstitution = local ? useLocalPublic : useApiPublic
-
-const useLocalSavedName = () => useSyncExternalStore(local!.subscribe, local!.readSavedName, () => null)
-const useApiSavedName = () => useProfileQuery().data?.name.trim() || null
-
-/**
- * Nombre institucional guardado (o null si no se configuró). Se actualiza al guardar el perfil; los cambios
- * sin guardar no lo afectan. Con la API, el perfil siempre existe (`InstitutionSeeder`).
- */
-export const useSavedInstitutionName: () => string | null = local ? useLocalSavedName : useApiSavedName
+/** Nombre institucional guardado. El perfil siempre existe en la API (`InstitutionSeeder`). */
+export function useSavedInstitutionName(): string | null {
+  return useProfileQuery().data?.name.trim() || null
+}
 
 /** Lo mismo, fuera de React (por ejemplo, al preparar un mensaje). */
 export async function fetchSavedInstitutionName(): Promise<string | null> {
-  if (local) return local.readSavedName()
   return (await queryClient.fetchQuery(profileQuery())).name.trim() || null
 }
 
-/** Para la pantalla de edición: el perfil confirmado, o `undefined` mientras llega de la API. */
+/** Para la pantalla de edición: el perfil confirmado, o `undefined` mientras llega. */
 export function useEditableInstitutionProfile(): { profile: InstitutionProfile | undefined; error: unknown } {
   const query = useProfileQuery()
-  if (local) return { profile: local.read(), error: null }
   return { profile: query.isPlaceholderData ? undefined : query.data, error: query.error }
 }
 
 /** El último perfil confirmado (lo que muestra "Cancelar"). */
 export function readConfirmedInstitutionProfile(): InstitutionProfile | undefined {
-  return local ? local.read() : queryClient.getQueryData<InstitutionProfile>(institutionKeys.profile)
+  return queryClient.getQueryData<InstitutionProfile>(institutionKeys.profile)
 }
 
 export function useSaveInstitutionProfile() {

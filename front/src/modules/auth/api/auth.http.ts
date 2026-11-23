@@ -57,10 +57,4 @@ export const httpAuthApi: AuthApi = {
   async requestAccess(values) {
     await apiPost("/auth/access-requests", values)
   },
-  // La cookie httpOnly restaura la sesión: nada se guarda en el navegador.
-  sessionCache: {
-    initial: () => undefined,
-    started: (session) => session,
-    cleared: () => {},
-  },
 }

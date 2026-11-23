@@ -13,9 +13,6 @@
 .report-custom-dates > div > div { display: grid; gap: 6px; min-width: 0; flex: 0 1 200px; padding-top: 12px; }
 .report-custom-dates input { width: 100%; min-width: 0; }
 .report-period[data-custom="true"] .report-custom-dates { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
-.reports-module .report-demo { padding: 10px 12px; font-size: 12px; }
-.reports-module .report-demo [data-slot="alert-title"] { font-size: 12px; }
-.reports-module .report-demo [data-slot="alert-description"] { font-size: 12px; line-height: 1.5; }
 .reports-kpis { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
 .reports-module .clinic-kpi-card > [data-slot="card-content"] { min-height: 92px; padding: 12px 14px; align-items: center; }
 .reports-module .clinic-kpi-label { font-size: 13px; line-height: 1.4; }

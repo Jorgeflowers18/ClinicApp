@@ -7,8 +7,7 @@ import type {
 } from "../types/finance.types"
 
 /**
- * Finanzas (etapa A: saldos y pagos, sin cuotas, seguros ni factura). `finance.http.ts` lo cumple con la API y
- * `finance.mock.ts` con los datos de demostración; `finance.api.ts` elige con `env.usesApi("finance")`.
+ * Finanzas (etapa A: saldos y pagos, sin cuotas, seguros ni factura). `finance.http.ts` lo cumple con la API.
  * Solo admin y recepción: el médico recibe `403`, así que las pantallas no se lo piden.
  */
 export interface FinanceApi {

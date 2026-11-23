@@ -1,8 +1,5 @@
-import { env } from "@/shared/lib/env"
-
 import type { ArchiveApi } from "./archive.contract"
 import { httpArchiveApi } from "./archive.http"
-import { mockArchiveApi } from "./archive.mock"
 
-/** La única elección entre la API y la demostración (IndexedDB) para el archivo clínico. */
-export const archiveApi: ArchiveApi = env.usesApi("clinical-history") ? httpArchiveApi : mockArchiveApi
+/** El recurso de este módulo. Los hooks y las pantallas importan solo esto (nunca `*.http.ts`). */
+export const archiveApi: ArchiveApi = httpArchiveApi

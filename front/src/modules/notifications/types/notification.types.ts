@@ -33,7 +33,7 @@ export interface NotificationLog {
   channel: NotificationChannel
   status: NotificationStatus
   sentAt: string
-  /** "Nombres Apellidos" del paciente; lo trae la API (en demostración se busca en la lista de pacientes). */
+  /** "Nombres Apellidos" del paciente; lo trae la API. */
   patientName?: string
   /** El texto enviado, ya armado con las variables (solo con la API). */
   message?: string

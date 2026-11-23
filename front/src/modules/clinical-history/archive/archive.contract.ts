@@ -2,11 +2,10 @@ import type { PatientClinicalHistory } from "../types/clinical-history.types"
 import type { ArchiveCatalog, ArchiveCategory, ClinicalFileDraft } from "./types"
 
 /**
- * Archivo clínico digital. `archive.http.ts` lo cumple con la API y `archive.mock.ts` con IndexedDB;
- * `api.ts` elige con `env.usesApi("clinical-history")`.
+ * Archivo clínico digital. `archive.http.ts` lo cumple con la API.
  *
  * Cada escritura devuelve la historia completa (o el catálogo), para reemplazarla en la caché. Las reglas
- * (duplicados por SHA-256, vínculos con atención, examen y tratamiento, versiones) las valida quien guarda.
+ * (duplicados por SHA-256, vínculos con atención, examen y tratamiento, versiones) las valida el servidor.
  */
 export interface ArchiveApi {
   catalog(signal?: AbortSignal): Promise<ArchiveCatalog>

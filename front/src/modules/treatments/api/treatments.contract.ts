@@ -3,10 +3,9 @@ import type { PageQuery, Paginated } from "@/shared/types/common"
 import type { CreateAssignmentInput, Treatment, TreatmentAssignment, TreatmentFormValues } from "../types/treatment.types"
 
 /**
- * Catálogo de tratamientos y tratamientos realizados. `treatments.http.ts` lo cumple con la API y
- * `treatments.mock.ts` con los datos de demostración; `treatments.api.ts` elige con `env.usesApi("treatments")`.
+ * Catálogo de tratamientos y tratamientos realizados. `treatments.http.ts` lo cumple con la API.
  *
- * El descuento de insumos al registrar un tratamiento realizado lo hace quien guarda (el servidor, con FEFO):
+ * El descuento de insumos al registrar un tratamiento realizado lo hace el servidor (FEFO):
  * no está en el contrato.
  */
 export interface TreatmentsApi {

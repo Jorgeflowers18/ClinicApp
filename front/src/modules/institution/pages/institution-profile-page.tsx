@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { PageHeader } from "@/shared/components/page-header"
-import { env } from "@/shared/lib/env"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { ApiError } from "@/shared/types/common"
 import { readConfirmedInstitutionProfile, useEditableInstitutionProfile, useSaveInstitutionProfile } from "../api/institution.queries"
@@ -22,7 +21,6 @@ type TextField = Exclude<keyof InstitutionProfile, "branches" | "logoImage" | "l
 type FieldErrors = Partial<Record<TextField, string>>
 const textFields: readonly string[] = ["name", "subtitle", "legalName", "ruc", "phone", "email", "address", "website", "notes", "hours"]
 
-const usesApi = env.usesApi("institution")
 
 /** Los errores del `400` del servidor que son de un campo del formulario; el resto (sedes, logo) va al mensaje general. */
 function serverFieldErrors(error: unknown): FieldErrors {
@@ -101,9 +99,7 @@ function InstitutionProfileForm({ initial }: { initial: InstitutionProfile }) {
       const fields = serverFieldErrors(error)
       setFieldErrors(fields)
       if (Object.keys(fields).length) focusFirst(fields)
-      setSaveError(usesApi
-        ? getErrorMessage(error)
-        : /* MOCK-ONLY */ "No se pudieron guardar los cambios en este navegador. Tus cambios siguen en el formulario. Inténtalo de nuevo.")
+      setSaveError(getErrorMessage(error))
     } finally { savingRef.current = false; setSaving(false) }
   }
 
@@ -198,7 +194,7 @@ function InstitutionProfileForm({ initial }: { initial: InstitutionProfile }) {
     <InstitutionBranches branches={profile.branches} onCommit={handleCommitBranches} />
     {saveError && <p role="alert" className={styles.error}>{saveError}</p>}
     <div className={styles.actions}>
-      <div>{!usesApi && /* MOCK-ONLY */ <p className={styles.hint}>Los cambios se guardan en este navegador.</p>}
+      <div>
         {dirty ? <p className={styles.pending} role="status">Cambios sin guardar</p> : saved && <p className={styles.hint} role="status">Cambios guardados</p>}
       </div>
       <div className={styles.buttons}>

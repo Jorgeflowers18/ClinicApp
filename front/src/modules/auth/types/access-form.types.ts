@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-// Recuperar contraseña y solicitar acceso: se envían con `authApi` (en demostración no salen del navegador).
+// Recuperar contraseña y solicitar acceso: se envían con `authApi`.
 export const recoverySchema = z.object({
   email: z.string().trim().email("Ingresa un correo válido"),
 })

@@ -67,8 +67,6 @@
 .clinic-kpi-card[data-icon-tone="warning"] { --kpi-icon-color: var(--warning); --kpi-icon-surface: var(--warning-surface); }
 .clinic-kpi-card[data-icon-tone="destructive"] { --kpi-icon-color: var(--destructive); --kpi-icon-surface: var(--destructive-surface); }
 .clinic-summary-icon { width: 32px; height: 32px; flex-shrink: 0; background: var(--kpi-icon-surface); color: var(--kpi-icon-color); }
-.clinic-demo-notice { display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--info) 22%, var(--border)); border-radius: var(--radius-control); background: var(--info-surface); color: var(--muted-foreground); font-size: 12px; line-height: 1.5; }
-.clinic-demo-notice > svg { color: var(--info); margin-top: 1px; }
 
 .clinic-app-canvas [data-slot="card"]:has(> [data-slot="card-content"].p-4:only-child) { padding-block: 0; }
 .clinic-data-table [data-slot="table-head"] { height: 42px; padding-inline: 12px; font-size: 13px; font-weight: 510; color: var(--muted-foreground); }

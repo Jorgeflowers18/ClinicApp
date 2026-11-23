@@ -4,7 +4,7 @@ import { archiveMutationKey } from "../archive/hooks"
 import { mergeArchiveRows } from "../archive/lib/filter"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
-import { Activity, AlertCircle, CalendarClock, ClipboardList, Info, Stethoscope } from "lucide-react"
+import { Activity, AlertCircle, CalendarClock, ClipboardList, Stethoscope } from "lucide-react"
 import { FormProvider, useForm, useWatch, type FieldErrors, type Path } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { formatDateOnly } from "@/shared/lib/date"
-import { env } from "@/shared/lib/env"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { ApiError } from "@/shared/types/common"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
@@ -337,16 +336,6 @@ export function RecordWorkspace({
       <div ref={navigationContainer} className={`${navigationStyles.scope} clinic-history-workspace min-w-0 space-y-4`}>
         <RecordHeader patient={patient} record={record} onBack={goBack} onRegisterEncounter={() => openRegister(null)} />
 
-        {/* MOCK-ONLY */}
-        {!env.usesApi("clinical-history") && (
-          <p role="note" className="clinic-demo-notice">
-            <Info aria-hidden="true" className="size-4 shrink-0" />
-            <span>
-            Modo demostración: la historia clínica se guarda en este navegador y no se sincroniza con un servidor. Los
-            datos del paciente se guardan en memoria y vuelven a los de ejemplo al recargar la página.
-            </span>
-          </p>
-        )}
 
         {conflict && (
           <Alert variant="destructive">

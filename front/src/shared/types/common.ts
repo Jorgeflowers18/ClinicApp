@@ -27,7 +27,7 @@ export interface ApiErrorDetails {
 }
 
 /**
- * Único error que ven las pantallas, venga del servidor (normalizado en `shared/lib/http.ts`) o de un mock.
+ * Único error que ven las pantallas, venga del servidor (normalizado en `shared/lib/http.ts`) o de una validación local.
  * `kind` clasifica el error (validación, conflicto, sesión…); `traceId` sirve para buscarlo en el log del back.
  */
 export class ApiError extends Error {

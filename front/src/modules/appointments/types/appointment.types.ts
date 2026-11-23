@@ -64,7 +64,7 @@ export type AppointmentFormValues = z.infer<typeof appointmentSchema>
 export interface Appointment {
   id: string
   patientId: string
-  /** "Nombres Apellidos", lo trae la API; en demostración se busca en la lista de pacientes. */
+  /** "Nombres Apellidos", lo trae la API. */
   patientName?: string
   professionalId: string
   treatmentId?: string

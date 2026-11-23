@@ -1,6 +1,5 @@
 import type { AxiosRequestConfig } from "axios"
 
-import { env } from "@/shared/lib/env"
 import { http, setUnauthorizedHandler } from "@/shared/lib/http"
 
 import { authApi } from "../api/auth.api"
@@ -50,13 +49,12 @@ function installSessionRenewal() {
 let started = false
 
 /**
- * Se llama una vez al arrancar (`main.tsx`). Con la API instala la renovación ante un 401 y, como el token
- * no se guarda en el navegador, pregunta al servidor si la cookie de renovación sigue valiendo.
+ * Se llama una vez al arrancar (`main.tsx`). Instala la renovación ante un 401 y, como el token no se guarda
+ * en el navegador, pregunta al servidor si la cookie de renovación sigue valiendo.
  */
 export function startSession(): void {
   if (started) return
   started = true
-  if (!env.usesApi("auth")) return
   installSessionRenewal()
   if (useAuthStore.getState().status !== "checking") return
   void renewSession().then((ok) => {

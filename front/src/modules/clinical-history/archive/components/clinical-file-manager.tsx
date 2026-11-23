@@ -3,7 +3,6 @@ import { FolderOpen, FolderCog, Upload, LayoutGrid, List, Images, ChevronLeft, C
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
-import { env } from "@/shared/lib/env"
 import { formatDateOnly, formatDateTime } from "@/shared/lib/date"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { usePatient } from "@/modules/patients/api/patients.queries"
@@ -91,10 +90,6 @@ function PatientArchive({ patientId }: { patientId: string }) {
       </div>
     </header>
 
-    {/* MOCK-ONLY */}
-    {!env.usesApi("clinical-history") && <p className={styles.demo}>
-      Demostración local: utiliza solo datos de prueba. Los archivos se guardan en este navegador y no se sincronizan con un servidor.
-    </p>}
 
     <dl className={styles.metrics}>
       <div>

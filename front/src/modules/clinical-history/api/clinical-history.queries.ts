@@ -73,7 +73,7 @@ export type { RegisterEncounterInput, RegisterEncounterResult } from "./clinical
 
 export function useRegisterEncounter(patientId: string) {
   return useMutation({
-    // Con la API, una sola transacción (POST …/encounters/register); en demostración, el mock lo hace por pasos.
+    // Una sola transacción en el servidor (POST …/encounters/register).
     mutationFn: (input: RegisterEncounterInput) => clinicalHistoryApi.registerEncounter(patientId, input),
     onSuccess: (result) => {
       if (result.record) updateCachedRecord(result.record)
@@ -91,8 +91,7 @@ export function useRegisterEncounter(patientId: string) {
       if (result.appointmentCompleted) queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() })
     },
     onError: () => {
-      // En demostración, una falla a mitad de camino pudo haber guardado la historia o registrado tratamientos.
-      // Con la API no queda nada a medias, pero recargar es inofensivo.
+      // El registro es una transacción: no queda nada a medias. Recargar asegura ver el estado del servidor.
       queryClient.invalidateQueries({ queryKey: clinicalHistoryKeys.record(patientId) })
       queryClient.invalidateQueries({ queryKey: treatmentsKeys.all })
       queryClient.invalidateQueries({ queryKey: inventoryKeys.all })

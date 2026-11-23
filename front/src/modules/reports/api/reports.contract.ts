@@ -2,8 +2,7 @@ import type { AgendaReport, InventoryReport, ProductivityReport, ReportPeriod, R
 
 /**
  * Reportes e indicadores del Inicio. `reports.http.ts` los pide a la API (agregados en PostgreSQL, por días de
- * la clínica) y `reports.mock.ts` los calcula desde los datos de demostración; `reports.api.ts` elige con
- * `env.usesApi("reports")`. El periodo es obligatorio, inclusivo y de hasta 366 días (`400` si no).
+ * la clínica). El periodo es obligatorio, inclusivo y de hasta 366 días (`400` si no).
  */
 export interface ReportsApi {
   /** Los tres roles (lo usa el Inicio). */
