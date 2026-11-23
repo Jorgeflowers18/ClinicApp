@@ -151,6 +151,10 @@ public class NotificationsTests(ApiFactory api)
 
         var byName = await admin.GetJson($"/api/notifications?search={Uri.EscapeDataString(patient.Str("lastName"))}&dateFrom={today}&dateTo={today}");
         Assert.Equal(1, byName!["totalItems"]!.GetValue<int>());
+        var row = byName["items"]![0]!;
+        Assert.Equal($"{patient.Str("firstName")} {patient.Str("lastName")}", row.Str("patientName"));
+        Assert.Contains(patient.Str("lastName"), row.Str("message"));
+        Assert.Null(row["recipient"]); // el teléfono o correo no se expone
 
         var byDocument = await (await api.As("recepcion")).GetJson($"/api/notifications?search={patient.Str("documentId")}");
         Assert.Equal(1, byDocument!["totalItems"]!.GetValue<int>());
@@ -161,6 +165,59 @@ public class NotificationsTests(ApiFactory api)
 
         await (await api.As("medico")).GetJson("/api/notifications", HttpStatusCode.Forbidden);
         await admin.GetJson("/api/notifications?dateFrom=17-11-2026", HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Reporte_filtra_por_canal_estado_tipo_e_id_en_el_servidor()
+    {
+        var (admin, sentPatient, _) = await AppointmentAsync();
+        await Dispatcher().RunOnceAsync(CancellationToken.None);
+        var (_, failedPatient, _) = await AppointmentAsync();
+        var failing = Dispatcher(new FailingSender());
+        for (var attempt = 0; attempt < 3; attempt++) await failing.RunOnceAsync(CancellationToken.None);
+
+        async Task<JsonNode> Page(JsonNode patient, string filters) =>
+            (await admin.GetJson($"/api/notifications?search={Uri.EscapeDataString(patient.Str("lastName"))}&{filters}"))!;
+        int Total(JsonNode page) => page["totalItems"]!.GetValue<int>();
+
+        Assert.Equal(1, Total(await Page(sentPatient, "status=enviada")));
+        Assert.Equal(0, Total(await Page(sentPatient, "status=fallida")));
+        var failed = await Page(failedPatient, "status=fallida&type=confirmacion_cita");
+        Assert.Equal(1, Total(failed));
+        Assert.Equal(0, Total(await Page(failedPatient, "type=cancelacion_cita")));
+
+        var row = failed["items"]![0]!;
+        var otherChannel = row.Str("channel") == "sms" ? "email" : "sms";
+        Assert.Equal(1, Total(await Page(failedPatient, $"channel={row.Str("channel")}")));
+        Assert.Equal(0, Total(await Page(failedPatient, $"channel={otherChannel}")));
+
+        // ?id= (el enlace de la alerta de envío fallido) trae solo esa notificación, sin buscar.
+        var byId = await admin.GetJson($"/api/notifications?id={row.Str("id")}");
+        Assert.Equal(row.Str("id"), Assert.Single(byId!["items"]!.AsArray())!.Str("id"));
+
+        var invalid = await admin.GetJson("/api/notifications?channel=fax&status=pendiente&type=otro", HttpStatusCode.BadRequest);
+        Assert.True(invalid.HasError("channel"));
+        Assert.True(invalid.HasError("status")); // las pendientes no salen en el reporte
+        Assert.True(invalid.HasError("type"));
+    }
+
+    [Fact]
+    public async Task Resumen_cuenta_todo_el_historial_sin_las_pendientes()
+    {
+        await AppointmentAsync();
+        await Dispatcher().RunOnceAsync(CancellationToken.None);
+        await AppointmentAsync(); // queda pendiente: no cuenta
+
+        var summary = await (await api.As("recepcion")).GetJson("/api/notifications/summary");
+
+        await using var scope = api.Db();
+        var logs = scope.Context.NotificationLogs.AsNoTracking();
+        Assert.Equal(await logs.CountAsync(log => log.Status != NotificationStatuses.Pendiente), summary!["total"]!.GetValue<int>());
+        Assert.Equal(await logs.CountAsync(log => log.Status == NotificationStatuses.Enviada), summary["sent"]!.GetValue<int>());
+        Assert.Equal(await logs.CountAsync(log => log.Status == NotificationStatuses.Fallida), summary["failed"]!.GetValue<int>());
+        Assert.True(await logs.AnyAsync(log => log.Status == NotificationStatuses.Pendiente));
+
+        await (await api.As("medico")).GetJson("/api/notifications/summary", HttpStatusCode.Forbidden);
     }
 
     [Fact]

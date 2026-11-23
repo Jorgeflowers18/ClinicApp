@@ -94,6 +94,13 @@ public class AttachmentStorage
 
     public bool Exists(string storagePath) => File.Exists(FullPath(storagePath));
 
+    /// <summary>SHA-256 del archivo guardado, en hexadecimal minúscula (como el que calcula el frontend).</summary>
+    public async Task<string> DigestAsync(string storagePath, CancellationToken cancellationToken)
+    {
+        await using var file = new FileStream(FullPath(storagePath), FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true);
+        return Convert.ToHexStringLower(await System.Security.Cryptography.SHA256.HashDataAsync(file, cancellationToken));
+    }
+
     /// <summary>Borra el archivo si existe. Devuelve false si no se pudo.</summary>
     public bool TryDelete(string storagePath, out Exception? error)
     {

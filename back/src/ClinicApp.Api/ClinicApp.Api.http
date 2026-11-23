@@ -296,6 +296,14 @@ Content-Type: application/json
 GET {{api}}/patients?page=1&pageSize=10&search=perez
 Authorization: Bearer {{token}}
 
+### Filtros: estado, género y fecha de registro (días de la clínica, inclusivos)
+GET {{api}}/patients?page=1&pageSize=10&status=activo&gender=femenino&registeredFrom=2026-11-01&registeredTo=2026-11-30
+Authorization: Bearer {{token}}
+
+### Dados de baja (solo admin)
+GET {{api}}/patients?page=1&pageSize=10&deleted=true
+Authorization: Bearer {{token}}
+
 ### Ver un paciente
 GET {{api}}/patients/{{paciente.response.body.id}}
 Authorization: Bearer {{token}}
@@ -450,6 +458,65 @@ Content-Type: application/pdf
 GET {{api}}/clinical-history/attachments/{{adjunto.response.body.id}}/file
 Authorization: Bearer {{token}}
 
+### ── Archivo clínico digital ──
+
+### Catálogo de categorías y etiquetas
+GET {{api}}/clinical-history/archive/catalog
+Authorization: Bearer {{token}}
+
+### Crear una categoría (color: neutral, cyan, violet, amber o green)
+POST {{api}}/clinical-history/archive/categories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Radiografías", "description": "Estudios de imagen", "color": "cyan", "archivedAt": null }
+
+### Crear una etiqueta (si ya existe, no crea otra)
+POST {{api}}/clinical-history/archive/tags
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Control" }
+
+### Adjuntar con metadatos: queda en la historia en el acto (409 si el mismo original ya está)
+# @name archivo
+POST {{api}}/clinical-history/patients/{{paciente.response.body.id}}/archive/files
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="displayName"
+
+Panorámica inicial
+--limite
+Content-Disposition: form-data; name="clinicalType"
+
+panoramica
+--limite
+Content-Disposition: form-data; name="studyDate"
+
+2026-11-10
+--limite
+Content-Disposition: form-data; name="file"; filename="panoramica.pdf"
+Content-Type: application/pdf
+
+%PDF-1.7 panoramica de ejemplo
+--limite--
+
+### Editar los metadatos (version = la que se leyó; 409 si cambió)
+PATCH {{api}}/clinical-history/attachments/{{archivo.response.body.record.attachments[0].id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "version": 1, "displayName": "Panorámica de control", "clinicalType": "panoramica", "studyDate": "2026-11-10", "tagIds": [], "zone": "", "notes": "" }
+
+### Archivar (sigue en la historia; restaurar con /restore)
+POST {{api}}/clinical-history/attachments/{{archivo.response.body.record.attachments[0].id}}/archive
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "version": 2 }
+
 ### Registrar una atención (el id lo genera el frontend: un reintento con el mismo id devuelve 200)
 # @name atencion
 POST {{api}}/clinical-history/patients/{{paciente.response.body.id}}/encounters
@@ -487,6 +554,23 @@ Content-Type: application/json
   "clinicalSnapshot": null
 }
 
+### Registrar la atención completa en una transacción: tratamientos realizados (con insumos), atención,
+### historia (propuestos usados y exámenes pendientes) y cita completada → { encounter, record, appointmentCompleted, warnings }
+POST {{api}}/clinical-history/patients/{{paciente.response.body.id}}/encounters/register
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "0199d000-0000-7000-8000-000000000002",
+  "date": "2026-11-17",
+  "professionalId": "{{profesional.response.body.id}}",
+  "appointmentId": null,
+  "reason": "Control",
+  "diagnoses": [{ "id": "d1", "description": "Gingivitis", "tooth": "", "priority": "" }],
+  "requestedExams": [{ "id": "e1", "kind": "panoramica", "detail": "" }],
+  "performedTreatments": [{ "id": "p1", "treatmentId": "{{crear.response.body.id}}", "description": "", "tooth": "26", "cost": 35, "assignmentId": null }]
+}
+
 ### Agregar una nota aclaratoria (el autor sale de la sesión)
 POST {{api}}/clinical-history/encounters/{{atencion.response.body.id}}/notes
 Authorization: Bearer {{token}}
@@ -514,6 +598,7 @@ Content-Type: application/json
 
 {
   "name": "ClinicApp Odontología",
+  "subtitle": "Odontología integral",
   "legalName": "Grupo Odontológico ClinicApp S.A.",
   "ruc": "1798765432001",
   "phone": "+593 98 123 4567",
@@ -531,6 +616,10 @@ Content-Type: application/json
 }
 
 ### ───────────── Notificaciones (admin o recepción) ─────────────
+
+### Alertas del día (los tres roles; stock crítico y envíos fallidos solo admin y recepción)
+GET {{api}}/alerts
+Authorization: Bearer {{token}}
 
 ### Reporte de notificaciones enviadas (búsqueda por nombre o cédula; fechas de la clínica, inclusivas)
 GET {{api}}/notifications?page=1&pageSize=10&dateFrom=2026-11-01&dateTo=2026-11-30

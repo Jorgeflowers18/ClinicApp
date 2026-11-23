@@ -23,7 +23,7 @@ public class InstitutionController(AppDbContext db, ClinicClock clock) : Control
     public async Task<PublicInstitutionDto> GetPublic(CancellationToken cancellationToken)
     {
         var profile = await LoadAsync(tracking: false, cancellationToken);
-        return new PublicInstitutionDto(profile.Name, profile.LogoText, profile.LogoImage);
+        return new PublicInstitutionDto(profile.Name, profile.Subtitle, profile.LogoText, profile.LogoImage);
     }
 
     /// <summary>GET /api/institution/profile → el perfil completo con sus sedes. Los tres roles.</summary>
@@ -45,6 +45,7 @@ public class InstitutionController(AppDbContext db, ClinicClock clock) : Control
         var profile = await LoadAsync(tracking: true, cancellationToken);
 
         profile.Name = request.Name.Trim();
+        profile.Subtitle = Validation.Clean(request.Subtitle);
         profile.LegalName = Validation.Clean(request.LegalName);
         profile.Ruc = Validation.Clean(request.Ruc);
         profile.Phone = Validation.Clean(request.Phone);

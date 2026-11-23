@@ -9,7 +9,7 @@ import { formatDateOnly } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 import { useSterilizationCyclesList } from "../api/inventory.queries"
-import { useInventoryCatalog } from "../hooks/use-inventory-catalog"
+import { useInventoryOptions } from "../hooks/use-inventory-options"
 import { sterilizationResultLabels, sterilizationResults, type SterilizationCycle } from "../types/inventory.types"
 import { SterilizationCycleFormDialog } from "./sterilization-cycle-form-dialog"
 import { InventoryToolbar } from "./inventory-toolbar"
@@ -18,7 +18,7 @@ import { InventoryStatus } from "./inventory-presentation"
 
 export function SterilizationTab() {
   const [open,setOpen]=useState(false),[result,setResult]=useState(ALL)
-  const cycles=useSterilizationCyclesList(),inventory=useInventoryCatalog(),professionals=useProfessionals(),table=useTableQueryState()
+  const cycles=useSterilizationCyclesList(),inventory=useInventoryOptions(),professionals=useProfessionals(),table=useTableQueryState()
   const instrument=(id:string)=>inventory.data?.find(item=>item.id===id)?.name??(inventory.isPending?"Cargando instrumental…":"Instrumento no disponible")
   const responsible=(id:string)=>professionals.data?.find(item=>item.id===id)?.name??(professionals.isPending?"Cargando responsable…":"Profesional no disponible")
   const search=table.debouncedSearch.trim().toLowerCase()

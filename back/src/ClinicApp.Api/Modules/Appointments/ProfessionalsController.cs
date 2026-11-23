@@ -9,7 +9,7 @@ namespace ClinicApp.Api.Modules.Appointments;
 
 /// <summary>
 /// Catálogo de profesionales: /api/professionals
-/// Leer: los tres roles. Crear y editar: solo admin (el frontend aún no tiene pantalla).
+/// Leer: los tres roles. Crear y editar: solo admin (pantalla /administracion del frontend).
 /// </summary>
 [ApiController]
 [Route("api/professionals")]

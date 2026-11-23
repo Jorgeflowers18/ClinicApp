@@ -13,6 +13,7 @@ public record PatientDto(
     string FirstName,
     string LastName,
     string DocumentId,
+    string? DocumentType,
     string BirthDate,
     string Gender,
     string MaritalStatus,
@@ -42,6 +43,7 @@ public record PatientDto(
         patient.FirstName,
         patient.LastName,
         patient.DocumentId,
+        patient.DocumentType.Length == 0 ? null : patient.DocumentType,
         FormatDate(patient.BirthDate),
         patient.Gender,
         patient.MaritalStatus,
@@ -89,6 +91,10 @@ public class PatientRequest
     [MaxLength(20, ErrorMessage = "Máximo 20 caracteres")]
     public string DocumentId { get; set; } = "";
 
+    /// <summary><c>cedula</c> (valida el dígito verificador), <c>pasaporte</c>, <c>otro</c>, o vacío/null.</summary>
+    [AllowedValues("", "cedula", "pasaporte", "otro", null, ErrorMessage = "Tipo de documento inválido")]
+    public string? DocumentType { get; set; }
+
     /// <summary>"YYYY-MM-DD". Que no sea futura ni anterior a 1900 lo revisa el controlador.</summary>
     [Required(ErrorMessage = "La fecha de nacimiento es obligatoria")]
     [IsoDate]
@@ -110,10 +116,9 @@ public class PatientRequest
     [MaxLength(60, ErrorMessage = "Máximo 60 caracteres")]
     public string? Nationality { get; set; }
 
-    [Required(ErrorMessage = "Teléfono inválido")]
-    [MinLength(7, ErrorMessage = "Teléfono inválido")]
+    /// <summary>Opcional (hay pacientes sin teléfono); si viene, con al menos 7 dígitos.</summary>
     [MaxLength(30, ErrorMessage = "Máximo 30 caracteres")]
-    public string Phone { get; set; } = "";
+    public string? Phone { get; set; }
 
     [MaxLength(254, ErrorMessage = "Máximo 254 caracteres")]
     [RegularExpression(Validation.OptionalEmailPattern, ErrorMessage = "Correo inválido")]
@@ -167,19 +172,31 @@ public class PatientRequest
         if (lastVisit > today) yield return ("lastVisitAt", "La última visita no puede ser futura");
     }
 
+    /// <summary>Reglas entre campos: cédula según el tipo de documento y teléfonos opcionales.</summary>
+    public IEnumerable<(string Field, string Message)> ValidateRules()
+    {
+        if (DocumentType == "cedula" && !PatientOptions.IsEcuadorianId(DocumentId.Trim()))
+            yield return ("documentId", "La cédula debe tener 10 dígitos y un dígito verificador válido");
+        if (!PatientOptions.IsValidOptionalPhone(Phone))
+            yield return ("phone", "Ingresa un teléfono válido o deja el campo vacío");
+        if (!PatientOptions.IsValidOptionalPhone(EmergencyContactPhone))
+            yield return ("emergencyContactPhone", "Ingresa un teléfono válido o deja el campo vacío");
+    }
+
     /// <summary>Copia el formulario en la entidad (crear y editar). No toca el N.° de historia.</summary>
     public void ApplyTo(Patient patient)
     {
         patient.FirstName = FirstName.Trim();
         patient.LastName = LastName.Trim();
         patient.DocumentId = DocumentId.Trim();
+        patient.DocumentType = DocumentType ?? "";
         patient.BirthDate = Validation.ParseDate(BirthDate);
         patient.Gender = Gender;
         patient.MaritalStatus = MaritalStatus ?? "";
         patient.Occupation = Validation.Clean(Occupation);
         patient.Company = Validation.Clean(Company);
         patient.Nationality = Validation.Clean(Nationality);
-        patient.Phone = Phone.Trim();
+        patient.Phone = Validation.Clean(Phone);
         patient.Email = Validation.Clean(Email).ToLowerInvariant();
         patient.Address = Validation.Clean(Address);
         patient.City = Validation.Clean(City);

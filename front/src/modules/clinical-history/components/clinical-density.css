@@ -13,7 +13,6 @@
 .clinic-history-workspace :is([data-slot="table-head"], [data-slot="table-cell"]) { padding: 8px 10px; font-size: 14px; vertical-align: top; }
 .clinic-history-workspace [data-slot="table-head"] { height: 38px; font-size: 13px; vertical-align: middle; }
 .clinic-history-workspace [data-slot="table-cell"].text-right { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.clinic-history-workspace .clinic-demo-notice { padding: 6px 10px; gap: 7px; }
 
 /* Subgrid shares header/value/hint tracks: wrapping never misaligns the four readings. */
 .clinic-clinical-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
@@ -130,7 +129,6 @@
 }
 @media (max-width: 479px) {
   .clinic-history-workspace [data-slot="card"]:not(.clinic-kpi-card) > :is([data-slot="card-header"], [data-slot="card-content"]) { padding-inline: 12px; }
-  .clinic-history-workspace .clinic-demo-notice { padding: 7px 9px; }
   .clinic-history-workspace .clinic-history-export[data-slot="card"] > [data-slot="card-header"] { padding: 0; }
   .clinic-history-medical-table table, .clinic-history-medical-table tbody { display: block; }
   .clinic-history-medical-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

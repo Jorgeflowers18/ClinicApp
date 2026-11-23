@@ -69,8 +69,8 @@ export function DashboardPage() {
           layout="split"
         />
         <KpiCard
-          label="Tratamientos en curso"
-          value={summaryUnavailable ? "—" : summary?.activeTreatments ?? 0}
+          label="Tratamientos realizados este mes"
+          value={summaryUnavailable ? "—" : summary?.treatmentsPerformed ?? 0}
           icon={Stethoscope}
           iconTone="success"
           isLoading={isLoadingSummary}

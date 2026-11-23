@@ -1,20 +1,23 @@
 # Endpoints de la API — ClinicApp
 
-Estado al **2026-11-17**: **80 endpoints implementados**:
+Estado al **2026-11-22**: **97 endpoints implementados**:
 - 1 de salud;
 - 8 de `auth`;
+- 4 de `users` (gestión de usuarios, solo admin);
 - 9 de `treatments` (catálogo y tratamientos realizados);
-- 18 de `inventory`;
+- 19 de `inventory`;
 - 6 de `patients`;
 - 7 de `professionals` y `rooms`;
 - 8 de `appointments` y `schedule-blocks`;
-- 7 de `clinical-history`;
+- 17 de `clinical-history` (8 de la historia y 9 del archivo clínico);
 - 3 de `institution`;
-- 3 de `notifications`;
+- 5 de `notifications` (con el resumen y las alertas del día);
 - 5 de `finance`;
 - 5 de `reports`.
 
 Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md). Lo que falta, por módulo, está en [`../backlog.md`](../backlog.md). Para probarlos: `src/ClinicApp.Api/ClinicApp.Api.http`, o Scalar en `http://localhost:5000/scalar` (solo en desarrollo).
+
+**Documento OpenAPI** (`/openapi/v1.json`, solo en desarrollo): de él salen los tipos del frontend (`npm run api:types` en `front/`). Los números se documentan solo como `integer`/`number` (`Common/NumericSchemaTransformer.cs`), aunque la API también acepte un número escrito como texto al leer una petición.
 
 ## 1. Reglas comunes
 
@@ -27,7 +30,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 
 - **Todos los endpoints piden sesión**, salvo los marcados como **público**. La sesión va en el encabezado `Authorization: Bearer <accessToken>`.
 - **Access token:** JWT de 15 minutos. Trae los claims `sub` (id del usuario), `email`, `name` y `role`.
-- **Renovación:** con la cookie `clinicapp_refresh`, que es `httpOnly`, `Secure`, `SameSite=Strict`, con ruta `/api/auth` y válida 7 días. El navegador la manda solo a los endpoints de `/api/auth`.
+- **Renovación:** con la cookie `clinicapp_refresh`, que es `httpOnly`, `Secure`, `SameSite=Strict` y con ruta `/api/auth`. Con "Recordarme" dura 7 días (`Auth:RefreshTokenDays`); sin él es una cookie de sesión (el navegador la borra al cerrarse) y el token vence a las 12 horas (`Auth:SessionRefreshHours`). Cada renovación extiende el plazo y conserva el modo. El navegador la manda solo a los endpoints de `/api/auth`.
 - **Sin sesión o con el token vencido:** `401` "Inicia sesión para continuar".
 
 ### Roles
@@ -40,11 +43,13 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 | `inventory`: leer insumos (`GET /inventory/items` y `GET /inventory/items/:id`) | los tres |
 | `inventory`: todo lo demás | `admin`, `recepcion` |
 | `patients` | los tres; dar de baja: `admin` y `recepcion`; reactivar: `admin` |
+| `users` | `admin` |
 | `professionals`, `rooms` | leer: los tres; crear y editar: `admin` |
 | `appointments`, `schedule-blocks` | los tres |
 | `clinical-history` | `admin`, `medico` |
 | `institution` | perfil público: sin sesión; leer: los tres; guardar: `admin` |
 | `notifications` | `admin`, `recepcion`; las de una cita (`?appointmentId=`): los tres |
+| `alerts` | los tres; el stock crítico y los envíos fallidos solo `admin` y `recepcion` |
 | `finance` | `admin`, `recepcion` (el médico no ve montos) |
 | `reports` | resumen y agenda: los tres; los demás: `admin` |
 
@@ -90,7 +95,7 @@ La respuesta tiene esta forma:
 
 ### Límite de intentos
 
-`login`, `password-recovery`, `password-reset` y `access-requests` aceptan **20 peticiones por minuto por IP**, contadas por endpoint. `GET /institution/public` acepta 120. Al pasarse, responden `429` "Demasiados intentos. Espera un minuto e inténtalo de nuevo", con el encabezado `Retry-After`.
+`login`, `password-recovery`, `password-reset` y `access-requests` aceptan **20 peticiones por minuto por IP**, contadas por endpoint. `GET /institution/public` acepta 120. Al pasarse, responden `429` "Demasiados intentos. Espera un minuto e inténtalo de nuevo", con el encabezado `Retry-After`. El 20 se puede cambiar con `RateLimits:AuthPerMinute`: solo lo sube la API de las pruebas E2E (`front/scripts/run-api-e2e.mjs`), que inicia sesión desde la pantalla más de 20 veces por minuto.
 
 ## 2. Índice
 
@@ -105,6 +110,10 @@ La respuesta tiene esta forma:
 | `POST` | `/api/auth/password-recovery` | público | `202` |
 | `POST` | `/api/auth/password-reset` | público | `204` |
 | `POST` | `/api/auth/access-requests` | público | `202` |
+| `GET` | `/api/users` | admin | `200` lista |
+| `POST` | `/api/users` | admin | `201` usuario + enlace |
+| `PUT` | `/api/users/:id` | admin | `200` |
+| `POST` | `/api/users/:id/password-link` | admin | `200` enlace |
 | `GET` | `/api/treatments` | los tres | `200` paginado o lista |
 | `GET` | `/api/treatments/:id` | los tres | `200` |
 | `POST` | `/api/treatments` | los tres | `201` |
@@ -114,6 +123,7 @@ La respuesta tiene esta forma:
 | `GET` | `/api/treatment-assignments` | los tres | `200` lista |
 | `POST` | `/api/treatment-assignments` | admin, medico | `201` (o `200` si ya existía) |
 | `GET` | `/api/inventory/items` | los tres | `200` paginado |
+| `GET` | `/api/inventory/items/options` | los tres | `200` lista |
 | `GET` | `/api/inventory/items/:id` | los tres | `200` |
 | `POST` | `/api/inventory/items` | admin, recepcion | `201` |
 | `PUT` | `/api/inventory/items/:id` | admin, recepcion | `200` |
@@ -156,14 +166,26 @@ La respuesta tiene esta forma:
 | `GET` | `/api/clinical-history/patients/:patientId` | admin, medico | `200` |
 | `PUT` | `/api/clinical-history/patients/:patientId` | admin, medico | `200` |
 | `POST` | `/api/clinical-history/patients/:patientId/encounters` | admin, medico | `201` (o `200` si ya existía) |
+| `POST` | `/api/clinical-history/patients/:patientId/encounters/register` | admin, medico | `201` (o `200` si ya existía) |
 | `POST` | `/api/clinical-history/encounters/:encounterId/notes` | admin, medico | `201` |
 | `POST` | `/api/clinical-history/attachments` | admin, medico | `201` |
 | `GET` | `/api/clinical-history/attachments/:attachmentId/file` | admin, medico | `200` archivo |
+| `GET` | `/api/clinical-history/archive/catalog` | admin, medico | `200` |
+| `POST` | `/api/clinical-history/archive/categories` | admin, medico | `200` catálogo |
+| `PUT` | `/api/clinical-history/archive/categories/:id` | admin, medico | `200` catálogo |
+| `POST` | `/api/clinical-history/archive/tags` | admin, medico | `200` catálogo |
+| `PUT` | `/api/clinical-history/archive/tags/:id` | admin, medico | `200` catálogo |
+| `POST` | `/api/clinical-history/patients/:patientId/archive/files` | admin, medico | `201` historia |
+| `PATCH` | `/api/clinical-history/attachments/:id` | admin, medico | `200` historia |
+| `POST` | `/api/clinical-history/attachments/:id/archive` | admin, medico | `200` historia |
+| `POST` | `/api/clinical-history/attachments/:id/restore` | admin, medico | `200` historia |
 | `GET` | `/api/institution/public` | público | `200` |
 | `GET` | `/api/institution/profile` | los tres | `200` |
 | `PUT` | `/api/institution/profile` | admin | `200` |
 | `GET` | `/api/notifications` | admin, recepcion (con `?appointmentId=`: los tres) | `200` paginado o lista |
+| `GET` | `/api/notifications/summary` | admin, recepcion | `200` |
 | `GET` | `/api/notifications/template` | admin, recepcion | `200` |
+| `GET` | `/api/alerts` | los tres | `200` |
 | `PUT` | `/api/notifications/template` | admin, recepcion | `200` |
 | `GET` | `/api/finance/portfolio` | admin, recepcion | `200` lista |
 | `GET` | `/api/finance/treatments/:treatmentId/summary` | admin, recepcion | `200` |
@@ -205,13 +227,14 @@ Público. Responde `Healthy` (`200`) si la API llega a la base de datos, o `Unhe
 }
 ```
 
-`profile` es `null` hasta que el usuario completa "Mi perfil". `professionalId` es el profesional vinculado al usuario (lo asigna el admin con `PUT /api/professionals/:id`, campo `userId`), o `null`.
+`profile` es `null` hasta que el usuario completa "Mi perfil". `professionalId` es el profesional vinculado al usuario (lo asigna el admin con `PUT /api/users/:id`, campo `professionalId`, o con `PUT /api/professionals/:id`, campo `userId`), o `null`.
 
 ### `POST /api/auth/login` — público
 
-**Body:** `{ "email": "...", "password": "..." }`.
+**Body:** `{ "email": "...", "password": "...", "rememberMe": false }`.
 - `email`: obligatorio, correo válido, hasta 254 caracteres. No distingue mayúsculas.
 - `password`: obligatoria, hasta 128 caracteres.
+- `rememberMe`: opcional, `false` por defecto. Ver "Renovación" en § Sesión.
 
 **`200`:** `{ "accessToken": "...", "expiresIn": 900, "user": AuthUser }`, más la cookie de refresh. `expiresIn` va en segundos.
 
@@ -279,6 +302,32 @@ Si la cuenta existe y está activa:
 
 **`202`:** la solicitud queda guardada como `pendiente`. Todavía no hay pantalla ni endpoint para revisarlas.
 
+### Gestión de usuarios (`users`) — solo admin
+
+Recepción y el médico reciben `403`. Las cuentas no se borran: se desactivan.
+
+**Usuario:** `{ id, name, email, role, professionalId, professionalName, active, createdAt, lastLoginAt }`. Nunca trae la contraseña ni su hash. `professionalName` es el nombre del profesional vinculado, o `null`.
+
+| Endpoint | Respuesta |
+|---|---|
+| `GET /api/users` | `200` todas las cuentas, también las inactivas, sin paginar, por nombre |
+| `POST /api/users` | `201` `{ user, passwordLink: { url, expiresAt } }` |
+| `PUT /api/users/:id` | `200` usuario |
+| `POST /api/users/:id/password-link` | `200` `{ url, expiresAt }` |
+
+**Body de `POST` y `PUT`:** `{ name, email, role, professionalId }`, y en `PUT` además `active`.
+- `name`: obligatorio, de 3 a 120.
+- `email`: obligatorio, válido, hasta 254. Se guarda en minúsculas. Repetido (sin distinguir mayúsculas): `409` `errors.email` "Ya existe una cuenta con ese correo".
+- `role`: `admin`, `recepcion` o `medico`. Otro: `400` `errors.role` "Elige un rol válido".
+- `professionalId`: opcional. Inexistente: `400` `errors.professionalId`. Ya vinculado a otra cuenta: `409` `errors.professionalId` "Ese profesional ya tiene una cuenta". `null` desvincula.
+
+**Contraseña:** una cuenta nueva no tiene contraseña usable. El `url` (`<FrontendBaseUrl>/restablecer-contrasena?token=…`) es de un solo uso, vale `Auth:InvitationHours` (72 horas) y se usa con `POST /api/auth/password-reset`. El admin se lo pasa a la persona mientras no haya proveedor de correo. Generar un enlace nuevo invalida el anterior. Una cuenta desactivada: `409` `errors.active`, y tampoco puede usar un enlace que ya tenía.
+
+**Reglas del `PUT`:**
+- El admin no puede desactivarse ni quitarse el rol a sí mismo: `409` `errors.active` "No puedes desactivar tu propia cuenta" o `errors.role` "No puedes quitarte el rol de administrador".
+- Siempre queda al menos un admin activo: `409` "Debe quedar al menos un administrador activo". Con la regla anterior solo se alcanza si quien llama ya perdió el rol y su access token aún no vence.
+- Desactivar o cambiar el rol cierra las sesiones de esa cuenta (revoca sus tokens de refresh). El access token que ya tenga sigue valiendo hasta 15 minutos (decisión aceptada).
+
 ## 5. `treatments`
 
 **Tratamiento (`Treatment`):**
@@ -323,7 +372,8 @@ Si la cuenta existe y está activa:
 
 ```json
 {
-  "id": "0199…", "treatmentId": "0199…", "patientId": "0199…",
+  "id": "0199…", "treatmentId": "0199…", "treatmentName": "Endodoncia",
+  "patientId": "0199…", "patientName": "María Pérez",
   "totalSessions": 1, "completedSessions": 1, "status": "completado",
   "startDate": "2026-11-17", "tooth": "26",
   "sourceEncounterId": "8f1c…", "price": 35.00, "sourceKey": "8f1c…:4b2a…"
@@ -377,6 +427,7 @@ El stock **no** se envía: nace en 0 y solo cambia con movimientos.
 | Endpoint | Detalle |
 |---|---|
 | `GET /api/inventory/items?page&pageSize&search` | `200` paginado, ordenado por nombre. `search` busca en nombre, categoría y proveedor. |
+| `GET /api/inventory/items/options` | `200` con **todos** los insumos, sin paginar y por nombre, solo `{ id, name, unit, kind }`: para los selectores (tratamientos, órdenes de compra, esterilización) en una sola petición. Los tres roles. |
 | `GET /api/inventory/items/:id` | `200`, o `404` "Insumo no encontrado" |
 | `POST /api/inventory/items` | `201` con `stock: 0` y `Location`; `400` |
 | `PUT /api/inventory/items/:id` | `200`; `400`, `404`. No cambia el stock. |
@@ -550,7 +601,8 @@ Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos selecci
   "clinicalRecordNumber": "HC-000123",
   "firstName": "María",
   "lastName": "Pérez",
-  "documentId": "1712345678",
+  "documentId": "1710034065",
+  "documentType": "cedula",
   "birthDate": "1990-05-12",
   "gender": "femenino",
   "maritalStatus": "",
@@ -577,9 +629,10 @@ Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos selecci
   - `firstName` y `lastName`: 2 a 80;
   - `documentId`: 5 a 20;
   - `birthDate`: no futura y desde 1900;
-  - `gender`: `femenino`, `masculino` u `otro`;
-  - `phone`: 7 a 30.
+  - `gender`: `femenino`, `masculino` u `otro`.
 - **Opcionales:**
+  - `documentType`: `cedula`, `pasaporte`, `otro`, `""` o `null` (sin indicar: la respuesta trae `null`). Con `cedula`, `documentId` debe ser una cédula ecuatoriana válida (10 dígitos, provincia, tercer dígito y verificador), igual que `isEcuadorianId` del frontend;
+  - `phone` y `emergencyContactPhone`: vacíos, o con al menos 7 dígitos (hasta 30 caracteres; se aceptan `+`, espacios, guiones, paréntesis y `ext.`);
   - `maritalStatus`: `""` o una de 5 opciones;
   - `email`: correo válido o `""`;
   - `treatmentStatus`: una de 4 opciones, `activo` por defecto;
@@ -589,7 +642,8 @@ Errores `400`: validación, `errors.itemIds` "Alguno de los instrumentos selecci
 
 | Endpoint | Roles | Detalle |
 |---|---|---|
-| `GET /api/patients?page&pageSize&search` | los tres | `200` paginado, sin los dados de baja, del más reciente al más antiguo. `search` no distingue mayúsculas ni tildes y busca en nombres y apellidos (en cualquier orden), cédula, teléfono y N.° de historia (`HC-000123`). |
+| `GET /api/patients?page&pageSize&search&status&gender&registeredFrom&registeredTo` | los tres | `200` paginado, sin los dados de baja, del más reciente al más antiguo. `search` no distingue mayúsculas ni tildes y busca en nombres y apellidos (en cualquier orden), cédula, teléfono y N.° de historia (`HC-000123`). Filtros: `status` (estado del tratamiento), `gender`, y `registeredFrom`/`registeredTo` (días de la clínica, inclusivos, sobre la fecha de registro). `400` con un valor o una fecha inválidos, o `registeredFrom > registeredTo`. |
+| `GET /api/patients?deleted=true` | admin | `200` paginado de los **dados de baja**, del más reciente en darse de baja al más antiguo (para reactivarlos). Acepta los mismos filtros. `403` para los demás roles. |
 | `GET /api/patients/:id` | los tres | `200` (también si está dado de baja, con `deletedAt`); `404` "Paciente no encontrado" |
 | `POST /api/patients` | los tres | `201` con `Location`; `400`; `409` "Ya existe un paciente con esta cédula" con `errors.documentId` |
 | `PUT /api/patients/:id` | los tres | `200`; `400`; `404`. `409` si la cédula **cambió** a una que ya usa otro paciente activo, o si el paciente está dado de baja ("Reactiva al paciente antes de editarlo"). |
@@ -631,12 +685,14 @@ Catálogos de la agenda. **No se borran:** se desactivan (`active: false`), porq
 
 ```json
 {
-  "id": "0199…", "patientId": "0199…", "professionalId": "0199…",
+  "id": "0199…", "patientId": "0199…", "patientName": "María Pérez", "professionalId": "0199…",
   "treatmentId": null, "roomId": "0199…",
   "start": "2026-12-01T14:00:00Z", "end": "2026-12-01T14:30:00Z",
   "status": "programada", "notes": "Control", "createdAt": "2026-11-17T20:00:00Z"
 }
 ```
+
+`patientName` ("Nombres Apellidos", también si el paciente está dado de baja) viene en la lista, el detalle y las respuestas de crear, editar y cambiar estado: la agenda muestra los nombres sin cargar a todos los pacientes. Se pide con una sola consulta por respuesta.
 
 **Body de `POST` y `PUT`** (`appointmentSchema`): `{ patientId, professionalId, treatmentId?, roomId?, date, startTime, endTime, notes? }`.
 - `treatmentId` y `roomId` aceptan `""` o `null` cuando no se eligen.
@@ -676,10 +732,11 @@ Solo `admin` y `medico` (`403` para `recepcion`). Contrato: `front/src/modules/c
 
 | Endpoint | Detalle |
 |---|---|
-| `GET /api/clinical-history/encounters?page&pageSize&search&patientId&professionalId` | `200` paginado de `EncounterListItem` (`id, patientId, date, professionalId, legacyProfessionalName, reason, diagnoses, nextVisit`), de la más reciente a la más antigua. `search` busca sin tildes en el motivo, los diagnósticos y el nombre o la cédula del paciente. |
+| `GET /api/clinical-history/encounters?page&pageSize&search&patientId&professionalId` | `200` paginado de `EncounterListItem` (`id, patientId, patientName, date, professionalId, legacyProfessionalName, reason, diagnoses, nextVisit`; `patientName` es "Nombres Apellidos"), de la más reciente a la más antigua. `search` busca sin tildes en el motivo, los diagnósticos y el nombre o la cédula del paciente. |
 | `GET /api/clinical-history/patients/:patientId` | `200` `{ record, encounters, references }` (ver abajo); `404` "Paciente no encontrado" |
 | `PUT /api/clinical-history/patients/:patientId` | `200` con la historia guardada y `revision + 1`; `400` por campo; `404`; `409` (revisión vieja, o paciente dado de baja) |
 | `POST /api/clinical-history/patients/:patientId/encounters` | `201` con la atención, o `200` si el `id` ya existía para ese paciente; `400`; `404`; `409` (mismo `id` en otro paciente, cita ya vinculada, paciente dado de baja) |
+| `POST /api/clinical-history/patients/:patientId/encounters/register` | **Registro completo en una transacción** (recomendado para el frontend; ver abajo). `201` `{ encounter, record, appointmentCompleted, warnings }`, o `200` si el `id` ya existía; mismos errores que el anterior, más `400` en `performedTreatments[i].treatmentId` (tratamiento inactivo) o `performedTreatments[i].assignmentId` (no es de este paciente). |
 | `POST /api/clinical-history/encounters/:encounterId/notes` | Body `{ text }` (10 a 4000). `201` `{ id, text, authorName, createdAt }`; el autor sale de la sesión. `400`; `404` "Atención no encontrada". |
 | `POST /api/clinical-history/attachments` | Multipart: `file`, `kind`, `patientId`. `201` `{ id, name, kind, mime, size, createdAt }`. `400` con `errors.file` y el título "<nombre>: utiliza JPG, PNG, WebP o PDF de hasta 20 MB". |
 | `GET /api/clinical-history/attachments/:attachmentId/file` | `200` con el archivo, su tipo y `Content-Disposition` con el alias; `404`; `410` si el protocolo de conservación lo borró |
@@ -708,9 +765,87 @@ Solo `admin` y `medico` (`403` para `recepcion`). Contrato: `front/src/modules/c
 - Reglas de `encounterFormSchema`: signos vitales en rango y PA `NNN/NN`; hallazgo obligatorio si una estructura está `alterado` (`extraoralExam.atm.finding`); interconsulta con detalle; intervalo `otro` con texto; `nextVisit` igual o posterior a la fecha.
 - `appointmentId` opcional: cita existente del mismo paciente, y sin otra atención (`409`).
 - Las estructuras del examen extraoral (6) e intraoral (8) que no vienen se guardan `no_evaluado`.
-- No cambia la cita ni la historia: eso lo sigue haciendo el frontend (ver pendientes en `backlog.md`).
+- No cambia la cita ni la historia: para eso está `…/encounters/register`.
+
+**Registrar la atención en una transacción (`POST …/encounters/register`):** mismo body que `POST …/encounters`. Hace en una sola transacción lo que hoy coordina `registerEncounterSequence` del frontend; si algo falla, no queda nada a medias:
+1. **Tratamientos realizados:** cada ítem de `performedTreatments` con `treatmentId` y sin `assignmentId` se registra como tratamiento realizado:
+   - completado, con la fecha de la atención y el `cost` como precio cobrado;
+   - con el profesional de la atención (`treatment_assignments.professional_id`);
+   - descontando sus insumos por FEFO;
+   - idempotente por `sourceKey` = `"{id de la atención}:{id del ítem}"`, así que reutiliza lo que haya registrado un intento anterior por pasos.
+
+   Un `assignmentId` que ya venga debe ser de este paciente.
+2. **Atención:** se crea, con los `assignmentId`.
+3. **Historia:** se quitan los propuestos con el mismo `id` que un tratamiento realizado y se agregan los `requestedExams` como exámenes `pendiente`. Si cambió, guarda la versión anterior y sube la revisión; si no tenía historia, la crea. `record` en la respuesta es la historia guardada, o `null` si no cambió.
+4. **Cita:** pasa a `completada` si estaba programada o confirmada. Si estaba cancelada o no asistió, no cambia y queda un aviso en `warnings`.
+
+Dos registros simultáneos con la misma cita: uno `201` y el otro `409`, sin descontar insumos dos veces.
 
 **Adjuntos:** se reconocen por los primeros bytes (no por la extensión). Se guardan en `{Attachments:RootPath}/{patientId}/{id}.{ext}`; lo guardado en una historia se conserva siempre, y los subidos que nunca se guardaron se borran a las 24 h.
+
+### Archivo clínico digital
+
+Metadatos de los archivos de la historia, su archivado y auditoría, y el catálogo de categorías y etiquetas. Contrato: `front/src/modules/clinical-history/archive/types.ts`. Las operaciones sobre archivos devuelven la **historia completa** actualizada (`{ record, encounters, references }`), igual que el `GET`.
+
+**`archive` en cada adjunto** (`record.attachments[i].archive`, `ClinicalFileMetadata`): `null` si el archivo nunca se clasificó (adjuntos anteriores o subidos con `POST /attachments`).
+
+```json
+{
+  "version": 2, "displayName": "Panorámica inicial", "clinicalType": "panoramica", "studyDate": "2026-11-10",
+  "categoryId": "0199…", "tagIds": ["0199…"], "professionalId": "0199…", "encounterId": "0199…",
+  "treatmentId": "0199…", "examRequestId": "4b2a…", "zone": "Arcada superior", "notes": "",
+  "digest": "9f86d0…", "uploadedBy": { "id": "0199…", "name": "Dra. Carla Ríos" },
+  "updatedAt": "2026-11-20T18:00:00Z", "archivedAt": null,
+  "audit": [ { "action": "adjuntar", "at": "2026-11-20T17:00:00Z", "actor": { "id": "0199…", "name": "Dra. Carla Ríos" }, "fields": ["displayName", "…"] } ]
+}
+```
+
+- `treatmentId` es un **tratamiento realizado** del paciente (`treatment_assignments`), no del catálogo.
+- `version` sube con cada cambio de metadatos o de archivado: es la concurrencia optimista de cada archivo.
+- `digest`: SHA-256 del archivo, calculado por el servidor (también en `POST /attachments`).
+
+**Catálogo** (`ArchiveCatalog`): `{ id: "local-institution", revision, categories: [{ id, name, description, color, archivedAt, version }], tags: [{ id, name, version }] }`. `revision` sube con cada cambio.
+
+| Endpoint | Detalle |
+|---|---|
+| `GET /api/clinical-history/archive/catalog` | `200` el catálogo |
+| `POST /api/clinical-history/archive/categories` | Body `{ name (≤ 60), description (≤ 300), color, archivedAt }`. `color`: `neutral`, `cyan`, `violet`, `amber` o `green`. `200` con el catálogo; `409` en `errors.name` si ya existe el nombre (sin tildes, mayúsculas ni espacios repetidos). |
+| `PUT /api/clinical-history/archive/categories/:id` | El mismo body más `version` (la que se leyó). `archivedAt` con valor archiva (la fecha la pone el servidor); `null` la reactiva. `409` "La categoría cambió. Recarga el catálogo." o nombre repetido; `404`. |
+| `POST /api/clinical-history/archive/tags` | Body `{ name (≤ 40) }`. Si ya existe una con ese nombre, `200` sin crear otra. |
+| `PUT /api/clinical-history/archive/tags/:id` | `{ name, version }`. `409` versión vieja o nombre repetido; `404`. |
+| `POST /api/clinical-history/patients/:patientId/archive/files` | Ver abajo |
+| `PATCH /api/clinical-history/attachments/:id` | Ver abajo |
+| `POST /api/clinical-history/attachments/:id/archive` | Body `{ version }`. Archiva: el archivo **sigue en la historia**, la vista lo oculta por defecto. `409` versión vieja; `404` si no está en una historia. |
+| `POST /api/clinical-history/attachments/:id/restore` | Body `{ version }`. Lo restaura. |
+
+**Adjuntar con metadatos (`POST …/patients/:patientId/archive/files`):** multipart con `file` y los campos del borrador:
+- `displayName` (1 a 200), `clinicalType`;
+- `studyDate`, `categoryId`, `tagIds` (un campo por etiqueta), `professionalId`, `encounterId`, `treatmentId`, `examRequestId`, `zone` (≤ 150) y `notes` (≤ 3000), opcionales.
+
+Qué hace:
+- El archivo queda **en la historia en el acto** (no espera al `PUT`), con `kind` = `clinicalType` si es un tipo de la historia, u `otro`. La historia sube de revisión y guarda la versión anterior.
+- Con `examRequestId`, el examen pasa a `recibido`, con este archivo y la fecha de hoy.
+- Responde `201` con la historia.
+
+Errores:
+- `400` por campo:
+  - `clinicalType` fuera de la lista;
+  - `encounterId` que no es del paciente;
+  - `examRequestId` que no está en la historia;
+  - `treatmentId` que no es un tratamiento realizado del paciente;
+  - `professionalId`, `categoryId` o `tagIds` inexistentes;
+  - `errors.file` con formato o tamaño no permitidos (las mismas reglas de `POST /attachments`).
+- `409` en `errors.file` "Este original ya está registrado para el paciente, incluso si está archivado". Se compara el SHA-256; a los adjuntos anteriores sin huella y del mismo tamaño se les calcula en el momento.
+- `409` "Este examen ya tiene un resultado" si el examen ya apunta a otro archivo.
+- `409` si el paciente está dado de baja.
+
+**Editar metadatos (`PATCH /attachments/:id`):** JSON con `version` y los mismos campos (`tagIds` como lista).
+- Los adjuntos anteriores usan `version: 0` y sus metadatos parten de su nombre y su tipo.
+- La auditoría guarda los campos que cambiaron.
+- Si el archivo ya es el resultado de un examen, `examRequestId` no se puede cambiar ni quitar (`400`). Si no tenía, vincularlo marca el examen como recibido.
+- `409` "El archivo cambió en otra pantalla. Recarga antes de editar." con una versión vieja.
+
+**Con el `PUT` de la historia:** la lista `attachments` sigue mandando solo los `id`. Los metadatos no se tocan, y quitar un archivo de la lista lo saca de la historia aunque tenga metadatos.
 
 ## 11. `institution`
 
@@ -718,7 +853,7 @@ Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/in
 
 ```json
 {
-  "name": "Clínica Sonrisas", "legalName": "Sonrisas S.A.", "ruc": "1798765432001",
+  "name": "Clínica Sonrisas", "subtitle": "Odontología integral", "legalName": "Sonrisas S.A.", "ruc": "1798765432001",
   "phone": "+593 98 123 4567", "email": "contacto@sonrisas.ec", "address": "Av. Amazonas N45-120, Quito",
   "website": "https://sonrisas.ec", "logoText": "CS", "logoImage": "data:image/png;base64,…",
   "notes": "", "hours": "Lunes a viernes: 08:00 - 18:00",
@@ -732,12 +867,12 @@ Perfil de la clínica (una sola fila por ahora). Contrato: `front/src/modules/in
 
 | Endpoint | Roles | Detalle |
 |---|---|---|
-| `GET /api/institution/public` | **público** | `200` `{ name, logoText, logoImage }` para la pantalla de inicio de sesión. Límite: 120 por minuto por IP. |
+| `GET /api/institution/public` | **público** | `200` `{ name, subtitle, logoText, logoImage }` para la pantalla de inicio de sesión. Límite: 120 por minuto por IP. |
 | `GET /api/institution/profile` | los tres | `200` el perfil completo, con las sedes en orden |
 | `PUT /api/institution/profile` | admin | `200`. Reemplaza el perfil completo: las sedes con `id` se actualizan, las que vienen sin `id` (o `""`) se crean y las que no vienen se borran. El servidor da el `id` (UUID v7) y lo devuelve en la respuesta. |
 
 **Validación del `PUT`:**
-- `name`: 2 a 160.
+- `name`: 2 a 160; `subtitle`: hasta 120, opcional (texto debajo del nombre en el login y la barra lateral).
 - `ruc`: 13 dígitos o vacío (no se verifica el dígito del SRI).
 - `email`: correo válido o vacío.
 - `website`: `http(s)://…` o vacío.
@@ -754,7 +889,8 @@ El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los v
 
 ## 12. `notifications`
 
-**Notificación (`NotificationLog`):** `{ id, patientId, appointmentId, type, channel, status, sentAt }`.
+**Notificación (`NotificationLog`):** `{ id, patientId, patientName, appointmentId, type, channel, status, sentAt, message }`.
+- `patientName`: nombre del paciente, para el historial sin pedir cada paciente. `message`: el texto que se le envió, ya armado. El destinatario (teléfono o correo) no se expone.
 - `type`: `confirmacion_cita`, `cancelacion_cita` o `recordatorio_cita`.
 - `channel`: `sms` o `email`.
 - `status`: `enviada` o `fallida`.
@@ -762,7 +898,8 @@ El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los v
 | Endpoint | Roles | Detalle |
 |---|---|---|
 | `GET /api/notifications?appointmentId=` | los tres | `200` lista sin paginar de las notificaciones de una cita ("cliente notificado" en el detalle de la cita, que ven todos los roles) |
-| `GET /api/notifications?page&pageSize&search&dateFrom&dateTo` | admin, recepcion | `200` paginado, del envío más reciente al más antiguo. `search`: nombre o cédula del paciente, sin tildes. Fechas `YYYY-MM-DD` inclusivas, en hora de la clínica. `400` con una fecha inválida. |
+| `GET /api/notifications?page&pageSize&search&dateFrom&dateTo&channel&status&type&id` | admin, recepcion | `200` paginado, del envío más reciente al más antiguo. `search`: nombre o cédula del paciente, sin tildes. Fechas `YYYY-MM-DD` inclusivas, en hora de la clínica. `channel` (`email`, `sms`), `status` (`enviada`, `fallida`), `type` (`recordatorio_cita`, `confirmacion_cita`, `cancelacion_cita`). `id`: solo esa notificación (el enlace de una alerta de envío fallido). `400` en su campo con una fecha, canal, estado o tipo inválido. |
+| `GET /api/notifications/summary` | admin, recepcion | `200` `{ total, sent, failed }` de todo el historial (sin las pendientes): los indicadores de la página sin leer el historial completo. |
 | `GET /api/notifications/template` | admin, recepcion | `200` `{ id, message, updatedAt }` |
 | `PUT /api/notifications/template` | admin, recepcion | Body `{ message }` (10 a 1000). `200`; `400`. |
 
@@ -773,6 +910,22 @@ El perfil existe desde el primer arranque: `InstitutionSeeder` lo crea con los v
 - **La misma tarea envía las pendientes** cada 10 s (`Notifications:DispatchIntervalSeconds`). La cita nunca espera al proveedor. Si el envío falla, se reintenta; al tercer intento queda `fallida`. Las pendientes no salen en la API.
 - **Mensaje:** la plantilla con sus variables reemplazadas (`[nombre del cliente]`, `[nombre de la clínica]`, `[fecha de la cita]` como "12 de septiembre", `[hora de la cita]` como "10:00 am", `[profesional]`). Se guarda ya armado.
 - **Proveedor (`Notifications:Provider`):** por elegir con la clínica. `log` (en desarrollo) solo escribe el mensaje en el log. **Vacío (producción, por ahora): no se registra ninguna notificación**, para no mostrar "cliente notificado" cuando nadie le envió nada.
+
+**Alertas del día (`GET /api/alerts`)**, para el centro de alertas del encabezado (reemplaza leer todos los pacientes, citas, insumos y notificaciones cada 5 minutos). "Hoy" es el día de la clínica.
+
+```json
+{
+  "date": "2026-11-20",
+  "appointmentsToday": [ { "id": "0199…", "start": "2026-11-20T14:00:00Z", "end": "2026-11-20T14:30:00Z", "status": "programada", "patientId": "0199…", "patientName": "María Pérez", "professionalId": "0199…", "professionalName": "Dra. Carla Ríos" } ],
+  "birthdaysToday": [ { "patientId": "0199…", "patientName": "Luis Vera", "birthDate": "1990-11-20" } ],
+  "criticalItems": [ { "itemId": "0199…", "name": "Guantes de nitrilo", "stock": 2, "minStock": 5, "unit": "caja" } ],
+  "failedDeliveries": [ { "id": "0199…", "patientId": "0199…", "patientName": "María Pérez", "appointmentId": "0199…", "channel": "sms", "type": "recordatorio_cita", "sentAt": "2026-11-19T15:00:00Z" } ]
+}
+```
+
+- `appointmentsToday`: citas programadas o confirmadas que empiezan hoy, por hora.
+- `birthdaysToday`: pacientes activos que cumplen años hoy (los del 29 de febrero, el 28 en los años no bisiestos).
+- `criticalItems` (stock ≤ mínimo) y `failedDeliveries` (envíos `fallida` de los últimos 7 días): solo `admin` y `recepcion`; para el médico van vacíos.
 
 ## 13. `finance`
 
@@ -819,7 +972,7 @@ Todos con `?from=YYYY-MM-DD&to=YYYY-MM-DD`, **obligatorios e inclusivos**, en ho
 | | `patientsNewInPeriod` | Pacientes creados en el periodo |
 | | `appointmentsInPeriod`, `appointmentsCompleted`, `appointmentsNoShow` | Citas que empiezan en el periodo: todas, completadas y no asistió |
 | | `noShowRate` | `noShow / (completadas + noShow)`; 0 si no hay |
-| | `activeTreatments` | Tratamientos realizados `en_progreso` (la API solo registra completados: será 0 salvo en datos importados) |
+| | `treatmentsPerformed` | Tratamientos realizados `completado` con fecha en el periodo (como "Realizados" del reporte de tratamientos). Reemplazó a `activeTreatments` el 2026-11-23 |
 | | `criticalStockItems` | Insumos con `stock <= minStock` |
 | | `notificationsSent` | Notificaciones `enviada` en el periodo |
 | Agenda | `byDay` | Todos los días del periodo, también los vacíos, con `label` como el mock ("lun 12"). Agrupa por el **día de la clínica**: una cita a las 23:30 en Ecuador cuenta en ese día, aunque en UTC ya sea el siguiente. |
@@ -837,24 +990,16 @@ Todos con `?from=YYYY-MM-DD&to=YYYY-MM-DD`, **obligatorios e inclusivos**, en ho
 | Módulo | Responsable | Estado |
 |---|---|---|
 | Base (errores, paginación, salud, CORS, configuración, logs) | Jorge Flores | ✅ Hecho |
-| `auth` | Jorge Flores | ✅ Endpoints hechos. Faltan el proveedor de correo, la gestión de usuarios, la revisión de solicitudes de acceso y la limpieza de tokens viejos. |
+| `auth` | Jorge Flores | ✅ Endpoints hechos. Gestión de usuarios hecha (`api/users`). Faltan el proveedor de correo, la revisión de solicitudes de acceso y la limpieza de tokens viejos. |
 | `treatments` | Jorge Flores | ✅ Catálogo, insumos y tratamientos realizados |
 | `inventory` | Jorge Flores | ✅ Los 18 endpoints |
-| `clinical-history` | Jorge Flores | ✅ Los 7 endpoints, con versiones, adjuntos y referencias. ⏳ Registro transaccional de la atención. |
+| `clinical-history` | Jorge Flores | ✅ Los 7 endpoints de la historia, con versiones, adjuntos y referencias, , el registro de la atención en una transacción y los 9 del archivo clínico. |
 | `patients` | Jorge Flores | ✅ Los 6 endpoints, con baja lógica y N.° de historia |
 | `appointments`: profesionales y consultorios | Jorge Flores | ✅ Los 7 endpoints |
 | `appointments`: citas y bloqueos | Jorge Flores | ✅ Los 8 endpoints, con choques, candados y hora de la clínica |
 | `institution` | Jorge Flores | ✅ Los 3 endpoints (falta su `institution.api.ts` en el frontend) |
-| `notifications` | Jorge Flores | ✅ Los 3 endpoints y el envío automático. ⏳ Falta elegir el proveedor de envío. |
+| `notifications` | Jorge Flores | ✅ Los 4 endpoints (con `GET /alerts`) y el envío automático. ⏳ Falta elegir el proveedor de envío. |
 | `finance` | Jorge Flores | ✅ Etapa A: cartera, resúmenes y pagos. ⏳ Etapa B (cuotas, seguros y factura) espera el ítem 8. |
 | `reports` | Jorge Flores | ✅ Los 5 reportes, agregados en la base |
 
-**Para conectar el frontend** (`VITE_USE_MOCK_API=false`): falta la parte de sesión del frontend, detallada en `backlog.md` § `auth`.
-- `withCredentials: true` en `shared/lib/http.ts`.
-- Llamar a `POST /auth/refresh` al cargar la app.
-- Renovar la sesión ante un `401`.
-- Las funciones `*Real` que faltan en `auth.api.ts`.
-
-Sin eso, la sesión se pierde al recargar la página.
-
-**Lo demás que el frontend debe cambiar** para usar estos endpoints (pares Mock/Real nuevos, pantallas y ajustes por módulo) está en [`backlog-desgloce.md` § Pendientes al cerrar los planes](../backlog-desgloce.md#pendientes-al-cerrar-los-planes-2026-11-17).
+**Frontend:** conectado a todos estos endpoints (planes 0 a 11 del front, 2026-11-22), con la sesión por `POST /auth/refresh` y renovación ante el `401`. Lo que falta está en [`backlog-desgloce.md` § Pendientes al cerrar los planes](../backlog-desgloce.md#pendientes-al-cerrar-los-planes-2026-11-17).

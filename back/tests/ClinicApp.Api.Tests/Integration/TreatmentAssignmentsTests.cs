@@ -193,6 +193,14 @@ public class TreatmentAssignmentsTests(ApiFactory api)
         var byTreatment = (await setup.Admin.GetJson($"/api/treatments/{setup.Treatment.Id()}/assignments"))!.AsArray();
         Assert.Equal([newer.Id(), older.Id()], byTreatment.Select(item => item.Id()));
 
+        // Nombres del paciente y del tratamiento en cada fila (y en la respuesta del registro).
+        var patientName = $"{setup.Patient.Str("firstName")} {setup.Patient.Str("lastName")}";
+        Assert.All(byPatient.Concat(byTreatment).Append(newer), item =>
+        {
+            Assert.Equal(patientName, item.Str("patientName"));
+            Assert.Equal(setup.Treatment.Str("name"), item.Str("treatmentName"));
+        });
+
         await setup.Admin.GetJson("/api/treatment-assignments", HttpStatusCode.BadRequest);
         await setup.Admin.GetJson($"/api/treatments/{Guid.NewGuid()}/assignments", HttpStatusCode.NotFound);
     }

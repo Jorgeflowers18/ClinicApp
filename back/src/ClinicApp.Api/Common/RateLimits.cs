@@ -15,8 +15,14 @@ public static class RateLimits
     /// <summary>Lecturas públicas sin sesión (logo de la pantalla de inicio de sesión): más holgado.</summary>
     public const string Public = "public";
 
-    public static IServiceCollection AddClinicRateLimits(this IServiceCollection services) =>
-        services.AddRateLimiter(options =>
+    /// <summary>
+    /// Intentos por minuto de los endpoints de <see cref="Auth"/>: 20, o <c>RateLimits:AuthPerMinute</c>. Solo las
+    /// pruebas E2E lo suben (la suite inicia sesión desde la pantalla decenas de veces por minuto).
+    /// </summary>
+    public static IServiceCollection AddClinicRateLimits(this IServiceCollection services, IConfiguration configuration)
+    {
+        var authPerMinute = configuration.GetValue("RateLimits:AuthPerMinute", 20);
+        return services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
@@ -27,7 +33,7 @@ public static class RateLimits
                 partitionKey: $"{context.Connection.RemoteIpAddress}|{context.Request.Path}",
                 factory: _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 20,
+                    PermitLimit = authPerMinute,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));
@@ -52,4 +58,5 @@ public static class RateLimits
                 return ValueTask.CompletedTask;
             };
         });
+    }
 }

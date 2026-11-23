@@ -1,7 +1,5 @@
-import { getPatientFinancialSummary, getTreatmentFinancialSummary, buildPortfolioRows } from "./finance.mock-data"
+import type { FinanceApi } from "./finance.contract"
+import { httpFinanceApi } from "./finance.http"
 
-export const financeApi = {
-  listPortfolio: async () => buildPortfolioRows(),
-  getTreatmentSummary: async (treatmentId: string, patientId?: string) => getTreatmentFinancialSummary(treatmentId, patientId),
-  getPatientSummary: async (patientId: string) => getPatientFinancialSummary(patientId),
-}
+/** El recurso de este módulo. Los hooks y las pantallas importan solo esto (nunca `*.http.ts`). */
+export const financeApi: FinanceApi = httpFinanceApi

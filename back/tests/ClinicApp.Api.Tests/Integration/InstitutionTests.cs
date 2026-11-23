@@ -13,6 +13,7 @@ public class InstitutionTests(ApiFactory api)
     private static Dictionary<string, object?> Body(params object[] branches) => new()
     {
         ["name"] = "Clínica Sonrisas",
+        ["subtitle"] = "Odontología integral",
         ["legalName"] = "Sonrisas S.A.",
         ["ruc"] = "1798765432001",
         ["phone"] = "+593 98 123 4567",
@@ -50,6 +51,7 @@ public class InstitutionTests(ApiFactory api)
         var saved = await admin.PutJson("/api/institution/profile",
             Body(Branch(null, "Matriz", isMain: true), Branch("", "Norte")), HttpStatusCode.OK);
         Assert.Equal("contacto@sonrisas.ec", saved.Str("email"));
+        Assert.Equal("Odontología integral", saved.Str("subtitle"));
         var created = saved!["branches"]!.AsArray();
         Assert.Equal(["Matriz", "Norte"], created.Select(branch => branch.Str("name")));
         Assert.All(created, branch => Assert.True(Guid.TryParse(branch.Str("id"), out _)));
@@ -116,6 +118,7 @@ public class InstitutionTests(ApiFactory api)
     [InlineData("logoImage", "data:image/svg+xml;base64,PHN2Zz4=")]
     [InlineData("logoImage", "https://otro.com/logo.png")]
     [InlineData("name", "")]
+    [InlineData("subtitle", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")]
     public async Task Validacion_del_perfil(string field, string value)
     {
         var admin = await api.As("admin");
@@ -157,7 +160,8 @@ public class InstitutionTests(ApiFactory api)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = (await response.JsonAsync()).AsObject();
 
-        Assert.Equal(["name", "logoText", "logoImage"], body.Select(property => property.Key));
+        Assert.Equal(["name", "subtitle", "logoText", "logoImage"], body.Select(property => property.Key));
+        Assert.Equal("Odontología integral", body.Str("subtitle"));
         Assert.Equal("Clínica Sonrisas", body.Str("name"));
     }
 }

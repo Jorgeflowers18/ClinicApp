@@ -1,27 +1,42 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query"
 
 import { queryClient } from "@/shared/lib/query-client"
-import { notificationsApi } from "@/modules/notifications/api/notifications.api"
 import { notificationsKeys } from "@/modules/notifications/api/notifications.queries"
 
 import { appointmentsApi } from "./appointments.api"
-import type { Appointment, AppointmentFormValues, ScheduleBlockFormValues } from "../types/appointment.types"
+import type { DateRange } from "./appointments.contract"
+import type {
+  Appointment,
+  AppointmentFormValues,
+  Professional,
+  ProfessionalFormValues,
+  RoomFormValues,
+  ScheduleBlockFormValues,
+} from "../types/appointment.types"
 
 export const appointmentsKeys = {
   all: ["appointments"] as const,
   lists: () => [...appointmentsKeys.all, "list"] as const,
+  /** Las citas de un rango de días (lo que muestra el calendario). */
+  range: (range: DateRange) => [...appointmentsKeys.lists(), "range", range] as const,
   /** Bajo `lists()`: se invalida junto con la agenda al crear, editar o cambiar el estado de una cita. */
   byPatient: (patientId: string) => [...appointmentsKeys.lists(), "patient", patientId] as const,
   detail: (id: string) => [...appointmentsKeys.all, "detail", id] as const,
   professionals: ["professionals"] as const,
   rooms: ["rooms"] as const,
   scheduleBlocks: ["schedule-blocks"] as const,
+  scheduleBlocksRange: (range: DateRange) => [...appointmentsKeys.scheduleBlocks, range] as const,
 }
 
-export function useAppointmentsList() {
+/**
+ * Citas que empiezan en `range` (días de la clínica). Sin rango pide **todas**: solo para
+ * los usos que el plan 8 reemplaza. `keepPreviousData` evita que el calendario parpadee al navegar.
+ */
+export function useAppointmentsList(range?: DateRange) {
   return useQuery({
-    queryKey: appointmentsKeys.lists(),
-    queryFn: () => appointmentsApi.list(),
+    queryKey: range ? appointmentsKeys.range(range) : appointmentsKeys.lists(),
+    queryFn: ({ signal }) => appointmentsApi.list(range, signal),
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -29,40 +44,42 @@ export function useAppointmentsList() {
 export function useAppointmentsByPatient(patientId: string | undefined) {
   return useQuery({
     queryKey: appointmentsKeys.byPatient(patientId ?? ""),
-    queryFn: () => appointmentsApi.listByPatient(patientId as string),
+    queryFn: ({ signal }) => appointmentsApi.listByPatient(patientId as string, signal),
     enabled: Boolean(patientId),
   })
 }
 
+/** Todos los profesionales, también los inactivos (para mostrar nombres). Los selectores usan `selectable`. */
 export function useProfessionals() {
   return useQuery({
     queryKey: appointmentsKeys.professionals,
-    queryFn: () => appointmentsApi.listProfessionals(),
+    queryFn: ({ signal }) => appointmentsApi.listProfessionals(signal),
     staleTime: 5 * 60_000,
   })
 }
 
+/** Todos los consultorios, también los inactivos. */
 export function useRooms() {
   return useQuery({
     queryKey: appointmentsKeys.rooms,
-    queryFn: () => appointmentsApi.listRooms(),
+    queryFn: ({ signal }) => appointmentsApi.listRooms(signal),
     staleTime: 5 * 60_000,
   })
 }
 
-export function useScheduleBlocksList() {
+export function useScheduleBlocksList(range?: DateRange) {
   return useQuery({
-    queryKey: appointmentsKeys.scheduleBlocks,
-    queryFn: () => appointmentsApi.listScheduleBlocks(),
+    queryKey: range ? appointmentsKeys.scheduleBlocksRange(range) : appointmentsKeys.scheduleBlocks,
+    queryFn: ({ signal }) => appointmentsApi.listScheduleBlocks(range, signal),
+    placeholderData: keepPreviousData,
   })
 }
 
-async function notifyAppointmentEvent(appointment: Appointment, type: "confirmacion_cita" | "cancelacion_cita") {
-  await notificationsApi.logAppointmentEvent({
-    patientId: appointment.patientId,
-    appointmentId: appointment.id,
-    type,
-  })
+/**
+ * Al crear o cancelar una cita, el servidor registra su notificación en la misma transacción. Aquí solo se
+ * refresca el historial de notificaciones.
+ */
+function refreshNotifications(appointment: Appointment) {
   queryClient.invalidateQueries({ queryKey: notificationsKeys.lists() })
   queryClient.invalidateQueries({ queryKey: notificationsKeys.byAppointment(appointment.id) })
 }
@@ -70,9 +87,9 @@ async function notifyAppointmentEvent(appointment: Appointment, type: "confirmac
 export function useCreateAppointment() {
   return useMutation({
     mutationFn: (values: AppointmentFormValues) => appointmentsApi.create(values),
-    onSuccess: async (appointment) => {
+    onSuccess: (appointment) => {
       queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() })
-      await notifyAppointmentEvent(appointment, "confirmacion_cita")
+      refreshNotifications(appointment)
     },
   })
 }
@@ -90,11 +107,9 @@ export function useUpdateAppointmentStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: Appointment["status"] }) =>
       appointmentsApi.updateStatus(id, status),
-    onSuccess: async (appointment) => {
+    onSuccess: (appointment) => {
       queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() })
-      if (appointment.status === "cancelada") {
-        await notifyAppointmentEvent(appointment, "cancelacion_cita")
-      }
+      if (appointment.status === "cancelada") refreshNotifications(appointment)
     },
   })
 }
@@ -113,6 +128,28 @@ export function useDeleteScheduleBlock() {
     mutationFn: (id: string) => appointmentsApi.removeScheduleBlock(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: appointmentsKeys.scheduleBlocks })
+    },
+  })
+}
+
+/** Pantalla de administración (solo admin): crear y editar profesionales y consultorios. */
+export function useSaveProfessional() {
+  return useMutation({
+    // Al editar, la respuesta trae además `futureAppointments`.
+    mutationFn: ({ id, values, userId }: { id?: string; values: ProfessionalFormValues; userId?: string | null }): Promise<Professional & { futureAppointments?: number }> =>
+      id ? appointmentsApi.updateProfessional(id, values, userId ?? null) : appointmentsApi.createProfessional(values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: appointmentsKeys.professionals })
+    },
+  })
+}
+
+export function useSaveRoom() {
+  return useMutation({
+    mutationFn: ({ id, values }: { id?: string; values: RoomFormValues }) =>
+      id ? appointmentsApi.updateRoom(id, values) : appointmentsApi.createRoom(values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: appointmentsKeys.rooms })
     },
   })
 }

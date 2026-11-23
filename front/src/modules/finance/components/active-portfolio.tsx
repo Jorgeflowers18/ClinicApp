@@ -7,11 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { DataTableColumn } from "@/shared/components/data-table"
 import { SearchInput } from "@/shared/components/search-input"
 import { ResponsiveFilterBar } from "@/shared/components/responsive-filter-bar"
-import { formatDateOnly } from "@/shared/lib/date"
 import { formatCurrency } from "@/shared/lib/number"
 import type { FinancialPortfolioRow } from "../types/finance.types"
 
-const statusLabels = { al_dia: "Al día", parcial: "Parcial", vencida: "Vencida" }
+// Sin vencimientos, mora ni estado "Vencida": dependen del financiamiento de cada clínica (ítem 8 del backlog).
+const statusLabels: Record<FinancialPortfolioRow["status"], string> = { al_dia: "Al día", parcial: "Parcial" }
+const balanceLabels: Record<string, string> = { all: "Todos los saldos", pending: "Con pendiente" }
 function PortfolioStatus({ row }: { row: FinancialPortfolioRow }) {
   return <Badge className="finance-status" data-state={row.status}>{statusLabels[row.status]}</Badge>
 }
@@ -25,14 +26,13 @@ function Amount({ value, kind }: { value: number; kind: string }) {
 const columns: DataTableColumn<FinancialPortfolioRow>[] = [
   { key: "patientName", header: "Paciente", cell: row => <PatientIdentity row={row} /> },
   { key: "treatmentName", header: "Tratamiento", cell: row => row.treatmentName },
-  ...(["total", "paid", "pending", "overdue"] as const).map((key, index) => ({
-    key, header: ["Total", "Pagado", "Pendiente", "Vencido"][index],
+  ...(["total", "paid", "pending"] as const).map((key, index) => ({
+    key, header: ["Total", "Pagado", "Pendiente"][index],
     cell: (row: FinancialPortfolioRow) => <Amount value={row[key]} kind={key} />,
   })),
-  { key: "nextDueDate", header: "Próximo venc.", cell: row => row.nextDueDate ? formatDateOnly(row.nextDueDate, { year: "numeric", month: "short", day: "numeric" }) : "—" },
-  { key: "daysLate", header: "Días mora", cell: row => row.daysLate },
   { key: "status", header: "Estado", cell: row => <PortfolioStatus row={row} /> },
 ]
+const primaryColumns = columns.filter(column => ["total", "paid", "pending"].includes(column.key))
 
 export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
   const [search, setSearch] = useState("")
@@ -42,7 +42,7 @@ export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
   const filtered = rows.filter(row =>
     (!query || [row.patientName, row.treatmentName].join(" ").toLocaleLowerCase().includes(query)) &&
     (status === "all" || row.status === status) &&
-    (balance === "all" || (balance === "pending" ? row.pending > 0 : row.overdue > 0)))
+    (balance === "all" || row.pending > 0))
   const count = Number(status !== "all") + Number(balance !== "all") + Number(Boolean(query))
   const clear = () => { setSearch(""); setStatus("all"); setBalance("all") }
   const filters = (prefix: string) => <div className="finance-filter-fields">
@@ -53,9 +53,9 @@ export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
       </Select>
     </div>
     <div><Label htmlFor={prefix + "PortfolioBalance"}>Saldo</Label>
-      <Select value={balance} items={{ all: "Todos los saldos", pending: "Con pendiente", overdue: "Con vencido" }} onValueChange={value => setBalance(value ?? "all")}>
+      <Select value={balance} items={balanceLabels} onValueChange={value => setBalance(value ?? "all")}>
         <SelectTrigger id={prefix + "PortfolioBalance"}><SelectValue /></SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}><SelectItem value="all">Todos los saldos</SelectItem><SelectItem value="pending">Con pendiente</SelectItem><SelectItem value="overdue">Con vencido</SelectItem></SelectContent>
+        <SelectContent alignItemWithTrigger={false}>{Object.entries(balanceLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
       </Select>
     </div>
   </div>
@@ -77,8 +77,7 @@ export function ActivePortfolio({ rows }: { rows: FinancialPortfolioRow[] }) {
         return <li key={id}><article aria-labelledby={id}>
           <div className="finance-portfolio-heading"><h3 id={id}><PatientIdentity row={row} /></h3><PortfolioStatus row={row} /></div>
           <p className="finance-treatment-name">{row.treatmentName}</p>
-          <dl className="finance-primary-amounts">{columns.slice(2, 5).map(column => <div key={column.key}><dt>{column.header}</dt><dd>{column.cell(row)}</dd></div>)}</dl>
-          <dl className="finance-secondary-amounts">{columns.slice(5, 8).map(column => <div key={column.key}><dt>{column.header}</dt><dd>{column.cell(row)}</dd></div>)}</dl>
+          <dl className="finance-primary-amounts">{primaryColumns.map(column => <div key={column.key}><dt>{column.header}</dt><dd>{column.cell(row)}</dd></div>)}</dl>
         </article></li>
       })}
     </ul>

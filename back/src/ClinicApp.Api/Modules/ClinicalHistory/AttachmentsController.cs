@@ -51,6 +51,7 @@ public class AttachmentsController(AppDbContext db, ClinicClock clock, Attachmen
             Mime = stored.Mime,
             Size = file.Length,
             StoragePath = stored.StoragePath,
+            Digest = await storage.DigestAsync(stored.StoragePath, cancellationToken),
             UploadedByUserId = User.GetUserId(),
             CreatedAt = clock.UtcNow,
         };

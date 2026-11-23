@@ -9,7 +9,7 @@ import { formatDateTime, formatDateOnly } from "@/shared/lib/date"
 import { formatCurrency } from "@/shared/lib/number"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { useCreatePurchaseOrder, useSuppliersList } from "../api/inventory.queries"
-import { useInventoryCatalog } from "../hooks/use-inventory-catalog"
+import { useInventoryOptions } from "../hooks/use-inventory-options"
 import { useInventoryAccordion } from "../hooks/use-inventory-accordion"
 import { useInventorySubmit } from "../hooks/use-inventory-submit"
 import { purchaseOrderSchema, purchaseOrderStatusLabels, type PurchaseOrder, type PurchaseOrderFormValues, type PurchaseOrderLine } from "../types/inventory.types"
@@ -25,7 +25,7 @@ export function PurchaseOrderFormDialog(props: Props) {
   return props.order ? <PurchaseDetail order={props.order} onClose={() => props.onOpenChange(false)} /> : <PurchaseEditor onClose={() => props.onOpenChange(false)} />
 }
 function PurchaseDetail({ order, onClose }: { order: PurchaseOrder; onClose: () => void }) {
-  const inventory = useInventoryCatalog(), suppliers = useSuppliersList()
+  const inventory = useInventoryOptions(), suppliers = useSuppliersList()
   const columns: DataTableColumn<PurchaseOrderLine>[] = [
     { key: "name", header: "Insumo", cell: line => inventory.data?.find(item => item.id === line.itemId)?.name ?? (inventory.isPending ? "Cargando insumo…" : "Insumo no disponible") },
     { key: "quantity", header: "Cantidad", cell: line => { const item = inventory.data?.find(item => item.id === line.itemId); return line.quantity + (item ? " " + inventoryUnit(item.unit, line.quantity) : "") } },
@@ -42,7 +42,7 @@ function PurchaseDetail({ order, onClose }: { order: PurchaseOrder; onClose: () 
   </InventoryDialog>
 }
 function PurchaseEditor({ onClose }: { onClose: () => void }) {
-  const inventory = useInventoryCatalog(), suppliers = useSuppliersList(), create = useCreatePurchaseOrder()
+  const inventory = useInventoryOptions(), suppliers = useSuppliersList(), create = useCreatePurchaseOrder()
   const form = useForm<PurchaseOrderFormValues>({ resolver: zodResolver(purchaseOrderSchema), shouldUnregister: false, shouldFocusError: false, defaultValues: { supplierId: "", lines: [], notes: "" } })
   const element = useRef<HTMLFormElement>(null), accordion = useInventoryAccordion(element)
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "lines" })

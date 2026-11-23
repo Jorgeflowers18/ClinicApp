@@ -156,7 +156,8 @@ erDiagram
 | `id` | `uuid` PK | | |
 | `user_id` | `uuid` FK → `users` (cascade) | | Índice |
 | `token_hash` | `varchar(64)` | | SHA-256 en hexadecimal del token de la cookie. Único. |
-| `created_at`, `expires_at` | `timestamptz` | | Vida: 7 días (`Auth:RefreshTokenDays`) |
+| `created_at`, `expires_at` | `timestamptz` | | Vida: 7 días con "Recordarme" (`Auth:RefreshTokenDays`); 12 horas sin él (`Auth:SessionRefreshHours`) |
+| `persistent` | `boolean` | | "Recordarme": cookie con fecha de vencimiento. Si es `false`, la cookie es de sesión. Se hereda al rotar. |
 | `revoked_at` | `timestamptz` | sí | Al cerrar sesión, al rotar o al detectar reuso |
 | `replaced_by_token_id` | `uuid` | sí | Token que lo reemplazó al rotar. Sirve para detectar el reuso de un token robado. |
 
@@ -167,7 +168,7 @@ erDiagram
 | `id` | `uuid` PK | | |
 | `user_id` | `uuid` FK → `users` (cascade) | | Índice |
 | `token_hash` | `varchar(64)` | | SHA-256 del token del enlace. Único. |
-| `created_at`, `expires_at` | `timestamptz` | | Vida: 60 minutos (`Auth:PasswordResetMinutes`) |
+| `created_at`, `expires_at` | `timestamptz` | | Vida: 60 minutos para la recuperación (`Auth:PasswordResetMinutes`); 72 horas para el enlace que genera el admin (`Auth:InvitationHours`) |
 | `used_at` | `timestamptz` | sí | Un solo uso. Al pedir un enlace nuevo, los anteriores se invalidan. |
 
 ### `access_requests`
@@ -225,7 +226,7 @@ Tratamientos realizados a un paciente. La API los registra ya completados desde 
 | `source_encounter_id` | `uuid` | sí | Atención de origen. **Sin FK** por ahora: el frontend registra el tratamiento antes de crear la atención. |
 | `source_key` | `varchar(200)` | sí | Idempotencia (atención + ítem). Único cuando no es `null`. |
 | `price` | `numeric(10,2)` | sí | Costo cobrado (`CHECK ≥ 0`). `null` en asignaciones antiguas: vale el precio del catálogo. |
-| `professional_id` | `uuid` FK → `professionals` (restrict) | sí | Profesional que lo realizó (lo llenará el registro transaccional de la atención) |
+| `professional_id` | `uuid` FK → `professionals` (restrict) | sí | Profesional que lo realizó: lo llena `POST …/encounters/register` (el registro por pasos lo deja vacío) |
 | `created_at` | `timestamptz` | | |
 | `created_by_user_id` | `uuid` FK → `users` (set null) | sí | |
 
@@ -346,12 +347,13 @@ Baja lógica: un paciente nunca se borra, porque tiene citas, tratamientos, hist
 | `record_number` | `integer` | | N.° de historia clínica. Lo asigna la secuencia `patient_record_number_seq` (`DEFAULT nextval(...)`). Único. La API lo muestra como `HC-000123`. |
 | `first_name`, `last_name` | `varchar(80)` | | 2 a 80 |
 | `document_id` | `varchar(20)` | | Cédula o pasaporte. Índice **no único**: los datos que se importarán tienen cédulas repetidas. La API rechaza repetidas entre pacientes activos. |
+| `document_type` | `varchar(10)` | | `cedula`, `pasaporte`, `otro` o `''` sin indicar (`CHECK`). Con `cedula` la API valida el dígito verificador. |
 | `birth_date` | `date` | sí | Obligatoria en la API; nulable solo para datos importados con fechas imposibles |
 | `gender` | `varchar(10)` | | `femenino`, `masculino`, `otro` (`CHECK`) |
 | `marital_status` | `varchar(15)` | | `""` o 5 opciones (`CHECK`) |
 | `occupation`, `company` | `varchar(120)` | | |
 | `nationality` | `varchar(60)` | | |
-| `phone` | `varchar(30)` | | |
+| `phone` | `varchar(30)` | | Opcional (`''`); si hay, al menos 7 dígitos |
 | `email` | `varchar(254)` | | En minúsculas, o `""` |
 | `address` | `varchar(250)` | | |
 | `city` | `varchar(120)` | | |
@@ -503,8 +505,44 @@ Las secciones anidadas del formulario van en columnas `jsonb` (una por sección)
 | `purged_at` | `timestamptz` | sí | El protocolo de conservación borró el archivo (apagado por defecto); la fila queda |
 | `uploaded_by_user_id` | `uuid` FK → `users` (set null) | sí | |
 | `created_at` | `timestamptz` | | Índice `(linked_at, created_at)` para la limpieza |
+| `digest` | `varchar(64)` | sí | SHA-256 (hex) del archivo, calculado por el servidor. Índice `(patient_id, digest)`: detecta originales repetidos. |
+| `metadata_version` | `integer` | | 0 = sin metadatos del archivo clínico; sube con cada edición o archivado (concurrencia optimista) |
+| `display_name`, `clinical_type` | `varchar(200)`, `varchar(40)` | | Nombre visible y tipo clínico (los de `ArchiveKeys.ClinicalTypes`); `''` sin metadatos |
+| `study_date` | `date` | sí | Fecha del estudio |
+| `category_id` | `uuid` FK → `archive_categories` (set null) | sí | |
+| `professional_id` | `uuid` FK → `professionals` (set null) | sí | |
+| `encounter_id` | `uuid` FK → `clinical_encounters` (set null) | sí | Debe ser una atención del paciente |
+| `treatment_assignment_id` | `uuid` FK → `treatment_assignments` (set null) | sí | Tratamiento realizado del paciente (`treatmentId` en la API) |
+| `exam_request_id` | `varchar(60)` | sí | Examen solicitado de la historia cuyo resultado es este archivo; no se reasigna |
+| `zone`, `notes` | `varchar(150)`, `varchar(3000)` | | |
+| `metadata_updated_at`, `archived_at` | `timestamptz` | sí | `archived_at`: archivado (sigue en la historia; la vista lo oculta) |
 
 **Archivos:** en `Attachments:RootPath` (producción: `/var/lib/clinicapp/attachments`, incluida en los respaldos; desarrollo: `App_Data/attachments`, ignorada por git). La tarea `AttachmentCleanupService` corre cada hora.
+
+### `archive_categories` y `archive_tags` (catálogo del archivo clínico)
+
+| Tabla | Columnas |
+|---|---|
+| `archive_categories` | `id uuid` PK, `name varchar(60)`, `description varchar(300)`, `color varchar(20)` (`neutral`, `cyan`, `violet`, `amber`, `green`; `CHECK`), `archived_at`, `version integer`, `created_at`, `updated_at` |
+| `archive_tags` | `id uuid` PK, `name varchar(40)`, `version integer`, `created_at`, `updated_at` |
+
+Los nombres no se repiten sin tildes ni mayúsculas: lo controla la API, con un candado de PostgreSQL (`archive-catalog`). Nada se borra; las categorías se archivan.
+
+### `clinical_attachment_tags`
+
+`(attachment_id, tag_id)` PK; `attachment_id` FK → `clinical_attachments` (cascade), `tag_id` FK → `archive_tags` (cascade), `position integer` (orden en que se eligieron).
+
+### `clinical_attachment_audit`
+
+| Columna | Tipo | Nulo | Reglas |
+|---|---|---|---|
+| `id` | `uuid` PK | | |
+| `attachment_id` | `uuid` FK → `clinical_attachments` (cascade) | | Índice `(attachment_id, at)` |
+| `action` | `varchar(20)` | | `adjuntar`, `editar`, `archivar`, `restaurar` (`CHECK`) |
+| `fields` | `text[]` | | Campos que cambiaron (nombres del JSON) |
+| `actor_user_id` | `uuid` FK → `users` (set null) | sí | |
+| `actor_name` | `varchar(120)` | | Nombre del usuario en ese momento |
+| `at` | `timestamptz` | | |
 
 ## 11. Módulo `institution`
 
@@ -516,6 +554,7 @@ Si se aprueba la multi-clínica (`plan-multiclinica.md`, M1), esta misma tabla t
 |---|---|---|---|
 | `id` | `uuid` PK | | Fijo (`00000000-0000-7000-8000-0000000000c1`) |
 | `name` | `varchar(160)` | | Nombre comercial |
+| `subtitle` | `varchar(120)` | | Texto debajo del nombre (login y barra lateral); `''` si no hay |
 | `legal_name` | `varchar(200)` | | Razón social |
 | `ruc` | `varchar(13)` | | 13 dígitos o `''` (`CHECK`) |
 | `phone`, `email`, `address`, `website` | `varchar(30)`, `(254)`, `(250)`, `(200)` | | |
@@ -604,6 +643,10 @@ Pagos de los pacientes por sus tratamientos. Un pago no se borra: se anula, con 
 | `20261118031703_CrearPagos` | `financial_payments` |
 | `20261118032137_IndicesReportes` | Índice `stock_movements (type, created_at)` para el reporte de inventario |
 | `20261120175534_SedesConUuid` | `institution_branches.id` pasa de texto a `uuid` y queda como PK. Las sedes con ids de texto reciben un UUID nuevo. |
+| `20261120191521_InstitucionSubtitulo` | Columna `institutions.subtitle` |
+| `20261120191802_PacientesTipoDocumento` | Columna `patients.document_type` con su `CHECK` |
+| `20261120193107_ArchivoClinico` | Archivo clínico: metadatos y huella en `clinical_attachments`, `archive_categories`, `archive_tags`, `clinical_attachment_tags` y `clinical_attachment_audit` |
+| `20261123070933_RefreshTokenPersistent` | Columna `refresh_tokens.persistent` ("Recordarme"). Las sesiones que ya existían quedan en `true`, como eran. |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -626,7 +669,7 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 |---|---|---|
 | `ConnectionStrings:Default` | Desarrollo: `appsettings.Development.json`. Producción: variable de entorno. | Cadena de conexión de PostgreSQL |
 | `Auth:Issuer`, `Auth:Audience` | `appsettings.json` | `clinicapp` |
-| `Auth:AccessTokenMinutes`, `Auth:RefreshTokenDays`, `Auth:PasswordResetMinutes` | `appsettings.json` | 15, 7, 60 |
+| `Auth:AccessTokenMinutes`, `Auth:RefreshTokenDays`, `Auth:SessionRefreshHours`, `Auth:PasswordResetMinutes`, `Auth:InvitationHours` | `appsettings.json` | 15, 7 días, 12 horas, 60, 72 |
 | `Auth:SigningKey` | Desarrollo: `appsettings.Development.json`. Producción: variable de entorno. | Al menos 32 caracteres. La API no arranca sin ella. |
 | `Auth:FrontendBaseUrl` | Igual que la anterior | URL del frontend, para armar el enlace de recuperación de contraseña |
 | `Cors:AllowedOrigins` | `appsettings*.json` | Orígenes del frontend (con cookies: `AllowCredentials`) |

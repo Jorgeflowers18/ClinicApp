@@ -1,5 +1,7 @@
 # Archivo clínico digital del paciente
 
+> **Histórico.** Este documento describe la versión de demostración (IndexedDB en el navegador), que se conserva en la rama `jf/front-demo-mocks`. Desde el 2026-11-22 el archivo clínico vive en la API (plan 7): ver `documentacion/arquitectura-frontend.md` § "Historia clínica odontológica" y `back/docs/endpoints-api.md`.
+
 Implementación sobre el frontend existente. No introduce un módulo en el sidebar ni un repositorio paralelo de documentos.
 
 ## Fuente de datos y alcance

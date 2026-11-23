@@ -27,7 +27,7 @@ export const inventoryKeys = {
 export function useSuppliersList() {
   return useQuery({
     queryKey: inventoryKeys.suppliers(),
-    queryFn: () => inventoryApi.listSuppliers(),
+    queryFn: ({ signal }) => inventoryApi.listSuppliers(signal),
   })
 }
 
@@ -63,7 +63,7 @@ export function useDeleteSupplier() {
 export function useInventoryList(query: PageQuery) {
   return useQuery({
     queryKey: inventoryKeys.list(query),
-    queryFn: () => inventoryApi.list(query),
+    queryFn: ({ signal }) => inventoryApi.list(query, signal),
     placeholderData: keepPreviousData,
   })
 }
@@ -71,7 +71,7 @@ export function useInventoryList(query: PageQuery) {
 export function useInventoryItem(id: string | undefined) {
   return useQuery({
     queryKey: inventoryKeys.detail(id ?? ""),
-    queryFn: () => inventoryApi.get(id as string),
+    queryFn: ({ signal }) => inventoryApi.get(id as string, signal),
     enabled: Boolean(id),
   })
 }
@@ -79,7 +79,7 @@ export function useInventoryItem(id: string | undefined) {
 export function useInventoryMovements(id: string | undefined) {
   return useQuery({
     queryKey: inventoryKeys.movements(id ?? ""),
-    queryFn: () => inventoryApi.listMovements(id as string),
+    queryFn: ({ signal }) => inventoryApi.listMovements(id as string, signal),
     enabled: Boolean(id),
   })
 }
@@ -87,7 +87,7 @@ export function useInventoryMovements(id: string | undefined) {
 export function useInventoryLots(id: string | undefined) {
   return useQuery({
     queryKey: inventoryKeys.lots(id ?? ""),
-    queryFn: () => inventoryApi.listLots(id as string),
+    queryFn: ({ signal }) => inventoryApi.listLots(id as string, signal),
     enabled: Boolean(id),
   })
 }
@@ -135,7 +135,7 @@ export function useRegisterMovement(itemId: string) {
 export function usePurchaseOrdersList() {
   return useQuery({
     queryKey: inventoryKeys.purchaseOrders(),
-    queryFn: () => inventoryApi.listPurchaseOrders(),
+    queryFn: ({ signal }) => inventoryApi.listPurchaseOrders(signal),
   })
 }
 
@@ -171,7 +171,7 @@ export function useCancelPurchaseOrder() {
 export function useSterilizationCyclesList() {
   return useQuery({
     queryKey: inventoryKeys.sterilizationCycles(),
-    queryFn: () => inventoryApi.listSterilizationCycles(),
+    queryFn: ({ signal }) => inventoryApi.listSterilizationCycles(signal),
   })
 }
 

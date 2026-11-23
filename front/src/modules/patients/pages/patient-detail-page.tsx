@@ -1,15 +1,17 @@
 import { useState, type ReactNode } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { FolderOpen, ArrowLeft, Bell, BriefcaseBusiness, Building2, CalendarDays, CalendarPlus, ClipboardList, FileText, Globe, Heart, Mail, MapPin, MessageSquare, Pencil, Phone, ShieldCheck, Stethoscope, UserRound, Wallet, type LucideIcon } from "lucide-react"
+import { toast } from "sonner"
+import { Archive, FolderOpen, ArrowLeft, Bell, BriefcaseBusiness, Building2, CalendarDays, CalendarPlus, ClipboardList, FileText, Globe, Heart, Mail, MapPin, MessageSquare, Pencil, Phone, ShieldCheck, Stethoscope, UserRound, Wallet, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TabsContent } from "@/components/ui/tabs"
-import { formatDateOnly } from "@/shared/lib/date"
+import { formatDateOnly, formatDateTime } from "@/shared/lib/date"
+import { getErrorMessage } from "@/shared/lib/error-message"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { PatientClinicalSummary } from "@/modules/clinical-history/components/patient-clinical-summary"
 import { AppointmentFormDialog } from "@/modules/appointments/components/appointment-form-dialog"
-import { usePatient } from "../api/patients.queries"
+import { usePatient, useRestorePatient } from "../api/patients.queries"
 import { genderLabels, maritalStatusLabels } from "../types/patient.types"
 import { PatientInitials, PatientStatus } from "../components/patient-status"
 import { PatientActions, PatientActionsProvider } from "../components/patient-actions"
@@ -29,6 +31,7 @@ export function PatientDetailPage() {
   const role = useAuthStore(state => state.user?.role)
   const clinical = role === "admin" || role === "medico"
   const query = usePatient(id)
+  const restore = useRestorePatient()
   const lastVisit = usePatientLastVisit(id)
   const [section, setSection] = useState("resumen")
   const [scheduling, setScheduling] = useState(false)
@@ -36,20 +39,33 @@ export function PatientDetailPage() {
   if (query.isLoading) return <div className="patient-detail space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>
   if (query.isError || !query.data) return <div role="alert" className="patient-source-error"><p>No se pudo cargar el paciente.</p><Button variant="outline" onClick={() => query.refetch()}>Reintentar</Button></div>
   const patient = query.data
+  // Dado de baja: se consulta, pero no se edita ni se agenda (el servidor responde 409) hasta reactivarlo.
+  const removed = Boolean(patient.deletedAt)
   const age = patientAge(patient.birthDate)
-  const editSection = (target: string, label: string) => <Tooltip><TooltipTrigger render={<Button variant="ghost" size="icon" aria-label={`Editar ${label}`} onClick={event => setEditing({ section: target, trigger: event.currentTarget })}><Pencil aria-hidden="true" /></Button>} /><TooltipContent>{`Editar ${label}`}</TooltipContent></Tooltip>
+  async function reactivate() {
+    try {
+      await restore.mutateAsync(patient.id)
+      toast.success("Paciente reactivado")
+    } catch (error) { toast.error(getErrorMessage(error)) }
+  }
+  const editSection = (target: string, label: string) => removed ? undefined : <Tooltip><TooltipTrigger render={<Button variant="ghost" size="icon" aria-label={`Editar ${label}`} onClick={event => setEditing({ section: target, trigger: event.currentTarget })}><Pencil aria-hidden="true" /></Button>} /><TooltipContent>{`Editar ${label}`}</TooltipContent></Tooltip>
   return <PatientActionsProvider><div className="patient-detail space-y-4">
     <Button variant="ghost" size="sm" onClick={() => navigate("/pacientes")}><ArrowLeft />Volver a pacientes</Button>
     <header className="patient-profile-header">
       <div className="patient-profile-identity"><PatientInitials patient={patient} /><div><h1>{patient.firstName} {patient.lastName}</h1><p>{documentTypes.find(item => item.value === patient.documentType)?.label ?? "Documento"} {patient.documentId}{age !== null && ` · ${age} ${age === 1 ? "año" : "años"}`} · {patient.clinicalRecordNumber}</p><PatientStatus status={patient.treatmentStatus} /></div></div>
-      <div className="patient-profile-actions"><Button variant="outline" onClick={event => setEditing({ trigger: event.currentTarget })}><Pencil />Editar</Button><Button onClick={() => setScheduling(true)}><CalendarPlus />Agendar cita</Button><PatientActions patient={patient} onSchedule={() => setScheduling(true)} onEdit={trigger => setEditing({ trigger })} /></div>
+      {!removed && <div className="patient-profile-actions"><Button variant="outline" onClick={event => setEditing({ trigger: event.currentTarget })}><Pencil />Editar</Button><Button onClick={() => setScheduling(true)}><CalendarPlus />Agendar cita</Button><PatientActions patient={patient} allowRemoval onSchedule={() => setScheduling(true)} onEdit={trigger => setEditing({ trigger })} /></div>}
     </header>
+    {removed && <div role="status" className="patient-removed-notice">
+      <p><Archive aria-hidden="true" /><span><strong>Paciente dado de baja</strong> el {formatDateTime(patient.deletedAt!, { year: "numeric", month: "long", day: "2-digit" })}. Sus registros se conservan; para editarlo o agendarle citas, un administrador debe reactivarlo.</span></p>
+      {role === "admin" && <Button variant="outline" disabled={restore.isPending} onClick={() => { void reactivate() }}><UserRound />Reactivar paciente</Button>}
+    </div>}
     <PatientTabs value={section} onValueChange={setSection} items={[
       { value: "resumen", label: <><UserRound />Resumen</>, accessibleLabel: "Resumen" },
       { value: "citas", label: <><CalendarDays />Citas</>, accessibleLabel: "Citas" },
       ...(clinical ? [{ value: "historial", label: <><ClipboardList />Historial clínico</>, accessibleLabel: "Historial clínico" }] : []),
       { value: "tratamientos", label: <><Stethoscope />Tratamientos</>, accessibleLabel: "Tratamientos" },
-      { value: "finanzas", label: <><Wallet />Finanzas</>, accessibleLabel: "Finanzas" },
+      // Finanzas: solo admin y recepción (el médico recibe 403 de la API).
+      ...(role === "admin" || role === "recepcion" ? [{ value: "finanzas", label: <><Wallet />Finanzas</>, accessibleLabel: "Finanzas" }] : []),
       { value: "documentos", label: <><FolderOpen />Archivo clínico</>, accessibleLabel: "Archivo clínico" },
     ]}>
       <TabsContent value="resumen"><div className="patient-information-grid">
@@ -67,7 +83,7 @@ export function PatientDetailPage() {
       <TabsContent value="citas"><PatientAppointments patientId={patient.id} /></TabsContent>
       {clinical && <TabsContent value="historial"><div className="patient-clinical-tab"><PatientClinicalSummary patientId={patient.id} /></div></TabsContent>}
       <TabsContent value="tratamientos"><PatientTreatments patientId={patient.id} canReadClinical={clinical} /></TabsContent>
-      <TabsContent value="finanzas"><PatientFinances patientId={patient.id} canOpenPortfolio={role === "admin" || role === "recepcion"} /></TabsContent>
+      {(role === "admin" || role === "recepcion") && <TabsContent value="finanzas"><PatientFinances patientId={patient.id} canOpenPortfolio /></TabsContent>}
       <TabsContent value="documentos">{clinical ? <PatientDocuments patientId={patient.id} /> : <PatientEmptyState icon={ShieldCheck} title="Los documentos clínicos requieren un perfil clínico autorizado." description={`Consentimiento informado registrado: ${patient.consentSigned ? "Firmado" : "No firmado"}.`} />}</TabsContent>
     </PatientTabs>
     {scheduling && <AppointmentFormDialog open onOpenChange={setScheduling} initialPatientId={patient.id} />}

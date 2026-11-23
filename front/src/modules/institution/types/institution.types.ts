@@ -1,6 +1,9 @@
 export type InstitutionBranch = {
+  /** UUID del servidor. Una sede nueva se envía con `""`: el servidor le da el id. */
   id: string
   name: string
+  /** Lo que se muestra: el nombre, o "Sede N" si no tiene. Lo calcula la API. */
+  label?: string
   address: string
   phone: string
   hours: string
@@ -22,10 +25,12 @@ export type InstitutionProfile = {
   notes: string
   hours: string
   branches: InstitutionBranch[]
+  /** Última vez que se guardó (solo con la API). */
+  updatedAt?: string
 }
 
-export const INSTITUTION_PROFILE_STORAGE_KEY = "clinicapp.institution-profile"
-export const INSTITUTION_PROFILE_CHANGED = "clinicapp:institution-profile-changed"
+/** Lo que ve la pantalla de inicio de sesión, sin sesión (`GET /institution/public`). */
+export type PublicInstitution = Pick<InstitutionProfile, "name" | "subtitle" | "logoText" | "logoImage">
 
 export const initialInstitutionProfile: InstitutionProfile = {
   name: "ClinicApp Odontología",
@@ -44,35 +49,5 @@ export const initialInstitutionProfile: InstitutionProfile = {
   branches: [],
 }
 
-export function readInstitutionProfile(): InstitutionProfile {
-  if (typeof window === "undefined") {
-    return initialInstitutionProfile
-  }
-
-  try {
-    const raw = window.localStorage.getItem(INSTITUTION_PROFILE_STORAGE_KEY)
-    if (!raw) {
-      return initialInstitutionProfile
-    }
-
-    const parsed = JSON.parse(raw) as Partial<InstitutionProfile>
-    return {
-      ...initialInstitutionProfile,
-      ...parsed,
-      subtitle: typeof parsed.subtitle === "string" ? parsed.subtitle : initialInstitutionProfile.subtitle,
-      branches: parsed.branches?.length ? parsed.branches : initialInstitutionProfile.branches,
-    }
-  } catch {
-    return initialInstitutionProfile
-  }
-}
-
-export function writeInstitutionProfile(profile: InstitutionProfile) {
-  if (typeof window === "undefined") {
-    return
-  }
-
-  window.localStorage.setItem(INSTITUTION_PROFILE_STORAGE_KEY, JSON.stringify(profile))
-  // Publish only confirmed writes; failed storage must never change the Sidebar.
-  window.dispatchEvent(new Event(INSTITUTION_PROFILE_CHANGED))
-}
+/** El nombre visible de una sede. */
+export const branchLabel = (branch: InstitutionBranch) => branch.name.trim() || branch.label || "Nueva sede"

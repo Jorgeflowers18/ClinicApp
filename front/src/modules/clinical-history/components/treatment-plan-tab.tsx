@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency } from "@/shared/lib/number"
-import { useActiveTreatments, useTreatmentsList } from "@/modules/treatments/api/treatments.queries"
+import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
+import { useTreatmentCatalog } from "@/modules/treatments/hooks/use-treatment-options"
 
 import { groupPlanByPhase, NO_PHASE, phaseItems } from "../lib/plan"
 import { today, type ProposedTreatment, type RecordFormValues, type TreatmentPhase } from "../types/clinical-history.types"
@@ -19,9 +20,9 @@ export function TreatmentPlanTab() {
   const plan = useWatch({ control, name: "plan" })
   const { data: activeTreatments } = useActiveTreatments()
   // Catálogo completo (incluye inactivos) para mostrar nombre y precio de ítems antiguos.
-  const { data: catalog } = useTreatmentsList({ page: 1, pageSize: 100 })
+  const { data: catalog } = useTreatmentCatalog()
 
-  const treatmentById = new Map((catalog?.items ?? activeTreatments ?? []).map((treatment) => [treatment.id, treatment]))
+  const treatmentById = new Map((catalog ?? activeTreatments ?? []).map((treatment) => [treatment.id, treatment]))
   const priceOf = (item: ProposedTreatment) => treatmentById.get(item.treatmentId ?? "")?.price ?? 0
   const estimatedTotal = plan.reduce((sum, item) => sum + priceOf(item), 0)
   const groups = groupPlanByPhase(plan)

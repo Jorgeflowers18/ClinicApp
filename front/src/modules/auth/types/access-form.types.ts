@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-// Presentation-only validation; neither form sends or persists its values.
+// Recuperar contraseña y solicitar acceso: se envían con `authApi`.
 export const recoverySchema = z.object({
   email: z.string().trim().email("Ingresa un correo válido"),
 })

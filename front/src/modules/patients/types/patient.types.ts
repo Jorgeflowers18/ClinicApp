@@ -76,6 +76,8 @@ export interface Patient extends PatientFormValues {
   /** N.° de historia clínica, asignado automáticamente al registrar al paciente (solo lectura). */
   clinicalRecordNumber: string
   createdAt: string
+  /** Fecha de la baja lógica, o `null` si está activo. */
+  deletedAt?: string | null
 }
 
 export interface PatientsQuery extends PageQuery {
@@ -83,6 +85,8 @@ export interface PatientsQuery extends PageQuery {
   gender?: Patient["gender"]
   registeredFrom?: string
   registeredTo?: string
+  /** Solo admin: la lista de dados de baja en lugar de la de activos. */
+  deleted?: boolean
 }
 
 /** Formato del N.° de historia clínica: HC-000123. */

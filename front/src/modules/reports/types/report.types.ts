@@ -23,7 +23,7 @@ export interface ReportPeriodState {
   period: ReportPeriod
 }
 
-/** `patientsTotal`, `activeTreatments` y `criticalStockItems` son puntuales; el resto filtra por periodo. */
+/** `patientsTotal` y `criticalStockItems` son puntuales; el resto filtra por periodo. */
 export interface ReportsSummary {
   patientsTotal: number
   patientsNewInPeriod: number
@@ -31,7 +31,8 @@ export interface ReportsSummary {
   appointmentsCompleted: number
   appointmentsNoShow: number
   noShowRate: number
-  activeTreatments: number
+  /** Tratamientos realizados (completados) con fecha en el periodo, igual que en el reporte de tratamientos. */
+  treatmentsPerformed: number
   criticalStockItems: number
   notificationsSent: number
 }

@@ -12,12 +12,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-import type { InstitutionBranch } from "../types/institution.types"
+import { getErrorMessage } from "@/shared/lib/error-message"
+
+import { branchLabel, type InstitutionBranch } from "../types/institution.types"
 import styles from "./institution-branches.module.css"
 
 type BranchDraft = Pick<InstitutionBranch, "name" | "address" | "phone" | "hours">
 type Editor = { original: InstitutionBranch | null; draft: BranchDraft }
-type Props = { branches: InstitutionBranch[]; onCommit: (branches: InstitutionBranch[]) => void }
+type Props = { branches: InstitutionBranch[]; onCommit: (branches: InstitutionBranch[]) => Promise<void> }
+
 
 function BranchActions({ branch, onEdit, onDelete }: {
   branch: InstitutionBranch
@@ -27,7 +30,7 @@ function BranchActions({ branch, onEdit, onDelete }: {
   const triggerRef = useRef<HTMLButtonElement>(null)
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button ref={triggerRef} variant="ghost" size="icon" aria-label={`Acciones de sede ${branch.name || "Nueva sede"}`} />}>
+      <DropdownMenuTrigger render={<Button ref={triggerRef} variant="ghost" size="icon" aria-label={`Acciones de sede ${branchLabel(branch)}`} />}>
         <MoreHorizontal aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={styles.menu}>
@@ -43,6 +46,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
   const [deleting, setDeleting] = useState<InstitutionBranch | null>(null)
   const [error, setError] = useState("")
   const busyRef = useRef(false)
+  const [busy, setBusy] = useState(false)
   const createRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<HTMLButtonElement | null>(null)
 
@@ -65,36 +69,37 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
     setError("")
     setDeleting(branch)
   }
-  const saveBranch = (event: React.FormEvent) => {
+  const saveBranch = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!editor || busyRef.current) return
     busyRef.current = true
+    setBusy(true)
     try {
-      let idNumber = Date.now()
-      while (branches.some((branch) => branch.id === `branch-${idNumber}`)) idNumber += 1
       const original = editor.original
+      // Una sede nueva va sin id: lo pone el servidor al guardar.
       const next = original
         ? branches.map((branch) => branch.id === original.id ? { ...branch, ...editor.draft } : branch)
-        : [...branches, { ...editor.draft, id: `branch-${idNumber}`, isMain: branches.length === 0 }]
-      onCommit(next)
+        : [...branches, { ...editor.draft, id: "", isMain: branches.length === 0 }]
+      await onCommit(next)
       setEditor(null)
       setError("")
       toast.success(editor.original ? "Sede actualizada" : "Sede creada")
-    } catch {
-      setError("No se pudo guardar la sede en este navegador. Tus datos siguen en el formulario. Inténtalo de nuevo.")
-    } finally { busyRef.current = false }
+    } catch (cause) {
+      setError(getErrorMessage(cause))
+    } finally { busyRef.current = false; setBusy(false) }
   }
-  const deleteBranch = () => {
+  const deleteBranch = async () => {
     if (!deleting || busyRef.current) return
     busyRef.current = true
+    setBusy(true)
     try {
-      onCommit(branches.filter((branch) => branch.id !== deleting.id))
+      await onCommit(branches.filter((branch) => branch.id !== deleting.id))
       setDeleting(null)
       setError("")
       toast.success("Sede eliminada")
-    } catch {
-      setError("No se pudo eliminar la sede en este navegador. La sede se conserva. Inténtalo de nuevo.")
-    } finally { busyRef.current = false }
+    } catch (cause) {
+      setError(getErrorMessage(cause))
+    } finally { busyRef.current = false; setBusy(false) }
   }
   const condition = (branch: InstitutionBranch) => branch.isMain
     ? <Badge variant="secondary" className={styles.principal}>Principal</Badge>
@@ -140,7 +145,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
                   <TableHead scope="col">Tipo</TableHead><TableHead scope="col"><span className="sr-only">Acciones</span></TableHead>
                 </TableRow></TableHeader>
                 <TableBody>{branches.map((branch) => <TableRow key={branch.id}>
-                  <TableCell className={styles.name}>{branch.name || "Nueva sede"}</TableCell>
+                  <TableCell className={styles.name}>{branchLabel(branch)}</TableCell>
                   <TableCell>{branch.address || "Sin dirección"}</TableCell>
                   <TableCell>{branch.phone || "Sin teléfono"}</TableCell>
                   <TableCell>{branch.hours || "Sin horarios"}</TableCell>
@@ -151,7 +156,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
             <ul className={styles.mobile} aria-label="Sedes de la institución">
               {branches.map((branch) => <li className={styles.branch} key={branch.id}>
                 <div className={styles.branchHeader}>
-                  <div><h3>{branch.name || "Nueva sede"}</h3>{condition(branch)}</div>{actions(branch)}
+                  <div><h3>{branchLabel(branch)}</h3>{condition(branch)}</div>{actions(branch)}
                 </div>
                 <dl className={styles.facts}>
                   <div><dt>Dirección</dt><dd>{branch.address || "Sin dirección"}</dd></div>
@@ -170,7 +175,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
             <DialogTitle>{editor?.original ? "Editar sede" : "Nueva sede"}</DialogTitle>
             <DialogDescription>{editor?.original ? "Actualiza los datos de esta ubicación de la institución." : "Registra una nueva ubicación de la institución."}</DialogDescription>
           </DialogHeader>
-          {editor && <form className={styles.editorForm} noValidate onSubmit={saveBranch}>
+          {editor && <form className={styles.editorForm} noValidate onSubmit={(event) => { void saveBranch(event) }} aria-busy={busy}>
             <div className={styles.editorBody}>
               <fieldset className={styles.group}>
                 <legend>Información de la sede</legend>
@@ -184,7 +189,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
             </div>
             <div className={styles.editorFooter} data-institution-editor-actions>
               <Button type="button" variant="outline" onClick={() => { setEditor(null); setError("") }}>Cancelar</Button>
-              <Button type="submit">Guardar sede</Button>
+              <Button type="submit" disabled={busy}>Guardar sede</Button>
             </div>
           </form>}
         </DialogContent>
@@ -194,12 +199,12 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
         <AlertDialogContent finalFocus={returnFocus} className={styles.confirm}>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar esta sede?</AlertDialogTitle>
-            <AlertDialogDescription>Se eliminará «{deleting?.name || "Nueva sede"}» del listado de sedes. Esta acción no se puede deshacer.</AlertDialogDescription>
+            <AlertDialogDescription>Se eliminará «{deleting ? branchLabel(deleting) : "Nueva sede"}» del listado de sedes. Esta acción no se puede deshacer.</AlertDialogDescription>
           </AlertDialogHeader>
           {error && <p role="alert" className={styles.error}>{error}</p>}
           <AlertDialogFooter>
             <Button variant="outline" autoFocus onClick={() => { setDeleting(null); setError("") }}>Cancelar</Button>
-            <Button variant="destructive" onClick={deleteBranch}>Eliminar sede</Button>
+            <Button variant="destructive" disabled={busy} onClick={() => { void deleteBranch() }}>Eliminar sede</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

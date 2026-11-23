@@ -1,11 +1,11 @@
 import { useMutation } from "@tanstack/react-query"
+import { toast } from "sonner"
 
-import { queryClient } from "@/shared/lib/query-client"
+import { getErrorMessage } from "@/shared/lib/error-message"
 
 import { authApi } from "./auth.api"
 import { useAuthStore } from "../store/auth-store"
-import { toast } from "sonner"
-import { getErrorMessage } from "@/shared/lib/error-message"
+import type { AccessRequestFormValues } from "../types/access-form.types"
 import type { LoginFormValues } from "../types/auth.types"
 
 export function useLogin() {
@@ -23,14 +23,28 @@ export function useLogout() {
   const clearSession = useAuthStore((state) => state.clearSession)
 
   return useMutation({
+    // Con la API borra la cookie de renovación. Si falla, la sesión local se cierra igual.
     mutationFn: () => authApi.logout(),
     onSettled: () => {
       try {
         clearSession()
-        queryClient.clear()
       } catch (error) {
         toast.error(getErrorMessage(error))
       }
     },
   })
+}
+
+export function usePasswordRecovery() {
+  return useMutation({ mutationFn: (email: string) => authApi.requestPasswordRecovery(email) })
+}
+
+export function usePasswordReset() {
+  return useMutation({
+    mutationFn: ({ token, password }: { token: string; password: string }) => authApi.resetPassword(token, password),
+  })
+}
+
+export function useAccessRequest() {
+  return useMutation({ mutationFn: (values: AccessRequestFormValues) => authApi.requestAccess(values) })
 }

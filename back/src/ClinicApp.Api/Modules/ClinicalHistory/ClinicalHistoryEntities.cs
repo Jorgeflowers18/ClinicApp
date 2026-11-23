@@ -147,5 +147,89 @@ public class ClinicalAttachment
     public Guid? UploadedByUserId { get; set; }
     public DateTime CreatedAt { get; set; }
 
+    // ── Archivo clínico digital (metadatos opcionales; ver ClinicalArchiveController) ──
+
+    /// <summary>SHA-256 (hex) del archivo, calculado por el servidor. Detecta originales repetidos del paciente.</summary>
+    public string? Digest { get; set; }
+
+    /// <summary>0 = sin metadatos (adjunto anterior al archivo clínico). Sube con cada edición: concurrencia optimista.</summary>
+    public int MetadataVersion { get; set; }
+
+    public string DisplayName { get; set; } = "";
+    public string ClinicalType { get; set; } = "";
+    public DateOnly? StudyDate { get; set; }
+    public Guid? CategoryId { get; set; }
+    public Guid? ProfessionalId { get; set; }
+    public Guid? EncounterId { get; set; }
+
+    /// <summary>Tratamiento realizado (<c>treatment_assignments</c>) al que corresponde ("treatmentId" en la API).</summary>
+    public Guid? TreatmentAssignmentId { get; set; }
+
+    /// <summary>Examen solicitado de la historia (<c>examRequests[].id</c>) cuyo resultado es este archivo.</summary>
+    public string? ExamRequestId { get; set; }
+
+    public string Zone { get; set; } = "";
+    public string Notes { get; set; } = "";
+    public DateTime? MetadataUpdatedAt { get; set; }
+
+    /// <summary>Archivado: sigue en la historia, pero la vista lo oculta por defecto. Se puede restaurar.</summary>
+    public DateTime? ArchivedAt { get; set; }
+
+    public List<ClinicalAttachmentTag> Tags { get; set; } = [];
+    public List<ClinicalAttachmentAudit> Audit { get; set; } = [];
+
     public bool IsInRecord => LinkedAt is not null && RemovedAt is null;
+}
+
+/// <summary>Categoría del archivo clínico (catálogo de la clínica). Tabla <c>archive_categories</c>.</summary>
+public class ArchiveCategory
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Color { get; set; } = "neutral";
+    public DateTime? ArchivedAt { get; set; }
+    public int Version { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>Etiqueta del archivo clínico. Tabla <c>archive_tags</c>.</summary>
+public class ArchiveTag
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public int Version { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>Etiquetas de cada adjunto. Tabla <c>clinical_attachment_tags</c>.</summary>
+public class ClinicalAttachmentTag
+{
+    public Guid AttachmentId { get; set; }
+    public Guid TagId { get; set; }
+
+    /// <summary>Orden en que se eligieron (el frontend las muestra así).</summary>
+    public int Position { get; set; }
+}
+
+/// <summary>Auditoría del archivo clínico: quién adjuntó, editó, archivó o restauró cada archivo. Tabla <c>clinical_attachment_audit</c>.</summary>
+public class ClinicalAttachmentAudit
+{
+    public Guid Id { get; set; }
+    public Guid AttachmentId { get; set; }
+
+    /// <summary><c>adjuntar</c>, <c>editar</c>, <c>archivar</c> o <c>restaurar</c>.</summary>
+    public string Action { get; set; } = "";
+
+    /// <summary>Campos que cambiaron (nombres del JSON).</summary>
+    public List<string> Fields { get; set; } = [];
+
+    public Guid? ActorUserId { get; set; }
+
+    /// <summary>Nombre del usuario en ese momento (se conserva aunque luego cambie).</summary>
+    public string ActorName { get; set; } = "";
+
+    public DateTime At { get; set; }
 }

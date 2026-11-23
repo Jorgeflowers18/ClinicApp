@@ -3,7 +3,7 @@
 Trabajo de la API .NET por módulo y en orden de implementación. El detalle de cada endpoint (contrato, validaciones y casos de error) está en [`backlog.md`](./backlog.md). Este archivo dice **en qué orden** se hace cada módulo y **de qué depende**.
 
 - **Responsable de todo el backend:** **Jorge Flores**. Desde el 2026-11-16 también le corresponden los módulos que antes estaban asignados a Josue Cevallos (`patients`, `appointments`, `institution`, `notifications`, `finance` y `reports`).
-- **Criterio de terminado:** el frontend ya está aprobado por la clienta. Cada módulo se da por terminado cuando su pantalla funciona con `VITE_USE_MOCK_API=false` contra la API real.
+- **Criterio de terminado:** el frontend ya está aprobado por la clienta. Cada módulo se da por terminado cuando su pantalla funciona contra la API real.
 
 ---
 
@@ -15,10 +15,10 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 | ✅ | `treatments`: catálogo con sus insumos | Hecho | 1 | Base, `inventory` |
 | ✅ | `inventory` | Hecho | 1 y 2 | Base |
 | ✅ 1 | `patients` | Hecho (falta importar los pacientes de la clínica) | 1 | Base |
-| ✅ 2 | `appointments`: profesionales y consultorios | Hecho (falta su pantalla en el frontend) | 1 | Base |
+| ✅ 2 | `appointments`: profesionales y consultorios | Hecho, con su pantalla en el frontend (`/administracion`) | 1 | Base |
 | ✅ 3 | `appointments`: citas y bloqueos | Hecho (falta que el frontend envíe el rango del calendario) | 2 | `patients`, profesionales y consultorios |
 | ✅ 4 | `treatments`: tratamientos realizados (`treatment-assignments`) | Hecho | 2 | `patients`, `treatments`, `inventory` |
-| ✅ 5 | `clinical-history` | Hecho (falta el registro transaccional de la atención) | 3 | `patients`, profesionales, citas, tratamientos realizados |
+| ✅ 5 | `clinical-history` | Hecho, con el registro de la atención en una transacción y el archivo clínico | 3 | `patients`, profesionales, citas, tratamientos realizados |
 | ✅ 6 | `institution` | Hecho (falta su `institution.api.ts` en el frontend) | 1 | Base |
 | ✅ 7 | `notifications` | Hecho (falta elegir el proveedor de envío) | 2 | Citas, `patients` |
 | ✅ 8 | `finance` | Etapa A hecha (pagos, cartera y resúmenes); la etapa B espera el ítem 8 | 4 | Tratamientos realizados, `patients` |
@@ -26,40 +26,43 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 
 ## Pendientes al cerrar los planes (2026-11-17)
 
-Los 9 planes están implementados (80 endpoints, 215 pruebas: [`docs/pruebas.md`](./docs/pruebas.md)). Lo que queda, en orden de importancia. El detalle de cada punto está en la sección del módulo en [`backlog.md`](./backlog.md).
+Los 9 planes están implementados, más lo que pidió el frontend el 2026-11-20 (91 endpoints, 258 pruebas: [`docs/pruebas.md`](./docs/pruebas.md)). Lo que queda, en orden de importancia. El detalle de cada punto está en la sección del módulo en [`backlog.md`](./backlog.md).
 
 **1. Decisiones de la clínica:**
-- **Canal y proveedor de notificaciones** (SMS o WhatsApp). Hasta elegirlo, en producción no se envía ni se registra nada.
-- **Qué es una atención:** las preguntas A1 a A8 de `backlog.md` § `clinical-history`. De ellas depende el registro de la atención en una sola transacción.
+- **Canal de notificaciones:** decidido (2026-11-23) que será la **API de WhatsApp**, para contactar a pacientes y a proveedores. Se implementará más adelante; hasta entonces, en producción no se envía ni se registra nada.
+- **Qué es una atención:** las preguntas A1 a A8 de `backlog.md` § `clinical-history`. El registro en una transacción ya existe con las reglas actuales; las respuestas pueden cambiarlas (varias sesiones, cortesías, borradores).
+- **Teléfono del paciente:** la API lo dejó opcional, porque hay pacientes importados sin teléfono. Confirmar con la clínica.
 - **Importación de los 820 pacientes:** las preguntas de `documentacion/decisiones-backend.md` § 5 (número de ficha, datos cortados, especialidad, segundo teléfono).
 - **Texto legal del consentimiento** y la forma de **firmar** (paciente y profesional).
 - **Una o varias sedes** (ítem 2 del backlog de producto).
 - **Diseño del ítem 8** (cuotas, seguros y factura electrónica): habilita la etapa B de finanzas.
 
 **2. Backend:**
-- Registro transaccional de la atención (`POST …/encounters` que registre tratamientos, atención, historia y cita a la vez), con la FK `treatment_assignments.source_encounter_id` y el profesional de cada tratamiento realizado.
+- FK `treatment_assignments.source_encounter_id` → `clinical_encounters`: **ya se puede agregar**. Con la API, el frontend registra las atenciones solo con `…/encounters/register` (plan 7); el registro por pasos se fue con el modo demostración.
 - Comando de importación de pacientes (cuando se respondan las preguntas).
 - Proveedor real de notificaciones (`INotificationSender`) y de correo para la recuperación de contraseña (hoy solo se escriben en el log).
 - Última visita del paciente calculada desde las atenciones.
-- Gestión de usuarios (crear, asignar rol, desactivar) y revisión de las solicitudes de acceso.
+- Revisión de las solicitudes de acceso (la gestión de usuarios se hizo el 2026-11-22, plan 12 punto 3.3: `api/users`).
 - Limpieza de tokens de sesión vencidos.
 - Etapa B de finanzas; ingresos reales en el reporte de tratamientos.
 - Antivirus de adjuntos.
 - Multi-clínica, si se aprueba ([`docs/plan-multiclinica.md`](./docs/plan-multiclinica.md)).
+- Sesiones por profesional en el reporte de productividad (los tratamientos realizados ya guardan el profesional al registrarse con `…/encounters/register`).
 
-**3. Frontend, para consumir la API** (`VITE_USE_MOCK_API=false`; registrar los cambios en `documentacion/arquitectura-frontend.md`):
-- **Sesión:** `withCredentials: true`, restaurar la sesión con `POST /auth/refresh` al cargar, renovar ante un `401` y las funciones `*Real` que faltan en `auth.api.ts` (§ `auth`). Sin esto la sesión se pierde al recargar.
-- **Errores de listas:** convertir `[0]` en `.0` en `toFieldErrors` (la API nombra `plan[0].tooth`).
-- **Pares Mock/Real nuevos:** `institution.api.ts` (y el logo del login con `GET /institution/public`) y `finance.api.ts`.
-- **Sedes:** dejar de generar `branch-${Date.now()}` (`institution-branches.tsx`). Una sede nueva se envía con `id` vacío y se usa el UUID que devuelve el `PUT`. El nombre pasa a ser opcional y se muestra `label` ("Sede N" si no tiene nombre).
-- **Pantallas nuevas:** administrar profesionales y consultorios; registrar y anular pagos; ver y reactivar pacientes dados de baja.
-- **Ajustes:**
-  - la agenda debe enviar `from`/`to` del calendario;
-  - los selectores deben mostrar solo los profesionales y consultorios activos;
-  - ocultar al médico "Eliminar paciente" y los montos de finanzas;
-  - usar `user.professionalId` como profesional por defecto de la atención;
-  - usar `references` de la historia al mostrar e imprimir, y dejar de enviar `description` en los ítems del catálogo;
-  - avisar del límite de 160 caracteres en la plantilla de SMS.
+**3. Frontend, para consumir la API:** **los planes 0 a 11 están hechos (2026-11-22)**; queda el 12 (`front/docs/planes-implementacion/12-campos-sin-conectar.md`: lo que aún no está conectado, con lo que le toca al back). Antes eran los 12 planes de [`front/docs/planes-implementacion/`](../front/docs/planes-implementacion/README.md), en orden. Lo que esos planes pedían al back ya está hecho (subtítulo de la institución, filtros y tipo de documento de pacientes, archivo clínico digital, registro de la atención en una transacción y alertas del día). Incluyen la sesión con refresh, el estándar de recurso de API, los pares Mock/Real que faltan (`institution` y `finance`), las pantallas nuevas (profesionales y consultorios, pagos, pacientes dados de baja) y los ajustes por módulo. El plan 0 está hecho: el frontend compila, el cliente HTTP normaliza los errores, existía el conmutador `VITE_API_MODULES` (se quitó con el modo demostración en el plan 11) y los tipos se generan desde OpenAPI. La conversión `[0]` → `.0` ya la hace `shared/lib/field-issues.ts`. Quedó del plan 0:
+- **Pruebas unitarias en el front** (Vitest) para `normalizeProblem` y los mapeos: hoy solo hay Playwright. Decidir si se agregan.
+- **Del plan 1 (auth), hecho el 2026-11-21:** sesión con refresh y token solo en memoria, renovación ante el `401`, "Mi perfil", recuperar y restablecer contraseña y solicitar acceso, conectados. Quedan del lado del back: el proveedor de correo (el enlace de recuperación solo sale en el log), y la pantalla para revisar las solicitudes de acceso (listada arriba). La gestión de usuarios se hizo con el plan 12, punto 3.3.
+- **Del plan 2 (institution), hecho el 2026-11-21:** perfil, marca pública y sedes con UUID del servidor, conectados. El logo se recodifica a WebP en el navegador si no es PNG, JPG o WebP (o pesa más de ~500 KB). Pendiente de la clínica: si una sede puede quedar sin nombre (hoy se muestra "Sede N").
+- **Del plan 3 (patients), hecho el 2026-11-21:** lista con filtros del back, alta y edición con errores por campo, baja lógica (`deletedAt`) y reactivación, y la vista de dados de baja para el admin. "Dar de baja" está en el menú de la ficha (no en el de la lista). Pendientes: la búsqueda del back no incluye el correo; confirmar con la clínica que el teléfono sea opcional.
+- **Del plan 4 (agenda), hecho el 2026-11-21:** citas y bloqueos por rango visible, choques y estados validados por el back, sin registro de notificaciones desde el front, selectores solo con activos y `patientName` en cada cita (back, con prueba). Pendiente: mostrar la agenda con la zona de la clínica si algún equipo tiene otra zona. Los detalles están en `front/docs/planes-implementacion/12-campos-sin-conectar.md`.
+- **Del plan 5 (treatments), hecho el 2026-11-21:** catálogo y tratamientos realizados en la API; borrar uno usado ofrece desactivarlo; límites del back en el esquema. Pendiente del back: `patientName` en `TreatmentAssignmentDto` (el detalle del tratamiento pide cada paciente por separado).
+- **Del plan 6 (inventory), hecho el 2026-11-21:** todo inventario en la API, sin FEFO ni cálculo de stock en el front, y `registerConsumption` fuera del contrato. Pendientes del back: desactivar insumos en lugar de borrarlos, y un listado liviano para selectores sin el límite de 100.
+- **Del plan 7 (clinical-history), hecho el 2026-11-21:** historia, atención en una transacción, notas, adjuntos y archivo clínico en la API; sin IndexedDB en modo API; `references` al imprimir; profesional por defecto desde `professionalId`; aviso del `410`. Pendiente del back: `patientName` en la lista de atenciones (`EncounterListItemDto`).
+- **Del plan 8 (notifications), hecho el 2026-11-22:** plantilla, historial con `patientName` y `message`, y alertas con una sola petición (`GET /alerts`); el front ya no registra notificaciones. Pendientes del back: tipar `GET /notifications` (hoy responde `IActionResult`) y filtros/indicadores en el servidor para no leer todo el historial.
+- **Del plan 9 (finance), hecho el 2026-11-22:** cartera, resúmenes, registrar y anular pagos; el médico no ve montos. El detalle del tratamiento suma la cartera de todos sus pacientes. Espera la etapa B (ítem 8): cuotas, seguros y factura; el front ya no muestra vencimientos, mora, seguros ni factura (plan 12 punto 2.3, 2026-11-23): dependen del financiamiento de cada clínica.
+- **Del plan 10 (reports), hecho el 2026-11-22:** los cinco reportes y el Inicio leen la API. Pendientes: la tarjeta "Tratamientos activos" del Inicio da 0 con datos reales (decidir si se cambia por "realizados en el periodo", que pide un campo nuevo en `summary`) (el `400` del periodo ya se muestra junto al selector, plan 12 punto 4.2).
+- **Del plan 11 (cierre), hecho el 2026-11-22:** opción B. Los mocks, los datos de ejemplo y las 530 pruebas E2E del modo demostración se quitaron de esta rama y se conservan en `jf/front-demo-mocks` (ahí quedan también las pruebas que ya fallaban antes de los planes). El build ya no incluye datos de ejemplo ni las contraseñas de prueba. Nueva suite E2E contra la API real (`npm run test:e2e`, 21 pruebas) con la base `clinicapp_e2e`, que el script crea al empezar y **borra siempre al terminar**; el CORS de las pruebas lo pasa el script por variable de entorno, sin tocar `appsettings`. Pendiente para el despliegue: `Cors__AllowedOrigins__0` y `Auth__FrontendBaseUrl` con la URL pública del front (el enlace de restablecer contraseña usa la segunda), y `VITE_API_BASE_URL` con la URL pública de la API al compilar el front.
+- **Del plan 12, punto 1 (lecturas que no escalan), hecho el 2026-11-22:** selector de paciente con búsqueda en el servidor (cita y filtro del historial), `patientName` en la lista de atenciones, `patientName` y `treatmentName` en los tratamientos realizados, filtros (`channel`, `status`, `type`, `id`) y `GET /notifications/summary` en notificaciones, y `GET /inventory/items/options` para los selectores de insumos, con sus pruebas. Pendiente no urgente: la pestaña Insumos, "Stock crítico" y el catálogo de tratamientos siguen juntando páginas de 100 (`fetchAllPages`).
 
 **4. Infraestructura:** despliegue en el Droplet (nginx, `systemd`, migraciones y respaldos que **incluyan la carpeta de adjuntos**): `tutorial/fase-0.md` § 5.9.
 
@@ -131,7 +134,9 @@ Siguen por definir:
 - [ ] Proveedor de correo para la recuperación de contraseña (el mismo de `notifications`).
 - [ ] Despliegue en el Droplet (nginx, servicio `systemd`, migraciones y respaldos): `tutorial/fase-0.md` § 5.9.
 
-**Por definir:** pantalla de gestión de usuarios; quién revisa las solicitudes de acceso.
+**Hecho (2026-11-22):** gestión de usuarios (`api/users`, solo admin) con su pestaña en `/administracion`: crear con un enlace de un solo uso para elegir la contraseña, rol, profesional vinculado y desactivar.
+
+**Por definir:** quién revisa las solicitudes de acceso.
 
 ## `inventory` ✅
 

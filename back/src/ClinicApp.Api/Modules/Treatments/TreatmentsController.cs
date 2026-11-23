@@ -191,7 +191,7 @@ public class TreatmentsController(AppDbContext db) : ControllerBase
             .ThenByDescending(assignment => assignment.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return assignments.Select(TreatmentAssignmentDto.FromEntity).ToList();
+        return await TreatmentAssignmentDto.FromEntitiesAsync(assignments, db, cancellationToken);
     }
 
     /// <summary>

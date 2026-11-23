@@ -4,7 +4,6 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { env } from "@/shared/lib/env"
 import { getErrorMessage } from "@/shared/lib/error-message"
 
 import {
@@ -109,9 +108,6 @@ export function ExportCard({ context, getCurrentHistory, captureOdontogramImage,
           propuestos, el consentimiento de datos y el listado de atenciones. El menú «Exportar» del editor sigue
           ofreciendo su propio informe PDF, imágenes, SVG y FHIR. Las fotos y los documentos originales se descargan
           desde su ficha.
-          {/* MOCK-ONLY */}
-          {env.useMockApi &&
-            " En modo demostración la historia vive en este navegador: la «Historia completa JSON» sirve de respaldo."}
         </p>
       </CardContent>
     </Card>

@@ -5,10 +5,16 @@ using ClinicApp.Api.Common;
 namespace ClinicApp.Api.Modules.ClinicalHistory;
 
 /// <summary>Foto o documento: la forma de <c>DentalAttachment</c> del frontend.</summary>
-public record DentalAttachmentDto(Guid Id, string Name, string Kind, string Mime, long Size, DateTime CreatedAt)
+/// <summary>
+/// Adjunto (<c>DentalAttachment</c> del frontend). <c>archive</c> son los metadatos del archivo clínico digital,
+/// o null si el archivo nunca se clasificó (adjuntos anteriores o subidos desde la historia).
+/// Para que <c>archive</c> traiga etiquetas y auditoría, la consulta debe incluir <c>Tags</c> y <c>Audit</c>.
+/// </summary>
+public record DentalAttachmentDto(Guid Id, string Name, string Kind, string Mime, long Size, DateTime CreatedAt, ClinicalFileMetadataDto? Archive)
 {
     public static DentalAttachmentDto FromEntity(ClinicalAttachment attachment) =>
-        new(attachment.Id, attachment.Alias, attachment.Kind, attachment.Mime, attachment.Size, attachment.CreatedAt);
+        new(attachment.Id, attachment.Alias, attachment.Kind, attachment.Mime, attachment.Size, attachment.CreatedAt,
+            ClinicalFileMetadataDto.FromEntity(attachment));
 }
 
 /// <summary>Historia clínica: la forma de <c>ClinicalRecord</c> del frontend.</summary>
@@ -66,6 +72,9 @@ public record ClinicalReferences(
 
 /// <summary>GET /clinical-history/patients/:patientId</summary>
 public record PatientClinicalHistoryDto(ClinicalRecordDto Record, List<ClinicalEncounterDto> Encounters, ClinicalReferences References);
+
+/// <summary>Resultado de registrar la atención en una transacción (<c>RegisterEncounterResult</c> del frontend).</summary>
+public record RegisterEncounterResultDto(ClinicalEncounterDto Encounter, ClinicalRecordDto? Record, bool AppointmentCompleted, List<string> Warnings);
 
 /// <summary>Guardar la historia (PUT): la forma de <c>ClinicalRecord</c> que envía el frontend.</summary>
 public class SaveRecordRequest
@@ -173,9 +182,13 @@ public record ClinicalEncounterDto(
         encounter.CreatedAt);
 }
 
-/// <summary>Una fila de la lista global de atenciones (<c>EncounterListItem</c>).</summary>
+/// <summary>
+/// Una fila de la lista global de atenciones (<c>EncounterListItem</c>), con el nombre del paciente ("Nombres
+/// Apellidos") para no pedir cada paciente por separado.
+/// </summary>
 public record EncounterListItemDto(
-    Guid Id, Guid PatientId, string Date, Guid ProfessionalId, string? LegacyProfessionalName, string Reason, List<Diagnosis> Diagnoses, string NextVisit);
+    Guid Id, Guid PatientId, string PatientName, string Date, Guid ProfessionalId, string? LegacyProfessionalName, string Reason,
+    List<Diagnosis> Diagnoses, string NextVisit);
 
 /// <summary>Nota aclaratoria (<c>EncounterNote</c>).</summary>
 public record EncounterNoteDto(Guid Id, string Text, string AuthorName, DateTime CreatedAt)

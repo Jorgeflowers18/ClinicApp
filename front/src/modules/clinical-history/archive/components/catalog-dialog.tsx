@@ -22,7 +22,7 @@ export function CatalogDialog({ catalog, files, onClose }: { catalog: ArchiveCat
     <DialogContent variant="medium" aria-busy={busy}>
       <DialogHeader>
         <DialogTitle>Categorías y etiquetas</DialogTitle>
-        <DialogDescription>Catálogo compartido de la institución de demostración. Los recuentos corresponden únicamente al paciente actual.</DialogDescription>
+        <DialogDescription>Catálogo compartido de la institución. Los recuentos corresponden únicamente al paciente actual.</DialogDescription>
       </DialogHeader>
       <DialogBody className={styles.catalog}>
 

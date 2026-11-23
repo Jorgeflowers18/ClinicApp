@@ -1,4 +1,4 @@
-import { Building2, ChevronDown, LogOut, UserRound } from "lucide-react"
+import { Building2, ChevronDown, LogOut, Settings2, UserRound } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -7,9 +7,9 @@ import { useLogout } from "@/modules/auth/api/auth.queries"
 import { UserAvatar } from "@/modules/auth/components/user-avatar"
 import { userDisplayName } from "@/modules/auth/components/user-identity"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
+import { roleLabels } from "@/modules/auth/types/user-admin.types"
 import styles from "./header-user-menu.module.css"
 
-const roleLabels = { admin: "Administrador", recepcion: "Recepción", medico: "Personal médico" }
 
 export function HeaderUserMenu() {
   const user = useAuthStore((state) => state.user)
@@ -36,6 +36,7 @@ export function HeaderUserMenu() {
       <DropdownMenuSeparator />
       {link("/perfil-usuario", "Mi perfil", <UserRound />)}
       {user?.role === "admin" && link("/perfil-institucion", "Perfil institucional", <Building2 />)}
+      {user?.role === "admin" && link("/administracion", "Administración", <Settings2 />)}
       <DropdownMenuSeparator />
       <DropdownMenuItem disabled={logout.isPending} onClick={() => { if (!logout.isPending) logout.mutate() }}>
         <LogOut />{logout.isPending ? "Cerrando sesión…" : "Cerrar sesión"}

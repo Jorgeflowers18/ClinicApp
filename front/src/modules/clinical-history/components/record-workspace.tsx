@@ -4,7 +4,7 @@ import { archiveMutationKey } from "../archive/hooks"
 import { mergeArchiveRows } from "../archive/lib/filter"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
-import { Activity, AlertCircle, CalendarClock, ClipboardList, Info, Stethoscope } from "lucide-react"
+import { Activity, AlertCircle, CalendarClock, ClipboardList, Stethoscope } from "lucide-react"
 import { FormProvider, useForm, useWatch, type FieldErrors, type Path } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -22,12 +22,11 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { formatDateOnly } from "@/shared/lib/date"
-import { env } from "@/shared/lib/env"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { ApiError } from "@/shared/types/common"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 import { useUpdatePatient } from "@/modules/patients/api/patients.queries"
-import { useTreatmentsList } from "@/modules/treatments/api/treatments.queries"
+import { useTreatmentCatalog } from "@/modules/treatments/hooks/use-treatment-options"
 import { KpiCard } from "@/modules/reports/components/kpi-card"
 import type { Patient } from "@/modules/patients/types/patient.types"
 
@@ -138,11 +137,11 @@ export function RecordWorkspace({
   onShowEncounter,
 }: RecordWorkspaceProps) {
   const navigate = useNavigate()
-  const { record, encounters } = history
+  const { record, encounters, references } = history
   const patientName = `${patient.firstName} ${patient.lastName}`
   const { data: professionals } = useProfessionals()
   // Catálogo completo (incluye inactivos) para nombrar los tratamientos en los documentos.
-  const { data: catalog } = useTreatmentsList({ page: 1, pageSize: 100 })
+  const { data: catalog } = useTreatmentCatalog()
   const initialValues = (): WorkspaceValues => ({ ...pickRecordValues(record), patient: pickPatientData(patient) })
   const form = useForm<WorkspaceValues>({
     resolver: zodResolver(workspaceSchema),
@@ -197,7 +196,7 @@ export function RecordWorkspace({
   const indicators = computeChartIndicators(values.chart)
   const last = latestEncounter(encounters)
   const errorTabs = new Set(Object.keys(form.formState.errors).map(tabForField))
-  const treatmentById = new Map((catalog?.items ?? []).map((treatment) => [treatment.id, treatment]))
+  const treatmentById = new Map((catalog ?? []).map((treatment) => [treatment.id, treatment]))
 
   function handleChartReady(ready: boolean) {
     chartReadyRef.current = ready
@@ -327,8 +326,9 @@ export function RecordWorkspace({
     patientName,
     documentId: patient.documentId,
     professionals: professionals ?? [],
-    professionalName: (encounter) => resolveProfessionalName(encounter, professionals),
-    treatmentName: (treatmentId, fallback) => (treatmentId && treatmentById.get(treatmentId)?.name) || fallback,
+    // `references` (API) cubre a los profesionales y tratamientos que ya no están en los catálogos cargados.
+    professionalName: (encounter) => references?.professionals[encounter.professionalId]?.name ?? resolveProfessionalName(encounter, professionals),
+    treatmentName: (treatmentId, fallback) => (treatmentId && (treatmentById.get(treatmentId)?.name ?? references?.treatments[treatmentId]?.name)) || fallback,
   }
 
   return (
@@ -336,16 +336,6 @@ export function RecordWorkspace({
       <div ref={navigationContainer} className={`${navigationStyles.scope} clinic-history-workspace min-w-0 space-y-4`}>
         <RecordHeader patient={patient} record={record} onBack={goBack} onRegisterEncounter={() => openRegister(null)} />
 
-        {/* MOCK-ONLY */}
-        {env.useMockApi && (
-          <p role="note" className="clinic-demo-notice">
-            <Info aria-hidden="true" className="size-4 shrink-0" />
-            <span>
-            Modo demostración: la historia clínica se guarda en este navegador y no se sincroniza con un servidor. Los
-            datos del paciente se guardan en memoria y vuelven a los de ejemplo al recargar la página.
-            </span>
-          </p>
-        )}
 
         {conflict && (
           <Alert variant="destructive">

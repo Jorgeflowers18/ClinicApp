@@ -13,7 +13,7 @@ import { SearchInput } from "@/shared/components/search-input"
 import { useTableQueryState } from "@/shared/hooks/use-table-query-state"
 import { formatDateOnly } from "@/shared/lib/date"
 import { getErrorMessage } from "@/shared/lib/error-message"
-import { usePatient, usePatientsList } from "@/modules/patients/api/patients.queries"
+import { PatientCombobox } from "@/modules/patients/components/patient-combobox"
 import { useProfessionals } from "@/modules/appointments/api/appointments.queries"
 
 import { useEncountersList } from "../api/clinical-history.queries"
@@ -38,26 +38,18 @@ export function ClinicalHistoryListPage() {
     patientId,
     professionalId,
   })
-  const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
-  const missingSelectedPatient = patientId && patientsPage && !patientsPage.items.some(patient => patient.id === patientId) ? patientId : undefined
-  const selectedPatient = usePatient(missingSelectedPatient)
   const { data: professionals } = useProfessionals()
 
-  const patientItems: Record<string, string> = {
-    [ALL]: "Todos los pacientes",
-    ...Object.fromEntries((patientsPage?.items ?? []).map((item) => [item.id, `${item.firstName} ${item.lastName}`])),
-    ...(missingSelectedPatient ? { [missingSelectedPatient]: selectedPatient.data ? `${selectedPatient.data.firstName} ${selectedPatient.data.lastName}` : selectedPatient.isPending ? "Cargando paciente…" : "Nombre no disponible" } : {}),
-  }
   const professionalItems: Record<string, string> = {
     [ALL]: "Todos los profesionales",
     ...Object.fromEntries((professionals ?? []).map((item) => [item.id, item.name])),
   }
 
-  function changePatient(value: string | null) {
+  function changePatient(value: string) {
     setPage(1)
     setSearchParams((current) => {
       const next = new URLSearchParams(current)
-      if (value && value !== ALL) next.set("pacienteId", value)
+      if (value) next.set("pacienteId", value)
       else next.delete("pacienteId")
       return next
     })
@@ -86,7 +78,7 @@ export function ClinicalHistoryListPage() {
 
   const columns: DataTableColumn<EncounterListItem>[] = [
     { key: "date", header: "Fecha", cell: (row) => shortDate(row.date) },
-    { key: "patient", header: "Paciente", cell: (row) => patientItems[row.patientId] ?? "Paciente" },
+    { key: "patient", header: "Paciente", cell: (row) => row.patientName || "Paciente" },
     { key: "reason", header: "Motivo de consulta", cell: (row) => row.reason || "—", className: "max-w-56 truncate" },
     { key: "diagnosis", header: "Diagnóstico", cell: (row) => diagnosisSummary(row) || "—", className: "max-w-56 truncate" },
     { key: "professional", header: "Profesional", cell: (row) => resolveProfessionalName(row, professionals) },
@@ -100,16 +92,8 @@ export function ClinicalHistoryListPage() {
 
   const desktopFilters = (
     <>
-      <FilterField label="Paciente"><Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
-        <SelectTrigger className="w-56" aria-label="Filtrar por paciente">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {Object.entries(patientItems).map(([value, label]) => (
-            <SelectItem key={value} value={value}>{label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select></FilterField>
+      <FilterField label="Paciente"><PatientCombobox className="w-56" value={patientId ?? ""} onChange={changePatient} clearable
+        ariaLabel="Filtrar por paciente" placeholder="Todos los pacientes" /></FilterField>
       <FilterField label="Profesional"><Select items={professionalItems} value={professionalId ?? ALL} onValueChange={changeProfessional}>
         <SelectTrigger className="w-56" aria-label="Filtrar por profesional">
           <SelectValue />
@@ -155,16 +139,8 @@ export function ClinicalHistoryListPage() {
         <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm font-medium">Paciente</p>
-              <Select items={patientItems} value={patientId ?? ALL} onValueChange={changePatient}>
-                <SelectTrigger className="w-full" aria-label="Filtrar por paciente">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(patientItems).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PatientCombobox value={patientId ?? ""} onChange={changePatient} clearable
+                ariaLabel="Filtrar por paciente" placeholder="Todos los pacientes" />
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium">Profesional</p>
@@ -195,7 +171,7 @@ export function ClinicalHistoryListPage() {
         isError={isError}
         errorMessage={getErrorMessage(error)}
         onRowClick={openEncounter}
-        getRowLabel={(row) => `Abrir atención de ${patientItems[row.patientId] ?? "paciente"}`}
+        getRowLabel={(row) => `Abrir atención de ${row.patientName || "paciente"}`}
         emptyTitle="Sin atenciones"
         emptyDescription={
           patientId

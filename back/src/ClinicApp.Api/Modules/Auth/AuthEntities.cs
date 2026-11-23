@@ -64,6 +64,12 @@ public class RefreshToken
 
     /// <summary>Token que lo reemplazó al renovar la sesión. Vacío si se revocó por otro motivo.</summary>
     public Guid? ReplacedByTokenId { get; set; }
+
+    /// <summary>
+    /// "Recordarme": la cookie sobrevive al cierre del navegador y la sesión dura <c>Auth:RefreshTokenDays</c>.
+    /// Si no, es una cookie de sesión y vence tras <c>Auth:SessionRefreshHours</c>. Se hereda al renovar.
+    /// </summary>
+    public bool Persistent { get; set; }
 }
 
 /// <summary>Token de un solo uso para restablecer la contraseña. Solo se guarda su hash.</summary>

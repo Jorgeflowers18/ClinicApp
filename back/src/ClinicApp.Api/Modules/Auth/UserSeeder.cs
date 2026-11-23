@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ClinicApp.Api.Modules.Auth;
 
 /// <summary>
-/// Crea los usuarios iniciales al arrancar, mientras no exista una pantalla de gestión de usuarios.
+/// Crea los usuarios iniciales al arrancar. Los demás los crea el admin desde /administracion (UsersController).
 /// <list type="bullet">
 /// <item><b>Desarrollo:</b> si no hay ningún usuario, crea las tres cuentas de prueba del modo mock del
 /// frontend (admin@clinica.com / admin123, recepcion@clinica.com / recepcion123, medico@clinica.com / medico123).</item>

@@ -85,6 +85,9 @@ public class ReportsTests(ApiFactory api)
         Assert.Equal(1, summary["appointmentsCompleted"]!.GetValue<int>());
         Assert.Equal(1, summary["appointmentsNoShow"]!.GetValue<int>());
         Assert.Equal(0.5, summary["noShowRate"]!.GetValue<double>());
+        // Tratamientos realizados en el periodo: los 2 completados (el que sigue en progreso no cuenta).
+        Assert.Equal(2, summary["treatmentsPerformed"]!.GetValue<int>());
+        Assert.Null(summary["activeTreatments"]);
 
         // Agenda por día: los 7 días, con ceros donde no hay citas.
         var agenda = await admin.GetJson($"/api/reports/agenda?{Period}");

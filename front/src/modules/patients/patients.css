@@ -146,7 +146,7 @@
 .patient-consent-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 24px; }
 .patient-consent-summary .patient-information { flex: 0 1 220px; grid-template-columns: minmax(0, 1fr); }
 .patient-consent-summary .patient-field-help { flex: 1 1 240px; }
-.patient-financial-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; font-variant-numeric: tabular-nums; }
+.patient-financial-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; font-variant-numeric: tabular-nums; }
 .patient-financial-summary > div { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--card); }
 .patient-financial-summary > div > div { min-width: 0; }
 .patient-financial-summary dt { color: var(--muted-foreground); font-size: 12px; line-height: 18px; }
@@ -155,9 +155,6 @@
 .patient-financial-summary [data-tone="success"] svg { color: var(--success); }
 .patient-financial-summary [data-tone="warning"] svg { color: var(--warning); }
 .patient-financial-summary [data-tone="danger"] svg { color: var(--destructive); }
-.patient-next-due { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--muted-foreground); }
-.patient-next-due svg { width: 18px; height: 18px; }
-.patient-next-due strong { color: var(--foreground); font-weight: 510; }
 .patient-tab-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .patient-tab-heading h2 { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 590; }
 .patient-tab-heading h2 > svg { width: 18px; height: 18px; color: var(--primary); }
@@ -183,11 +180,6 @@
 .patient-ledger[open] > summary > svg:last-child { transform: rotate(180deg); }
 .patient-ledger-content { display: grid; min-width: 0; gap: 12px; padding: 4px 16px 16px; }
 .patient-ledger-content h3 { font-size: 12px; font-weight: 590; }
-.patient-invoice { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-control); }
-.patient-invoice > svg { width: 20px; height: 20px; }
-.patient-invoice > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.patient-invoice p { font-size: 12px; color: var(--muted-foreground); }
-.patient-invoice strong { font-size: 14px; font-weight: 590; font-variant-numeric: tabular-nums; }
 .patient-clinical-tab > div > dl > div { min-width: 0; background: var(--card); border-radius: var(--radius-card); }
 .patient-clinical-tab > div > dl dd { margin-top: 4px; overflow-wrap: anywhere; }
 .patient-clinical-tab > div > dl dd:not(:last-child) { font-size: 16px; }
@@ -254,3 +246,10 @@
   .patient-section-panel { animation-duration: 0s !important; transition-duration: 0s !important; }
   .patient-edit-dialog[data-slot="dialog-content"] { animation: none; transition: none; }
 }
+.patient-removed-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--warning); border-radius: var(--radius-card); background: var(--warning-surface); color: var(--foreground); }
+.patient-removed-notice p { display: flex; align-items: flex-start; gap: 10px; margin: 0; }
+.patient-removed-notice svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+.patient-deleted-filter { display: flex; align-items: center; gap: 8px; align-self: end; min-height: 40px; }
+.patient-advanced-filters .patient-deleted-filter label { display: inline; margin: 0; color: var(--foreground); font-size: 14px; }
+.patient-ledger-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.patient-void-reason { display: block; margin-top: 4px; color: var(--muted-foreground); font-size: 12px; }

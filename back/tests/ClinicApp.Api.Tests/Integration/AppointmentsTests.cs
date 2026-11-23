@@ -43,6 +43,24 @@ public class AppointmentsTests(ApiFactory api)
         Assert.Null(created["treatmentId"]);
     }
 
+    [Fact]
+    public async Task La_cita_trae_el_nombre_del_paciente_en_el_detalle_y_en_la_agenda()
+    {
+        var admin = await api.As("admin");
+        var patient = await admin.CreatePatientAsync("Rosa", "Agenda Nombre");
+        var agenda = new Agenda(admin, patient.Id(), await admin.ProfessionalIdAsync(), await admin.RoomIdAsync(), TestData.TodayInClinic().AddDays(33));
+
+        var created = await admin.PostJson("/api/appointments", Body(agenda, "07:00", "07:20"), HttpStatusCode.Created);
+        Assert.Equal("Rosa Agenda Nombre", created.Str("patientName"));
+
+        var detail = await admin.GetJson($"/api/appointments/{created.Id()}");
+        Assert.Equal("Rosa Agenda Nombre", detail.Str("patientName"));
+
+        var day = agenda.Day.Iso();
+        var list = (await admin.GetJson($"/api/appointments?from={day}&to={day}"))!.AsArray();
+        Assert.Equal("Rosa Agenda Nombre", list.Single(item => item!["id"]!.GetValue<string>() == created.Id().ToString())!.Str("patientName"));
+    }
+
     [Theory]
     [InlineData("recepcion")]
     [InlineData("medico")]

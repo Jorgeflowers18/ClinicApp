@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import { Link, Navigate, useLocation } from "react-router-dom"
 import { Eye, EyeOff, LoaderCircle } from "lucide-react"
 
@@ -13,11 +13,13 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 
 import { useLogin } from "../api/auth.queries"
 import { AuthLayout, AuthNotice, AuthRememberHelp } from "../components/auth-layout"
+import { SessionChecking } from "../components/session-checking"
 import { useAuthStore } from "../store/auth-store"
 import { loginSchema, type LoginFormValues } from "../types/auth.types"
 
 export function LoginPage() {
   const user = useAuthStore((state) => state.user)
+  const checking = useAuthStore((state) => state.status === "checking")
   const location = useLocation()
   const login = useLogin()
   const [showPassword, setShowPassword] = useState(false)
@@ -25,15 +27,20 @@ export function LoginPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "", password: "", rememberMe: false },
   })
   const errorMessage = login.error instanceof ApiError && login.error.status >= 400 && login.error.status < 500
     ? getErrorMessage(login.error)
     : "No se pudo iniciar sesión. Inténtalo de nuevo."
+  const passwordReset = (location.state as { passwordReset?: boolean } | null)?.passwordReset === true
+
+  // Al recargar con la API, primero se confirma si la cookie de renovación sigue valiendo.
+  if (checking) return <SessionChecking />
 
   if (user) {
     const redirectTo = (location.state as { from?: string } | null)?.from ?? "/"
@@ -96,12 +103,17 @@ export function LoginPage() {
 
         <div className="auth-options">
           <div className="auth-remember">
-            <Checkbox id="remember" disabled checked={false} aria-describedby="remember-status" />
+            <Controller control={control} name="rememberMe" render={({ field }) =>
+              <Checkbox id="remember" checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} aria-describedby="remember-status" />} />
             <FieldLabel htmlFor="remember">Recordarme</FieldLabel>
             <AuthRememberHelp />
           </div>
           <Link className="auth-link" to="/recuperar-contrasena" state={location.state}>¿Olvidaste tu contraseña?</Link>
         </div>
+
+        {passwordReset && !login.isError && (
+          <AuthNotice>Contraseña actualizada. Inicia sesión con la nueva.</AuthNotice>
+        )}
 
         {login.isError && (
           <AuthNotice error>{errorMessage}</AuthNotice>

@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  /** Dirección de la API, por ejemplo `http://localhost:5000/api`. */
   readonly VITE_API_BASE_URL: string
-  readonly VITE_USE_MOCK_API: string
 }
 
 interface ImportMeta {

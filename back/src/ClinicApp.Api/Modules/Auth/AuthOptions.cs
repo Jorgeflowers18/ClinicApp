@@ -21,11 +21,23 @@ public sealed class AuthOptions
     /// <summary>Vida del access token. Corta: si alguien lo roba, deja de servir pronto.</summary>
     public int AccessTokenMinutes { get; init; } = 15;
 
-    /// <summary>Vida de la sesión sin actividad. Cada renovación la extiende.</summary>
+    /// <summary>Vida de la sesión sin actividad con "Recordarme". Cada renovación la extiende.</summary>
     public int RefreshTokenDays { get; init; } = 7;
+
+    /// <summary>
+    /// Vida de la sesión sin actividad sin "Recordarme". Además la cookie es de sesión: se borra al cerrar el
+    /// navegador. Pensado para equipos compartidos (recepción, consultorios).
+    /// </summary>
+    public int SessionRefreshHours { get; init; } = 12;
 
     /// <summary>Vida del enlace de recuperación de contraseña.</summary>
     public int PasswordResetMinutes { get; init; } = 60;
+
+    /// <summary>
+    /// Vida del enlace que genera el admin (cuenta nueva o "Generar enlace nuevo"). Más larga que la de
+    /// recuperación: el admin se lo pasa a la persona por su cuenta.
+    /// </summary>
+    public int InvitationHours { get; init; } = 72;
 
     /// <summary>URL del frontend, para armar el enlace de recuperación de contraseña.</summary>
     public string FrontendBaseUrl { get; init; } = "";

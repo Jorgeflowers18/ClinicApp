@@ -21,7 +21,7 @@ import { ApiError } from "@/shared/types/common"
 import { financeKeys } from "@/modules/finance/api/finance.queries"
 import { useCreateTreatment, useTreatment, useUpdateTreatment } from "../api/treatments.queries"
 import { useTreatmentAccordion } from "../hooks/use-treatment-accordion"
-import { useTreatmentInventory } from "../hooks/use-treatment-options"
+import { useInventoryOptions } from "@/modules/inventory/hooks/use-inventory-options"
 import { treatmentSchema, type Treatment, type TreatmentFormValues } from "../types/treatment.types"
 import "../treatments.css"
 
@@ -73,7 +73,7 @@ function TreatmentEditor({ treatment, onDirtyChange, onSavingChange, onCancel, o
   onCancel: () => void
   onSaved: () => void
 }) {
-  const inventory = useTreatmentInventory()
+  const inventory = useInventoryOptions()
   const inventoryItems = inventory.data ?? []
   const createTreatment = useCreateTreatment()
   const updateTreatment = useUpdateTreatment(treatment?.id ?? "")
@@ -116,7 +116,7 @@ function TreatmentEditor({ treatment, onDirtyChange, onSavingChange, onCancel, o
     try {
       if(treatment) {
         await updateTreatment.mutateAsync(values)
-        if(values.price !== treatment.price) void queryClient.invalidateQueries({ queryKey: financeKeys.treatment(treatment.id) })
+        if(values.price !== treatment.price) void queryClient.invalidateQueries({ queryKey: financeKeys.all })
       }
       else await createTreatment.mutateAsync(values)
       toast.success(treatment ? "Tratamiento actualizado" : "Tratamiento creado")

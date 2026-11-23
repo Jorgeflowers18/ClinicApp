@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { HeaderThemeSwitch } from "@/app/layout/header-theme-switch"
-import { useInstitutionProfile } from "@/modules/institution/hooks/use-institution-profile"
+import { usePublicInstitution } from "@/modules/institution/hooks/use-institution-profile"
 import { InstitutionLogo } from "@/shared/components/brand-logo"
 
 import "../auth.css"
@@ -16,7 +16,7 @@ export function AuthLayout({ title, description, children, wide = false }: {
   children: ReactNode
   wide?: boolean
 }) {
-  const institution = useInstitutionProfile()
+  const institution = usePublicInstitution()
   const heading = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -57,23 +57,14 @@ export function AuthLayout({ title, description, children, wide = false }: {
   )
 }
 
-export function AuthUnavailableAction({ label, explanation }: { label: string; explanation: string }) {
-  return (
-    <div className="auth-unavailable-action">
-      <AuthNotice id="auth-unavailable">{explanation}</AuthNotice>
-      <Button type="submit" className="auth-submit" disabled aria-describedby="auth-unavailable">
-        {label}
-      </Button>
-    </div>
-  )
-}
-
 export function AuthNotice({ children, error = false, id }: { children: ReactNode; error?: boolean; id?: string }) {
   const Icon = error ? CircleAlert : Info
   return <p id={id} className={"auth-notice" + (error ? " auth-notice-error" : "")} role={error ? "alert" : "note"}>
     <Icon size={16} aria-hidden="true" /><span>{children}</span>
   </p>
 }
+
+const rememberHelp = "Sin marcar, la sesión se cierra al cerrar el navegador. Márcalo solo en un equipo personal: la sesión durará 7 días."
 
 export function AuthRememberHelp() {
   const [open, setOpen] = useState(false)
@@ -82,8 +73,8 @@ export function AuthRememberHelp() {
       <TooltipTrigger closeOnClick={false} onClick={() => setOpen(true)} render={
         <Button type="button" variant="ghost" size="icon" className="auth-help" aria-label="Información sobre Recordarme" aria-expanded={open} />
       }><Info size={14} aria-hidden="true" /></TooltipTrigger>
-      <TooltipContent>Recordarme aún no está disponible.</TooltipContent>
+      <TooltipContent className="max-w-72">{rememberHelp}</TooltipContent>
     </Tooltip>
-    <span id="remember-status" className="sr-only">Recordarme aún no está disponible.</span>
+    <span id="remember-status" className="sr-only">{rememberHelp}</span>
   </>
 }

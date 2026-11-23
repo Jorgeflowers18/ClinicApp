@@ -19,7 +19,7 @@ const reportQueryOptions = { placeholderData: keepPreviousData, refetchOnMount: 
 export function useReportsSummary(period: ReportPeriod) {
   return useQuery({
     queryKey: reportsKeys.summary(period),
-    queryFn: () => reportsApi.getSummary(period),
+    queryFn: ({ signal }) => reportsApi.getSummary(period, signal),
     ...reportQueryOptions,
   })
 }
@@ -27,7 +27,7 @@ export function useReportsSummary(period: ReportPeriod) {
 export function useAgendaReport(period: ReportPeriod) {
   return useQuery({
     queryKey: reportsKeys.agenda(period),
-    queryFn: () => reportsApi.getAgenda(period),
+    queryFn: ({ signal }) => reportsApi.getAgenda(period, signal),
     ...reportQueryOptions,
   })
 }
@@ -35,7 +35,7 @@ export function useAgendaReport(period: ReportPeriod) {
 export function useProductivityReport(period: ReportPeriod) {
   return useQuery({
     queryKey: reportsKeys.productivity(period),
-    queryFn: () => reportsApi.getProductivity(period),
+    queryFn: ({ signal }) => reportsApi.getProductivity(period, signal),
     ...reportQueryOptions,
   })
 }
@@ -43,7 +43,7 @@ export function useProductivityReport(period: ReportPeriod) {
 export function useTreatmentsReport(period: ReportPeriod) {
   return useQuery({
     queryKey: reportsKeys.treatments(period),
-    queryFn: () => reportsApi.getTreatments(period),
+    queryFn: ({ signal }) => reportsApi.getTreatments(period, signal),
     ...reportQueryOptions,
   })
 }
@@ -51,7 +51,7 @@ export function useTreatmentsReport(period: ReportPeriod) {
 export function useInventoryReport(period: ReportPeriod) {
   return useQuery({
     queryKey: reportsKeys.inventory(period),
-    queryFn: () => reportsApi.getInventory(period),
+    queryFn: ({ signal }) => reportsApi.getInventory(period, signal),
     ...reportQueryOptions,
   })
 }

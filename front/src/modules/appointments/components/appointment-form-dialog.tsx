@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { getErrorMessage } from "@/shared/lib/error-message"
-import { usePatient, usePatientsList } from "@/modules/patients/api/patients.queries"
+import { applyServerFieldErrors } from "@/shared/lib/field-issues"
+import { PatientCombobox } from "@/modules/patients/components/patient-combobox"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
 
 import {
@@ -20,7 +21,7 @@ import {
   useRooms,
   useUpdateAppointment,
 } from "../api/appointments.queries"
-import { appointmentSchema, type AppointmentFormValues } from "../types/appointment.types"
+import { appointmentSchema, selectable, type AppointmentFormValues } from "../types/appointment.types"
 import type { Appointment } from "../types/appointment.types"
 import { ScheduleFormDialog } from "./schedule-form-dialog"
 
@@ -40,10 +41,6 @@ export function AppointmentFormDialog({
   initialPatientId,
 }: AppointmentFormDialogProps) {
   const isEditMode = Boolean(appointment)
-  const { data: patientsPage } = usePatientsList({ page: 1, pageSize: 100 })
-  const { data: initialPatient } = usePatient(initialPatientId)
-  const patientOptions = initialPatient && !patientsPage?.items.some(patient => patient.id === initialPatient.id)
-    ? [initialPatient, ...(patientsPage?.items ?? [])] : patientsPage?.items ?? []
   const { data: professionals } = useProfessionals()
   const { data: rooms } = useRooms()
   const { data: treatments } = useActiveTreatments()
@@ -58,6 +55,7 @@ export function AppointmentFormDialog({
     reset,
     getValues,
     setValue,
+    setError,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<AppointmentFormValues>({
     resolver: zodResolver(appointmentSchema),
@@ -126,7 +124,9 @@ export function AppointmentFormDialog({
       }
       onOpenChange(false)
     } catch (error) {
-      toast.error(getErrorMessage(error))
+      // Un choque de horario (409) llega con errors.startTime: queda en el campo, además del aviso.
+      // Si el servidor señala un campo, el mensaje queda solo en el campo; si no, en un aviso.
+      if (!applyServerFieldErrors({ getValues, setError }, error).length) toast.error(getErrorMessage(error))
     }
   }
 
@@ -145,18 +145,8 @@ export function AppointmentFormDialog({
                 control={control}
                 name="patientId"
                 render={({ field }) => (
-                  <Select items={Object.fromEntries(patientOptions.map(patient => [patient.id, `${patient.firstName} ${patient.lastName}`]))} value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="patientId" className="w-full">
-                      <SelectValue placeholder="Selecciona un paciente..." />
-                    </SelectTrigger>
-                    <SelectContent className="clinic-schedule-options">
-                      {patientOptions.map((patient) => (
-                        <SelectItem key={patient.id} value={patient.id}>
-                          {patient.firstName} {patient.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <PatientCombobox id="patientId" value={field.value} onChange={field.onChange} invalid={!!errors.patientId}
+                    placeholder="Busca por nombre, documento o N.° de historia…" />
                 )}
               />
               <FieldError errors={errors.patientId ? [errors.patientId] : undefined} />
@@ -168,12 +158,12 @@ export function AppointmentFormDialog({
                 control={control}
                 name="professionalId"
                 render={({ field }) => (
-                  <Select items={Object.fromEntries((professionals ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries(selectable(professionals, field.value).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="professionalId" className="w-full">
                       <SelectValue placeholder="Selecciona un profesional..." />
                     </SelectTrigger>
                     <SelectContent className="clinic-schedule-options">
-                      {professionals?.map((professional) => (
+                      {selectable(professionals, field.value).map((professional) => (
                         <SelectItem key={professional.id} value={professional.id}>
                           {professional.name} · {professional.specialty}
                         </SelectItem>
@@ -217,12 +207,12 @@ export function AppointmentFormDialog({
                 control={control}
                 name="roomId"
                 render={({ field }) => (
-                  <Select items={Object.fromEntries((rooms ?? []).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries(selectable(rooms, field.value).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="roomId" className="w-full">
                       <SelectValue placeholder="Selecciona un consultorio..." />
                     </SelectTrigger>
                     <SelectContent className="clinic-schedule-options">
-                      {rooms?.map((room) => (
+                      {selectable(rooms, field.value).map((room) => (
                         <SelectItem key={room.id} value={room.id}>
                           {room.name}
                         </SelectItem>

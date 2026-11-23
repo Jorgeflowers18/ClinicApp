@@ -92,7 +92,7 @@ builder.Services
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-builder.Services.AddClinicRateLimits();
+builder.Services.AddClinicRateLimits(builder.Configuration);
 
 // "Hoy" y conversión de horas en la zona horaria de la clínica (Clinic:TimeZone).
 // TimeProvider permite que las pruebas simulen otra fecha.
@@ -133,6 +133,7 @@ builder.Services.AddScoped<ReportQueries>();
 // y la tarea que borra los adjuntos nunca guardados (y el protocolo de conservación, apagado por defecto).
 builder.Services.AddSingleton<AttachmentStorage>();
 builder.Services.AddScoped<ReferenceResolver>();
+builder.Services.AddScoped<ClinicalHistoryLoader>();
 builder.Services.AddSingleton<AttachmentCleanupService>();
 builder.Services.AddHostedService(services => services.GetRequiredService<AttachmentCleanupService>());
 
@@ -147,7 +148,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database");
 
 // Descripción OpenAPI de todos los endpoints (/openapi/v1.json).
-builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+    options.AddSchemaTransformer<NumericSchemaTransformer>(); // números solo como números (no "integer | string")
+});
 
 var app = builder.Build();
 

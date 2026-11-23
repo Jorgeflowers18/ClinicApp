@@ -21,6 +21,9 @@ public record InventoryItemDto(
         item.MinStock, item.UnitCost, item.Supplier, item.Stock, item.CreatedAt);
 }
 
+/// <summary>Insumo para los selectores (tratamientos, órdenes de compra, esterilización): solo lo que muestran.</summary>
+public record InventoryItemOptionDto(Guid Id, string Name, string Unit, string Kind);
+
 /// <summary>
 /// Crear o editar un insumo: la forma de <c>InventoryItemFormValues</c>.
 /// No trae el stock: el stock solo cambia con movimientos.

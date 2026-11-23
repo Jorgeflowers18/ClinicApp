@@ -33,7 +33,7 @@ public class TreatmentAssignmentsController(AppDbContext db, ClinicClock clock, 
             .ThenByDescending(assignment => assignment.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return assignments.Select(TreatmentAssignmentDto.FromEntity).ToList();
+        return await TreatmentAssignmentDto.FromEntitiesAsync(assignments, db, cancellationToken);
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ public class TreatmentAssignmentsController(AppDbContext db, ClinicClock clock, 
                 {
                     return this.FieldConflict("sourceKey", "Esta atención ya registró ese tratamiento para otro paciente o tratamiento");
                 }
-                return Ok(TreatmentAssignmentDto.FromEntity(existing));
+                return Ok(await TreatmentAssignmentDto.FromEntityAsync(existing, db, cancellationToken));
             }
         }
 
@@ -124,7 +124,7 @@ public class TreatmentAssignmentsController(AppDbContext db, ClinicClock clock, 
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return StatusCode(StatusCodes.Status201Created, TreatmentAssignmentDto.FromEntity(assignment));
+        return StatusCode(StatusCodes.Status201Created, await TreatmentAssignmentDto.FromEntityAsync(assignment, db, cancellationToken));
     }
 
     private static bool TryParseEncounterId(string? value, out Guid? id)

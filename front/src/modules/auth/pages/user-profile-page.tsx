@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils"
 import { BrandLogo } from "@/shared/components/brand-logo"
 import { PageHeader } from "@/shared/components/page-header"
 import { toast } from "sonner"
-import { env } from "@/shared/lib/env"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { ProfilePhotoControls } from "../components/profile-photo-controls"
 import { useProfileEditor } from "../components/use-profile-editor"
@@ -158,7 +157,7 @@ export function UserProfilePage() {
 
         <div className={styles.notice}>
           <Info aria-hidden="true" />
-          <div><p>Tu perfil quedará asociado a tu cuenta y se mostrará en la interfaz.</p><p className={styles.persistenceNote}>{env.useMockApi ? "Modo de demostración: los cambios confirmados se guardan en este navegador." : "El guardado del perfil todavía no está disponible en esta conexión."}</p></div>
+          <div><p>Tu perfil quedará asociado a tu cuenta y se mostrará en la interfaz.</p><p className={styles.persistenceNote}>Los cambios confirmados se guardan en tu cuenta y se ven desde cualquier equipo.</p></div>
         </div>
       </div>
     </div>
