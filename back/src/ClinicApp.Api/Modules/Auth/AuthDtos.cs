@@ -35,6 +35,12 @@ public class LoginRequest
     [Required(ErrorMessage = "La contraseña es obligatoria")]
     [MaxLength(128, ErrorMessage = "Máximo 128 caracteres")]
     public string Password { get; set; } = "";
+
+    /// <summary>
+    /// "Recordarme". Sin marcar (por defecto): la sesión termina al cerrar el navegador (cookie de sesión) o tras
+    /// <c>Auth:SessionRefreshHours</c> sin actividad. Marcado: cookie persistente de <c>Auth:RefreshTokenDays</c>.
+    /// </summary>
+    public bool RememberMe { get; set; }
 }
 
 public class UserProfileRequest

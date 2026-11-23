@@ -64,6 +64,8 @@ export function AuthNotice({ children, error = false, id }: { children: ReactNod
   </p>
 }
 
+const rememberHelp = "Sin marcar, la sesión se cierra al cerrar el navegador. Márcalo solo en un equipo personal: la sesión durará 7 días."
+
 export function AuthRememberHelp() {
   const [open, setOpen] = useState(false)
   return <>
@@ -71,8 +73,8 @@ export function AuthRememberHelp() {
       <TooltipTrigger closeOnClick={false} onClick={() => setOpen(true)} render={
         <Button type="button" variant="ghost" size="icon" className="auth-help" aria-label="Información sobre Recordarme" aria-expanded={open} />
       }><Info size={14} aria-hidden="true" /></TooltipTrigger>
-      <TooltipContent>Recordarme aún no está disponible.</TooltipContent>
+      <TooltipContent className="max-w-72">{rememberHelp}</TooltipContent>
     </Tooltip>
-    <span id="remember-status" className="sr-only">Recordarme aún no está disponible.</span>
+    <span id="remember-status" className="sr-only">{rememberHelp}</span>
   </>
 }

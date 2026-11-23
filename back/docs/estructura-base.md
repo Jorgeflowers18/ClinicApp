@@ -156,7 +156,8 @@ erDiagram
 | `id` | `uuid` PK | | |
 | `user_id` | `uuid` FK → `users` (cascade) | | Índice |
 | `token_hash` | `varchar(64)` | | SHA-256 en hexadecimal del token de la cookie. Único. |
-| `created_at`, `expires_at` | `timestamptz` | | Vida: 7 días (`Auth:RefreshTokenDays`) |
+| `created_at`, `expires_at` | `timestamptz` | | Vida: 7 días con "Recordarme" (`Auth:RefreshTokenDays`); 12 horas sin él (`Auth:SessionRefreshHours`) |
+| `persistent` | `boolean` | | "Recordarme": cookie con fecha de vencimiento. Si es `false`, la cookie es de sesión. Se hereda al rotar. |
 | `revoked_at` | `timestamptz` | sí | Al cerrar sesión, al rotar o al detectar reuso |
 | `replaced_by_token_id` | `uuid` | sí | Token que lo reemplazó al rotar. Sirve para detectar el reuso de un token robado. |
 
@@ -645,6 +646,7 @@ Pagos de los pacientes por sus tratamientos. Un pago no se borra: se anula, con 
 | `20261120191521_InstitucionSubtitulo` | Columna `institutions.subtitle` |
 | `20261120191802_PacientesTipoDocumento` | Columna `patients.document_type` con su `CHECK` |
 | `20261120193107_ArchivoClinico` | Archivo clínico: metadatos y huella en `clinical_attachments`, `archive_categories`, `archive_tags`, `clinical_attachment_tags` y `clinical_attachment_audit` |
+| `20261123070933_RefreshTokenPersistent` | Columna `refresh_tokens.persistent` ("Recordarme"). Las sesiones que ya existían quedan en `true`, como eran. |
 
 Para crear o actualizar la base local: `dotnet ef database update --project src/ClinicApp.Api` (desde `back/`). Antes de aplicar una migración nueva, se revisa su SQL con `dotnet ef migrations script <anterior> <nueva> --project src/ClinicApp.Api`.
 
@@ -667,7 +669,7 @@ Para crear o actualizar la base local: `dotnet ef database update --project src/
 |---|---|---|
 | `ConnectionStrings:Default` | Desarrollo: `appsettings.Development.json`. Producción: variable de entorno. | Cadena de conexión de PostgreSQL |
 | `Auth:Issuer`, `Auth:Audience` | `appsettings.json` | `clinicapp` |
-| `Auth:AccessTokenMinutes`, `Auth:RefreshTokenDays`, `Auth:PasswordResetMinutes`, `Auth:InvitationHours` | `appsettings.json` | 15, 7, 60, 72 |
+| `Auth:AccessTokenMinutes`, `Auth:RefreshTokenDays`, `Auth:SessionRefreshHours`, `Auth:PasswordResetMinutes`, `Auth:InvitationHours` | `appsettings.json` | 15, 7 días, 12 horas, 60, 72 |
 | `Auth:SigningKey` | Desarrollo: `appsettings.Development.json`. Producción: variable de entorno. | Al menos 32 caracteres. La API no arranca sin ella. |
 | `Auth:FrontendBaseUrl` | Igual que la anterior | URL del frontend, para armar el enlace de recuperación de contraseña |
 | `Cors:AllowedOrigins` | `appsettings*.json` | Orígenes del frontend (con cookies: `AllowCredentials`) |

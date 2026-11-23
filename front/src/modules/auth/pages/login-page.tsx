@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import { Link, Navigate, useLocation } from "react-router-dom"
 import { Eye, EyeOff, LoaderCircle } from "lucide-react"
 
@@ -27,11 +27,12 @@ export function LoginPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "", password: "", rememberMe: false },
   })
   const errorMessage = login.error instanceof ApiError && login.error.status >= 400 && login.error.status < 500
     ? getErrorMessage(login.error)
@@ -102,7 +103,8 @@ export function LoginPage() {
 
         <div className="auth-options">
           <div className="auth-remember">
-            <Checkbox id="remember" disabled checked={false} aria-describedby="remember-status" />
+            <Controller control={control} name="rememberMe" render={({ field }) =>
+              <Checkbox id="remember" checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} aria-describedby="remember-status" />} />
             <FieldLabel htmlFor="remember">Recordarme</FieldLabel>
             <AuthRememberHelp />
           </div>

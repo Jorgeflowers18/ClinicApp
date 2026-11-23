@@ -157,6 +157,8 @@ try {
     Cors__AllowedOrigins__0: `http://127.0.0.1:${WEB_PORT}`,
     Attachments__RootPath: attachments,
     Notifications__Provider: "log",
+    // La suite inicia sesión desde la pantalla más de 20 veces por minuto: solo esta API sube el límite.
+    RateLimits__AuthPerMinute: "1000",
     Logging__LogLevel__Default: "Warning",
   })
   // Caché de dependencias nueva en cada corrida (ver scripts/vite.e2e.config.ts).

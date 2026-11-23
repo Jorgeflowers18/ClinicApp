@@ -34,12 +34,12 @@ Ningún selector ni lista depende ya de "los primeros 100" ni pide cada paciente
 
 | # | Dónde | Qué | Qué hace falta |
 |---|---|---|---|
-| 3.1 | Inicio de sesión | Casilla "Recordarme" deshabilitada ("aún no está disponible") | **Decisión:** con la cookie de renovación la sesión ya sobrevive a la recarga (7 días). O se quita la casilla, o el back acepta `rememberMe` para alargar la cookie. |
+| 3.1 | Inicio de sesión | Casilla "Recordarme" deshabilitada ("aún no está disponible") | ✅ **Back y front, hecho (2026-11-23):** la casilla funciona y viene sin marcar. Sin marcar, la cookie de renovación es de sesión (se borra al cerrar el navegador) y la sesión vence tras 12 horas sin uso (`Auth:SessionRefreshHours`): lo seguro en equipos compartidos. Marcada, dura 7 días desde el último uso (`Auth:RefreshTokenDays`). El modo se guarda en `refresh_tokens.persistent` y se conserva al renovar. |
 | 3.2 | Agenda | Administrar profesionales y consultorios (nombre, especialidad, registro, activo, usuario vinculado) | ✅ **Front, hecho (2026-11-22):** `/administracion` (solo admin, en el menú de usuario) con las pestañas Profesionales y Consultorios: alta, edición y activo. Al desactivar un profesional con citas futuras se avisa "Tiene N citas futuras". El usuario vinculado se conserva al guardar; se elige en la pestaña Usuarios (3.3). |
 | 3.3 | Usuarios | Crear usuarios, asignar rol, desactivar, vincular a un profesional | ✅ **Back y front, hecho (2026-11-22):** `api/users` (solo admin) y la pestaña Usuarios de `/administracion`: crear la cuenta con un enlace de un solo uso para elegir la contraseña (72 h), rol, profesional vinculado, desactivar y "Generar enlace de contraseña". El admin no se desactiva ni se quita el rol; desactivar o cambiar el rol cierra las sesiones (el access token vigente dura hasta 15 min, aceptado). |
 | 3.4 | Solicitudes de acceso | Se envían (`POST /auth/access-requests`) pero nadie las ve | **Back:** listado y aprobación; **front:** pantalla para el admin. |
 | 3.5 | Recuperar contraseña | El enlace solo sale en el log del back | **Back:** proveedor de correo real. |
-| 3.6 | Notificaciones | El envío por SMS o WhatsApp | **Decisión de la clínica** (proveedor). En producción, por ahora, no se envía nada. |
+| 3.6 | Notificaciones | El envío por SMS o WhatsApp | **Decidido (2026-11-23), para más adelante:** se conectará la API de WhatsApp, que servirá para contactar a pacientes y a proveedores. Por ahora no se implementa; en producción no se envía nada. |
 
 ## 4. Detalles de comportamiento con la API
 
@@ -56,7 +56,7 @@ Ningún selector ni lista depende ya de "los primeros 100" ni pide cada paciente
 1. ~~Punto 1 completo~~ ✅ (2026-11-22).
 2. ~~2.3, 2.6 y 4.2~~ ✅ (2026-11-22).
 3. ~~3.2 y 3.3~~ ✅ (2026-11-22).
-4. ~~2.2 y 2.3~~ ✅ (2026-11-23). Lo que espera decisiones: 3.1 y 3.6; el financiamiento (ítem 8) cuando la clínica lo defina.
+4. ~~2.2, 2.3 y 3.1~~ ✅ (2026-11-23). Más adelante: WhatsApp (3.6) y el financiamiento (ítem 8) cuando la clínica lo defina.
 
 ## Terminado
 

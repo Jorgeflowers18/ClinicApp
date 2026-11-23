@@ -68,3 +68,30 @@ test("solicitar acceso envía la solicitud", async ({ page }) => {
   await page.getByRole("button", { name: "Enviar solicitud", exact: true }).click()
   await expect(page.locator("#auth-result")).toContainText("Recibimos tu solicitud")
 })
+
+test("Recordarme: sin marcar la cookie de renovación es de sesión; marcado dura 7 días", async ({ browser }) => {
+  async function refreshCookie(remember: boolean) {
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    await page.goto("/login")
+    await page.locator("#email").fill(accounts.recepcion.email)
+    await page.locator("#password").fill(accounts.recepcion.password)
+    const checkbox = page.getByRole("checkbox", { name: "Recordarme" })
+    await expect(checkbox).toBeEnabled()
+    await expect(checkbox).not.toBeChecked()
+    if (remember) await checkbox.click()
+    await page.getByRole("button", { name: "Ingresar", exact: true }).click()
+    await expect(page.locator(".clinic-app-header")).toBeVisible()
+    const cookie = (await context.cookies()).find((item) => item.name === "clinicapp_refresh")
+    await context.close()
+    return cookie
+  }
+
+  // Sin marcar (por defecto): cookie de sesión, el navegador la borra al cerrarse.
+  expect((await refreshCookie(false))?.expires).toBe(-1)
+
+  const remembered = await refreshCookie(true)
+  const days = (remembered!.expires * 1000 - Date.now()) / 86_400_000
+  expect(days).toBeGreaterThan(6.9)
+  expect(days).toBeLessThan(7.1)
+})

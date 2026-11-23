@@ -72,7 +72,7 @@ public sealed class AuthController(
         }
 
         user.LastLoginAt = DateTime.UtcNow;
-        return await StartSessionAsync(user, cancellationToken);
+        return await StartSessionAsync(user, request.RememberMe, cancellationToken);
     }
 
     /// <summary>
@@ -128,7 +128,8 @@ public sealed class AuthController(
             replacing = stored;
         }
 
-        return await StartSessionAsync(stored.User, cancellationToken, replacing);
+        // La sesión renovada conserva el "Recordarme" con el que se inició.
+        return await StartSessionAsync(stored.User, stored.Persistent, cancellationToken, replacing);
     }
 
     /// <summary>Cierra la sesión: invalida el token de refresh y borra la cookie.</summary>
@@ -256,9 +257,12 @@ public sealed class AuthController(
 
     public static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
-    /// <summary>Crea un token de refresh, lo pone en la cookie y devuelve el access token.</summary>
+    /// <summary>
+    /// Crea un token de refresh, lo pone en la cookie y devuelve el access token. Con <paramref name="persistent"/>
+    /// ("Recordarme") la cookie tiene fecha de vencimiento; si no, es de sesión y el token vence antes.
+    /// </summary>
     private async Task<ActionResult<LoginResponse>> StartSessionAsync(
-        User user, CancellationToken cancellationToken, RefreshToken? replacing = null)
+        User user, bool persistent, CancellationToken cancellationToken, RefreshToken? replacing = null)
     {
         var now = DateTime.UtcNow;
         var rawToken = TokenService.NewOpaqueToken();
@@ -268,7 +272,8 @@ public sealed class AuthController(
             UserId = user.Id,
             TokenHash = TokenService.Hash(rawToken),
             CreatedAt = now,
-            ExpiresAt = now.AddDays(options.RefreshTokenDays),
+            ExpiresAt = persistent ? now.AddDays(options.RefreshTokenDays) : now.AddHours(options.SessionRefreshHours),
+            Persistent = persistent,
         };
         db.RefreshTokens.Add(refreshToken);
 
@@ -279,7 +284,7 @@ public sealed class AuthController(
 
         await db.SaveChangesAsync(cancellationToken);
 
-        SetRefreshCookie(rawToken, refreshToken.ExpiresAt);
+        SetRefreshCookie(rawToken, persistent ? refreshToken.ExpiresAt : null);
         var (accessToken, expiresIn) = tokens.CreateAccessToken(user);
         return new LoginResponse(accessToken, expiresIn, AuthUserDto.FromEntity(user));
     }
@@ -310,7 +315,8 @@ public sealed class AuthController(
         IsEssential = true,
     };
 
-    private void SetRefreshCookie(string token, DateTime expiresAt) =>
+    /// <summary>Sin <paramref name="expiresAt"/>, cookie de sesión: el navegador la borra al cerrarse.</summary>
+    private void SetRefreshCookie(string token, DateTime? expiresAt) =>
         Response.Cookies.Append(RefreshCookieName, token, RefreshCookieOptions(expiresAt));
 
     private void DeleteRefreshCookie() =>

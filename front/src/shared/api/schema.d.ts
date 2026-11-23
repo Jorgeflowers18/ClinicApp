@@ -4150,6 +4150,7 @@ export interface components {
         LoginRequest: {
             email: string;
             password: string;
+            rememberMe?: boolean;
         };
         LoginResponse: {
             accessToken: string;

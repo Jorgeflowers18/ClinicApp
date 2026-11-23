@@ -29,7 +29,7 @@ Trabajo de la API .NET por módulo y en orden de implementación. El detalle de 
 Los 9 planes están implementados, más lo que pidió el frontend el 2026-11-20 (91 endpoints, 258 pruebas: [`docs/pruebas.md`](./docs/pruebas.md)). Lo que queda, en orden de importancia. El detalle de cada punto está en la sección del módulo en [`backlog.md`](./backlog.md).
 
 **1. Decisiones de la clínica:**
-- **Canal y proveedor de notificaciones** (SMS o WhatsApp). Hasta elegirlo, en producción no se envía ni se registra nada.
+- **Canal de notificaciones:** decidido (2026-11-23) que será la **API de WhatsApp**, para contactar a pacientes y a proveedores. Se implementará más adelante; hasta entonces, en producción no se envía ni se registra nada.
 - **Qué es una atención:** las preguntas A1 a A8 de `backlog.md` § `clinical-history`. El registro en una transacción ya existe con las reglas actuales; las respuestas pueden cambiarlas (varias sesiones, cortesías, borradores).
 - **Teléfono del paciente:** la API lo dejó opcional, porque hay pacientes importados sin teléfono. Confirmar con la clínica.
 - **Importación de los 820 pacientes:** las preguntas de `documentacion/decisiones-backend.md` § 5 (número de ficha, datos cortados, especialidad, segundo teléfono).

@@ -36,6 +36,11 @@ export interface AuthSession {
 export const loginSchema = z.object({
   email: z.string().email("Ingresa un correo válido"),
   password: z.string().min(1, "La contraseña es obligatoria"),
+  /**
+   * "Recordarme". Sin marcar, la sesión termina al cerrar el navegador (o tras 12 horas sin uso): lo seguro en
+   * equipos compartidos. Marcado, dura 7 días desde el último uso.
+   */
+  rememberMe: z.boolean(),
 })
 
 export type LoginFormValues = z.infer<typeof loginSchema>

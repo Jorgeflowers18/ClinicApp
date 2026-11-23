@@ -30,7 +30,7 @@ Las tablas que hay detrás están en [`estructura-base.md`](./estructura-base.md
 
 - **Todos los endpoints piden sesión**, salvo los marcados como **público**. La sesión va en el encabezado `Authorization: Bearer <accessToken>`.
 - **Access token:** JWT de 15 minutos. Trae los claims `sub` (id del usuario), `email`, `name` y `role`.
-- **Renovación:** con la cookie `clinicapp_refresh`, que es `httpOnly`, `Secure`, `SameSite=Strict`, con ruta `/api/auth` y válida 7 días. El navegador la manda solo a los endpoints de `/api/auth`.
+- **Renovación:** con la cookie `clinicapp_refresh`, que es `httpOnly`, `Secure`, `SameSite=Strict` y con ruta `/api/auth`. Con "Recordarme" dura 7 días (`Auth:RefreshTokenDays`); sin él es una cookie de sesión (el navegador la borra al cerrarse) y el token vence a las 12 horas (`Auth:SessionRefreshHours`). Cada renovación extiende el plazo y conserva el modo. El navegador la manda solo a los endpoints de `/api/auth`.
 - **Sin sesión o con el token vencido:** `401` "Inicia sesión para continuar".
 
 ### Roles
@@ -95,7 +95,7 @@ La respuesta tiene esta forma:
 
 ### Límite de intentos
 
-`login`, `password-recovery`, `password-reset` y `access-requests` aceptan **20 peticiones por minuto por IP**, contadas por endpoint. `GET /institution/public` acepta 120. Al pasarse, responden `429` "Demasiados intentos. Espera un minuto e inténtalo de nuevo", con el encabezado `Retry-After`.
+`login`, `password-recovery`, `password-reset` y `access-requests` aceptan **20 peticiones por minuto por IP**, contadas por endpoint. `GET /institution/public` acepta 120. Al pasarse, responden `429` "Demasiados intentos. Espera un minuto e inténtalo de nuevo", con el encabezado `Retry-After`. El 20 se puede cambiar con `RateLimits:AuthPerMinute`: solo lo sube la API de las pruebas E2E (`front/scripts/run-api-e2e.mjs`), que inicia sesión desde la pantalla más de 20 veces por minuto.
 
 ## 2. Índice
 
@@ -231,9 +231,10 @@ Público. Responde `Healthy` (`200`) si la API llega a la base de datos, o `Unhe
 
 ### `POST /api/auth/login` — público
 
-**Body:** `{ "email": "...", "password": "..." }`.
+**Body:** `{ "email": "...", "password": "...", "rememberMe": false }`.
 - `email`: obligatorio, correo válido, hasta 254 caracteres. No distingue mayúsculas.
 - `password`: obligatoria, hasta 128 caracteres.
+- `rememberMe`: opcional, `false` por defecto. Ver "Renovación" en § Sesión.
 
 **`200`:** `{ "accessToken": "...", "expiresIn": 900, "user": AuthUser }`, más la cookie de refresh. `expiresIn` va en segundos.
 

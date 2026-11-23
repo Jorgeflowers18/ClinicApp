@@ -92,7 +92,7 @@ builder.Services
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-builder.Services.AddClinicRateLimits();
+builder.Services.AddClinicRateLimits(builder.Configuration);
 
 // "Hoy" y conversión de horas en la zona horaria de la clínica (Clinic:TimeZone).
 // TimeProvider permite que las pruebas simulen otra fecha.

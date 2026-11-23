@@ -42,7 +42,8 @@ Todos desde la carpeta `back/`.
 
 | Módulo | Archivo | Qué cubre |
 |---|---|---|
-| `auth` | `Integration/UsersTests.cs` | Gestión de usuarios: solo admin, crear una cuenta y entrar con el enlace (antes no puede), correo repetido sin distinguir mayúsculas, rol y profesional en su campo, vincular y desvincular un profesional, desactivar o cambiar el rol cierra las sesiones, el admin no se desactiva ni se quita el rol, siempre queda un admin aunque el token de otro no haya vencido, un enlace nuevo invalida el anterior y una cuenta desactivada no usa su enlace |
+| `auth` | `Integration/SessionTests.cs` | "Recordarme": sin marcar (o sin enviarlo) la cookie es de sesión y el token vence en 12 horas; marcado, la cookie y el token duran 7 días; la renovación conserva el modo |
+| | `Integration/UsersTests.cs` | Gestión de usuarios: solo admin, crear una cuenta y entrar con el enlace (antes no puede), correo repetido sin distinguir mayúsculas, rol y profesional en su campo, vincular y desvincular un profesional, desactivar o cambiar el rol cierra las sesiones, el admin no se desactiva ni se quita el rol, siempre queda un admin aunque el token de otro no haya vencido, un enlace nuevo invalida el anterior y una cuenta desactivada no usa su enlace |
 | Base | `Unit/ClinicClockTests.cs` | "Hoy" en la zona de la clínica, conversión a UTC, rangos de fechas y zona inválida |
 | `patients` | `Unit/PatientRulesTests.cs` | Formato y búsqueda del N.° de historia, fechas, limpieza de textos, escape de comodines, cédula ecuatoriana (verificador) y teléfono opcional |
 | | `Integration/PatientsTests.cs` | Roles, validación de cada campo, tipo de documento y teléfono opcional, cédula repetida (también con altas simultáneas), búsqueda sin tildes, filtros (estado, género, fecha de registro), orden y paginación, baja lógica, lista de dados de baja (solo admin) y reactivación |
