@@ -139,9 +139,18 @@ builder.Services.AddHostedService(services => services.GetRequiredService<Attach
 
 // En producción la API está detrás de nginx, que atiende el HTTPS y le pasa la petición por HTTP.
 // nginx avisa en encabezados cuál era el esquema original (https) y la IP del cliente.
-// Solo se confía en esos encabezados si vienen de la misma máquina (127.0.0.1), que es donde está nginx.
+// Solo se confía en esos encabezados si vienen de la misma máquina (127.0.0.1), que es donde está nginx, o de las
+// redes de ForwardedHeaders:KnownNetworks. En Docker hacen falta: nginx (en el servidor) llega a la API por el
+// puerto publicado y la API ve como origen la puerta de enlace de la red de Docker, no 127.0.0.1. Sin esto, todos
+// los usuarios tendrían la misma IP (compartirían el límite de intentos de inicio de sesión).
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    foreach (var network in builder.Configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [])
+    {
+        options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
+    }
+});
 
 // Chequeo de salud: GET /api/health responde "Healthy" (200) si la API llega a la base,
 // o "Unhealthy" (503) si no.

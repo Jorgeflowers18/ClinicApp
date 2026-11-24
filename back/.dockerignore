@@ -1,0 +1,13 @@
+# Lo que no entra al construir la imagen (docker build lee la carpeta back/).
+**/bin/
+**/obj/
+tests/
+docs/
+tutorial/
+ClinicApp.ErrorHandling/
+*.md
+
+# Secretos y datos: nunca dentro de una imagen.
+.env
+.env.*
+**/App_Data/

@@ -935,7 +935,7 @@ Resultados que obtuvimos:
 
 - **Migraciones en el servidor:** sin el SDK de .NET instalado allá. La opción prevista es `dotnet ef migrations bundle`, que genera un ejecutable que aplica las migraciones pendientes.
 - **nginx:** la ruta `/api` hacia `127.0.0.1:5000`, con `proxy_set_header X-Forwarded-For` y `X-Forwarded-Proto`, más el certificado HTTPS (Let's Encrypt).
-- **Usuario y servicio `systemd`**, y la contraseña real de PostgreSQL generada en el servidor.
+- ~~Usuario y servicio `systemd`~~: se decidió (2026-11-24) correr la API en Docker junto a PostgreSQL (`back/Dockerfile`, `back/docker-compose.yml` con el perfil `api`; el bundle de migraciones va en el servicio `migrate`). La contraseña real de PostgreSQL se genera en el servidor, en `back/.env`. Pasos en `documentacion/proceso-despliegue-prod.md`.
 - **Respaldos diarios con `pg_dump`** (`decisiones-backend.md` § 3).
 
 Con esto la base de la API está completa. La lección 6 agrega usuarios, contraseñas, roles y JWT: con ella el frontend podrá dejar los datos de ejemplo y usar la API real.

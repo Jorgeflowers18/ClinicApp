@@ -12,19 +12,23 @@ dotnet ef database update --project src/ClinicApp.Api   # crea o actualiza las t
 dotnet run --project src/ClinicApp.Api --launch-profile http   # API en http://localhost:5000
 ```
 
+En desarrollo `docker compose up -d` levanta solo la base. Los servicios `migrate` y `api` tienen el perfil `api`: son para el servidor.
+
 Al arrancar en desarrollo con la tabla `users` vacía, la API crea las cuentas de prueba del modo mock del frontend: `admin@clinica.com` / `admin123`, `recepcion@clinica.com` / `recepcion123` y `medico@clinica.com` / `medico123`. Para probar los endpoints: http://localhost:5000/scalar (inicia sesión con `POST /api/auth/login` y pega el `accessToken` en el campo **Bearer**) o el archivo [`src/ClinicApp.Api/ClinicApp.Api.http`](./src/ClinicApp.Api/ClinicApp.Api.http).
 
-**Variables de entorno en producción** (nunca en `appsettings.json`):
+**Producción con Docker:** la API corre en un contenedor junto a PostgreSQL (`Dockerfile` y `docker-compose.yml` de esta carpeta). En el servidor, `back/.env` lleva `COMPOSE_PROFILES=api` y los secretos (ver `.env.example`); `docker compose up -d --build` construye la imagen, aplica las migraciones y arranca la API en `127.0.0.1:5000`. Pasos completos: [`../documentacion/proceso-despliegue-prod.md`](../documentacion/proceso-despliegue-prod.md).
+
+**Variables de entorno de la API en producción** (nunca en `appsettings.json`). Con Docker, el compose las arma a partir de `back/.env`:
 
 | Variable | Ejemplo |
 |---|---|
-| `ConnectionStrings__Default` | `Host=localhost;Port=5432;Database=clinicapp;Username=clinicapp;Password=<secreta>` |
+| `ConnectionStrings__Default` | Con Docker la arma el compose (`Host=db`, con `POSTGRES_*`) |
 | `Auth__SigningKey` | 64 caracteres aleatorios (`openssl rand -base64 48`) |
 | `Auth__FrontendBaseUrl` | `https://midominio.com` |
-| `ASPNETCORE_URLS` | `http://127.0.0.1:5000` |
+| `ForwardedHeaders__KnownNetworks__0` | Red de Docker en la que se confía para el `X-Forwarded-For` de nginx (`DOCKER_SUBNET`, por defecto `172.30.0.0/24`) |
 | `AllowedHosts` | `midominio.com` |
 | `Seed__AdminEmail`, `Seed__AdminPassword` | Administrador inicial (solo la primera vez; mínimo 12 caracteres) |
-| `Attachments__RootPath` | Carpeta de los adjuntos de la historia clínica, fuera de la carpeta de la app (por ejemplo `/var/lib/clinicapp/attachments`). **Debe estar en el respaldo diario**, junto con la base. |
+| `Attachments__RootPath` | Carpeta de los adjuntos de la historia clínica. Con Docker es `/app/data/attachments`, en el volumen `clinicapp-attachments`. **Debe estar en el respaldo diario**, junto con la base. |
 | `Clinic__TimeZone` | Zona horaria IANA de la clínica (por defecto `America/Guayaquil`) |
 | `Notifications__Provider` | Proveedor de envío de notificaciones. Vacío por ahora (no se registran notificaciones) hasta elegir el proveedor con la clínica. |
 
