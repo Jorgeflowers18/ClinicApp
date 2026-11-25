@@ -32,15 +32,18 @@ Decisiones de tecnología y base de datos para la API, tomadas a partir del aná
 
 **Docker:**
 - **En desarrollo**, PostgreSQL corre en un contenedor de Docker (`back/docker-compose.yml`) que se levanta y se apaga cuando se necesita. Los datos se guardan en un volumen y no se pierden al apagar el contenedor.
-- **En producción**, PostgreSQL también corre en Docker en el mismo Droplet, sin exponer su puerto a internet.
+- **En producción**, PostgreSQL también corre en Docker en el mismo Droplet, sin exponer su puerto a internet, junto con la API (ver § 3).
 
 ## 3. Despliegue
 
-- **API:** corre en el mismo Droplet de DigitalOcean que el frontend, como servicio del sistema, con nginx delante: `/` sirve el frontend y `/api` se redirige a la API.
+- **API:** corre en el mismo Droplet de DigitalOcean que el frontend, **en un contenedor de Docker junto a PostgreSQL** (`back/docker-compose.yml`, perfil `api`; decidido el 2026-11-24 en lugar de un servicio `systemd`). nginx, instalado en el servidor, va delante: `/` sirve el frontend y `/api` se redirige a la API en `127.0.0.1:5000`.
+  - **Por qué en contenedor:** no se instala .NET en el servidor; PostgreSQL no publica puertos hacia la API (van por la red interna); cada versión es una imagen (volver atrás es cambiar la etiqueta); las migraciones se aplican con un bundle (servicio `migrate`) antes de arrancar la API; y si se vende a varias clínicas, el stack se replica en otro Droplet.
+  - **Separar más** (otro Droplet para la API o una base administrada) no compensa con una clínica.
+  - **Cuidado:** la API confía en el `X-Forwarded-For` que llega de la red de Docker (`ForwardedHeaders:KnownNetworks`) para ver la IP real de cada usuario. Los pasos están en `documentacion/proceso-despliegue-prod.md`.
 - **Memoria:** la API y PostgreSQL usan juntas unos 300–400 MB de RAM. Hay que revisar la memoria del Droplet (`free -h`): con 1 GB funciona gracias al swap de 2 GB y con 2 GB va holgado.
 - **HTTPS con dominio:** es necesario antes de salir a producción con datos reales. La cookie de sesión (`httpOnly`, `Secure`) no funciona por HTTP en una IP.
 - **Respaldos:** `pg_dump` diario programado, además de los backups del Droplet. Se trata de historias clínicas: los respaldos no son opcionales.
-- **Adjuntos** (radiografías, fotos, PDF): por ahora en el disco del Droplet, dentro de los respaldos. Si crecen mucho, se pasan a DigitalOcean Spaces.
+- **Adjuntos** (radiografías, fotos, PDF): por ahora en el disco del Droplet (volumen `clinicapp-attachments`), dentro de los respaldos. Si crecen mucho, se pasan a DigitalOcean Spaces.
 - **Zona horaria de la clínica:** Ecuador (UTC−5). Las fechas se guardan en UTC y los reportes se calculan en la hora de la clínica.
 
 ## 4. Análisis de la base de pacientes actual

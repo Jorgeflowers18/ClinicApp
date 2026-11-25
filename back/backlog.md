@@ -245,4 +245,4 @@ Implementado en `back/src/ClinicApp.Api/Modules/Institution/`. Perfil de la inst
 ## Notas
 
 - Este archivo es un desglose técnico del contrato ya definido en [`../documentacion/arquitectura-frontend.md`](../documentacion/arquitectura-frontend.md) — si cambia el contrato del lado frontend, actualizar ambos documentos.
-- La priorización y el responsable de cada funcionalidad (a nivel de producto) están en [`../documentacion/backlog.md`](../documentacion/backlog.md); este archivo es solo el detalle de implementación del lado del backend.
+- La priorización y el responsable de cada funcionalidad (a nivel de producto) están en [`../backlog/backlog.md`](../backlog/backlog.md); este archivo es solo el detalle de implementación del lado del backend.

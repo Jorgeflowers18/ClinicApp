@@ -1,44 +1,23 @@
-# Backlog de implementación
+# Backlog
 
-Planes de implementación por sección de la webapp: un archivo `.md` por sección, con qué cambia, cómo se implementa y cómo se valida. El backlog general de alto nivel está en [`documentacion/backlog.md`](../documentacion/backlog.md).
+Todo lo pendiente a nivel de producto, en un solo lugar:
 
-Cuando un plan queda implementado se elimina de esta carpeta: su detalle queda en [`documentacion/arquitectura-frontend.md`](../documentacion/arquitectura-frontend.md), los pendientes de backend en [`back/backlog.md`](../back/backlog.md) y el plan original en el historial de git.
+| Archivo | Qué tiene |
+|---|---|
+| [`backlog.md`](./backlog.md) | Funcionalidades pendientes de la app, con prioridad, estado y responsable. |
+| [`backlog_HC.md`](./backlog_HC.md) | Lo que falta de la historia clínica según el formulario en papel del consultorio, y lo que hay que confirmar con la clínica. |
 
-## Alcance: solo frontend
+Cada ítem se borra cuando queda implementado: su detalle pasa a [`documentacion/arquitectura-frontend.md`](../documentacion/arquitectura-frontend.md) y la versión anterior queda en el historial de git.
 
-Mientras no se indique lo contrario, los planes se implementan **solo en el frontend**, para mostrarlos a la clienta. No se toca el backend (`back/`).
-- Los datos se guardan en el navegador a través de las funciones **Mock** de cada `*.api.ts`.
-- Las funciones **Real** son el contrato futuro: llamadas HTTP con su `// TODO: conectar a endpoint real`.
-- Los endpoints que mencionen los planes se anotan en `back/backlog.md` como pendientes de backend.
+## Dónde están los demás pendientes
 
-## Planes en curso
+- **Backend, por módulo:** [`back/backlog-desgloce.md`](../back/backlog-desgloce.md) (orden y responsable) y [`back/backlog.md`](../back/backlog.md) (detalle por endpoint).
+- **Lo que falta conectar entre el front y la API:** `front/docs/planes-implementacion/12-campos-sin-conectar.md`.
 
-Ninguno por ahora.
+## Planes de implementación de pantallas
 
----
+Cuando se diseña una pantalla nueva, su plan (qué cambia, cómo se implementa y cómo se valida) va en esta carpeta, un `.md` por sección, y se borra al terminar. Hoy no hay ninguno en curso.
 
-## Planes completados
-
-| Ítem | Contenido | Commits |
-|---|---|---|
-| 13. Simplificación de la historia clínica | Historia editable con "Guardar cambios", atenciones inmutables con notas aclaratorias, tratamientos realizados con costo editable, citas del paciente, resumen del paciente, lista global y exportación | `8a674aa`, `7ff025e` y siguientes |
-| 12. Historia clínica según el formulario del consultorio | Antecedentes y alertas, datos del paciente compartidos con Pacientes, declaración de veracidad y registro profesional, página "Registrar atención" por pasos (evaluación, diagnósticos, pronóstico, diagnóstico periodontal), copia de alertas, plan por fases, exámenes solicitados con interconsulta, índices periodontales y exportación | Commit «Ítem 12 - Historia clínica según el formulario del consultorio» |
-
-El detalle de lo implementado está en [`arquitectura-frontend.md` § Historia clínica odontológica](../documentacion/arquitectura-frontend.md#historia-clínica-odontológica).
-
-## Pendientes por confirmar con la clínica
-
-**Del ítem 13:**
-- **Texto del consentimiento de datos:** la clínica debe proveer el texto legal. Mientras tanto se usa un texto provisional marcado como tal.
-- **Ubicación del consentimiento de datos:** al ser sobre datos personales y no solo clínicos, ¿debería registrarse también (o en su lugar) en la ficha del paciente, al darlo de alta? La recepción no tiene acceso a la historia clínica.
-
-**Del ítem 12:**
-- **N.° de historia clínica:** se usa el formato automático `HC-000123`. ¿La clínica tiene una numeración propia que haya que respetar?
-- **Elementos que usa (higiene oral):** lista definitiva de opciones. Hoy hay una lista provisional (cepillo, hilo, cepillo interdental, enjuague, irrigador), marcada como tal.
-- **Registro profesional:** no hay pantalla para administrar profesionales; el registro de cada uno está cargado en los datos de ejemplo. ¿Se agrega una (por ejemplo, en Perfil institucional)?
-- **Datos del cliente al dar de alta:** hoy estado civil, ocupación, empresa, nacionalidad, ciudad y parentesco se registran solo en la historia. ¿Recepción debe poder registrarlos al dar de alta al paciente?
-- **Sugerencias de diagnóstico desde el odontograma:** hoy se ofrecen las caries y los diagnósticos por pieza del odontograma guardado. Confirmar si hacen falta otros hallazgos.
-- **Pronóstico por pieza:** su relación con el odontograma sigue por mapear; por ahora es texto.
-- **Nivel de inserción dentro del periodontograma:** se calcula y se muestra como índice (pérdida de inserción máxima), pero mostrarlo por sitio dentro del periodontograma requiere modificar la librería del editor.
-- **Fila "Signo" del periodontograma y firmas** (paciente, profesional, evolución y periodontograma): siguen por definir.
-- **Modo demostración:** los datos del paciente se guardan en memoria y vuelven a los de ejemplo al recargar; lo escrito en "Registrar atención" se pierde al recargar. Si para la demostración conviene conservarlos, se pueden guardar en el navegador.
+Planes completados (detalle en `arquitectura-frontend.md` § Historia clínica odontológica):
+- **Ítem 13, simplificación de la historia clínica:** historia editable, atenciones inmutables con notas aclaratorias, tratamientos realizados con costo y exportación.
+- **Ítem 12, historia clínica según el formulario del consultorio:** antecedentes y alertas, "Registrar atención" por pasos, plan por fases, exámenes solicitados e índices periodontales.

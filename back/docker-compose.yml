@@ -1,17 +1,39 @@
-# Base de datos de desarrollo de ClinicApp.
+# ClinicApp: base de datos PostgreSQL y API de .NET.
 #
+# Desarrollo (solo la base; la API se corre con "dotnet run"):
 #   Levantar:  docker compose up -d      (desde la carpeta back/)
 #   Apagar:    docker compose stop
 #   Estado:    docker compose ps
 #
-# Los datos se guardan en el volumen "clinicapp-pgdata" y sobreviven a "stop" y "down".
-# Solo "docker compose down -v" borra el volumen (y con él todos los datos).
+# Servidor (base + migraciones + API): en el .env del servidor va COMPOSE_PROFILES=api, y entonces
+#   docker compose up -d --build
+# construye la imagen, aplica las migraciones pendientes (servicio "migrate") y levanta la API.
+# Detalle en documentacion/proceso-despliegue-prod.md.
 #
-# Las credenciales se leen de back/.env (copiar .env.example). Los valores por defecto
-# son solo para desarrollo local; en producción se usan otros.
+# Los datos se guardan en los volúmenes "clinicapp-pgdata" (base) y "clinicapp-attachments" (adjuntos de la
+# historia clínica) y sobreviven a "stop" y "down". Solo "docker compose down -v" los borra.
+#
+# Las variables se leen de back/.env (copiar .env.example). Los valores por defecto son solo para desarrollo
+# local; en el servidor se usan otros. La configuración que no es secreta ni cambia por entorno (vida de los
+# tokens, zona horaria, intervalos) está en src/ClinicApp.Api/appsettings.json.
 
 # Nombre del proyecto en Docker (sin esto tomaría el nombre de la carpeta, "back").
 name: clinicapp
+
+# Variables que comparten la API y el bundle de migraciones (el bundle arranca la configuración de la API).
+x-api-environment: &api-environment
+  ASPNETCORE_ENVIRONMENT: Production
+  ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-clinicapp};Username=${POSTGRES_USER:-clinicapp};Password=${POSTGRES_PASSWORD:-clinicapp_dev}"
+  Auth__SigningKey: ${AUTH_SIGNING_KEY:-}
+  Auth__FrontendBaseUrl: ${FRONTEND_URL:-}
+  TZ: America/Guayaquil
+
+# Logs de Docker con tope: sin esto crecen hasta llenar el disco del servidor.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
 
 services:
   db:
@@ -24,16 +46,85 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clinicapp_dev}
       TZ: America/Guayaquil
     ports:
-      # Puerto de tu PC : puerto dentro del contenedor.
+      # Solo en esta máquina (127.0.0.1): Docker se salta el firewall (ufw), así que un puerto publicado sin IP
+      # quedaría abierto a internet. La API del contenedor no lo usa: llega a "db" por la red interna.
       # Se usa 5433 para no chocar con otros PostgreSQL que usen el 5432.
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - clinicapp-pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    mem_limit: ${DB_MEM_LIMIT:-512m}
+    logging: *logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
 
+  # Aplica las migraciones pendientes y termina. La API espera a que salga bien.
+  migrate:
+    profiles: ["api"]
+    build:
+      context: .
+      target: migrate
+    image: ${API_IMAGE:-clinicapp-api}-migrate:${API_IMAGE_TAG:-latest}
+    environment: *api-environment
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+    logging: *logging
+    restart: "no"
+
+  api:
+    profiles: ["api"]
+    build:
+      context: .
+      target: api
+    image: ${API_IMAGE:-clinicapp-api}:${API_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      <<: *api-environment
+      # El front se sirve desde el mismo dominio que /api (nginx), pero se deja explícito por si cambia.
+      Cors__AllowedOrigins__0: ${FRONTEND_URL:-}
+      # Dominios aceptados en el encabezado Host (separados por ";"). Con "*" acepta cualquiera.
+      AllowedHosts: ${ALLOWED_HOSTS:-*}
+      # Administrador inicial: solo se crea si ese correo no existe. Después del primer despliegue se pueden borrar.
+      Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-}
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-}
+      Seed__AdminName: ${SEED_ADMIN_NAME:-Administrador}
+      Attachments__RootPath: /app/data/attachments
+      # Vacío: no se envían ni registran notificaciones (todavía no hay proveedor; WhatsApp más adelante).
+      Notifications__Provider: ${NOTIFICATIONS_PROVIDER:-}
+      # nginx llega por el puerto publicado y la API lo ve como la puerta de enlace de esta red: se confía en su
+      # X-Forwarded-For para conocer la IP real de cada usuario (límite de intentos de inicio de sesión, logs).
+      ForwardedHeaders__KnownNetworks__0: ${DOCKER_SUBNET:-172.30.0.0/24}
+      # GC de estación de trabajo: bastante menos memoria, mejor para un Droplet chico.
+      DOTNET_gcServer: "0"
+    ports:
+      # Solo nginx, en el mismo servidor, llega a la API.
+      - "127.0.0.1:${API_PORT:-5000}:8080"
+    volumes:
+      - clinicapp-attachments:/app/data/attachments
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    mem_limit: ${API_MEM_LIMIT:-512m}
+    logging: *logging
+
+networks:
+  backend:
+    ipam:
+      config:
+        # Fija para poder confiar en ella (ForwardedHeaders__KnownNetworks__0). Cambiarla si choca con otra red.
+        - subnet: ${DOCKER_SUBNET:-172.30.0.0/24}
+
 volumes:
   clinicapp-pgdata:
+  clinicapp-attachments:

@@ -4,7 +4,7 @@ import { today } from "../lib/today"
 
 /**
  * Secciones de la historia tomadas del formulario en papel «Historia Clínica Odontológica Integral»
- * (ver documentacion/backlog_HC.md): antecedentes médicos, alergias / medicación / alertas, hábitos,
+ * (ver backlog/backlog_HC.md): antecedentes médicos, alergias / medicación / alertas, hábitos,
  * antecedentes odontológicos y periodontales, y declaración de veracidad. Se guardan con la historia.
  */
 

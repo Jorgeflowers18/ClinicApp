@@ -3,7 +3,7 @@ import { z } from "zod"
 import { allergySchema, medicalAlertKeys, medicationSchema } from "./background.types"
 
 /**
- * Evaluación clínica de una atención, tomada del formulario en papel (ver documentacion/backlog_HC.md):
+ * Evaluación clínica de una atención, tomada del formulario en papel (ver backlog/backlog_HC.md):
  * signos vitales, ASA, riesgo, exámenes extraoral e intraoral, dolor, riesgos, diagnósticos,
  * pronóstico, diagnóstico periodontal 2017, intervalo de mantenimiento y exámenes solicitados.
  */
