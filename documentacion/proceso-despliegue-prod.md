@@ -1,6 +1,6 @@
 # Despliegue en producción (Droplet de DigitalOcean)
 
-Cómo levantar ClinicApp en el VPS desde cero, qué hay que configurar a mano en el servidor y cómo se actualiza después. El detalle del backend (imagen, variables de la API, migraciones y problemas comunes) está en [`back/docs/despliegue.md`](../back/docs/despliegue.md).
+Cómo levantar ClinicApp en el VPS desde cero, qué hay que configurar a mano en el servidor y cómo se actualiza después. El detalle del backend (imagen, variables de la API, migraciones y problemas comunes) está en [`proceso-despliegue-back.md`](./proceso-despliegue-back.md).
 
 ## Cómo queda armado
 

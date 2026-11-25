@@ -1,15 +1,15 @@
 # Despliegue del backend (API .NET + PostgreSQL)
 
-Cómo se empaqueta y se despliega el backend en el VPS, y qué hacer cuando algo falla. La guía completa del servidor (preparar el Droplet, nginx, HTTPS, publicar el front y el primer ingreso) está en [`documentacion/proceso-despliegue-prod.md`](../../documentacion/proceso-despliegue-prod.md). Este documento cubre la parte del backend en detalle.
+Cómo se empaqueta y se despliega el backend en el VPS, y qué hacer cuando algo falla. La guía completa del servidor (preparar el Droplet, nginx, HTTPS, publicar el front y el primer ingreso) está en [`proceso-despliegue-prod.md`](./proceso-despliegue-prod.md). Este documento cubre la parte del backend en detalle.
 
 ## 1. Piezas
 
 | Archivo | Qué hace |
 |---|---|
-| [`Dockerfile`](../Dockerfile) | Construye la imagen de la API y la del bundle de migraciones. |
-| [`docker-compose.yml`](../docker-compose.yml) | Define los servicios `db`, `migrate` y `api`, los volúmenes y la red. |
-| [`.env.example`](../.env.example) | Plantilla del `back/.env`: en desarrollo, solo la base; en el servidor, también los secretos. |
-| [`.dockerignore`](../.dockerignore) | Deja fuera de la imagen las pruebas, la documentación, `bin/`/`obj/`, el `.env` y `App_Data/`. |
+| [`back/Dockerfile`](../back/Dockerfile) | Construye la imagen de la API y la del bundle de migraciones. |
+| [`back/docker-compose.yml`](../back/docker-compose.yml) | Define los servicios `db`, `migrate` y `api`, los volúmenes y la red. |
+| [`back/.env.example`](../back/.env.example) | Plantilla del `back/.env`: en desarrollo, solo la base; en el servidor, también los secretos. |
+| [`back/.dockerignore`](../back/.dockerignore) | Deja fuera de la imagen las pruebas, la documentación, `bin/`/`obj/`, el `.env` y `App_Data/`. |
 
 ### Etapas del `Dockerfile`
 
@@ -75,7 +75,7 @@ Si hace falta cambiar alguno solo en el servidor, se puede agregar al `environme
 
 ## 3. Primer despliegue (resumen)
 
-Detalle y valores en [`proceso-despliegue-prod.md`](../../documentacion/proceso-despliegue-prod.md) §§ 3 y 4.
+Detalle y valores en [`proceso-despliegue-prod.md`](./proceso-despliegue-prod.md) §§ 3 y 4.
 
 ```bash
 cd /home/dental-test/ClinicApp/back
@@ -119,7 +119,7 @@ docker image prune -f                  # borra las imágenes viejas
 **Volver a una versión anterior:**
 1. `git checkout <commit>`
 2. `docker compose up -d --build`
-3. Si la versión nueva había cambiado la base, restaurar el respaldo previo: [`proceso-despliegue-prod.md`](../../documentacion/proceso-despliegue-prod.md) § 8.
+3. Si la versión nueva había cambiado la base, restaurar el respaldo previo: [`proceso-despliegue-prod.md`](./proceso-despliegue-prod.md) § 8.
 
 ## 6. Probar la imagen antes de desplegar
 
@@ -148,7 +148,7 @@ docker stats --no-stream                            # memoria y CPU
 docker exec -it clinicapp-db psql -U clinicapp -d clinicapp    # consola SQL
 ```
 
-Respaldos y restauración de la base y de los adjuntos: [`proceso-despliegue-prod.md`](../../documentacion/proceso-despliegue-prod.md) § 8.
+Respaldos y restauración de la base y de los adjuntos: [`proceso-despliegue-prod.md`](./proceso-despliegue-prod.md) § 8.
 
 ## 8. Problemas comunes
 
