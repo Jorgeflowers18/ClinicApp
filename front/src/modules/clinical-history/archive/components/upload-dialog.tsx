@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, FileText, Upload, Trash2, ChevronDown } from "lucide-react"
+import { Check, FileText, Upload, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { createId } from "@/shared/lib/id"
+import { useModalAccordion } from "@/shared/hooks/use-modal-accordion"
+import { serverFieldIssues,type FieldIssues } from "@/shared/lib/field-issues"
+import { getErrorMessage } from "@/shared/lib/error-message"
+import { fileDraftIssues } from "../lib/validation"
 import { allowedAttachmentTypes } from "../../types/clinical-history.types"
 import { archiveApi } from "../api"
 import { useArchiveWrite, useBlobUrl } from "../hooks"
@@ -23,8 +27,11 @@ function PendingPreview({ file }: { file: File }) {
   </div>
 }
 export function UploadDialog({ patientId, patientName, recordNumber, options, onClose }: { patientId: string; patientName: string; recordNumber: string; options: MetadataOptions; onClose: () => void }) {
-  const [files, setFiles] = useState<PendingFile[]>([]), [common, setCommon] = useState(emptyFileDraft), [section, setSection] = useState("files"), [individual, setIndividual] = useState<string | null>(null), [error, setError] = useState(""), [busy, setBusy] = useState(false)
+  const [files, setFiles] = useState<PendingFile[]>([]), [common, setCommon] = useState(emptyFileDraft), [error, setError] = useState(""), [busy, setBusy] = useState(false)
   const write = useArchiveWrite(patientId), input = useRef<HTMLInputElement>(null), errorRef = useRef<HTMLParagraphElement>(null), mounted = useRef(true)
+  const body=useRef<HTMLDivElement>(null),lock=useRef(false)
+  const accordion=useModalAccordion(body,"files"),section=accordion.open,setSection=accordion.request
+  const [attempted,setAttempted]=useState(false),[remote,setRemote]=useState<Record<string,FieldIssues>>({})
   const actor = useAuthStore(state => state.user)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   function add(incoming: File[]) {
@@ -39,36 +46,46 @@ export function UploadDialog({ patientId, patientName, recordNumber, options, on
     setFiles(previous => [...previous, ...added])
   }
   const draftFor = (item: PendingFile): ClinicalFileDraft => ({ ...common, displayName: common.displayName || item.file.name, ...item.overrides })
+  const issuesFor=(item:PendingFile):FieldIssues=>item.status==="saved"?{}:{...(attempted?fileDraftIssues(draftFor(item)):{}),...remote[item.id]}
+  function reveal(item:PendingFile,issues:FieldIssues){const field=Object.keys(issues).find(key=>key!=="file")??"file";accordion.request(field==="file"?"files":"file:"+item.id,'[data-validation-field="'+CSS.escape(item.id+"."+field)+'"]')}
+  function changeCommon(next:ClinicalFileDraft){const changed=Object.keys(next).filter(key=>JSON.stringify(next[key as keyof ClinicalFileDraft])!==JSON.stringify(common[key as keyof ClinicalFileDraft]));setRemote(current=>Object.fromEntries(Object.entries(current).map(([id,issues])=>[id,Object.fromEntries(Object.entries(issues).filter(([key])=>!changed.includes(key)||key in(files.find(item=>item.id===id)?.overrides??{})))])));setCommon(next)}
   function override(item: PendingFile, next: ClinicalFileDraft) {
     const previous = draftFor(item)
     const changes = Object.fromEntries(Object.keys(next).filter(key => JSON.stringify(next[key as keyof ClinicalFileDraft]) !== JSON.stringify(previous[key as keyof ClinicalFileDraft])).map(key => [key, next[key as keyof ClinicalFileDraft]]))
-    setFiles(current => current.map(row => row.id === item.id ? { ...row, overrides: { ...row.overrides, ...changes } } : row))
+    setFiles(current => current.map(row => row.id === item.id ? { ...row,status:"pending",error:undefined, overrides: { ...row.overrides, ...changes } } : row))
+    setRemote(current=>({...current,[item.id]:Object.fromEntries(Object.entries(current[item.id]??{}).filter(([key])=>!(key in changes)))}))
   }
   async function save() {
+    if(lock.current)return
     setError("")
+    setAttempted(true)
     const pending = files.filter(item => item.status !== "saved")
     if (!pending.length) { setError("Selecciona al menos un archivo nuevo."); setSection("files"); return }
-    const invalid = pending.find(item => !draftFor(item).clinicalType || !draftFor(item).displayName.trim())
-    if (invalid) { setError(`Confirma el tipo clínico y el nombre de «${invalid.file.name}».`); setSection("classification"); setIndividual(invalid.id); requestAnimationFrame(() => errorRef.current?.focus()); return }
-    const examIds = pending.map(item => draftFor(item).examRequestId).filter(Boolean)
-    if (new Set(examIds).size !== examIds.length) { setError("Un examen solicitado admite un único resultado. Ajusta los vínculos individuales."); setSection("additional"); return }
+    lock.current=true
     setBusy(true); setSection("files")
     let failures = 0
+    let firstFailure:{item:PendingFile;issues:FieldIssues}|null=null
     for (const item of pending) {
       if (!mounted.current) break
+      const issues=fileDraftIssues(draftFor(item)),exam=draftFor(item).examRequestId
+      if(exam&&pending.some(other=>other.id!==item.id&&draftFor(other).examRequestId===exam))issues.examRequestId="Un examen solicitado admite un único resultado. Ajusta este vínculo."
+      if(Object.keys(issues).length){failures++;firstFailure??={item,issues};setRemote(current=>({...current,[item.id]:issues}));setFiles(current=>current.map(row=>row.id===item.id?{...row,status:"error",error:"Requiere corrección"}:row));continue}
       setFiles(current => current.map(row => row.id === item.id ? { ...row, status: "saving", error: undefined } : row))
       try {
         await write.mutateAsync(() => archiveApi.attach(patientId, item.file, draftFor(item)))
         if (mounted.current) setFiles(current => current.map(row => row.id === item.id ? { ...row, status: "saved", error: undefined } : row))
       } catch (error) {
         failures++
-        if (mounted.current) setFiles(current => current.map(row => row.id === item.id ? { ...row, status: "error", error: error instanceof Error ? error.message : "No se pudo guardar" } : row))
+        const issues=serverFieldIssues(error,[...Object.keys(draftFor(item)),"file"])
+        firstFailure??={item,issues}
+        if (mounted.current){setRemote(current=>({...current,[item.id]:issues}));setFiles(current => current.map(row => row.id === item.id ? { ...row, status: "error", error:getErrorMessage(error) } : row))}
       }
     }
-    if (mounted.current) { setBusy(false); if (failures) { setError(`${failures} archivos no se guardaron. Los archivos guardados no se repetirán al reintentar.`) } }
+    lock.current=false
+    if (mounted.current) { setBusy(false); if (failures) { setError(`${failures} ${failures===1?"archivo requiere":"archivos requieren"} atención. Revisa cada archivo; los guardados no se repetirán al reintentar.`) }if(firstFailure)reveal(firstFailure.item,firstFailure.issues) }
   }
   const saved = files.filter(item => item.status === "saved").length
-  const toggle = (name: string) => { if (!busy) setSection(section === name ? "" : name) }
+  const toggle = (name: string) => { if (!busy) setSection(section === name ? null : name) }
   return <Dialog open onOpenChange={open => !open && !busy && onClose()}>
     <DialogContent
       variant="wide"
@@ -79,10 +96,11 @@ export function UploadDialog({ patientId, patientName, recordNumber, options, on
         <DialogTitle>Adjuntar archivos clínicos</DialogTitle>
         <DialogDescription>{patientName} · {recordNumber}. Los originales se conservan sin modificaciones.</DialogDescription>
       </DialogHeader>
-      <DialogBody>
+      <DialogBody ref={body}>
 
         <ArchiveSection
           title="Archivos"
+          value="files"
           open={section === "files"}
           onToggle={() => toggle("files")}
           status={`${files.length} seleccionados · ${saved} guardados`}
@@ -121,9 +139,11 @@ export function UploadDialog({ patientId, patientName, recordNumber, options, on
                   {item.file.name}
                 </strong>
                 <small>{formatLabel({ mime: item.file.type })} · {bytesLabel(item.file.size)}</small>
-                <p role={item.status === "error" ? "alert" : "status"}>
+                <p role={item.status === "error" ? "alert" : "status"} tabIndex={-1} data-validation-field={`${item.id}.file`}>
                   {item.status === "saved" ? <><Check aria-hidden="true" />Guardado</> : item.status === "saving" ? "Validando y guardando original…" : item.error ?? "Pendiente de guardar"}
                 </p>
+                {Object.entries(issuesFor(item)).map(([field,message])=><small className="text-destructive" key={field}>{message}</small>)}
+                {item.status==="error"&&<Button type="button" size="sm" variant="link" onClick={()=>reveal(item,issuesFor(item))}>Corregir archivo</Button>}
               </div>
               <IconAction
                 label={`Quitar ${item.file.name}`}
@@ -138,6 +158,7 @@ export function UploadDialog({ patientId, patientName, recordNumber, options, on
 
         <ArchiveSection
           title="Clasificación clínica"
+          value="classification"
           open={section === "classification"}
           onToggle={() => toggle("classification")}
           status="Tipo, categoría y fecha"
@@ -146,7 +167,7 @@ export function UploadDialog({ patientId, patientName, recordNumber, options, on
             <MetadataFields
               value={common}
               name={false}
-              onChange={setCommon}
+              onChange={changeCommon}
               options={options}
               part="classification"
             />
@@ -155,6 +176,7 @@ export function UploadDialog({ patientId, patientName, recordNumber, options, on
 
         <ArchiveSection
           title="Información adicional"
+          value="additional"
           open={section === "additional"}
           onToggle={() => toggle("additional")}
           status="Vínculos, etiquetas y notas"
@@ -163,7 +185,7 @@ export function UploadDialog({ patientId, patientName, recordNumber, options, on
             <MetadataFields
               value={common}
               name={false}
-              onChange={setCommon}
+              onChange={changeCommon}
               options={options}
               part="additional"
             />
@@ -174,31 +196,12 @@ export function UploadDialog({ patientId, patientName, recordNumber, options, on
         {files.some(item => item.status !== "saved") && <div className={styles.individual}>
           <h3>Ajustes por archivo</h3>
           <small>Los campos comunes se aplican a todos. Los ajustes individuales tienen prioridad.</small>
-          {files.filter(item => item.status !== "saved").map(item => <div key={item.id}>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full justify-between"
-              disabled={busy}
-              aria-expanded={individual === item.id}
-              onClick={() => setIndividual(individual === item.id ? null : item.id)}
-            >
-              {item.file.name}
-              <ChevronDown />
-            </Button>
-            {individual === item.id && <fieldset disabled={busy}>
-              <MetadataFields
-                value={draftFor(item)}
-                onChange={next => override(item, next)}
-                options={options}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setFiles(current => current.map(row => row.id === item.id ? { ...row, overrides: {} } : row))}
-              >Restablecer ajustes individuales</Button>
-            </fieldset>}
-          </div>)}
+          {files.filter(item => item.status !== "saved").map(item => <ArchiveSection key={item.id} value={"file:"+item.id} title={item.file.name} open={section==="file:"+item.id} onToggle={()=>toggle("file:"+item.id)}>
+            <fieldset disabled={busy}>
+              <MetadataFields value={draftFor(item)} onChange={next=>override(item,next)} options={options} issues={issuesFor(item)} prefix={item.id+"."}/>
+              <Button type="button" variant="ghost" onClick={()=>setFiles(current=>current.map(row=>row.id===item.id?{...row,overrides:{}}:row))}>Restablecer ajustes individuales</Button>
+            </fieldset>
+          </ArchiveSection>)}
         </div>}
 
         {error && <p

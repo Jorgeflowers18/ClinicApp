@@ -136,3 +136,5 @@
 @media (prefers-reduced-motion: reduce) {
   .treatment-section-panel, .treatment-section-chevron { transition: none !important; }
 }
+
+.treatment-editor-scroll .treatment-editor { overflow-anchor: none; }

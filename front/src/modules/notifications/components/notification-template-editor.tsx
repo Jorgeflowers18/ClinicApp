@@ -1,7 +1,8 @@
 import { useRef } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm, useWatch } from "react-hook-form"
-import { Eye, FileText, Plus, Save } from "lucide-react"
+import { useWatch } from "react-hook-form"
+import { useValidatedForm as useForm } from "@/shared/hooks/use-validated-form"
+import { FileText, Plus, Save } from "lucide-react"
 import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -9,18 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
-import { BrandLogo } from "@/shared/components/brand-logo"
+import { NotificationMessagePreview } from "./notification-message-preview"
+import { useDemoContext } from "@/modules/saas/state"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { useNotificationTemplate, useUpdateNotificationTemplate } from "../api/notifications.queries"
 import { useTemplateNavigationGuard } from "../hooks/use-template-navigation-guard"
 import { notificationTemplateSchema, notificationVariables, type NotificationTemplateFormValues } from "../types/notification.types"
 
-function applyPreview(message: string) {
-  return notificationVariables.reduce(
-    (text, variable) => text.split(variable.token).join(variable.example),
-    message
-  )
-}
 const variableLabels: Record<string,string> = {
   "[nombre del cliente]": "Nombre del paciente", "[nombre de la clínica]": "Clínica",
   "[fecha de la cita]": "Fecha de cita", "[hora de la cita]": "Hora de cita", "[profesional]": "Profesional",
@@ -56,6 +52,7 @@ function TemplateForm({ initialMessage }: { initialMessage: string }) {
     })
   }
   async function onSubmit(values: NotificationTemplateFormValues) {
+    if(!useDemoContext.getState().userId&&/\{[^{}]+\}/.test(values.message)){setError("message",{message:"Las variables nuevas se pueden previsualizar y usar en WhatsApp. Para guardarlas como plantilla del servidor falta integrar su resolver. En demostración sí puedes guardarlas localmente."});return}
     if(submitting.current) return
     submitting.current = true; clearErrors("root.server")
     try {
@@ -79,10 +76,7 @@ function TemplateForm({ initialMessage }: { initialMessage: string }) {
         </Field>
         <p className="messaging-hint">Se insertan donde esté el cursor y se sustituyen al generar el mensaje. La vista previa utiliza datos de ejemplo.</p>
       </fieldset>
-      <section className="messaging-preview" aria-label="Vista previa del mensaje"><div className="messaging-preview-heading"><Eye aria-hidden="true" /><h3>Vista previa</h3><span>Datos de ejemplo</span></div>
-        <div className="messaging-preview-brand"><BrandLogo className="size-8" /><span>{notificationVariables.find(variable => variable.token === "[nombre de la clínica]")?.example}</span></div>
-        <p className="messaging-preview-body">{applyPreview(message || "")}</p>
-      </section>
+      <NotificationMessagePreview message={message||""}/>
       {errors.root?.server && <Alert variant="destructive" className="messaging-save-error"><AlertDescription>{errors.root.server.message}</AlertDescription></Alert>}
       <div className="messaging-template-actions" data-form-actions="" data-context="page"><Button type="submit" disabled={isSubmitting || !isDirty}><Save aria-hidden="true" />{isSubmitting ? "Guardando..." : "Guardar plantilla"}</Button></div>
     </form></CardContent>

@@ -1,0 +1,5 @@
+import { useQuery } from "@tanstack/react-query"
+import { Link } from "react-router-dom"
+import { patientsApi } from "../api/patients.api"
+import { useDemoContext } from "@/modules/saas/state"
+export function PatientDuplicateHint({documentId,documentType,patientId}:{documentId:string;documentType:string;patientId?:string}){const org=useDemoContext(state=>state.userId?state.organizationId:"api"),query=useQuery({queryKey:["patients","document-match",org,documentType,documentId],queryFn:({signal})=>patientsApi.list({search:documentId,page:1,pageSize:10},signal),enabled:documentId.trim().length>=4,staleTime:10000});const matches=query.data?.items.filter(patient=>patient.id!==patientId&&patient.documentId.trim().toLowerCase()===documentId.trim().toLowerCase()&&patient.documentType===documentType)??[];if(!matches.length)return null;return <div className="patient-field-help" role="status">Ya existe una ficha con este tipo y número de documento. {matches.map(patient=><Link className="text-primary underline" key={patient.id} to={`/pacientes/${patient.id}`}>Consultar {patient.firstName} {patient.lastName}</Link>)} No se fusionan fichas por nombre.</div>}

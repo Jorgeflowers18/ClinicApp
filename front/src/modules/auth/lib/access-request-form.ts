@@ -10,7 +10,7 @@ export type AccessRequestFields = z.input<typeof fieldsSchema>
 
 /** Presentation adapter: retain the existing fullName contract without splitting records. */
 export function prepareAccessRequest({ firstName, lastName, ...values }: AccessRequestFields): AccessRequestFormValues {
-  return { ...values, fullName: `${firstName.trim()} ${lastName.trim()}` }
+  return { ...values, fullName: `${firstName.trim()} ${lastName.trim()}`,firstName:firstName.trim(),lastName:lastName.trim() }
 }
 
 export const accessRequestDetailsSchema = fieldsSchema.transform(prepareAccessRequest)

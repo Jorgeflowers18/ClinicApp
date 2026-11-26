@@ -8,6 +8,7 @@ import {
   Package,
   Stethoscope,
   UsersRound,
+  UserRoundCog,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -55,4 +56,5 @@ export const navItems: NavItem[] = [
     icon: ChartNoAxesCombined,
     roles: ["admin"],
   },
+  { label: "Personal y accesos", to: "/personal-accesos", icon: UserRoundCog, roles: ["admin"] },
 ]

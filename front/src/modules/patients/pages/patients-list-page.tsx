@@ -16,6 +16,7 @@ import { getErrorMessage } from "@/shared/lib/error-message"
 import { formatDateTime } from "@/shared/lib/date"
 import { AppointmentFormDialog } from "@/modules/appointments/components/appointment-form-dialog"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
+import { DemoPermission } from "@/modules/saas/components/demo-permission"
 import { usePatientsList, useRestorePatient } from "../api/patients.queries"
 import { genderOptions, treatmentStatusOptions, type Patient, type PatientsQuery } from "../types/patient.types"
 import { PatientInitials, PatientStatus } from "../components/patient-status"
@@ -62,7 +63,7 @@ export function PatientsListPage() {
   ]
   return <PatientActionsProvider><div className="clinic-pilot clinic-pilot-page clinic-patients-page space-y-4">
     <PageHeader className="clinic-pilot-header" title="Pacientes" description="Gestiona la información y el seguimiento de tus pacientes."
-      actions={<Button className="patient-new-button" onClick={event => setEditor({ mode: "create", returnFocus: event.currentTarget })}><Plus />Nuevo paciente</Button>} />
+      actions={<DemoPermission module="Pacientes" action="create"><Button className="patient-new-button" onClick={event => setEditor({ mode: "create", returnFocus: event.currentTarget })}><Plus />Nuevo paciente</Button></DemoPermission>} />
     <div className="patient-statistics" role="group" aria-label="Resumen de pacientes">
       {[
         { label: "Pacientes registrados", source: total, icon: UsersRound, tone: "primary" },

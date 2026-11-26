@@ -7,23 +7,29 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { GlobalNotificationCenter } from "@/modules/notifications/components/global-notification-center"
 import { MessagingDraftProvider } from "@/modules/notifications/components/messaging-draft-provider"
 import { InstitutionSidebarBrand } from "@/modules/institution/components/institution-brand"
 import { navItems, type NavItem } from "../nav-config"
 import { HeaderThemeSwitch } from "./header-theme-switch"
 import { HeaderUserMenu } from "./header-user-menu"
+import { useDemoContext,useSessionUser,useSaasData } from "@/modules/saas/state"
+import { demoCan, permissionModuleForPath } from "@/modules/saas/lib/permissions"
+import { DemoSidebarIdentity,OrganizationSelector } from "@/modules/saas/components/context-selector"
+import { SaasScopeBoundary } from "@/modules/saas/components/scope-boundary"
+import "@/modules/saas/saas.css"
 
 const navigationGroups = [
   { label: "General", paths: ["/"] },
   { label: "Atención clínica", paths: ["/pacientes", "/citas", "/historial-clinico", "/tratamientos"] },
-  { label: "Gestión", paths: ["/inventario", "/finanzas", "/reportes"] },
+  { label: "Gestión", paths: ["/inventario", "/finanzas", "/reportes", "/personal-accesos"] },
   { label: "Comunicación", paths: ["/notificaciones"] },
 ]
 
 export function AppLayout() {
-  const user = useAuthStore((state) => state.user)
+  const user = useSessionUser()
+  const demo = useDemoContext(state=>state.userId)
+  const saas = useSaasData(), member = saas.users.find(item => item.id === demo)
   const { pathname } = useLocation()
   const [isMobileViewport, setIsMobileViewport] = useState(() => window.matchMedia("(max-width: 767px)").matches)
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => window.matchMedia("(min-width: 1024px)").matches)
@@ -44,7 +50,11 @@ export function AppLayout() {
     }
   }, [])
 
-  const visibleItems = navItems.filter((item) => !item.roles || (user && item.roles.includes(user.role)))
+  const visibleItems = navItems.filter(item => {
+    const allowed = !item.roles || (member ? member.roles.some(role => item.roles!.includes(role)) : user && item.roles.includes(user.role))
+    const module = permissionModuleForPath(item.to)
+    return allowed && (!member || !module || demoCan(member, saas, module, "view"))
+  })
   const isClinicalRoute = pathname.startsWith("/historial-clinico")
   const isPilotRoute = pathname === "/" || pathname === "/pacientes" || pathname.startsWith("/pacientes/")
   const isAdminVisualRoute = !isClinicalRoute
@@ -95,13 +105,14 @@ export function AppLayout() {
             </nav>
           </div>
           <div className="clinic-header-tools">
+            <OrganizationSelector />
             <HeaderThemeSwitch />
             {user && <GlobalNotificationCenter key={user.id} userId={user.id} role={user.role} />}
             <HeaderUserMenu />
           </div>
         </header>
         <main className={cn("clinic-app-canvas min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6", isAdminVisualRoute && "clinic-admin-canvas", isClinicalRoute && "clinic-clinical-canvas", isPilotRoute && "clinic-pilot-canvas")}>
-          <Outlet />
+          <SaasScopeBoundary />
         </main>
       </div>
     </div></MessagingDraftProvider>
@@ -111,9 +122,10 @@ export function AppLayout() {
 function SidebarContent({ visibleItems, isCollapsed, onNavigate }: {
   visibleItems: NavItem[]; isCollapsed: boolean; onNavigate?: () => void
 }) {
+  const demo=useDemoContext(state=>state.userId)
   return (
     <div className="clinic-sidebar-content" data-collapsed={isCollapsed}>
-      <InstitutionSidebarBrand collapsed={isCollapsed} />
+      {demo?<DemoSidebarIdentity collapsed={isCollapsed}/>:<InstitutionSidebarBrand collapsed={isCollapsed} />}
       <nav aria-label="Navegación principal" className="clinic-sidebar-navigation">
         {navigationGroups.map((group) => {
           const items = group.paths.flatMap((path) => visibleItems.filter((item) => item.to === path))

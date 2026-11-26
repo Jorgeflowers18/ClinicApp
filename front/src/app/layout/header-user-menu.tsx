@@ -6,13 +6,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { useLogout } from "@/modules/auth/api/auth.queries"
 import { UserAvatar } from "@/modules/auth/components/user-avatar"
 import { userDisplayName } from "@/modules/auth/components/user-identity"
-import { useAuthStore } from "@/modules/auth/store/auth-store"
+import { useSessionUser,useSaasData } from "@/modules/saas/state"
 import { roleLabels } from "@/modules/auth/types/user-admin.types"
 import styles from "./header-user-menu.module.css"
 
 
 export function HeaderUserMenu() {
-  const user = useAuthStore((state) => state.user)
+  const user = useSessionUser()
+  const data=useSaasData(),username=[...data.identities,...data.users].find(item=>item.id===user?.id)?.username
   const name = userDisplayName(user) || "Usuario"
   const logout = useLogout()
   const { pathname } = useLocation()
@@ -31,7 +32,7 @@ export function HeaderUserMenu() {
     <DropdownMenuContent align="end" className={styles.menu} aria-label="Opciones de usuario">
       <div className={styles.summary}>
         <UserAvatar name={name} image={user?.profile?.avatarImage ?? null} location="menu" />
-        <div><p>{name}</p><p className={styles.role}>{role}</p></div>
+        <div><p>{name}</p><p className={styles.role}>{role}{username?` · ${username}`:""}</p></div>
       </div>
       <DropdownMenuSeparator />
       {link("/perfil-usuario", "Mi perfil", <UserRound />)}

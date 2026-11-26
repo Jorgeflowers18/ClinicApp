@@ -198,3 +198,5 @@ button.chip[aria-pressed=true] { border-color: var(--primary); color: var(--fore
 @media (max-width: 430px) { .header { align-items: start; } .header .actions { width: 100%; justify-content: flex-start; } .header .actions > button { flex: 1; } .metadata { grid-template-columns: 1fr; } .inlineCreate { flex-wrap: wrap; } .inlineCreate > input { min-width: 140px; } .originalInfo, .fileInformation dl { grid-template-columns: 1fr; } .accordionTrigger > span { max-width: 45%; } }
 @media (max-width: 359px) { .gallery { grid-template-columns: 1fr; } .filterGrid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .accordionMotion, .accordionTrigger > svg { transition: none; } }
+
+.uploadDialog [data-slot="dialog-body"] { overflow-anchor: none; }

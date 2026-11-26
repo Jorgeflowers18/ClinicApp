@@ -4,6 +4,7 @@ import { getAccessToken, useAuthStore } from "@/modules/auth/store/auth-store"
 import { ApiError } from "@/shared/types/common"
 import { env } from "@/shared/lib/env"
 import { normalizeProblem } from "@/shared/lib/api-problem"
+import { isDemonstrationActive } from "./demonstration-boundary"
 
 /**
  * Cliente HTTP único de la app. Las implementaciones `*.http.ts` de cada módulo usan los helpers `api*` de
@@ -18,6 +19,7 @@ export const http = axios.create({
 })
 
 http.interceptors.request.use((config) => {
+  if(isDemonstrationActive())throw new ApiError("Esta operación utiliza la API real y no está disponible en la demostración. No se envió ninguna petición al servidor.",501)
   const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -59,6 +61,7 @@ async function errorPayload(data: unknown): Promise<unknown> {
 http.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+    if(error instanceof ApiError)return Promise.reject(error)
     // Una petición cancelada (búsqueda vieja, pantalla cerrada) no es un error para el usuario.
     if (axios.isCancel(error)) return Promise.reject(error)
 

@@ -25,3 +25,5 @@
   .clinic-encounter-group-panel { animation-duration: 0s !important; transition-duration: 0s !important; }
   .clinic-encounter-group-trigger, .clinic-encounter-group-chevron { transition: none; }
 }
+
+.clinic-encounter-scroll .clinic-encounter-groups { overflow-anchor: none; }

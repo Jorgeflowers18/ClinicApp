@@ -1,6 +1,7 @@
 import { useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, useForm } from "react-hook-form"
+import { Controller } from "react-hook-form"
+import { useValidatedForm as useForm } from "@/shared/hooks/use-validated-form"
 import { Link, Navigate, useLocation } from "react-router-dom"
 import { Eye, EyeOff, LoaderCircle } from "lucide-react"
 
@@ -16,12 +17,15 @@ import { AuthLayout, AuthNotice, AuthRememberHelp } from "../components/auth-lay
 import { SessionChecking } from "../components/session-checking"
 import { useAuthStore } from "../store/auth-store"
 import { loginSchema, type LoginFormValues } from "../types/auth.types"
+import { useDemoContext,useSessionUser } from "@/modules/saas/state"
 
 export function LoginPage() {
-  const user = useAuthStore((state) => state.user)
+  const user = useSessionUser()
+  const demoUserId=useDemoContext(state=>state.userId)
   const checking = useAuthStore((state) => state.status === "checking")
   const location = useLocation()
-  const login = useLogin()
+  const demo = new URLSearchParams(location.search).get("demo")==="1"
+  const login = useLogin(demo)
   const [showPassword, setShowPassword] = useState(false)
   const submitting = useRef(false)
 
@@ -40,11 +44,11 @@ export function LoginPage() {
   const passwordReset = (location.state as { passwordReset?: boolean } | null)?.passwordReset === true
 
   // Al recargar con la API, primero se confirma si la cookie de renovación sigue valiendo.
-  if (checking) return <SessionChecking />
+  if (checking && !demo) return <SessionChecking />
 
-  if (user) {
+  if (user && (!demo || demoUserId)) {
     const redirectTo = (location.state as { from?: string } | null)?.from ?? "/"
-    const nextTarget = user.profile && user.profile.fullName.trim() ? redirectTo : "/perfil-usuario"
+    const nextTarget = user.profile && user.profile.fullName.trim() ? demoUserId ? user.role==="admin"?"/personal-accesos":"/citas" : redirectTo : "/perfil-usuario"
     return <Navigate to={nextTarget} replace />
   }
 
@@ -59,12 +63,12 @@ export function LoginPage() {
       <form className="auth-form" noValidate onSubmit={(event) => { void handleSubmit(onSubmit)(event) }} aria-describedby="auth-description" aria-busy={login.isPending}>
         <FieldGroup>
           <Field data-invalid={!!errors.email}>
-            <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
+            <FieldLabel htmlFor="email">Usuario o correo electrónico</FieldLabel>
             <Input
               id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="nombre@correo.com"
+              type="text"
+              autoComplete="username"
+              placeholder="Ingresa tu usuario o correo electrónico"
               required
               aria-invalid={!!errors.email}
               aria-describedby={errors.email ? "email-error" : undefined}
@@ -108,7 +112,7 @@ export function LoginPage() {
             <FieldLabel htmlFor="remember">Recordarme</FieldLabel>
             <AuthRememberHelp />
           </div>
-          <Link className="auth-link" to="/recuperar-contrasena" state={location.state}>¿Olvidaste tu contraseña?</Link>
+          <Link className="auth-link" to={`/recuperar-contrasena${demo?"?demo=1":""}`} state={location.state}>¿Olvidaste tu contraseña?</Link>
         </div>
 
         {passwordReset && !login.isError && (
@@ -126,8 +130,9 @@ export function LoginPage() {
 
         <p className="auth-navigation">
           ¿No tienes acceso?{" "}
-          <Link className="auth-link" to="/solicitar-acceso" state={location.state}>Solicitar acceso</Link>
+          <Link className="auth-link" to={`/solicitar-acceso${demo?"?demo=1":""}`} state={location.state}>Solicitar acceso</Link>
         </p>
+        {demo?<AuthNotice>Demostración frontend sin servidor. Usuarios: amorales, avega o ltorres. Clave pública: Demo12345!<br/><Link className="auth-link" to="/login">Usar autenticación real</Link></AuthNotice>:<p className="auth-navigation"><Link className="auth-link" to="/login?demo=1">Explorar funciones SaaS en demostración</Link></p>}
       </form>
     </AuthLayout>
   )

@@ -3,6 +3,8 @@ import { Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { FieldError } from "@/components/ui/field"
+import type { FieldIssues } from "@/shared/lib/field-issues"
 import type { PatientClinicalHistory } from "../../types/clinical-history.types"
 import type { ArchiveCatalog, ClinicalFileDraft } from "../types"
 import { archiveApi } from "../api"
@@ -12,7 +14,7 @@ import { ArchiveSelect } from "./controls"
 import styles from "../archive.module.css"
 
 export interface MetadataOptions { history: PatientClinicalHistory; catalog: ArchiveCatalog; professionals: Record<string, string>; treatments: Record<string, string> }
-export function MetadataFields({ value, onChange, options, part = "all", name = true }: { value: ClinicalFileDraft; onChange: (value: ClinicalFileDraft) => void; options: MetadataOptions; part?: "classification" | "additional" | "all"; name?: boolean }) {
+export function MetadataFields({ value, onChange, options, part = "all", name = true,issues={},prefix="" }: { value: ClinicalFileDraft; onChange: (value: ClinicalFileDraft) => void; options: MetadataOptions; part?: "classification" | "additional" | "all"; name?: boolean;issues?:FieldIssues;prefix?:string }) {
   const id = useId(), [newCategory, setNewCategory] = useState(""), [newTag, setNewTag] = useState("")
   const [error, setError] = useState(""), [busy, setBusy] = useState(false)
   const set = <K extends keyof ClinicalFileDraft>(key: K, next: ClinicalFileDraft[K]) => onChange({ ...value, [key]: next })
@@ -35,15 +37,21 @@ export function MetadataFields({ value, onChange, options, part = "all", name = 
         <label htmlFor={`${id}-name`}>Nombre del archivo</label>
         <Input
           id={`${id}-name`}
+          data-validation-field={`${prefix}displayName`}
+          aria-invalid={Boolean(issues.displayName)}
+          aria-describedby={issues.displayName?`${id}-name-error`:undefined}
           required
           maxLength={200}
           value={value.displayName}
           onChange={event => set("displayName", event.target.value)}
         />
+        <FieldError id={`${id}-name-error`}>{issues.displayName}</FieldError>
       </div>}
 
       <ArchiveSelect
         label="Tipo clínico"
+        error={issues.clinicalType}
+        validationField={`${prefix}clinicalType`}
         value={value.clinicalType || "none"}
         items={{ none: "Seleccionar tipo clínico", ...clinicalFileTypes }}
         onChange={next => set("clinicalType", next === "none" ? "" : next)}
@@ -51,6 +59,8 @@ export function MetadataFields({ value, onChange, options, part = "all", name = 
 
       <ArchiveSelect
         label="Categoría"
+        error={issues.categoryId}
+        validationField={`${prefix}categoryId`}
         value={value.categoryId ?? "none"}
         items={{ none: "Sin categoría", ...Object.fromEntries(catalog.categories.filter(item => !item.archivedAt || item.id === value.categoryId).map(item => [item.id, `${item.name}${item.archivedAt ? " (archivada)" : ""}`])) }}
         onChange={next => set("categoryId", next === "none" ? null : next)}
@@ -60,16 +70,21 @@ export function MetadataFields({ value, onChange, options, part = "all", name = 
         <label htmlFor={`${id}-date`}>Fecha de estudio</label>
         <Input
           id={`${id}-date`}
-          aria-describedby={`${id}-date-help`}
+          aria-describedby={`${id}-date-help${issues.studyDate?` ${id}-date-error`:""}`}
+          data-validation-field={`${prefix}studyDate`}
+          aria-invalid={Boolean(issues.studyDate)}
           type="date"
           value={value.studyDate ?? ""}
           onChange={event => set("studyDate", event.target.value || null)}
         />
         <small id={`${id}-date-help`}>No se deduce de la fecha de carga.</small>
+        <FieldError id={`${id}-date-error`}>{issues.studyDate}</FieldError>
       </div>
 
       <ArchiveSelect
         label="Profesional"
+        error={issues.professionalId}
+        validationField={`${prefix}professionalId`}
         value={value.professionalId ?? "none"}
         items={{ none: "Sin profesional asociado", ...options.professionals }}
         onChange={next => set("professionalId", next === "none" ? null : next)}
@@ -99,6 +114,8 @@ export function MetadataFields({ value, onChange, options, part = "all", name = 
 
       <ArchiveSelect
         label="Atención vinculada"
+        error={issues.encounterId}
+        validationField={`${prefix}encounterId`}
         value={value.encounterId ?? "none"}
         items={{ none: "Sin atención vinculada", ...Object.fromEntries(history.encounters.map(item => [item.id, `${item.date} · ${item.reason || "Atención clínica"}`])) }}
         onChange={next => set("encounterId", next === "none" ? null : next)}
@@ -106,6 +123,8 @@ export function MetadataFields({ value, onChange, options, part = "all", name = 
 
       <ArchiveSelect
         label="Tratamiento vinculado"
+        error={issues.treatmentId}
+        validationField={`${prefix}treatmentId`}
         value={value.treatmentId ?? "none"}
         items={{ none: "Sin tratamiento vinculado", ...options.treatments }}
         onChange={next => set("treatmentId", next === "none" ? null : next)}
@@ -113,6 +132,8 @@ export function MetadataFields({ value, onChange, options, part = "all", name = 
 
       <ArchiveSelect
         label="Resultado de examen solicitado"
+        error={issues.examRequestId}
+        validationField={`${prefix}examRequestId`}
         value={value.examRequestId ?? "none"}
         items={{ none: "Sin examen vinculado", ...Object.fromEntries(history.record.examRequests.filter(item => item.status === "pendiente" || item.id === value.examRequestId).map(item => [item.id, `${clinicalFileTypes[item.kind]} · ${item.requestedAt}${item.detail ? ` · ${item.detail}` : ""}`])) }}
         onChange={next => set("examRequestId", next === "none" ? null : next)}
@@ -122,13 +143,17 @@ export function MetadataFields({ value, onChange, options, part = "all", name = 
         <label htmlFor={`${id}-zone`}>Zona o pieza dental</label>
         <Input
           id={`${id}-zone`}
+          data-validation-field={`${prefix}zone`}
+          aria-invalid={Boolean(issues.zone)}
+          aria-describedby={issues.zone?`${id}-zone-error`:undefined}
           maxLength={150}
           value={value.zone}
           onChange={event => set("zone", event.target.value)}
         />
+        <FieldError id={`${id}-zone-error`}>{issues.zone}</FieldError>
       </div>
 
-      <fieldset className={styles.full}>
+      <fieldset className={styles.full} aria-invalid={Boolean(issues.tagIds)} aria-describedby={issues.tagIds?`${id}-tags-error`:undefined} data-validation-field={`${prefix}tagIds`} tabIndex={-1}>
         <legend>Etiquetas</legend>
         <div className={styles.chips}>
           {catalog.tags.map(tag => <button
@@ -157,17 +182,22 @@ export function MetadataFields({ value, onChange, options, part = "all", name = 
             onClick={() => void create("tag")}
           ><Plus />Agregar etiqueta</Button>
         </div>
+        <FieldError id={`${id}-tags-error`}>{issues.tagIds}</FieldError>
       </fieldset>
 
       <div className={`${styles.field} ${styles.full}`}>
         <label htmlFor={`${id}-notes`}>Notas clínicas del archivo</label>
         <Textarea
           id={`${id}-notes`}
+          data-validation-field={`${prefix}notes`}
+          aria-invalid={Boolean(issues.notes)}
+          aria-describedby={issues.notes?`${id}-notes-error`:undefined}
           rows={3}
           maxLength={3000}
           value={value.notes}
           onChange={event => set("notes", event.target.value)}
         />
+        <FieldError id={`${id}-notes-error`}>{issues.notes}</FieldError>
       </div>
 
     </>}

@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { LoaderCircle } from "lucide-react"
-import { useForm } from "react-hook-form"
+import { useValidatedForm as useForm } from "@/shared/hooks/use-validated-form"
 import { Link, useLocation } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -17,11 +17,12 @@ import { accessRequestDetailsSchema, type AccessRequestFields } from "../lib/acc
 
 export function RequestAccessPage() {
   const location = useLocation()
-  const request = useAccessRequest()
+  const demo=new URLSearchParams(location.search).get("demo")==="1"
+  const request = useAccessRequest(demo)
   const { register, handleSubmit, formState: { errors } } = useForm<AccessRequestFields, unknown, AccessRequestFormValues>({
     resolver: zodResolver(accessRequestDetailsSchema),
     mode: "onTouched",
-    defaultValues: { firstName: "", lastName: "", email: "", institution: "", message: "" },
+    defaultValues: { firstName: "", lastName: "", email: "", institution: "", message: "", requestedUsername:"" },
   })
 
   function onSubmit(values: AccessRequestFormValues) {
@@ -53,6 +54,7 @@ export function RequestAccessPage() {
               aria-labelledby="request-last-name-label" aria-invalid={!!errors.lastName} aria-describedby={errors.lastName ? "request-last-name-error" : undefined} {...register("lastName")} />
             <FieldError id="request-last-name-error" errors={errors.lastName ? [errors.lastName] : undefined} />
           </Field>
+          <Field data-invalid={Boolean(errors.requestedUsername)} className="auth-field-full"><FieldLabel htmlFor="requested-username">Nombre de usuario solicitado</FieldLabel><Input id="requested-username" placeholder="Ej. jperez" autoComplete="username" {...register("requestedUsername")} aria-invalid={Boolean(errors.requestedUsername)}/><FieldError>{errors.requestedUsername?.message}</FieldError><p className="auth-optional">Propuesta para revisión administrativa. Se conserva localmente; no reserva un identificador en el servidor.</p></Field>
           <Field data-invalid={!!errors.email} className="auth-field-full">
             <FieldLabel htmlFor="request-email" data-required="true"><span id="request-email-label">Correo electrónico</span></FieldLabel>
             <Input
@@ -83,7 +85,7 @@ export function RequestAccessPage() {
           </Field>
         </FieldGroup>
         {request.isSuccess && (
-          <AuthNotice id="auth-result">Recibimos tu solicitud. El administrador de la clínica la revisará y te escribirá al correo indicado.</AuthNotice>
+          <AuthNotice id="auth-result">{demo?"Solicitud pendiente en la demostración local. No se creó una cuenta ni se envió un correo.":"Recibimos tu solicitud. El administrador de la clínica la revisará."}</AuthNotice>
         )}
         {request.isError && <AuthNotice id="auth-result" error>{getErrorMessage(request.error)}</AuthNotice>}
         <Button type="submit" className="auth-submit" disabled={request.isPending || request.isSuccess}>

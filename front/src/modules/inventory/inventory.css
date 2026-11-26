@@ -148,3 +148,5 @@
   .inventory-toolbar-actions { width: 100%; justify-content: flex-end; }
 }
 @media (prefers-reduced-motion: reduce) { .inventory-section-panel, .inventory-section-trigger > svg:last-child { transition: none !important; } }
+
+.inventory-dialog-scroll .inventory-editor { overflow-anchor: none; }

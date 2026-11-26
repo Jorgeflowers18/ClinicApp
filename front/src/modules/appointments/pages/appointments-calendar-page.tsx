@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ConfirmDialog } from "@/shared/components/confirm-dialog"
 import { PageHeader } from "@/shared/components/page-header"
+import { DemoPermission } from "@/modules/saas/components/demo-permission"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
 
@@ -239,7 +240,7 @@ export function AppointmentsCalendarPage() {
         title="Citas"
         description="Calendario de citas de la clínica."
         actions={
-          <>
+          <DemoPermission module="Citas" action="create">
             <Button
               variant="outline"
               onClick={() => {
@@ -260,7 +261,7 @@ export function AppointmentsCalendarPage() {
               <Plus />
               Nueva cita
             </Button>
-          </>
+          </DemoPermission>
         }
       />
 

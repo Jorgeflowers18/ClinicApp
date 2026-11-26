@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef,useState } from "react"
 import { ArrowRight, BriefcaseBusiness, Info, MoonStar, Save, SunMedium, UserRound } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useLocation, useNavigate } from "react-router-dom"
@@ -15,6 +15,13 @@ import { toast } from "sonner"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { ProfilePhotoControls } from "../components/profile-photo-controls"
 import { useProfileEditor } from "../components/use-profile-editor"
+import { AccountIdentityFields } from "@/modules/saas/components/account-identity-fields"
+import { accountIdentitySchema, existingAccountIdentitySchema } from "@/modules/saas/lib/identity"
+import { identityService } from "@/modules/saas/services"
+import { assertUsernameAvailable } from "@/modules/saas/adapters/demo-repository"
+import { focusValidationError } from "@/shared/lib/validation-focus"
+import { useDemoContext } from "@/modules/saas/state"
+import "@/modules/saas/saas.css"
 
 import styles from "./user-profile-page.module.css"
 
@@ -24,6 +31,8 @@ export function UserProfilePage() {
   const location = useLocation()
   const { resolvedTheme, setTheme } = useTheme()
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [identity,setIdentity]=useState(()=>user?identityService.initial(user):{id:"",firstName:"",lastName:"",username:"",email:"",phone:""})
+  const [identityErrors,setIdentityErrors]=useState<Record<string,string>>({}),root=useRef<HTMLDivElement>(null),demo=useDemoContext(state=>state.userId)
 
   if (!user) {
     return null
@@ -31,10 +40,14 @@ export function UserProfilePage() {
 
   const handleSubmit = async () => {
     setSaveError(null)
+    const parsed=(isInitialSetup ? accountIdentitySchema : existingAccountIdentitySchema).safeParse(identity)
+    if(!parsed.success){setIdentityErrors(Object.fromEntries(parsed.error.issues.map(issue=>[issue.path[0],issue.message])));focusValidationError(root.current);return}
     try {
+      if (parsed.data.username) assertUsernameAvailable(parsed.data.username,user.id)
       await saveFields()
-      toast.success("Perfil guardado")
-      const redirectTo = (location.state as { from?: string } | null)?.from ?? "/"
+      await identityService.save({ id: user.id, ...parsed.data })
+      toast.success(demo?"Perfil de demostración guardado":"Perfil guardado; identificador guardado localmente")
+      const redirectTo = demo ? user.role==="admin"?"/personal-accesos":"/citas" : (location.state as { from?: string } | null)?.from ?? "/"
       navigate(redirectTo, { replace: true })
     } catch (error) { setSaveError(getErrorMessage(error)) }
   }
@@ -42,7 +55,7 @@ export function UserProfilePage() {
   const displayName = profile.fullName.trim()
 
   return (
-    <div className={cn(styles.shell, isInitialSetup && styles.setupShell)}>
+    <div ref={root} className={cn(styles.shell, isInitialSetup && styles.setupShell)}>
       <div className={cn("clinic-app-canvas", styles.root, isInitialSetup && styles.standalone)}>
         {isInitialSetup ? (
           <>
@@ -98,15 +111,7 @@ export function UserProfilePage() {
             </CardHeader>
             <CardContent>
               <div className={styles.fields}>
-                <div className={styles.field}>
-                  <label htmlFor="user-profile-fullName">Nombre completo</label>
-                  <Input
-                    id="user-profile-fullName"
-                    value={profile.fullName}
-                    onChange={(event) => handleChange("fullName", event.target.value)}
-                    placeholder="Ej. Ana Morales"
-                  />
-                </div>
+                <AccountIdentityFields value={identity} initial={isInitialSetup} errors={identityErrors} onChange={next=>{setIdentity(next);handleChange("fullName",`${next.firstName} ${next.lastName}`.trim());setIdentityErrors(current=>Object.fromEntries(Object.entries(current).filter(([key])=>next[key as keyof typeof next]===identity[key as keyof typeof identity])))}}/>
 
                 <div className={styles.fieldPair}>
                   <div className={styles.field}>
@@ -123,7 +128,7 @@ export function UserProfilePage() {
                     <Input
                       id="user-profile-specialty"
                       value={profile.specialty}
-                      onChange={(event) => handleChange("specialty", event.target.value)}
+                      readOnly
                       placeholder="Ej. Odontología, recepción, administración"
                     />
                   </div>
@@ -144,7 +149,7 @@ export function UserProfilePage() {
 
                 {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
                 <FormActions>
-                  <Button variant="outline" disabled={saving !== null || !dirty} onClick={() => { cancelChanges(); setSaveError(null) }}>Cancelar</Button>
+                  <Button variant="outline" disabled={saving !== null} onClick={() => { cancelChanges(); setIdentity(identityService.initial(user));setIdentityErrors({});setSaveError(null) }}>Cancelar</Button>
                   <Button onClick={handleSubmit} disabled={saving !== null} className={styles.submit}>
                     {saving === "fields" ? "Guardando…" : isInitialSetup ? "Continuar" : "Guardar cambios"}
                     {isInitialSetup ? <ArrowRight className="size-4" /> : <Save className="size-4" />}
@@ -157,7 +162,7 @@ export function UserProfilePage() {
 
         <div className={styles.notice}>
           <Info aria-hidden="true" />
-          <div><p>Tu perfil quedará asociado a tu cuenta y se mostrará en la interfaz.</p><p className={styles.persistenceNote}>Los cambios confirmados se guardan en tu cuenta y se ven desde cualquier equipo.</p></div>
+          <div><p>Tu perfil quedará asociado a tu cuenta y se mostrará en la interfaz.</p><p className={styles.persistenceNote}>{demo?"Recorrido de demostración: los cambios se guardan en este navegador.":"El perfil se guarda en tu cuenta; el nombre de usuario y teléfono permanecen en el adaptador local hasta su integración."}</p></div>
         </div>
       </div>
     </div>

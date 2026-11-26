@@ -27,6 +27,8 @@ import { InstitutionProfilePage } from "@/modules/institution/pages/institution-
 import { NotificationsReportPage } from "@/modules/notifications/pages/notifications-report-page"
 import { FinancePage } from "@/modules/finance/pages/finance-page"
 import { ReportsPage } from "@/modules/reports/pages/reports-page"
+import { StaffManagementPage } from "@/modules/saas/pages/staff-page"
+import { ActivationPage } from "@/modules/saas/pages/activation-page"
 
 import { AppLayout } from "./layout/app-layout"
 import { AdministrationPage } from "./pages/administration-page"
@@ -58,6 +60,9 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/perfil-usuario" element={<UserProfilePage />} />
+          <Route path="/activar-cuenta" element={<ActivationPage/>}/>
+          <Route path="/cambio-inicial-contrasena" element={<ResetPasswordPage demoPurpose="first-login"/>}/>
+          <Route path="/cambiar-contrasena" element={<ResetPasswordPage demoPurpose="profile"/>}/>
           <Route path="/" element={<DashboardPage />} />
 
           <Route path="/pacientes" element={<PatientsListPage />} />
@@ -108,6 +113,7 @@ export function AppRoutes() {
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+            <Route path="/personal-accesos" element={<StaffManagementPage/>}/>
             <Route path="/perfil-institucion" element={<InstitutionProfilePage />} />
             <Route path="/administracion" element={<AdministrationPage />} />
             <Route path="/reportes" element={<ReportsPage />} />

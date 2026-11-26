@@ -11,10 +11,13 @@ import { SearchInput } from "@/shared/components/search-input"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { InstitutionMark } from "@/modules/institution/components/institution-brand"
 import { useInstitutionProfile, useSavedInstitutionName } from "@/modules/institution/hooks/use-institution-profile"
-import { useAppointmentsList, useProfessionals } from "@/modules/appointments/api/appointments.queries"
+import { useAppointmentsList, useProfessionals,useRooms } from "@/modules/appointments/api/appointments.queries"
+import { useActiveTreatments } from "@/modules/treatments/api/treatments.queries"
+import { useDemoContext,useSaasData } from "@/modules/saas/state"
+import { professionalAvailability,clinicDay } from "@/modules/saas/lib/professional-policy"
 import { appointmentStatusLabels } from "@/modules/appointments/types/appointment.types"
 import { usePatient } from "@/modules/patients/api/patients.queries"
-import { appointmentDateTime, hasActiveAppointmentStatus, resolveAppointmentMessage, resolveExampleMessage, type MessageIssue } from "../lib/message-template"
+import { appointmentDateTime, hasActiveAppointmentStatus, resolveAppointmentMessage, resolveExampleMessage,whatsappUrl, type MessageIssue } from "../lib/message-template"
 
 function MessageIssues({ issues, patientId }: { issues: MessageIssue[]; patientId?: string }) {
   const admin = useAuthStore(state => state.user?.role === "admin")
@@ -34,6 +37,7 @@ function AppointmentMessagePreview({ message, institutionName, selectedId, onSel
   // Solo las citas de hoy a 30 días, no la agenda completa.
   const range = useMemo(() => ({ from: format(new Date(), "yyyy-MM-dd"), to: format(addDays(new Date(), 30), "yyyy-MM-dd") }), [])
   const appointments = useAppointmentsList(range), professionals = useProfessionals()
+  const rooms=useRooms(),treatments=useActiveTreatments(),context=useDemoContext(),saas=useSaasData()
   const [search, setSearch] = useState("")
   const records = appointments.data ?? []
   const appointment = records.find(item => item.id === selectedId)
@@ -45,7 +49,10 @@ function AppointmentMessagePreview({ message, institutionName, selectedId, onSel
   const filtered = records.filter(item => `${items[item.id]} ${item.id}`.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()
     .includes(search.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim()))
   const professional = professionals.data?.find(item => item.id === appointment?.professionalId)
-  const result = resolveAppointmentMessage(message, { institutionName, appointment, patient: selectedPatient.data, professional })
+  const site=context.userId?saas.organizations.find(item=>item.id===context.organizationId)?.branches.find(item=>item.id===context.siteId):null
+  const result = resolveAppointmentMessage(message, { institutionName, appointment, patient: selectedPatient.data, professional,specialty:professional?.specialty,treatmentName:treatments.data?.find(item=>item.id===appointment?.treatmentId)?.name,roomName:rooms.data?.find(item=>item.id===appointment?.roomId)?.name,siteName:site?.name })
+  const member=saas.users.find(item=>item.professionalId===appointment?.professionalId),unavailable=context.userId&&member&&appointment?professionalAvailability(member,context.siteId,clinicDay(new Date(appointment.start))):null
+  const whatsapp=result.complete&&selectedPatient.data?.notificationsEnabled?whatsappUrl(selectedPatient.data.phone,result.message):null
   const loading = appointments.isPending || professionals.isPending || Boolean(appointment && selectedPatient.isPending)
   const failed = appointments.isError || professionals.isError || Boolean(appointment && selectedPatient.isError)
   const refreshing = appointments.isFetching || professionals.isFetching || Boolean(appointment && selectedPatient.isFetching)
@@ -71,6 +78,9 @@ function AppointmentMessagePreview({ message, institutionName, selectedId, onSel
         <div><dt>Estado de la cita</dt><dd>{appointmentStatusLabels[appointment.status]}</dd></div>
       </dl>
       <p className="messaging-preview-body" data-message-body>{result.message}</p>
+      {unavailable&&<p className="messaging-context-issues">{unavailable} Revisa la cita; no se sustituirá al profesional.</p>}
+      {whatsapp?<Button nativeButton={false} render={<a href={whatsapp} target="_blank" rel="noopener noreferrer"/>}>Enviar por WhatsApp</Button>:<p className="messaging-hint">Para abrir WhatsApp necesitas un teléfono válido, preferencias habilitadas y todas las variables resueltas.</p>}
+      <p className="messaging-hint">Abrir WhatsApp no registra el mensaje como enviado.</p>
       {!hasActiveAppointmentStatus(appointment) && <p className="messaging-context-issues">Esta cita no está activa para recordatorios. Sus datos se muestran como consulta.</p>}
       <MessageIssues issues={result.issues} patientId={appointment.patientId} />
       {!selectedPatient.data?.notificationsEnabled && <p className="messaging-hint">El paciente tiene las notificaciones deshabilitadas.</p>}
@@ -84,7 +94,8 @@ function AppointmentMessagePreview({ message, institutionName, selectedId, onSel
 
 export function NotificationMessagePreview({ message }: { message: string }) {
   const institution = useInstitutionProfile()
-  const institutionName = useSavedInstitutionName()
+  const savedName = useSavedInstitutionName(),context=useDemoContext(),data=useSaasData(),org=data.organizations.find(item=>item.id===context.organizationId)
+  const institutionName=context.userId?org?.name??null:savedName
   const [mode, setMode] = useState("example"), [appointmentId, setAppointmentId] = useState("")
   const example = resolveExampleMessage(message, institutionName)
   return <section className="messaging-preview" aria-label="Vista previa del mensaje">
@@ -95,7 +106,7 @@ export function NotificationMessagePreview({ message }: { message: string }) {
         <SelectContent><SelectItem value="example">Datos de ejemplo</SelectItem><SelectItem value="appointment">Cita existente</SelectItem></SelectContent>
       </Select>
     </div>
-    <div className="messaging-preview-brand"><InstitutionMark name={institutionName ?? ""} image={institution.logoImage} /><span>{institutionName ?? "Nombre institucional sin configurar"}</span></div>
+    <div className="messaging-preview-brand"><InstitutionMark name={institutionName ?? ""} image={context.userId?org?.logo??null:institution.logoImage} /><span>{institutionName ?? "Nombre institucional sin configurar"}</span></div>
     {!institutionName && <MessageIssues issues={[{ field: "institutionName", message: "Configura el nombre de la institución en Perfil institucional para usar la variable Clínica." }]} />}
     {mode === "example" ? <>
       <p className="messaging-preview-body" data-message-body>{example.message}</p>

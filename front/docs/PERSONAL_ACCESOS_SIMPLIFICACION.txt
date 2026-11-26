@@ -1,0 +1,163 @@
+CLINICAPP — SIMPLIFICACIÓN DE PERSONAL Y ACCESOS
+26 de noviembre de 2026
+
+RESULTADO
+Personal y accesos se centra en la administración clínica.
+Solo quedan Usuarios, Profesionales y Especialidades, con etiquetas separadas,
+scroll local en pantallas pequeñas y una acción principal según la pestaña.
+La descripción es: Administra los usuarios y profesionales de tu clínica.
+
+OPCIONES RETIRADAS
+Nueva organización, Plan y licencias, Configurar cliente y Administración actual
+de la API ya no aparecen en este módulo. Se retiraron las rutas nuevas
+/planes-licencias y /configuracion-cliente y sus componentes exclusivos.
+Se retiró la matriz editable de permisos y la pestaña Asignaciones a sedes.
+La ruta preexistente /administracion y los módulos originales se conservan.
+No se creó un panel del proveedor ni se trasladaron opciones comerciales.
+Los datos persistidos de organizaciones, planes y asignaciones no se borraron.
+
+ROLES Y SEDES
+Nuevo usuario y Editar usuario comparten el mismo modal.
+Los apartados son Datos personales, Credenciales, Rol y sede, Perfil profesional
+(solo para Personal médico) y Activación.
+Un selector permite elegir Administrador, Recepción o Personal médico.
+Los permisos están predefinidos; las antiguas modificaciones granulares locales
+ya no determinan los permisos de la interfaz. Los guards se conservan.
+El modelo roles[] sigue siendo compatible; al editar se guarda el único rol elegido.
+Rol y sede muestra la organización actual, sede principal y sedes adicionales.
+Permite retirar asignaciones sin duplicar identidades.
+Los horarios de profesionales por sede se conservan y se editan en este apartado.
+Las asignaciones de otras organizaciones y el historial de las retiradas se conservan.
+No se creó otra administración de sedes: el catálogo sigue en Perfil institucional.
+
+MENÚS Y ACCESO
+El menú de usuario tiene cuatro opciones con iconos:
+Ver perfil, Editar usuario, Gestionar acceso y Desactivar/Reactivar usuario.
+Gestionar acceso reúne invitación, recuperación, cambio obligatorio y bloqueo/
+desbloqueo, mostrando solo acciones apropiadas para la cuenta.
+Las acciones de demostración no envían correos ni cambian credenciales reales.
+Se conservan las restricciones para impedir desactivar o degradar la propia
+cuenta administrativa mientras gestiona el entorno de demostración.
+El menú tiene 260 px, limitado al ancho de la pantalla, con textos sin partir.
+
+ESTADOS
+Cuenta: activa en verde, inactiva en gris, bloqueada en rojo suave y pendiente
+en ámbar.
+Profesional: activo en verde, inactivo en gris, vacaciones en azul, permiso/
+licencia en ámbar y retirado en rojo atenuado.
+Cada badge conserva su texto y un indicador discreto; no depende solo del color.
+Cuenta y estado profesional son campos distintos.
+Se mantienen las fechas de ausencias, observaciones privadas y referencias
+a profesionales retirados, sin cancelar ni reasignar citas.
+Los colores se basan en tokens existentes; el azul se define solo en el badge.
+No se cambiaron los temas globales, el violeta ni Acid Lime.
+
+ACORDEONES
+useModalAccordion centraliza el estado de apertura y el foco.
+La nueva sección abre al mismo tiempo que la anterior cierra; hay una sola
+sección abierta por grupo activo. No se usan tiempos de espera arbitrarios.
+Los campos quedan montados y se conservan los valores.
+El foco de validación espera las animaciones reales antes de revelar el campo.
+Un clic posterior del usuario no vuelve a enfocar el encabezado.
+El desplazamiento se limita al contenedor del modal; se respeta reduced motion.
+
+MODALES REVISADOS
+Pacientes: creación y edición usan el controlador compartido.
+Tratamientos: se conserva el contenido y se coordina apertura/cierre.
+Compras y Esterilización: se reutiliza el controlador mediante el hook de Inventario.
+Registrar atención: se verificaron los componentes reales de los pasos 2, 3, 4 y 5.
+Cada paso activo mantiene sus grupos exclusivos; se conservan valores y errores.
+Archivo clínico: se unificó la apertura entre secciones comunes y ajustes por archivo.
+Los metadatos quedan montados al cerrar y los reintentos omiten archivos ya guardados.
+Personal y accesos: usa el mismo controlador, con apertura automática ante errores.
+Citas, proveedores, estado profesional y formularios institucionales simples no
+tenían acordeones; no se añadieron ni se rediseñaron sus contenidos.
+No se tocaron los acordeones internos de las librerías clínicas protegidas.
+
+IDENTIFICACIÓN Y ESPACIADO
+Datos de demostración se muestra de forma discreta con tooltip una vez por contexto.
+Los modales de creación/edición de usuarios ya no repiten el banner grande.
+Se corrigieron el ancho intrínseco de las pestañas, sus gaps y padding,
+el menú contextual y las columnas de la tabla de usuarios.
+Los badges permiten ajustar su altura para conservar el texto completo.
+Los cambios de CSS se limitan a los componentes implicados.
+
+COMPONENTES REUTILIZADOS
+PageHeader, DataTable y tarjetas móviles, Tabs, Dialog, ConfirmDialog, Select,
+Tooltip, Badge, Field/FieldError, Checkbox, Input, Button y formularios existentes.
+Se conservaron Zod, useValidatedForm, el repositorio demo y los contratos HTTP.
+Se añadieron useModalAccordion y AccessManagementDialog.
+No se instalaron dependencias.
+
+VERIFICACIONES EJECUTADAS
+10 grupos de comprobaciones de Personal y accesos aprobados:
+estructura, acciones contextuales, creación y validación, rol, sedes, navegación,
+menú/acceso, ausencias, rutas retiradas, estados y responsive.
+12 grupos de modales aprobados:
+Pacientes en claro/oscuro; Tratamientos; Compras; Esterilización;
+los cuatro pasos reales de Atenciones; Archivo clínico con reintentos;
+reduced motion/cambios rápidos y ausencia de errores de ejecución.
+5 grupos de regresión de cuenta aprobados:
+login real interceptado por correo y alias, Mi perfil con usuario faltante,
+recuperación genérica, solicitud con nombres compuestos y errores de ejecución.
+Total: 27 grupos aprobados con Chrome/Playwright, datos sintéticos y llamadas
+HTTP interceptadas. Cero escrituras de prueba en la API real.
+No se ejecutó la suite que crea datos en la base real.
+Los scripts de esta revisión están en TEMP; no se añadieron variables ni
+configuraciones de pruebas al frontend distribuido.
+
+RESPONSIVE
+Se verificaron 320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px en ambos temas:
+pestañas separadas, menús dentro del viewport, foco de errores y modales sin
+desbordamiento horizontal global. Las tablas conservan scroll interno cuando
+es necesario. Se guardaron y revisaron capturas de escritorio y móvil.
+
+COMPROBACIONES TÉCNICAS
+TypeScript y build Vite: aprobados mediante npm.cmd run build.
+Lint: sin errores; conserva cuatro advertencias preexistentes en button.tsx,
+badge.tsx, tabs.tsx y api-problem.ts.
+Vite mantiene el aviso por chunks de más de 500 kB.
+git diff --check: aprobado.
+Se compararon hashes de los 187 archivos protegidos del backend y herramientas
+clínicas: sin diferencias.
+
+CONSERVACIÓN
+El Sidebar no se rediseñó ni se cambiaron sus opciones en esta corrección.
+El Header no se reemplazó: solo se limpiaron referencias a rutas retiradas.
+Login, Mi perfil, primera configuración, recuperación y activación se conservan.
+No se modificaron backend, endpoints, base de datos, migraciones ni infraestructura.
+El odontograma, el periodontograma y sus librerías permanecen intactos.
+Las funciones sin API continúan como demostración local claramente identificada.
+
+ARCHIVOS DE ESTA CORRECCIÓN
+- front/src/app/layout/app-layout.tsx
+- front/src/app/routes.tsx
+- front/src/modules/clinical-history/archive/archive.module.css
+- front/src/modules/clinical-history/archive/components/controls.tsx
+- front/src/modules/clinical-history/archive/components/upload-dialog.tsx
+- front/src/modules/clinical-history/components/encounter-accordion.css
+- front/src/modules/clinical-history/components/encounter-accordion.tsx
+- front/src/modules/inventory/hooks/use-inventory-accordion.ts
+- front/src/modules/inventory/inventory.css
+- front/src/modules/patients/hooks/use-patient-accordion.ts
+- front/src/modules/patients/patients.css
+- front/src/modules/treatments/hooks/use-treatment-accordion.ts
+- front/src/modules/treatments/treatments.css
+- front/src/modules/saas/components/context-selector.tsx
+- front/src/modules/saas/components/controls.tsx
+- front/src/modules/saas/components/organization-dialog.tsx (retirado)
+- front/src/modules/saas/components/plan-editor.tsx (retirado)
+- front/src/modules/saas/components/role-permissions.tsx (retirado)
+- front/src/modules/saas/components/scope-boundary.tsx
+- front/src/modules/saas/components/site-assignments.tsx (retirado)
+- front/src/modules/saas/components/specialties.tsx
+- front/src/modules/saas/components/staff-editor.tsx
+- front/src/modules/saas/lib/permissions.ts
+- front/src/modules/saas/pages/client-setup-page.tsx (retirado)
+- front/src/modules/saas/pages/license-page.tsx (retirado)
+- front/src/modules/saas/pages/staff-page.tsx
+- front/src/modules/saas/saas.css
+- front/src/modules/saas/services.ts
+- front/src/modules/saas/types.ts
+- front/src/modules/saas/components/access-management-dialog.tsx
+- front/src/shared/hooks/use-modal-accordion.ts

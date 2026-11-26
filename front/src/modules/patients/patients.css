@@ -253,3 +253,8 @@
 .patient-advanced-filters .patient-deleted-filter label { display: inline; margin: 0; color: var(--foreground); font-size: 14px; }
 .patient-ledger-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .patient-void-reason { display: block; margin-top: 4px; color: var(--muted-foreground); font-size: 12px; }
+
+.patient-edit-dialog .patient-section-panel[data-ending-style] { transition-duration: 200ms; }
+@media (prefers-reduced-motion: reduce) { .patient-edit-dialog .patient-section-panel { transition-duration: 0s !important; } }
+
+.patient-edit-dialog .patient-form-sections { overflow-anchor: none; }

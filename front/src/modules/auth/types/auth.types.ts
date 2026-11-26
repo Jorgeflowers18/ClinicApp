@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { identifierSchema } from "@/modules/saas/lib/identity"
 
 export const roles = ["admin", "recepcion", "medico"] as const
 export type Role = (typeof roles)[number]
@@ -34,7 +35,7 @@ export interface AuthSession {
 }
 
 export const loginSchema = z.object({
-  email: z.string().email("Ingresa un correo válido"),
+  email: identifierSchema,
   password: z.string().min(1, "La contraseña es obligatoria"),
   /**
    * "Recordarme". Sin marcar, la sesión termina al cerrar el navegador (o tras 12 horas sin uso): lo seguro en

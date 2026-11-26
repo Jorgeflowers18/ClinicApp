@@ -1,5 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, useForm, useWatch } from "react-hook-form"
+import { Controller,useWatch } from "react-hook-form"
+import { useValidatedForm as useForm } from "@/shared/hooks/use-validated-form"
+import { PatientDuplicateHint } from "./patient-duplicate-hint"
 import { useEffect, useRef } from "react"
 import { Accordion } from "@base-ui/react/accordion"
 import { CalendarDays, ClipboardCheck, Phone, ShieldCheck, UserRound } from "lucide-react"
@@ -136,6 +138,7 @@ export function PatientForm({ patientId: id, presentation = "page", initialSecti
       <PatientFormSection id="patient-section-personal" title="Datos personales" icon={UserRound} status={personalComplete ? "Completa" : "Obligatoria"} hasErrors={hasErrors(sections.personal)}>
         {text("firstName", "Nombres", "text", true)}{text("lastName", "Apellidos", "text", true)}
         {select("documentType", "Tipo de documento", documentTypes)}{text("documentId", "Número de documento", "text", true)}
+        <PatientDuplicateHint documentId={values.documentId??""} documentType={values.documentType??"otro"} patientId={id}/>
         {text("birthDate", "Fecha de nacimiento", "date", true)}
         <div className="patient-readonly" data-patient-field="age" data-patient-short><span>Edad</span><output aria-live="polite">{age === null ? "Se calcula con la fecha de nacimiento" : `${age} ${age === 1 ? "año" : "años"}`}</output></div>
         {select("gender", "Género", genderOptions)}{select("treatmentStatus", "Estado y seguimiento", treatmentStatusOptions)}

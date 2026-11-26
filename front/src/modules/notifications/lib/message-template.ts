@@ -9,6 +9,10 @@ export interface AppointmentMessageContext {
   appointment?: Appointment | null
   patient?: Pick<Patient, "id" | "firstName" | "lastName"> | null
   professional?: Pick<Professional, "id" | "name"> | null
+  specialty?: string | null
+  treatmentName?: string | null
+  roomName?: string | null
+  siteName?: string | null
 }
 export interface ResolvedMessage { message: string; issues: MessageIssue[]; complete: boolean }
 /** Existing active notification states; this deliberately does not decide dispatch timing. */
@@ -20,11 +24,14 @@ const missing: Record<string, MessageIssue & { preview: string }> = {
   "[hora de la cita]": { field: "start", message: "Esta cita no tiene una hora de inicio válida.", preview: "Hora de cita no disponible" },
   "[profesional]": { field: "professionalId", message: "Esta cita no tiene un profesional asignado disponible.", preview: "Profesional pendiente de asignación" },
 }
+const aliases:Record<string,string>={"{nombre_paciente}":"[nombre del cliente]","{nombre_institucion}":"[nombre de la clínica]","{fecha_cita}":"[fecha de la cita]","{hora_cita}":"[hora de la cita]","{profesional}":"[profesional]"}
+for(const [token,label] of Object.entries({"{especialidad}":"Especialidad","{tratamiento}":"Tratamiento","{consultorio}":"Consultorio","{sede}":"Sede"}))missing[token]={field:"message",message:`${label}: no hay un dato vinculado verificable en esta cita.`,preview:`${label} no disponible`}
 
 /** Single-pass, literal substitution. Values cannot introduce another template substitution. */
 function resolve(message: string, values: Record<string, string | null>): ResolvedMessage {
   const issues: MessageIssue[] = []
-  const resolved = message.replace(/\[[^[\]\r\n]+\]/g, token => {
+  const resolved = message.replace(/\[[^[\]\r\n]+\]|\{[^{}\r\n]+\}/g, original => {
+    const token=aliases[original]??original
     if (!Object.hasOwn(missing, token)) {
       issues.push({ field: "message", message: `La variable ${token} no está disponible. Usa las variables del editor.` })
       return `Variable no reconocida: ${token.slice(1, -1)}`
@@ -57,6 +64,10 @@ export function resolveAppointmentMessage(message: string, context: AppointmentM
     "[fecha de la cita]": date?.date ?? null,
     "[hora de la cita]": date?.time ?? null,
     "[profesional]": professional?.name ?? null,
+    "{especialidad}":professional?context.specialty??null:null,
+    "{tratamiento}":context.treatmentName??null,
+    "{consultorio}":context.roomName??null,
+    "{sede}":context.siteName??null,
   })
   if (!appointment) {
     result.issues.unshift({ field: "appointmentId", message: "Selecciona una cita para generar el recordatorio." })
@@ -68,5 +79,6 @@ export function resolveAppointmentMessage(message: string, context: AppointmentM
 /** Only this explicitly-labelled preview is allowed to use sample patient/appointment data. */
 export function resolveExampleMessage(message: string, institutionName: string | null): ResolvedMessage {
   return resolve(message, Object.fromEntries(notificationVariables.map(variable => [variable.token,
-    variable.token === "[nombre de la clínica]" ? institutionName : variable.example])))
+    variable.token === "[nombre de la clínica]" || variable.token === "{nombre_institucion}" ? institutionName : variable.example])))
 }
+export function whatsappUrl(phone:string|undefined,message:string){let digits=(phone??"").replace(/\D/g,"");if(/^0\d{9}$/.test(digits))digits="593"+digits.slice(1);if(!/^[1-9]\d{9,14}$/.test(digits))return null;return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`}

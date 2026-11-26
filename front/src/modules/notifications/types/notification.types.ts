@@ -48,10 +48,19 @@ export interface NotificationVariable {
 
 export const notificationVariables: NotificationVariable[] = [
   { token: "[nombre del cliente]", label: "Nombre del cliente", example: "María González" },
-  { token: "[nombre de la clínica]", label: "Nombre de la clínica", example: "Grupo Odontológico Sonrisas" },
+  { token: "[nombre de la clínica]", label: "Nombre de la clínica", example: "" },
   { token: "[fecha de la cita]", label: "Fecha de la cita", example: "12 de septiembre" },
   { token: "[hora de la cita]", label: "Hora de la cita", example: "10:00 am" },
   { token: "[profesional]", label: "Profesional", example: "Dra. Carla Ríos" },
+  { token: "{nombre_paciente}", label: "Paciente", example: "Paciente de ejemplo" },
+  { token: "{nombre_institucion}", label: "Institución", example: "" },
+  { token: "{fecha_cita}", label: "Fecha", example: "25 de noviembre" },
+  { token: "{hora_cita}", label: "Hora", example: "10:00" },
+  { token: "{profesional}", label: "Profesional", example: "Profesional de ejemplo" },
+  { token: "{especialidad}", label: "Especialidad", example: "Odontología general" },
+  { token: "{tratamiento}", label: "Tratamiento", example: "Control general" },
+  { token: "{consultorio}", label: "Consultorio", example: "Consultorio de ejemplo" },
+  { token: "{sede}", label: "Sede", example: "Sede de ejemplo" },
 ]
 
 export const notificationTemplateSchema = z.object({

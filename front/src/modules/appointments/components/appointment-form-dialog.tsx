@@ -1,7 +1,10 @@
 import { useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { addMinutes, format } from "date-fns"
-import { Controller, useForm } from "react-hook-form"
+import { Controller,useWatch } from "react-hook-form"
+import { useValidatedForm as useForm } from "@/shared/hooks/use-validated-form"
+import { useDemoContext,useSaasData } from "@/modules/saas/state"
+import { professionalAvailability } from "@/modules/saas/lib/professional-policy"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -41,6 +44,7 @@ export function AppointmentFormDialog({
   initialPatientId,
 }: AppointmentFormDialogProps) {
   const isEditMode = Boolean(appointment)
+  const demo=useDemoContext(),saas=useSaasData()
   const { data: professionals } = useProfessionals()
   const { data: rooms } = useRooms()
   const { data: treatments } = useActiveTreatments()
@@ -100,6 +104,9 @@ export function AppointmentFormDialog({
       })
     }
   }, [open, appointment, initialSlot, initialPatientId, reset])
+  const [selectedDate,selectedStart,selectedEnd,selectedProfessional]=useWatch({control,name:["date","startTime","endTime","professionalId"]})
+  const availability=(id:string)=>{const member=saas.users.find(user=>user.professionalId===id);return demo.userId&&selectedDate&&member?professionalAvailability(member,demo.siteId,selectedDate,selectedStart||"09:00",selectedEnd||"09:30"):null}
+  const eligible=(professionals??[]).filter(item=>!availability(item.id)||item.id===selectedProfessional)
 
   function handleTreatmentChange(treatmentId: string | null, onChange: (value: string) => void) {
     onChange(treatmentId ?? "")
@@ -158,12 +165,12 @@ export function AppointmentFormDialog({
                 control={control}
                 name="professionalId"
                 render={({ field }) => (
-                  <Select items={Object.fromEntries(selectable(professionals, field.value).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
+                  <Select items={Object.fromEntries(selectable(eligible, field.value).map(item => [item.id, item.name]))} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="professionalId" className="w-full">
                       <SelectValue placeholder="Selecciona un profesional..." />
                     </SelectTrigger>
                     <SelectContent className="clinic-schedule-options">
-                      {selectable(professionals, field.value).map((professional) => (
+                      {selectable(eligible, field.value).map((professional) => (
                         <SelectItem key={professional.id} value={professional.id}>
                           {professional.name} · {professional.specialty}
                         </SelectItem>
@@ -173,6 +180,7 @@ export function AppointmentFormDialog({
                 )}
               />
               <FieldError errors={errors.professionalId ? [errors.professionalId] : undefined} />
+              {selectedProfessional&&availability(selectedProfessional)&&<p className="text-xs text-destructive">{availability(selectedProfessional)}</p>}
             </Field>
 
             <Field>

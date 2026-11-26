@@ -1,0 +1,267 @@
+INFORME HISTÓRICO DEL 25 DE NOVIEMBRE
+La corrección del 26 de noviembre retira las vistas comerciales y la matriz de permisos.
+La descripción vigente está en PERSONAL_ACCESOS_SIMPLIFICACION.txt.
+
+CLINICAPP — AMPLIACIÓN DEL FRONTEND SaaS
+Fecha: 25 de noviembre de 2026
+Base de trabajo: main, 1c7ed34951dab644e97058fca44ca654507fe64d
+
+ALCANCE Y AUDITORÍA
+Se inspeccionaron rutas, autenticación real, Zustand, TanStack Query, contratos HTTP,
+formularios, perfil, sedes, calendario, pacientes, mensajería y archivo clínico.
+La ampliación conserva la estructura de Sidebar y Header, los grupos existentes,
+las rutas anteriores, el tema claro violeta y el tema oscuro Acid Lime.
+Se agregó Personal y accesos al grupo Gestión. Plan y licencias y Configurar cliente
+se abren desde esa pantalla administrativa; no se creó otra navegación principal.
+
+ENTRADA Y CUENTAS PÚBLICAS DE DEMOSTRACIÓN
+Frontend: http://localhost:5173
+Demostración: http://localhost:5173/login?demo=1
+Administrador: amorales / Demo12345!
+Profesional: avega / Demo12345!
+Recepción: ltorres / Demo12345!
+También se admiten sus correos @demo.example.
+La clave pública solo abre el recorrido de demostración. No es una credencial del servidor.
+La sesión real sigue disponible en /login.
+
+COMPONENTES REUTILIZADOS
+AppLayout, HeaderUserMenu, UserAvatar, ProfilePhotoControls, AuthLayout,
+PageHeader, DataTable y su presentación móvil, Tabs, Dialog con tamaños existentes,
+DialogBody/DialogFooter, Select, Field/FieldError, Input, Button, Checkbox,
+SearchInput, ResetFiltersButton, InstitutionIdentity, InstitutionBranches,
+InstitutionLogoControls, PatientForm, AppointmentFormDialog, calendario,
+NotificationMessagePreview, GlobalNotificationCenter y UploadDialog.
+Se reutilizaron useValidatedForm, focusValidationError, Zod, las claves de queries,
+los contratos de recursos existentes y los tokens semánticos del proyecto.
+
+IDENTIDAD Y FORMULARIOS DE ACCESO
+- Validador y normalización compartidos para usuario o correo.
+- Nombre de usuario de 3 a 30 caracteres; comprobación local de duplicados sin
+  distinguir mayúsculas, sugerencia y conservación de identificadores internos.
+- Nombres y Apellidos se conservan por separado, incluso cuando tienen varias palabras.
+- Login real por correo mantiene su contrato email/password/rememberMe.
+- Un alias preparado localmente se resuelve al correo real antes del login; la
+  contraseña sigue siendo validada por la API existente.
+- Solicitar acceso incorpora usuario solicitado como propuesta administrativa local.
+  El POST real conserva fullName/email/institution/message.
+- Recuperación acepta alias conocido localmente o correo; la confirmación es genérica.
+- Restablecimiento real conserva el enlace con token y el endpoint existente.
+- Activación, cambio obligatorio y cambio desde Mi perfil tienen recorridos explícitos
+  de demostración. No generan tokens, no envían correos y no almacenan contraseñas.
+- Primera configuración permite crear usuario o muestra el ya asignado como solo lectura.
+- Mi perfil permite crear el usuario que falta, sin impedir editar perfiles anteriores.
+  Rol, organizaciones, sedes, especialidades y estados se consultan sin conceder permisos.
+- Avatar y fotografía siguen usando el editor y persistencia existentes.
+
+PERSONAL Y ACCESOS
+- Usuarios con búsqueda, filtros por rol, cuenta, estado profesional, especialidad y sede.
+- Indicadores compactos y directorio profesional en tarjetas o lista.
+- Un modal compartido para crear y editar, con seis acordeones exclusivos animados:
+  datos personales, credenciales, roles, organización/sedes, perfil profesional y activación.
+- Roles reales existentes: administrador, recepción y médico. Se admiten combinaciones
+  en la demostración y se evalúa la unión de sus permisos.
+- Detalle administrativo y acciones de invitación, recuperación, cambio obligatorio,
+  bloqueo, desactivación y reactivación. Sus efectos son locales y se explican al usuario.
+- Las solicitudes pasan por pendiente, revisión, aprobación y creación; el formulario
+  de usuario se precarga con sus nombres, correo y usuario propuesto.
+- Catálogo de especialidades por organización, con edición, activación y duplicados.
+- Matriz de permisos por módulo/acción para el entorno de demostración. La API real
+  conserva sus permisos y sigue siendo la autoridad de seguridad.
+
+PROFESIONALES, ORGANIZACIONES Y SEDES
+- Estado de cuenta separado del estado profesional.
+- Activo, inactivo, vacaciones, permiso y retirado.
+- Ausencias con fechas y observación privada; al terminar un período vuelve a calcularse
+  la disponibilidad, sin dejar al profesional permanentemente de vacaciones.
+- Conservación de ID profesional, registros históricos y asignaciones anteriores inactivas.
+- Advertencia y cantidad verificable de citas futuras de la organización al cambiar estado.
+  No se cancelan ni reasignan citas automáticamente.
+- Varias organizaciones bajo una cuenta empresarial; creación de otra organización.
+- Una identidad con varias sedes y horarios por sede; se reutiliza el catálogo de sedes.
+- Selector de contexto limitado a organizaciones y sedes autorizadas.
+- Cambio de contexto con confirmación, limpieza de cachés y cierre de formularios anteriores.
+- Pacientes únicos dentro de la organización de demostración y separados entre organizaciones.
+- Calendarios separados por sede; una persona no se duplica por trabajar en varias sedes.
+- Se bloquea borrar sedes que aún conservan asignaciones activas.
+
+INTEGRACIÓN CON PACIENTES Y CITAS
+Se conservan pantallas, formularios y contratos existentes. El adaptador de demostración
+añade datos sintéticos aislados por organización y contexto de sede.
+El registro de pacientes advierte coincidencias exactas por tipo y número de documento;
+no fusiona por nombre ni mezcla organizaciones.
+Las citas comprueban asignación, horario, ausencias, cuenta y estado profesional,
+superposiciones y bloqueos. Una selección antigua se conserva para explicar su advertencia.
+Los módulos sin adaptador no muestran datos reales bajo una organización ficticia.
+
+MENSAJERÍA
+Se reutiliza el módulo y su vista previa; no se crea otro módulo.
+Se admiten las cinco variables anteriores y:
+{nombre_paciente}, {nombre_institucion}, {fecha_cita}, {hora_cita}, {profesional},
+{especialidad}, {tratamiento}, {consultorio}, {sede}.
+La sustitución es literal y de una sola pasada.
+La institución y su logo proceden de la identidad guardada o del contexto de demostración.
+Paciente, profesional, fecha y hora se obtienen de la misma cita seleccionada.
+Los datos ausentes se identifican; no se inventa una sede que la API real no relaciona.
+Se distingue la vista previa de ejemplo de la de una cita existente.
+WhatsApp prepara wa.me con teléfono válido y texto codificado. No envía automáticamente
+ni registra un mensaje como enviado al abrir el enlace.
+La campana existente se conserva y utiliza las alertas del contexto en la demostración.
+
+ARCHIVO CLÍNICO Y VALIDACIONES
+Se conserva lista, galería, visor, comparación y acciones de archivos.
+Se localizaron los cambios en selección múltiple y metadatos:
+- Errores por archivo y campo, resaltado y mensaje asociado.
+- Apertura de la sección y foco al primer error después de la animación.
+- Scroll interno del modal y conservación de metadatos.
+- Guardado parcial: los archivos guardados no se reenvían en los reintentos.
+- Error de archivo vacío o fallo general identificado en el archivo correspondiente.
+La validación del servidor y su detección de duplicados permanecen intactas.
+No se implementa idempotencia de servidor ni se afirma una escritura exitosa cuando
+la respuesta del servidor no puede confirmarse.
+Los formularios nuevos usan el estándar compartido de errores. Se hicieron cambios
+localizados en pacientes, citas y plantilla; Inventario y Finanzas conservan el sistema
+de validación que ya tenían, sin reconstrucciones ni cambios globales.
+
+PLANES Y CONFIGURACIÓN DEL CLIENTE
+- Inicial, Profesional y Empresarial, con importes y recursos incluidos configurables.
+- Estimador: base + recursos no incluidos + almacenamiento + complementos.
+- Profesionales contados por ID único, aunque tengan varias sedes.
+- Cuenta de usuario administrativa diferenciada de la licencia profesional.
+- Política configurable de estados facturables, incluyendo vacaciones y permisos.
+- No se cobra por pacientes como unidad principal ni se simulan pagos.
+- Asistente de ocho pasos: institución, logo, primera sede, administrador,
+  especialidades, profesionales, horarios y resumen.
+- Se reutilizan logo/sedes y el mismo modal de personal, con el rol adecuado precargado.
+
+ADAPTADORES Y PERSISTENCIA
+src/modules/saas/adapters/demo-repository.ts centraliza la demostración no sensible.
+src/modules/saas/adapters/operational-demo.ts adapta los contratos ya existentes.
+Namespace local: clinicapp.saas-demonstration.v1.
+SessionStorage conserva solo los IDs del contexto de demostración, sin claves ni tokens.
+Los fallos de almacenamiento no sobrescriben la versión anterior ni un JSON ilegible.
+La sesión real sigue en el AuthStore original y los datos remotos en TanStack Query.
+El límite HTTP evita llamadas reales mientras el entorno de demostración está activo.
+
+INTEGRACIÓN POSTERIOR CON BACKEND
+Esta entrega es una ampliación frontend, no una implementación SaaS de servidor.
+Pendiente de conectar:
+- Búsqueda y unicidad global de nombres de usuario entre dispositivos.
+- Personal multirrol, sedes, organizaciones y permisos reales.
+- Invitaciones, activación, contraseñas temporales y notificaciones por correo.
+- Contexto multiclínica en APIs clínicas, políticas y controles de acceso del servidor.
+- Suscripciones, facturación y persistencia remota de configuración comercial.
+- Variables nuevas en el resolver de plantillas del servidor.
+Para evitar mensajes incorrectos, el editor no guarda variables nuevas con llaves
+en la plantilla real hasta que su resolver esté integrado. Sí funcionan en vista
+previa y WhatsApp; en la demostración se pueden guardar localmente.
+La plantilla real con variables anteriores sigue operativa.
+Las áreas clínicas que requieren una API todavía no adaptada muestran la limitación
+en demostración; el acceso real a esos módulos se conserva fuera de ella.
+
+PRUEBAS EJECUTADAS
+Chrome mediante Playwright, contextos aislados y respuestas HTTP interceptadas:
+17 grupos de comprobaciones SaaS aprobados, más 6 grupos de cuenta/archivo aprobados.
+Incluyen:
+- Login demo y conservación de enlaces de navegación.
+- Creación/edición, errores, foco, acordeón exclusivo y conservación de campos.
+- Duplicados sin distinguir mayúsculas y estabilidad de ID al cambiar usuario.
+- Activación, contraseñas no coincidentes, primer ingreso y usuario asignado.
+- Fechas de vacaciones y recuperación de disponibilidad al terminar.
+- Separación entre organizaciones, rutas prohibidas y acceso por rol.
+- Permisos combinados y rechazo de escrituras demo no autorizadas.
+- Varias sedes, calendarios separados y licencia única por profesional.
+- Validación de ausencias y conservación de citas al retirar/reactivar al profesional.
+- Importes negativos del plan, foco y conservación de valores.
+- Creación de organización, reutilización del modal de sede y asistente.
+- Almacenamiento sin cuota/JSON ilegible sin pérdida de datos previos.
+- Vista previa ligada a cita, variables anteriores/nuevas y URL WhatsApp.
+- Login real interceptado por correo y alias, sin cambiar el contrato HTTP.
+- Recuperación genérica por usuario/correo y formato inválido.
+- Solicitud con nombres compuestos y contrato original.
+- Archivo: errores por campo/archivo, guardado parcial y reintentos sin reenviar guardados.
+- Ausencia de errores de ejecución en los recorridos comprobados.
+No se usó una cuenta real para enviar comunicaciones o escribir datos de prueba.
+No se ejecutó la suite E2E contra la base real porque prepara registros y realiza escrituras.
+
+RESPONSIVE Y REVISIÓN VISUAL
+Listado/modal de personal en claro y oscuro:
+320, 360, 375, 390, 430, 768, 1024, 1280, 1440 y 1920 px.
+Sin desbordamiento horizontal global ni del modal en esas comprobaciones.
+Plan/licencias revisado a 390 px en ambos temas.
+Capturas revisadas de modal móvil oscuro, modal escritorio, licencias móvil claro y
+archivo clínico con reintento parcial. No se declara una auditoría visual exhaustiva
+de todas las pantallas clínicas existentes.
+
+COMPROBACIONES TÉCNICAS
+npm.cmd run build: aprobado; incluye TypeScript y build Vite.
+npm.cmd run lint: sin errores, con cuatro advertencias preexistentes:
+Fast Refresh de button.tsx, badge.tsx y tabs.tsx, y escape de api-problem.ts.
+Vite mantiene la advertencia por chunks superiores a 500 kB.
+git diff --check: aprobado.
+SHA-256 de 187 archivos protegidos: sin diferencias.
+Backend, infraestructura, manifiestos de dependencias y librerías clínicas: sin cambios.
+No se ejecutaron migraciones ni escrituras de prueba en la base de datos en este trabajo.
+No se realizaron commits ni pushes.
+
+ARCHIVOS DEL CAMBIO
+
+- front/src/app/layout/app-layout.tsx
+- front/src/app/layout/header-user-menu.tsx
+- front/src/app/nav-config.ts
+- front/src/app/routes.tsx
+- front/src/modules/appointments/api/appointments.api.ts
+- front/src/modules/appointments/components/appointment-form-dialog.tsx
+- front/src/modules/appointments/pages/appointments-calendar-page.tsx
+- front/src/modules/auth/api/auth.queries.ts
+- front/src/modules/auth/components/protected-route.tsx
+- front/src/modules/auth/components/use-profile-editor.ts
+- front/src/modules/auth/lib/access-request-form.ts
+- front/src/modules/auth/pages/login-page.tsx
+- front/src/modules/auth/pages/recover-password-page.tsx
+- front/src/modules/auth/pages/request-access-page.tsx
+- front/src/modules/auth/pages/reset-password-page.tsx
+- front/src/modules/auth/pages/user-profile-page.tsx
+- front/src/modules/auth/types/access-form.types.ts
+- front/src/modules/auth/types/auth.types.ts
+- front/src/modules/clinical-history/archive/components/controls.tsx
+- front/src/modules/clinical-history/archive/components/metadata-fields.tsx
+- front/src/modules/clinical-history/archive/components/upload-dialog.tsx
+- front/src/modules/clinical-history/archive/lib/validation.ts
+- front/src/modules/notifications/api/notifications.api.ts
+- front/src/modules/notifications/components/notification-message-preview.tsx
+- front/src/modules/notifications/components/notification-template-editor.tsx
+- front/src/modules/notifications/lib/message-template.ts
+- front/src/modules/notifications/types/notification.types.ts
+- front/src/modules/patients/api/patients.api.ts
+- front/src/modules/patients/components/patient-duplicate-hint.tsx
+- front/src/modules/patients/components/patient-form.tsx
+- front/src/modules/patients/pages/patients-list-page.tsx
+- front/src/modules/saas/adapters/demo-repository.ts
+- front/src/modules/saas/adapters/operational-demo.ts
+- front/src/modules/saas/components/account-identity-fields.tsx
+- front/src/modules/saas/components/context-selector.tsx
+- front/src/modules/saas/components/controls.tsx
+- front/src/modules/saas/components/demo-permission.tsx
+- front/src/modules/saas/components/organization-dialog.tsx
+- front/src/modules/saas/components/plan-editor.tsx
+- front/src/modules/saas/components/professional-status-dialog.tsx
+- front/src/modules/saas/components/role-permissions.tsx
+- front/src/modules/saas/components/scope-boundary.tsx
+- front/src/modules/saas/components/site-assignments.tsx
+- front/src/modules/saas/components/specialties.tsx
+- front/src/modules/saas/components/staff-editor.tsx
+- front/src/modules/saas/lib/identity.ts
+- front/src/modules/saas/lib/permissions.ts
+- front/src/modules/saas/lib/professional-policy.ts
+- front/src/modules/saas/lib/staff-draft.ts
+- front/src/modules/saas/pages/activation-page.tsx
+- front/src/modules/saas/pages/client-setup-page.tsx
+- front/src/modules/saas/pages/license-page.tsx
+- front/src/modules/saas/pages/staff-page.tsx
+- front/src/modules/saas/saas.css
+- front/src/modules/saas/services.ts
+- front/src/modules/saas/state.ts
+- front/src/modules/saas/types.ts
+- front/src/modules/treatments/api/treatments.api.ts
+- front/src/shared/lib/demonstration-boundary.ts
+- front/src/shared/lib/http.ts

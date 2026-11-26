@@ -1,13 +1,14 @@
 import { useId, type ReactNode } from "react"
 import { ChevronDown, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Field,FieldError } from "@/components/ui/field"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import styles from "../archive.module.css"
 
-export function ArchiveSelect({ label, value, items, onChange, disabled = false }: { label: string; value: string; items: Record<string, string>; onChange: (value: string) => void; disabled?: boolean }) {
+export function ArchiveSelect({ label, value, items, onChange, disabled = false,error,validationField }: { label: string; value: string; items: Record<string, string>; onChange: (value: string) => void; disabled?: boolean;error?:string;validationField?:string }) {
   const id = useId()
-  return <div className={styles.field}>
+  return <Field className={styles.field} data-invalid={Boolean(error)}>
     <label htmlFor={id}>
       {label}
     </label>
@@ -21,6 +22,8 @@ export function ArchiveSelect({ label, value, items, onChange, disabled = false 
         id={id}
         className="w-full"
         title={items[value]}
+        aria-invalid={Boolean(error)}
+        data-validation-field={validationField}
       >
         <SelectValue />
       </SelectTrigger>
@@ -30,7 +33,8 @@ export function ArchiveSelect({ label, value, items, onChange, disabled = false 
         </SelectItem>)}
       </SelectContent>
     </Select>
-  </div>
+    <FieldError>{error}</FieldError>
+  </Field>
 }
 export function IconAction({ label, icon: Icon, onClick, disabled, pressed }: { label: string; icon: LucideIcon; onClick: () => void; disabled?: boolean; pressed?: boolean }) {
   return <Tooltip>
@@ -50,12 +54,13 @@ export function IconAction({ label, icon: Icon, onClick, disabled, pressed }: { 
     </TooltipContent>
   </Tooltip>
 }
-export function ArchiveSection({ title, open, onToggle, children, status }: { title: string; open: boolean; onToggle: () => void; children: ReactNode; status?: string }) {
+export function ArchiveSection({ title, value, open, onToggle, children, status }: { title: string; value: string; open: boolean; onToggle: () => void; children: ReactNode; status?: string }) {
   const id = useId()
-  return <section className={styles.accordion}>
+  return <section className={styles.accordion} data-modal-section={value}>
     <button
       type="button"
       className={styles.accordionTrigger}
+      data-modal-section-trigger
       aria-expanded={open}
       aria-controls={id}
       onClick={onToggle}
@@ -71,7 +76,9 @@ export function ArchiveSection({ title, open, onToggle, children, status }: { ti
     <div
       className={styles.accordionMotion}
       data-open={open}
+      data-validation-panel
       inert={!open}
+      aria-hidden={!open || undefined}
       id={id}
     >
       <div>
