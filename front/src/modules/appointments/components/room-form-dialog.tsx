@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { applyServerFieldErrors } from "@/shared/lib/field-issues"
+import { AdministrativeStatusBadge } from "@/shared/components/administrative-status-badge"
 
 import { useSaveRoom } from "../api/appointments.queries"
 import { roomSchema, type Room, type RoomFormValues } from "../types/appointment.types"
@@ -59,8 +60,10 @@ export function RoomFormDialog({ open, onOpenChange, room }: RoomFormDialogProps
             <FieldLabel htmlFor="roomActive" className="flex-1">Consultorio activo
               <FieldDescription id="roomActiveHint">Si lo desactivas, ya no se ofrece al agendar; sus citas siguen mostrando su nombre.</FieldDescription>
             </FieldLabel>
-            <Controller control={control} name="active" render={({ field }) =>
-              <Switch id="roomActive" aria-describedby="roomActiveHint" checked={field.value} onCheckedChange={field.onChange} />} />
+            <Controller control={control} name="active" render={({ field }) => <span className="inline-flex items-center gap-2">
+              <AdministrativeStatusBadge kind="room" state={field.value ? "active" : "inactive"} />
+              <Switch id="roomActive" aria-describedby="roomActiveHint" checked={field.value} onCheckedChange={field.onChange} />
+            </span>} />
           </Field>
         </FieldGroup>
         <DialogFooter>

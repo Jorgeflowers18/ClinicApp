@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Plus } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
+import { AdministrativeStatusBadge, ProfessionalStatusBadge } from "@/shared/components/administrative-status-badge"
 import { Button } from "@/components/ui/button"
 import { DataTable, type DataTableColumn } from "@/shared/components/data-table"
 import { SearchInput } from "@/shared/components/search-input"
@@ -18,9 +18,6 @@ const matches = (search: string, ...values: string[]) => {
   const needle = search.trim().toLocaleLowerCase("es")
   return !needle || values.join(" ").toLocaleLowerCase("es").includes(needle)
 }
-
-const statusBadge = (active: boolean) =>
-  <Badge variant={active ? "secondary" : "outline"}>{active ? "Activo" : "Inactivo"}</Badge>
 
 function useEditor<T>() {
   const [state, setState] = useState<{ open: boolean; item: T | null }>({ open: false, item: null })
@@ -45,7 +42,7 @@ export function ProfessionalsAdmin() {
     { key: "registrationNumber", header: "Registro", cell: (item) => item.registrationNumber || "—" },
     // La cuenta se vincula desde la pestaña Usuarios.
     { key: "userId", header: "Cuenta", cell: (item) => item.userId ? userName(item.userId) : "Sin cuenta" },
-    { key: "active", header: "Estado", cell: (item) => statusBadge(item.active) },
+    { key: "active", header: "Estado", cell: (item) => <ProfessionalStatusBadge state={item.active ? "ACTIVE" : "INACTIVE"} /> },
   ]
   return <div className="space-y-4">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -69,7 +66,7 @@ export function RoomsAdmin() {
   const rows = (query.data ?? []).filter((item) => matches(search, item.name))
   const columns: DataTableColumn<Room>[] = [
     { key: "name", header: "Consultorio", cell: (item) => <span className="font-medium">{item.name}</span> },
-    { key: "active", header: "Estado", cell: (item) => statusBadge(item.active) },
+    { key: "active", header: "Estado", cell: (item) => <AdministrativeStatusBadge kind="room" state={item.active ? "active" : "inactive"} /> },
   ]
   return <div className="space-y-4">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

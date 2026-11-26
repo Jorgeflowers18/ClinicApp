@@ -1,0 +1,41 @@
+.badge, .label {
+  --status-ink: var(--muted-foreground);
+  --status-surface: var(--muted);
+  color: var(--status-ink);
+  vertical-align: middle;
+}
+.badge[data-slot="badge"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  height: 24px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--status-ink) 28%, transparent);
+  background: var(--status-surface);
+  color: var(--status-ink);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.badge::before, .label::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+:is(.badge, .label)[data-tone="success"] { --status-ink: var(--success); --status-surface: var(--success-surface); }
+:is(.badge, .label)[data-tone="warning"] { --status-ink: var(--warning); --status-surface: var(--warning-surface); }
+:is(.badge, .label)[data-tone="danger"] { --status-ink: var(--destructive); --status-surface: var(--destructive-surface); }
+:is(.badge, .label)[data-tone="vacation"] { --status-ink: #235bb5; --status-surface: #edf3ff; }
+:is(.badge, .label)[data-tone="retired"] { --status-ink: color-mix(in srgb, var(--destructive) 65%, var(--muted-foreground)); --status-surface: color-mix(in srgb, var(--destructive-surface) 50%, var(--muted)); }
+:global(.dark) .badge[data-slot="badge"] { background: color-mix(in srgb, var(--status-ink) 20%, var(--card)); }
+:global(.dark) :is(.badge, .label)[data-tone="vacation"] { --status-ink: #a4c7ff; }

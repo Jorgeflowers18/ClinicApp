@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { applyServerFieldErrors } from "@/shared/lib/field-issues"
+import { ProfessionalStatusBadge } from "@/shared/components/administrative-status-badge"
 
 import { useSaveProfessional } from "../api/appointments.queries"
 import { professionalSchema, type Professional, type ProfessionalFormValues } from "../types/appointment.types"
@@ -83,8 +84,10 @@ export function ProfessionalFormDialog({ open, onOpenChange, professional }: Pro
             <FieldLabel htmlFor="professionalActive" className="flex-1">Profesional activo
               <FieldDescription id="professionalActiveHint">Si lo desactivas, ya no se ofrece al agendar; sus citas y atenciones siguen mostrando su nombre.</FieldDescription>
             </FieldLabel>
-            <Controller control={control} name="active" render={({ field }) =>
-              <Switch id="professionalActive" aria-describedby="professionalActiveHint" checked={field.value} onCheckedChange={field.onChange} />} />
+            <Controller control={control} name="active" render={({ field }) => <span className="inline-flex items-center gap-2">
+              <ProfessionalStatusBadge state={field.value ? "ACTIVE" : "INACTIVE"} />
+              <Switch id="professionalActive" aria-describedby="professionalActiveHint" checked={field.value} onCheckedChange={field.onChange} />
+            </span>} />
           </Field>
         </FieldGroup>
         <DialogFooter>

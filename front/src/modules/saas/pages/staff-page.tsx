@@ -118,8 +118,8 @@ export function StaffManagementPage() {
           <div className="saas-filters">
             <SearchInput value={search} onChange={setSearch} ariaLabel="Buscar personal" placeholder="Nombres, usuario, correo o especialidad…" />
             <SaasSelect label="Rol" value={role} items={{ all: "Todos los roles", ...roleLabels }} onChange={setRole} />
-            <SaasSelect label="Estado de cuenta" value={state} items={{ all: "Todos", ...accountStates }} onChange={setState} />
-            {current === "professionals" && <SaasSelect label="Estado profesional" value={professionalState} items={{ all: "Todos", ...professionalStates }} onChange={setProfessionalState} />}
+            <SaasSelect label="Estado de cuenta" statusKind="account" value={state} items={{ all: "Todos", ...accountStates }} onChange={setState} />
+            {current === "professionals" && <SaasSelect label="Estado profesional" statusKind="professional" value={professionalState} items={{ all: "Todos", ...professionalStates }} onChange={setProfessionalState} />}
             <SaasSelect label="Especialidad" value={specialty} items={{ all: "Todas", ...Object.fromEntries(data.specialties.filter(item => item.organizationId === organizationId).map(item => [item.id, item.name])) }} onChange={setSpecialty} />
             <SaasSelect label="Sede" value={site} items={{ all: "Todas las sedes", ...Object.fromEntries((organization?.branches ?? []).map(item => [item.id, item.name])) }} onChange={setSite} />
             <ResetFiltersButton disabled={!search && role === "all" && state === "all" && professionalState === "all" && specialty === "all" && site === "all"}

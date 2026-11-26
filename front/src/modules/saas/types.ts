@@ -1,9 +1,8 @@
 import type { Role, UserProfile } from "@/modules/auth/types/auth.types";
 import type { InstitutionBranch, InstitutionProfile } from "@/modules/institution/types/institution.types";
-export const professionalStates = { ACTIVE: "Activo", INACTIVE: "Inactivo", VACATION: "Vacaciones", LEAVE: "Permiso/Licencia", RETIRED: "Retirado" } as const;
-export type ProfessionalState = keyof typeof professionalStates;
-export type AccountState = "active" | "inactive" | "blocked" | "pending";
-export const accountStates: Record<AccountState, string> = { active: "Activa", inactive: "Inactiva", blocked: "Bloqueada", pending: "Pendiente de activación" };
+import type { AccountState, ProfessionalState } from "@/shared/lib/administrative-status";
+export { accountStates, professionalStates } from "@/shared/lib/administrative-status";
+export type { AccountState, ProfessionalState } from "@/shared/lib/administrative-status";
 export interface Absence {
     id: string;
     type: "VACATION" | "LEAVE";

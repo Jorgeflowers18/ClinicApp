@@ -6,7 +6,7 @@ import { useValidatedForm } from "@/shared/hooks/use-validated-form"
 import { applyServerFieldErrors } from "@/shared/lib/field-issues"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { AdministrativeStatusBadge } from "@/shared/components/administrative-status-badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
@@ -39,7 +39,7 @@ export function SpecialtyManagement({ onEdit }: { onEdit: (specialty: Specialty)
       { key: "name", header: "Especialidad", cell: item => item.name },
       { key: "description", header: "Descripción", cell: item => item.description || "—" },
       { key: "professionals", header: "Profesionales", cell: item => new Set(data.users.filter(user => user.professionalId && user.organizationIds.includes(organizationId) && user.specialtyIds.includes(item.id)).map(user => user.professionalId)).size },
-      { key: "active", header: "Estado", cell: item => <Badge variant="outline" className="saas-status-badge" data-tone={item.active ? "success" : "muted"}>{item.active ? "Activa" : "Inactiva"}</Badge> },
+      { key: "active", header: "Estado", cell: item => <AdministrativeStatusBadge kind="specialty" state={item.active ? "active" : "inactive"} /> },
       { key: "actions", header: "Acciones", cell: item => <div className="staff-specialty-actions">
         <Button size="sm" variant="outline" disabled={busyId !== null} onClick={() => onEdit(item)}><Pencil />Editar</Button>
         <Button size="sm" variant="outline" className="staff-state-action" data-active={item.active} disabled={busyId !== null} aria-busy={busyId === item.id} onClick={() => item.active ? (setFailure(""), setDeactivating(item)) : void toggle(item)}>

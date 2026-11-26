@@ -22,6 +22,7 @@ import { useStaffInstitution } from "../lib/institution-scope"
 import { useSaveInstitutionProfile } from "@/modules/institution/api/institution.queries"
 import { InstitutionBranches } from "@/modules/institution/components/institution-branches"
 import { accountStates, type StaffUser } from "../types"
+import { activationLabels } from "@/shared/lib/administrative-status"
 import { ProfessionalStatusBadge, SaasSelect, UsernameField } from "./controls"
 
 const schedule = z.object({ days: z.array(z.number()), start: z.string(), end: z.string() })
@@ -54,7 +55,6 @@ const groups = [
   { id: "professional", title: "Perfil profesional", fields: ["profession", "registration", "specialtyIds"] },
   { id: "activation", title: "Activación", fields: ["activation"] },
 ]
-const activationLabels = { invitation: "Invitación pendiente", temporary: "Contraseña temporal · cambio obligatorio", active: "Cuenta activa" }
 export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user: StaffUser | null; onClose: () => void; initialRole?: Role }) {
   const data = useSaasData(), { organizationId, organization, profile } = useStaffInstitution(), body = useRef<HTMLDivElement>(null), lock = useRef(false)
   const sites = organization.branches, saveInstitution = useSaveInstitutionProfile()
@@ -134,7 +134,7 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user
     </div>,
     credentials: <div className="saas-stack">
       <UsernameField value={values.username} onChange={value => form.setValue("username", value, { shouldDirty: true, shouldValidate: form.formState.isSubmitted })} firstName={values.firstName} lastName={values.lastName} accountId={user?.id} error={errors.username?.message} required />
-      <SaasSelect label="Estado de cuenta" id="state" value={values.state} error={errors.state?.message} items={accountStates} onChange={value => form.setValue("state", value as Values["state"], { shouldDirty: true })} />
+      <SaasSelect label="Estado de cuenta" statusKind="account" id="state" value={values.state} error={errors.state?.message} items={accountStates} onChange={value => form.setValue("state", value as Values["state"], { shouldDirty: true })} />
     </div>,
     assignments: <div className="saas-stack">
       <div className="saas-grid">
@@ -199,7 +199,7 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user
       {user?.professionalId && <p className="saas-hint">Gestiona el estado, las vacaciones y los permisos desde el directorio de profesionales.</p>}
     </div>,
     activation: <div className="saas-stack">
-      <SaasSelect label="Método de activación" value={values.activation} items={activationLabels} onChange={value => form.setValue("activation", value as Values["activation"], { shouldDirty: true })} />
+      <SaasSelect label="Método de activación" statusKind="activation" value={values.activation} items={activationLabels} onChange={value => form.setValue("activation", value as Values["activation"], { shouldDirty: true })} />
       <dl className="saas-summary">{[["Persona", nameOf(values)], ["Usuario", values.username], ["Correo", values.email], ["Rol", roleLabels[values.role]], ["Sedes", sites.filter(site => values.siteIds.includes(site.id)).map(site => site.name).join(", ")]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "Por completar"}</dd></div>)}</dl>
       <p className="saas-hint">No se generan contraseñas ni se envían invitaciones reales.</p>
     </div>,

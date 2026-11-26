@@ -1,0 +1,89 @@
+CLINICAPP — COLORES DE ESTADO EN PERSONAL Y ACCESOS
+Fecha: 26 de noviembre de 2026
+
+CAMBIOS
+
+Se centralizaron las etiquetas y los tonos de cuenta, estado profesional,
+consultorio, especialidad y método de activación en administrative-status.ts.
+Se reutiliza el Badge existente mediante AdministrativeStatusBadge.
+AccountStatusBadge y ProfessionalStatusBadge conservan sus interfaces públicas.
+
+Los badges tienen altura uniforme de 24 px, texto visible, punto discreto,
+bordes suaves y fondos semánticos. Los filtros conservan sus opciones y lógica;
+la etiqueta seleccionada y sus opciones reutilizan el mismo mapeo de color,
+sin añadir controles ni alterar sus valores.
+
+Usuarios: activa verde, inactiva gris, bloqueada roja y pendiente ámbar.
+Invitación pendiente: ámbar.
+Profesionales: activo verde, inactivo gris, vacaciones azul, permiso/licencia
+ámbar y retirado rojo atenuado.
+Consultorios: activo verde e inactivo gris.
+Especialidades: activa verde e inactiva gris.
+
+Se reutilizan los tokens success, warning, destructive y muted existentes.
+El azul de vacaciones mantiene los valores previos del módulo.
+En oscuro, el fondo mezcla un 20 % del tono semántico con la superficie actual.
+La apariencia se encuentra en CSS Modules, sin reglas globales para otros badges.
+Los estilos anteriores duplicados de saas.css se retiraron.
+
+Se aplicó la presentación a tablas, tarjetas, detalle, gestión de acceso,
+selectores de estado y edición. Los modales de catálogos muestran junto al
+switch su estado actual, utilizando exactamente el mismo valor y onChange.
+La cuenta de acceso y el estado profesional siguen siendo independientes.
+No se modificaron cálculos, filtros, validaciones, guardados ni disponibilidad.
+
+ESTRUCTURA CONSERVADA
+
+El checkout actual tiene Usuarios | Profesionales | Especialidades dentro de
+Personal y accesos. Consultorios está en la administración de Citas.
+Se conservaron esas ubicaciones; no se añadieron ni renombraron pestañas.
+Solo se adaptaron los badges de los catálogos existentes de Consultorios y
+Profesionales para que compartan los colores.
+Se mantuvieron columnas, acciones, botones, búsqueda y distribución.
+
+VALIDACIÓN
+
+- npm.cmd run build: TypeScript y build correctos.
+- npm.cmd run lint: sin errores; cuatro advertencias preexistentes de
+  Fast Refresh (button, badge, tabs) y escape de api-problem.
+- Build conserva la advertencia previa de paquetes mayores de 500 kB.
+- git diff --check: correcto.
+- Chrome/Playwright: 11 grupos específicos de estados aprobados.
+- Chrome/Playwright: 13 regresiones de institución, personal, especialidades
+  y asignaciones aprobadas. Total: 24 grupos aprobados.
+- Los estados conservan sus colores al cambiar de pestaña.
+- Las tablas y el detalle actualizan el badge después de guardar.
+- Un profesional de vacaciones conserva independientemente su cuenta activa.
+- El switch de Consultorios cambia el badge y la tabla refleja el guardado.
+- Ambos temas comprobados con capturas y estilos calculados.
+- Contraste mínimo medido en los badges de cuentas y profesionales:
+  4,70:1 en claro y 6,14:1 en oscuro; altura uniforme de 24 px.
+- Personal/especialidades: anchos 320, 375, 390, 430, 768, 1024, 1440 y 1920 px.
+- Consultorios: 320, 768 y 1440 px. Sin overflow horizontal de página.
+- Sin errores de ejecución del navegador y sin escrituras en API real.
+- Se utilizaron datos aislados e interceptores de QA en el navegador.
+  Scripts y capturas permanecen en TEMP; no se agregaron tests, datos,
+  variables de entorno ni dependencias al repositorio.
+- 187 archivos protegidos verificados mediante SHA-256: ninguno modificado.
+
+ARCHIVOS MODIFICADOS O NUEVOS (desde front/)
+
+src/shared/lib/administrative-status.ts (nuevo)
+src/shared/components/administrative-status-badge.tsx (nuevo)
+src/shared/components/administrative-status-badge.module.css (nuevo)
+src/modules/saas/types.ts
+src/modules/saas/components/controls.tsx
+src/modules/saas/components/staff-editor.tsx
+src/modules/saas/components/professional-status-dialog.tsx
+src/modules/saas/components/specialties.tsx
+src/modules/saas/pages/staff-page.tsx
+src/modules/saas/saas.css
+src/modules/appointments/components/agenda-catalogs-admin.tsx
+src/modules/appointments/components/room-form-dialog.tsx
+src/modules/appointments/components/professional-form-dialog.tsx
+docs/COLORES_ESTADOS_PERSONAL_ACCESOS.txt (este informe)
+
+Backend, base de datos, endpoints, Sidebar, Header, rutas, temas globales,
+odontograma y periodontograma permanecen intactos.
+La implementación se validó localmente. El usuario autorizó posteriormente
+su publicación en main el 26 de noviembre de 2026.

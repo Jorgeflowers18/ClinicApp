@@ -4,21 +4,25 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import { AdministrativeStatusBadge } from "@/shared/components/administrative-status-badge"
+import { administrativeStatus, type AdministrativeStatusKind } from "@/shared/lib/administrative-status"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { assertUsernameAvailable, demoReadError } from "../adapters/demo-repository"
 import { suggestUsername, usernameSchema } from "../lib/identity"
-import { accountStates, professionalStates, type AccountState, type ProfessionalState } from "../types"
+export { AccountStatusBadge, ProfessionalStatusBadge } from "@/shared/components/administrative-status-badge"
 
-export function SaasSelect({ label, value, items, onChange, id, disabled, error }: {
-  label: string; value: string; items: Record<string, string>; onChange: (value: string) => void; id?: string; disabled?: boolean; error?: string
+export function SaasSelect({ label, value, items, onChange, id, disabled, error, statusKind }: {
+  label: string; value: string; items: Record<string, string>; onChange: (value: string) => void; id?: string; disabled?: boolean; error?: string; statusKind?: AdministrativeStatusKind
 }) {
   const generated = useId(), target = id ?? generated
+  const renderItem = (key: string, text: string) => statusKind && administrativeStatus(statusKind, key)
+    ? <AdministrativeStatusBadge kind={statusKind} state={key} label={text} appearance="label" /> : text
+  const displayItems = statusKind ? Object.fromEntries(Object.entries(items).map(([key, text]) => [key, renderItem(key, text)])) : items
   return <Field className="saas-field" data-invalid={Boolean(error)}>
     <FieldLabel htmlFor={target}>{label}</FieldLabel>
-    <Select value={value} items={items} disabled={disabled} onValueChange={next => next && onChange(next)}>
+    <Select value={value} items={displayItems} disabled={disabled} onValueChange={next => next && onChange(next)}>
       <SelectTrigger id={target} data-validation-field={id} className="w-full" aria-invalid={Boolean(error)} aria-describedby={error ? target + "-error" : undefined}><SelectValue /></SelectTrigger>
-      <SelectContent>{Object.entries(items).map(([key, text]) => <SelectItem value={key} key={key}>{text}</SelectItem>)}</SelectContent>
+      <SelectContent>{Object.entries(items).map(([key, text]) => <SelectItem value={key} key={key}>{renderItem(key, text)}</SelectItem>)}</SelectContent>
     </Select>
     <FieldError id={target + "-error"}>{error}</FieldError>
   </Field>
@@ -43,14 +47,6 @@ export function UsernameField({ value, onChange, firstName = "", lastName = "", 
     <p id={id + "-help"} className="saas-hint">{readOnly ? "Identificador asignado. Su modificación requiere administración." : "3–30 caracteres. Letras, números, punto, guion o guion bajo."}</p>
     {status && <small role="status">{status}</small>}<FieldError id={id + "-error"}>{error}</FieldError>
   </Field>
-}
-export function AccountStatusBadge({ state }: { state: AccountState }) {
-  const tones = { active: "success", inactive: "muted", blocked: "danger", pending: "warning" }
-  return <Badge variant="outline" className="saas-status-badge" data-status-kind="account" data-status={state} data-tone={tones[state]}>{accountStates[state]}</Badge>
-}
-export function ProfessionalStatusBadge({ state }: { state: ProfessionalState }) {
-  const tones = { ACTIVE: "success", INACTIVE: "muted", VACATION: "vacation", LEAVE: "warning", RETIRED: "retired" }
-  return <Badge variant="outline" className="saas-status-badge" data-status-kind="professional" data-status={state} data-tone={tones[state]}>{professionalStates[state]}</Badge>
 }
 export function DemoNotice() {
   const error = demoReadError()
