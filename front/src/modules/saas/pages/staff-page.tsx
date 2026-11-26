@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { LayoutGrid, List, MoreHorizontal, Pencil, Plus, ShieldCheck, UserRound, UserRoundCheck, UserRoundX } from "lucide-react"
+import { CalendarDays, LayoutGrid, List, Mail, MoreHorizontal, Pencil, Plus, ShieldCheck, Stethoscope, UserRound, UserRoundCheck, UserRoundX, UsersRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -12,7 +12,8 @@ import { SearchInput } from "@/shared/components/search-input"
 import { ResetFiltersButton } from "@/shared/components/reset-filters-button"
 import { roleLabels } from "@/modules/auth/types/user-admin.types"
 import { getErrorMessage } from "@/shared/lib/error-message"
-import { useDemoContext, useSaasData, useSessionUser } from "../state"
+import { useSaasData, useSessionUser } from "../state"
+import { useStaffInstitution } from "../lib/institution-scope"
 import { nameOf } from "../lib/identity"
 import { effectiveProfessionalState } from "../lib/professional-policy"
 import { demoStaffAdapter } from "../services"
@@ -27,7 +28,7 @@ import { staffFromRequest } from "../lib/staff-draft"
 import "../saas.css"
 
 export function StaffManagementPage() {
-  const data = useSaasData(), organizationId = useDemoContext(state => state.organizationId), actor = useSessionUser()
+  const data = useSaasData(), { organizationId, organization, profile, error: institutionError } = useStaffInstitution(), actor = useSessionUser()
   const [tab, setTab] = useState("users"), [search, setSearch] = useState(""), [role, setRole] = useState("all")
   const [state, setState] = useState("all"), [professionalState, setProfessionalState] = useState("all")
   const [specialty, setSpecialty] = useState("all"), [site, setSite] = useState("all"), [cards, setCards] = useState(true)
@@ -35,8 +36,9 @@ export function StaffManagementPage() {
   const [detailsId, setDetailsId] = useState<string | null>(null), [statusId, setStatusId] = useState<string | null>(null)
   const [accessId, setAccessId] = useState<string | null>(null), [toggleId, setToggleId] = useState<string | null>(null)
   const [failure, setFailure] = useState(""), [busy, setBusy] = useState(false)
-  const organization = data.organizations.find(item => item.id === organizationId), needle = search.trim().toLocaleLowerCase("es")
+  const needle = search.trim().toLocaleLowerCase("es")
   const all = data.users.filter(user => user.organizationIds.includes(organizationId))
+  const requests = data.requests.filter(request => request.organizationId === organizationId)
   const rows = all.filter(user =>
     (!needle || [nameOf(user), user.username, user.email, ...data.specialties.filter(item => user.specialtyIds.includes(item.id)).map(item => item.name)].join(" ").toLocaleLowerCase("es").includes(needle))
     && (role === "all" || user.roles.includes(role as never)) && (state === "all" || user.state === state)
@@ -46,7 +48,11 @@ export function StaffManagementPage() {
   const clinical = rows.filter(user => user.professionalId)
   const details = all.find(user => user.id === detailsId), statusUser = all.find(user => user.id === statusId)
   const accessUser = all.find(user => user.id === accessId), toggleUser = all.find(user => user.id === toggleId)
-  const siteNames = (user: StaffUser) => organization?.branches.filter(branch => user.assignments.some(item => item.organizationId === organizationId && item.siteId === branch.id && item.active)).map(item => item.name).join(", ") || "Sin asignar"
+  const siteNames = (user: StaffUser, compact = true) => {
+    const names = organization.branches.filter(branch => user.assignments.some(item => item.organizationId === organizationId && item.siteId === branch.id && item.active)).map(item => item.name)
+    const label = compact && names.length > 2 ? names.slice(0, 2).join(" · ") + ` +${names.length - 2}` : names.join(" · ")
+    return <span title={names.join(" · ")}>{label || "Pendiente de asignar sede"}</span>
+  }
   const specialtyNames = (user: StaffUser) => data.specialties.filter(item => user.specialtyIds.includes(item.id) && item.organizationId === organizationId).map(item => item.name).join(", ") || "—"
 
   function actions(user: StaffUser) {
@@ -54,7 +60,7 @@ export function StaffManagementPage() {
       <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Acciones de ${nameOf(user)}`} />}><MoreHorizontal /></DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="saas-user-menu">
         <DropdownMenuItem onClick={() => setDetailsId(user.id)}><UserRound />Ver perfil</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setEditor(user)}><Pencil />Editar usuario</DropdownMenuItem>
+        <DropdownMenuItem disabled={!profile} onClick={() => setEditor(user)}><Pencil />Editar usuario</DropdownMenuItem>
         <DropdownMenuItem onClick={() => setAccessId(user.id)}><ShieldCheck />Gestionar acceso</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant={user.state === "inactive" ? "default" : "destructive"} disabled={user.id === actor?.id}
@@ -92,15 +98,16 @@ export function StaffManagementPage() {
     <PageHeader title="Personal y accesos" description="Administra los usuarios y profesionales de tu clínica"
       actions={tab === "specialties"
         ? <Button onClick={() => setSpecialtyEditor(null)}><Plus />Nueva especialidad</Button>
-        : <Button onClick={() => setEditor(null)}><Plus />Nuevo usuario</Button>} />
+        : <Button disabled={!profile} onClick={() => setEditor(null)}><Plus />Nuevo usuario</Button>} />
     <DemoNotice />
+    {Boolean(institutionError) && <p className="text-destructive" role="alert">{getErrorMessage(institutionError)}</p>}
     <div className="saas-metrics">
       {[
-        ["Usuarios activos", all.filter(user => user.state === "active").length],
-        ["Profesionales activos", all.filter(user => user.professionalId && effectiveProfessionalState(user) === "ACTIVE").length],
-        ["Profesionales de vacaciones", all.filter(user => user.professionalId && effectiveProfessionalState(user) === "VACATION").length],
-        ["Invitaciones pendientes", all.filter(user => user.state === "pending" && user.activation === "invitation").length],
-      ].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}
+        { label: "Usuarios activos", value: all.filter(user => user.state === "active").length, Icon: UsersRound, tone: "success" },
+        { label: "Profesionales activos", value: all.filter(user => user.professionalId && effectiveProfessionalState(user) === "ACTIVE").length, Icon: Stethoscope, tone: "success" },
+        { label: "Profesionales de vacaciones", value: all.filter(user => user.professionalId && effectiveProfessionalState(user) === "VACATION").length, Icon: CalendarDays, tone: "info" },
+        { label: "Invitaciones pendientes", value: all.filter(user => user.state === "pending" && user.activation === "invitation").length, Icon: Mail, tone: "warning" },
+      ].map(({ label, value, Icon, tone }) => <div key={label} className="staff-metric" data-tone={tone}><span>{label}</span><Icon aria-hidden="true" /><strong>{value}</strong></div>)}
     </div>
     <Tabs value={tab} onValueChange={value => setTab(String(value))}>
       <div className="saas-tabs-scroll"><TabsList variant="line" aria-label="Personal y accesos">
@@ -130,9 +137,9 @@ export function StaffManagementPage() {
             </article>)}
             {!clinical.length && <p>No hay profesionales con estos filtros.</p>}
           </div> : <DataTable className={current === "users" ? "staff-users-table" : undefined} data={current === "users" ? rows : clinical} columns={current === "users" ? columns : professionalColumns} getRowId={user => user.id} mobileTitleKey="name" />}
-          {current === "users" && data.requests.length > 0 && <section className="saas-panel saas-stack">
+          {current === "users" && requests.length > 0 && <section className="saas-panel saas-stack">
             <h2>Solicitudes de acceso</h2>
-            {data.requests.map(request => <div className="saas-inline" key={request.id}>
+            {requests.map(request => <div className="saas-inline" key={request.id}>
               <span>{nameOf(request)} · {request.username} · {({ pending: "Pendiente", reviewed: "Revisada", approved: "Aprobada", created: "Cuenta creada" })[request.state]}</span>
               {["pending", "reviewed"].includes(request.state) && <Button variant="outline" size="sm" onClick={() => updateDemoData(next => {
                 const item = next.requests.find(item => item.id === request.id)!; item.state = item.state === "pending" ? "reviewed" : "approved"
@@ -155,7 +162,7 @@ export function StaffManagementPage() {
     {details && <Dialog open onOpenChange={open => !open && setDetailsId(null)}>
       <DialogContent className="saas-scope"><DialogHeader><DialogTitle>{nameOf(details)}</DialogTitle><DialogDescription>Perfil del personal</DialogDescription></DialogHeader>
         <DialogBody><dl className="saas-summary">
-          {[["Usuario", details.username], ["Correo", details.email], ["Teléfono", details.phone], ["Rol", details.roles.map(role => roleLabels[role]).join(", ")], ["Sedes", siteNames(details)]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}
+          {[["Usuario", details.username], ["Correo", details.email], ["Teléfono", details.phone], ["Rol", details.roles.map(role => roleLabels[role]).join(", ")], ["Sedes", siteNames(details, false)]].map(([label, value], index) => <div key={index}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}
           <div><dt>Estado de cuenta</dt><dd><AccountStatusBadge state={details.state} /></dd></div>
           {details.professionalId && <div><dt>Estado profesional</dt><dd><ProfessionalStatusBadge state={effectiveProfessionalState(details)} /></dd></div>}
         </dl></DialogBody><DialogFooter><Button variant="outline" onClick={() => setDetailsId(null)}>Cerrar</Button></DialogFooter>

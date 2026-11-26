@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/shared/lib/error-message";
 import { demoFutureAppointments } from "../adapters/operational-demo";
-import { useDemoContext } from "../state";
+import { useStaffInstitution } from "../lib/institution-scope";
 import { demoId } from "../adapters/demo-repository";
 import { nameOf } from "../lib/identity";
 import { clinicDay, effectiveProfessionalState } from "../lib/professional-policy";
@@ -30,7 +30,7 @@ export function ProfessionalStatusDialog({ user, onClose }: {
     user: StaffUser;
     onClose: () => void;
 }) {
-    const root = useRef<HTMLDivElement>(null), [error, setError] = useState(""), organizationId = useDemoContext(state => state.organizationId);
+    const root = useRef<HTMLDivElement>(null), [error, setError] = useState(""), { organizationId } = useStaffInstitution();
     const future = user.professionalId ? demoFutureAppointments(user.professionalId, organizationId) : [];
     const form = useValidatedForm({ resolver: zodResolver(schema), defaultValues: { state: effectiveProfessionalState(user), from: clinicDay(), to: "", note: "", confirmed: false } }, root), values = form.watch(), errors = form.formState.errors;
     async function save(next: z.infer<typeof schema>) { setError(""); try {

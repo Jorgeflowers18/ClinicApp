@@ -1,5 +1,5 @@
 import type { Role, UserProfile } from "@/modules/auth/types/auth.types";
-import type { InstitutionBranch } from "@/modules/institution/types/institution.types";
+import type { InstitutionBranch, InstitutionProfile } from "@/modules/institution/types/institution.types";
 export const professionalStates = { ACTIVE: "Activo", INACTIVE: "Inactivo", VACATION: "Vacaciones", LEAVE: "Permiso/Licencia", RETIRED: "Retirado" } as const;
 export type ProfessionalState = keyof typeof professionalStates;
 export type AccountState = "active" | "inactive" | "blocked" | "pending";
@@ -45,6 +45,8 @@ export interface StaffUser {
     createdAt: string;
 }
 export interface Organization {
+    /** Canonical profile for this isolated frontend demonstration. Legacy fields are not catalogs. */
+    profile?: InstitutionProfile;
     id: string;
     name: string;
     businessAccountId: string;
@@ -60,6 +62,8 @@ export interface Specialty {
 }
 export type PermissionAction = "view" | "create" | "edit" | "deactivate" | "approve" | "export" | "manage";
 export interface AccessRequest {
+    /** Only requests with a known scope may be reviewed in that institution. */
+    organizationId?: string;
     id: string;
     firstName: string;
     lastName: string;
@@ -109,5 +113,4 @@ export interface StaffAdapter {
     read(): SaasData;
     saveUser(user: StaffUser): Promise<StaffUser>;
     saveSpecialty(specialty: Specialty): Promise<void>;
-    saveOrganization(organization: Organization): Promise<void>;
 }

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useAuthStore } from "@/modules/auth/store/auth-store";
 import { queryClient } from "@/shared/lib/query-client";
 import { setDemonstrationActive } from "@/shared/lib/demonstration-boundary";
@@ -23,7 +23,8 @@ function restoreContext() { try {
     const data = readDemoData(), user = data.users.find(item => item.id === value.userId), org = data.organizations.find(item => item.id === value.organizationId);
     if (value.userId && (!user || ["blocked", "inactive"].includes(user.state) || !user.organizationIds.includes(value.organizationId)))
         return emptyContext;
-    return org ? { userId: user?.id ?? null, organizationId: org.id, siteId: org.branches.some(item => item.id === value.siteId) ? value.siteId : org.branches[0]?.id ?? "" } : emptyContext;
+    const branches = org?.profile?.branches ?? [];
+    return org ? { userId: user?.id ?? null, organizationId: org.id, siteId: branches.some(item => item.id === value.siteId) ? value.siteId : branches[0]?.id ?? "" } : emptyContext;
 }
 catch {
     return emptyContext;
@@ -40,7 +41,8 @@ export const useDemoContext = create<DemoContext>((set) => ({
         const user = readDemoData().users.find(item => item.id === userId);
         if (!user || ["blocked", "inactive"].includes(user.state))
             throw new Error("Esta cuenta de demostración no está activa.");
-        const assignment = user.assignments.find(item => item.active);
+        const branches = readDemoData().organizations.find(org => org.id === user.organizationIds[0])?.profile?.branches ?? [];
+        const assignment = user.assignments.find(item => item.active && branches.some(branch => branch.id === item.siteId));
         const next = { userId, organizationId: user.organizationIds[0], siteId: assignment?.siteId ?? "" };
         setDemonstrationActive(true);
         queryClient.clear();
@@ -49,11 +51,17 @@ export const useDemoContext = create<DemoContext>((set) => ({
     },
     exit: () => { setDemonstrationActive(false); queryClient.clear(); cacheContext(emptyContext); set(emptyContext); },
     select: (organizationId, siteId) => { const userId = useDemoContext.getState().userId; const user = readDemoData().users.find(item => item.id === userId); if (userId && !user?.organizationIds.includes(organizationId))
-        throw new Error("Esta organización no está asignada a tu identidad."); const org = readDemoData().organizations.find(item => item.id === organizationId); if (!org || siteId && !org.branches.some(item => item.id === siteId))
+        throw new Error("Esta organización no está asignada a tu identidad."); const org = readDemoData().organizations.find(item => item.id === organizationId); if (!org || siteId && !(org.profile?.branches ?? []).some(item => item.id === siteId))
         throw new Error("La sede no pertenece a la organización."); if (user && !user.roles.includes("admin") && siteId && !user.assignments.some(item => item.active && item.organizationId === organizationId && item.siteId === siteId))
         throw new Error("Esta sede no está asignada a tu identidad."); queryClient.clear(); cacheContext({ userId, organizationId, siteId }); set({ organizationId, siteId }); },
 }));
-export function useSaasData() { return useSyncExternalStore(subscribeDemoData, safeDemoSnapshot, safeDemoSnapshot); }
+export function useSaasData() {
+    const data = useSyncExternalStore(subscribeDemoData, safeDemoSnapshot, safeDemoSnapshot);
+    // Compatibility view: existing consumers read the confirmed profile, never legacy seed catalogs.
+    return useMemo(() => ({ ...data, organizations: data.organizations.map(org => ({ ...org,
+        name: org.profile?.name ?? "", logo: org.profile?.logoImage ?? null, branches: org.profile?.branches ?? [],
+    })) }), [data]);
+}
 export function useSessionUser(): AuthUser | null {
     const real = useAuthStore(state => state.user), demoId = useDemoContext(state => state.userId), data = useSaasData();
     const demo = data.users.find(item => item.id === demoId);

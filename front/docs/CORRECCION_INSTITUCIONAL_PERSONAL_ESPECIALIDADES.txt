@@ -1,0 +1,159 @@
+CLINICAPP — PERFIL INSTITUCIONAL, PERSONAL Y ESPECIALIDADES
+Fecha: 26 de noviembre de 2026
+
+IMPLEMENTACIÓN
+
+Perfil institucional es la fuente de nombres, subtítulo, logo y sedes.
+En sesión real se reutiliza institutionApi y su contrato HTTP existente.
+En demostración se reutiliza la misma pantalla mediante institution.demo.ts,
+con un perfil confirmado por organización y almacenamiento local aislado.
+Los hooks y las claves de TanStack Query distinguen ambos contextos.
+
+Personal y accesos obtiene el perfil confirmado mediante useStaffInstitution.
+No copia sedes del servidor a organizaciones ficticias ni muestra el catálogo
+institucional antiguo de la demostración. La vista compatible de useSaasData
+deriva los nombres, logos y sedes del perfil confirmado, también para los
+consumidores existentes de mensajería y de identidad personal.
+
+La API actual no expone un identificador institucional. Se utiliza
+frontend-institution-current como clave local del único contexto institucional
+de la API actual, sin enviarla como identificador al servidor. No se inventó
+un estado de sede: el contrato actual tampoco lo expone. Las asignaciones
+usan los identificadores reales de las sedes devueltas por Perfil institucional.
+En demostración, el adaptador asigna identificadores locales estables a sedes
+nuevas. Renombrar una sede conserva su identificador.
+
+Los campos institucionales heredados del repositorio local se conservan para
+compatibilidad de lectura, pero no alimentan los catálogos visibles. No se
+eliminan asignaciones históricas al cambiar la configuración institucional.
+
+NUEVO Y EDITAR USUARIO
+
+- Institución dinámica y de solo lectura.
+- Estado vacío sin sedes ficticias.
+- Crear primera sede reutiliza InstitutionBranches y su modal actual.
+- Se conserva el formulario del usuario abierto y su borrador.
+- Al guardar una sede se actualizan la caché y los selectores sin recargar.
+- Una sola sede no produce una selección adicional vacía.
+- Principal y adicionales usan identificadores y evitan duplicados.
+- Los horarios de sedes nuevas se inicializan al seleccionarlas.
+- Se permite guardar cuentas y profesionales pendientes de asignar sede.
+- Se indica que el profesional sin sede no estará disponible para citas.
+- Si una sede desaparece con el formulario abierto, se conserva el borrador,
+  se señala y enfoca el campo, y se permite retirar explícitamente esa
+  asignación no disponible. Las referencias anteriores quedan inactivas.
+- El catálogo confirmado debe terminar de cargar antes de abrir el editor,
+  para evitar inicializar asignaciones a partir de un catálogo vacío temporal.
+- El rol sigue siendo un selector simple. Se conservan las tres pestañas.
+- Las solicitudes locales sin institución verificable no se atribuyen a una
+  clínica por coincidencia de nombre. Los registros se conservan.
+
+ICONOS, ESTADOS Y ESPACIADO
+
+Indicadores: UsersRound, Stethoscope, CalendarDays y Mail.
+Encabezados del formulario: UserRound, KeyRound, Building2, Stethoscope y
+ShieldCheck. Se emplean iconos Lucide de contorno y tokens existentes.
+Los indicadores conservan altura uniforme incluso con etiquetas multilínea.
+
+Se reutilizan AccountStatusBadge y ProfessionalStatusBadge con sus tonos
+semánticos existentes: verde, gris, rojo discreto, azul y ámbar.
+Las sedes múltiples se muestran de forma compacta, por ejemplo
+Centro · Norte +1; el perfil del personal permite consultar todos los nombres
+y el atributo title los conserva como ayuda en las tablas.
+
+ESPECIALIDADES
+
+Se reutiliza DataTable, que conserva su tabla en escritorio y tarjetas
+en móvil. Columnas: Especialidad, Descripción, Profesionales, Estado, Acciones.
+El nombre y la descripción admiten ajuste de línea; las acciones son compactas.
+El número de profesionales cuenta professionalId únicos dentro de la institución.
+
+Editar abre SpecialtyEditor con los datos actuales y validaciones por campo.
+Activar y Desactivar son botones Button outline con iconos y estado de guardado.
+Desactivar solicita confirmación; no borra asociaciones ni registros.
+El badge Activa/Inactiva y la acción correspondiente se actualizan al guardar.
+Una especialidad inactiva conserva sus asociaciones previas, visibles y
+bloqueadas en el editor; no se ofrece para nuevas asignaciones.
+Al reactivarse vuelve a estar disponible.
+
+CITAS Y AISLAMIENTO
+
+El adaptador de demostración valida el catálogo institucional, la sede,
+el rol clínico, la cuenta, la especialidad, los horarios y las ausencias.
+Los catálogos conservan identidades inactivas para las referencias históricas.
+La disponibilidad para una fecha sigue utilizando professionalAvailability.
+No se crean pacientes por sede ni se generan citas al asignar un profesional.
+La API real de Citas mantiene su comportamiento y sus contratos actuales.
+La gestión local de personal continúa siendo un adaptador frontend;
+su integración definitiva con el servidor queda a cargo del propietario.
+
+MODALES Y COMPONENTES REUTILIZADOS
+
+Se conserva useModalAccordion, las secciones montadas y su transición de
+220 ms, una sección abierta, enfoque de errores y prefers-reduced-motion.
+No se alteran los acordeones clínicos externos ni los formularios simples.
+
+Componentes reutilizados:
+InstitutionBranches, InstitutionProfilePage, InstitutionIdentity,
+DataTable, Button, Badge, Dialog, ConfirmDialog, Field/FieldError,
+SaasSelect, useValidatedForm, useModalAccordion y los badges administrativos.
+
+VALIDACIÓN EJECUTADA
+
+- TypeScript y build: npm.cmd run build, resultado correcto.
+- Lint: npm.cmd run lint, sin errores; cuatro avisos preexistentes
+  (Fast Refresh en button/badge/tabs y escape en api-problem).
+- Build conserva el aviso previo de paquetes mayores de 500 kB.
+- Chrome/Playwright: 13 grupos de institución, sedes, usuarios,
+  especialidades, disponibilidad, borradores y responsive aprobados.
+- Chrome/Playwright: 12 regresiones de modales de pacientes, tratamientos,
+  compras, esterilización, pasos clínicos y archivo digital aprobadas.
+- Chrome/Playwright: 5 regresiones de autenticación y solicitud de acceso
+  aprobadas.
+- Total: 30 grupos aprobados. Sin errores de ejecución del navegador.
+- Anchos: 320, 375, 390, 430, 768, 1024, 1440 y 1920 px, en ambos temas.
+- Sin desbordamiento horizontal de página; las tablas mantienen su patrón
+  responsive compartido. Se revisaron capturas de escritorio y móvil.
+- Se probaron nombre en vivo, creación y renombrado de sedes, múltiples
+  asignaciones, sedes eliminadas con borrador abierto y cuentas sin sede.
+- Las peticiones de las pruebas se interceptaron; no se escribieron datos
+  en el servidor ni en una base de datos.
+- El ejecutor test:e2e del repositorio levanta backend y crea/migra una base;
+  se utilizaron comprobaciones frontend aisladas para respetar el alcance.
+- Los scripts y capturas de QA están en TEMP, sin agregar tests,
+  variables de entorno ni dependencias al proyecto.
+- git diff --check correcto.
+- 187 archivos protegidos comprobados mediante SHA-256: ninguno alterado.
+
+ARCHIVOS MODIFICADOS O NUEVOS (rutas desde front/)
+
+src/modules/institution/api/institution.api.ts
+src/modules/institution/api/institution.queries.ts
+src/modules/institution/api/institution.demo.ts (nuevo)
+src/modules/institution/components/institution-branches.tsx
+src/modules/saas/adapters/demo-repository.ts
+src/modules/saas/adapters/operational-demo.ts
+src/modules/saas/components/context-selector.tsx
+src/modules/saas/components/professional-status-dialog.tsx
+src/modules/saas/components/scope-boundary.tsx
+src/modules/saas/components/specialties.tsx
+src/modules/saas/components/staff-editor.tsx
+src/modules/saas/pages/staff-page.tsx
+src/modules/saas/saas.css
+src/modules/saas/services.ts
+src/modules/saas/state.ts
+src/modules/saas/types.ts
+src/modules/saas/lib/institution-scope.ts (nuevo)
+docs/CORRECCION_INSTITUCIONAL_PERSONAL_ESPECIALIDADES.txt (este informe)
+
+ALCANCE CONSERVADO
+
+No se modificaron los archivos de Sidebar, Header ni AppLayout.
+context-selector.tsx conserva su ubicación y consume el perfil compartido;
+solo ofrece sedes de la institución activa, sin gestión comercial ajena.
+No se modificaron rutas, campana, contador, temas globales ni dependencias.
+No se modificaron backend, endpoints, base de datos, migraciones,
+infraestructura, autenticación del servidor ni las librerías o componentes
+protegidos del odontograma y periodontograma.
+La implementación se validó localmente antes de versionarla. El usuario
+autorizó posteriormente su publicación en main el 26 de noviembre de 2026.

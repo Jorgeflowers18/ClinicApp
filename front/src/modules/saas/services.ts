@@ -4,6 +4,7 @@ import type { IdentityProfile, StaffAdapter } from "./types";
 import { assertUsernameAvailable, demoId, readDemoData, safeDemoSnapshot, recordAudit, updateDemoData } from "./adapters/demo-repository";
 import { currentActor, useDemoContext } from "./state";
 import { normalizeUsername } from "./lib/identity";
+import { activeInstitutionScope, confirmedStaffInstitution } from "./lib/institution-scope";
 function administrator() {
     const actor = currentActor();
     if (!actor || actor.role !== "admin")
@@ -16,10 +17,14 @@ export const demoStaffAdapter: StaffAdapter = {
         const actor = administrator();
         assertUsernameAvailable(user.username, user.id);
         const catalog = readDemoData();
-        if (user.assignments.some(assignment => assignment.active && (!user.organizationIds.includes(assignment.organizationId) || !catalog.organizations.find(org => org.id === assignment.organizationId)?.branches.some(site => site.id === assignment.siteId))))
-            throw new ApiError("Revisa las sedes de la identidad.", 422, [{ field: "siteIds", message: "Cada sede activa debe pertenecer a una organización asignada." }]);
+        const scope = activeInstitutionScope(), profile = confirmedStaffInstitution();
+        const previous = catalog.users.find(item => item.id === user.id);
+        if (!user.organizationIds.includes(scope) || previous && !previous.organizationIds.includes(scope)) throw new ApiError("Esta identidad no pertenece a la institución actual.", 403);
+        if (JSON.stringify(user.assignments) !== JSON.stringify(previous?.assignments) && user.assignments.some(assignment => assignment.active && assignment.organizationId === scope && !profile?.branches.some(site => site.id === assignment.siteId)))
+            throw new ApiError("Revisa las sedes de la identidad.", 422, [{ field: "mainSiteId", message: "La sede seleccionada ya no está disponible." }]);
         if (user.specialtyIds.some(id => !catalog.specialties.some(item => item.id === id && user.organizationIds.includes(item.organizationId))))
             throw new ApiError("Revisa las especialidades.", 422, [{ field: "specialtyIds", message: "Selecciona especialidades de las organizaciones asignadas." }]);
+        if (user.specialtyIds.some(id => !previous?.specialtyIds.includes(id) && catalog.specialties.some(item => item.id === id && !item.active))) throw new ApiError("Revisa las especialidades.", 422, [{ field: "specialtyIds", message: "La especialidad seleccionada ya no está activa para nuevas asignaciones." }]);
         if (readDemoData().users.some(item => item.id !== user.id && item.email.toLowerCase() === user.email.toLowerCase()))
             throw new ApiError("Este correo ya pertenece a una identidad.", 409, [{ field: "email", message: "El correo ya está registrado en la demostración." }]);
         if (user.id === actor.id && (!user.roles.includes("admin") || user.state !== "active"))
@@ -28,7 +33,7 @@ export const demoStaffAdapter: StaffAdapter = {
             data.users.push(user);
         else
             data.users[index] = user; for (const request of data.requests) {
-            if (request.state === "approved" && request.email.toLowerCase() === user.email.toLowerCase()) {
+            if (request.organizationId === scope && request.state === "approved" && request.email.toLowerCase() === user.email.toLowerCase()) {
                 request.state = "created";
                 request.userId = user.id;
             }
@@ -37,17 +42,13 @@ export const demoStaffAdapter: StaffAdapter = {
     },
     async saveSpecialty(specialty) {
         const actor = administrator();
+        if (specialty.organizationId !== activeInstitutionScope()) throw new ApiError("Esta especialidad no pertenece a la institución actual.", 403);
         updateDemoData(data => { if (data.specialties.some(item => item.id !== specialty.id && item.organizationId === specialty.organizationId && item.name.trim().toLowerCase() === specialty.name.trim().toLowerCase()))
             throw new ApiError("Ya existe esta especialidad.", 409, [{ field: "name", message: "El nombre ya está registrado." }]); const index = data.specialties.findIndex(item => item.id === specialty.id); if (index < 0)
             data.specialties.push(specialty);
         else
             data.specialties[index] = specialty; recordAudit(data, actor.id, specialty.id, "Guardar especialidad"); });
     },
-    async saveOrganization(organization) { const actor = administrator(); updateDemoData(data => { if (data.users.some(user => user.assignments.some(item => item.active && item.organizationId === organization.id && !organization.branches.some(site => site.id === item.siteId))))
-        throw new ApiError("Retira primero las asignaciones activas antes de eliminar una sede.", 409); const index = data.organizations.findIndex(item => item.id === organization.id); if (index < 0)
-        data.organizations.push(organization);
-    else
-        data.organizations[index] = organization; recordAudit(data, actor.id, organization.id, "Guardar organización"); }); },
 };
 export const identityService = {
     find(id: string) { return safeDemoSnapshot().identities.find(item => item.id === id) ?? safeDemoSnapshot().users.find(item => item.id === id); },
@@ -89,7 +90,7 @@ export const identityService = {
         username: string;
         email: string;
         institution: string;
-    }) { updateDemoData(data => data.requests.push({ ...values, id: demoId(), state: "pending" })); },
+    }) { updateDemoData(data => data.requests.push({ ...values, organizationId: useDemoContext.getState().userId ? useDemoContext.getState().organizationId : undefined, id: demoId(), state: "pending" })); },
     async updateDemoProfile(profile: AuthUser["profile"]) { const id = useDemoContext.getState().userId; if (!id || !profile)
         throw new Error("Sesión de demostración no disponible."); updateDemoData(data => { const user = data.users.find(item => item.id === id)!; user.profile = profile; }); },
     async completeDemoActivation(id: string) { const selected = useDemoContext.getState().userId; if (id !== selected)

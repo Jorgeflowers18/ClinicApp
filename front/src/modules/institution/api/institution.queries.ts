@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { queryClient } from "@/shared/lib/query-client"
+import { useDemoContext, useSaasData } from "@/modules/saas/state"
 
 import { institutionApi } from "./institution.api"
 import { initialInstitutionProfile, type InstitutionProfile, type PublicInstitution } from "../types/institution.types"
@@ -10,6 +11,8 @@ export const institutionKeys = {
   all: ["institution"] as const,
   profile: ["institution", "profile"] as const,
   public: ["institution", "public"] as const,
+  profileFor: (scope: string) => ["institution", "profile", scope] as const,
+  publicFor: (scope: string) => ["institution", "public", scope] as const,
 }
 
 /** El perfil cambia poco: no hace falta pedirlo en cada pantalla. */
@@ -17,9 +20,13 @@ const STALE_TIME = 5 * 60_000
 
 const publicPart = ({ name, subtitle, logoText, logoImage }: InstitutionProfile): PublicInstitution => ({ name, subtitle, logoText, logoImage })
 
-function profileQuery() {
+function currentScope() {
+  const context = useDemoContext.getState()
+  return context.userId ? context.organizationId : "frontend-institution-current"
+}
+function profileQuery(scope = currentScope()) {
   return {
-    queryKey: institutionKeys.profile,
+    queryKey: institutionKeys.profileFor(scope),
     queryFn: ({ signal }: { signal: AbortSignal }) => institutionApi.getProfile(signal),
     staleTime: STALE_TIME,
   }
@@ -28,12 +35,17 @@ function profileQuery() {
 /** El perfil completo pide sesión (los tres roles); antes de iniciarla no se pide. */
 function useProfileQuery() {
   const signedIn = useAuthStore((state) => state.status === "authenticated")
+  const context = useDemoContext()
+  const demo = useSaasData()
+  const scope = context.userId ? context.organizationId : "frontend-institution-current"
   return useQuery({
-    ...profileQuery(),
-    enabled: signedIn,
+    ...profileQuery(scope),
+    enabled: signedIn || Boolean(context.userId),
+    // Subscribe to local changes without waiting for a network refetch.
+    initialData: context.userId ? demo.organizations.find(item => item.id === scope)?.profile : undefined,
     // Mientras llega, la marca que ya se leyó en el inicio de sesión evita que la barra lateral parpadee.
     placeholderData: () => {
-      const brand = queryClient.getQueryData<PublicInstitution>(institutionKeys.public)
+      const brand = queryClient.getQueryData<PublicInstitution>(institutionKeys.publicFor(scope))
       return brand ? { ...initialInstitutionProfile, ...brand } : undefined
     },
   })
@@ -46,8 +58,10 @@ export function useInstitutionProfile(): InstitutionProfile {
 
 /** Nombre y marca para las pantallas sin sesión (inicio de sesión, recuperar contraseña…). */
 export function usePublicInstitution(): PublicInstitution {
+  const context = useDemoContext()
+  const scope = context.userId ? context.organizationId : "frontend-institution-current"
   const { data } = useQuery({
-    queryKey: institutionKeys.public,
+    queryKey: institutionKeys.publicFor(scope),
     queryFn: ({ signal }) => institutionApi.getPublic(signal),
     staleTime: STALE_TIME,
   })
@@ -72,15 +86,17 @@ export function useEditableInstitutionProfile(): { profile: InstitutionProfile |
 
 /** El último perfil confirmado (lo que muestra "Cancelar"). */
 export function readConfirmedInstitutionProfile(): InstitutionProfile | undefined {
-  return queryClient.getQueryData<InstitutionProfile>(institutionKeys.profile)
+  return queryClient.getQueryData<InstitutionProfile>(institutionKeys.profileFor(currentScope()))
 }
 
 export function useSaveInstitutionProfile() {
+  const context = useDemoContext()
+  const scope = context.userId ? context.organizationId : "frontend-institution-current"
   return useMutation({
     mutationFn: (profile: InstitutionProfile) => institutionApi.saveProfile(profile),
     onSuccess: (saved) => {
-      queryClient.setQueryData(institutionKeys.profile, saved)
-      queryClient.setQueryData(institutionKeys.public, publicPart(saved))
+      queryClient.setQueryData(institutionKeys.profileFor(scope), saved)
+      queryClient.setQueryData(institutionKeys.publicFor(scope), publicPart(saved))
     },
   })
 }

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ChevronDown } from "lucide-react"
+import { Building2, ChevronDown, KeyRound, ShieldCheck, Stethoscope, UserRound } from "lucide-react"
 import { useValidatedForm } from "@/shared/hooks/use-validated-form"
 import { useModalAccordion } from "@/shared/hooks/use-modal-accordion"
 import { applyServerFieldErrors } from "@/shared/lib/field-issues"
@@ -17,7 +17,10 @@ import { demoId } from "../adapters/demo-repository"
 import { usernameSchema, nameOf } from "../lib/identity"
 import { effectiveProfessionalState } from "../lib/professional-policy"
 import { demoStaffAdapter } from "../services"
-import { useDemoContext, useSaasData } from "../state"
+import { useSaasData } from "../state"
+import { useStaffInstitution } from "../lib/institution-scope"
+import { useSaveInstitutionProfile } from "@/modules/institution/api/institution.queries"
+import { InstitutionBranches } from "@/modules/institution/components/institution-branches"
 import { accountStates, type StaffUser } from "../types"
 import { ProfessionalStatusBadge, SaasSelect, UsernameField } from "./controls"
 
@@ -27,11 +30,12 @@ const schema = z.object({
   username: usernameSchema, email: z.string().trim().email("Ingresa un correo válido."),
   phone: z.string().trim().refine(value => !value || /^\+?[\d ()-]{7,20}$/.test(value), "Ingresa un teléfono válido."),
   documentType: z.string(), documentNumber: z.string(), role: z.enum(roles),
-  siteIds: z.array(z.string()).min(1, "Asigna al menos una sede."), mainSiteId: z.string().min(1, "Selecciona la sede principal."),
+  siteIds: z.array(z.string()), mainSiteId: z.string(),
   schedules: z.record(schedule), profession: z.string(), registration: z.string(), specialtyIds: z.array(z.string()),
   state: z.enum(["active", "inactive", "blocked", "pending"]), activation: z.enum(["invitation", "temporary", "active"]),
 }).superRefine((value, context) => {
   if (value.mainSiteId && !value.siteIds.includes(value.mainSiteId)) context.addIssue({ code: "custom", path: ["mainSiteId"], message: "La sede principal debe estar asignada." })
+  if (value.siteIds.length && !value.mainSiteId) context.addIssue({ code: "custom", path: ["mainSiteId"], message: "Selecciona la sede principal." })
   if (value.role !== "medico") return
   if (!value.profession.trim()) context.addIssue({ code: "custom", path: ["profession"], message: "Indica la profesión." })
   if (!value.specialtyIds.length) context.addIssue({ code: "custom", path: ["specialtyIds"], message: "Asigna al menos una especialidad." })
@@ -52,9 +56,9 @@ const groups = [
 ]
 const activationLabels = { invitation: "Invitación pendiente", temporary: "Contraseña temporal · cambio obligatorio", active: "Cuenta activa" }
 export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user: StaffUser | null; onClose: () => void; initialRole?: Role }) {
-  const data = useSaasData(), organizationId = useDemoContext(state => state.organizationId), body = useRef<HTMLDivElement>(null), lock = useRef(false)
-  const organization = data.organizations.find(item => item.id === organizationId)
-  const sites = organization?.branches ?? []
+  const data = useSaasData(), { organizationId, organization, profile } = useStaffInstitution(), body = useRef<HTMLDivElement>(null), lock = useRef(false)
+  const sites = organization.branches, saveInstitution = useSaveInstitutionProfile()
+  const [creatingSite, setCreatingSite] = useState(false)
   const accordion = useModalAccordion(body, "personal")
   const [failure, setFailure] = useState("")
   const existingRole = user?.roles.includes("admin") ? "admin" : user?.roles[0] ?? initialRole
@@ -63,8 +67,8 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user
     defaultValues: {
       firstName: user?.firstName ?? "", lastName: user?.lastName ?? "", username: user?.username ?? "", email: user?.email ?? "", phone: user?.phone ?? "",
       documentType: user?.documentType ?? "cedula", documentNumber: user?.documentNumber ?? "", role: existingRole,
-      siteIds: user?.assignments.filter(item => item.active && item.organizationId === organizationId).map(item => item.siteId) ?? [],
-      mainSiteId: user?.assignments.find(item => item.active && item.main && item.organizationId === organizationId)?.siteId ?? "",
+      siteIds: user?.assignments.filter(item => item.active && item.organizationId === organizationId && sites.some(site => site.id === item.siteId)).map(item => item.siteId) ?? [],
+      mainSiteId: user?.assignments.find(item => item.active && item.main && item.organizationId === organizationId && sites.some(site => site.id === item.siteId))?.siteId ?? "",
       schedules: Object.fromEntries(sites.map(site => {
         const previous = user?.assignments.find(item => item.siteId === site.id && item.organizationId === organizationId)
         return [site.id, { days: previous?.days ?? [1, 2, 3, 4, 5], start: previous?.start ?? "08:00", end: previous?.end ?? "18:00" }]
@@ -88,6 +92,12 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user
     if (lock.current) return
     lock.current = true; setFailure("")
     try {
+      const unavailable = next.siteIds.find(id => !sites.some(site => site.id === id))
+      if (unavailable) {
+        form.setError("mainSiteId", { message: "La sede seleccionada ya no está disponible. Revisa la asignación." })
+        reveal("mainSiteId")
+        return
+      }
       const previous = data.users.find(item => item.id === user?.id) ?? user
       const currentAssignments = sites.filter(site => next.siteIds.includes(site.id)).map(site => ({
         organizationId, siteId: site.id, main: next.mainSiteId === site.id, active: true,
@@ -129,19 +139,42 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user
     assignments: <div className="saas-stack">
       <div className="saas-grid">
         <SaasSelect label="Rol *" id="role" value={values.role} items={roleLabels} error={errors.role?.message} onChange={value => form.setValue("role", value as Role, { shouldDirty: true, shouldValidate: form.formState.isSubmitted })} />
-        <div className="saas-field"><span>Organización actual</span><p className="saas-readonly">{organization?.name ?? "Organización no disponible"}</p></div>
+        <div className="saas-field"><span>Institución</span><p className="saas-readonly">{organization.name}</p></div>
       </div>
-      <SaasSelect label="Sede principal *" id="mainSiteId" value={values.mainSiteId || "none"} error={errors.mainSiteId?.message}
-        items={{ none: "Seleccionar sede", ...Object.fromEntries(sites.map(site => [site.id, site.name])) }}
-        onChange={value => { form.setValue("mainSiteId", value === "none" ? "" : value, { shouldDirty: true, shouldValidate: true }); if (value !== "none") form.setValue("siteIds", [...new Set([...values.siteIds, value])], { shouldDirty: true, shouldValidate: true }) }} />
-      <Field data-invalid={Boolean(errors.siteIds)}><FieldLabel>Sedes adicionales</FieldLabel>
+      {!sites.length && <div className="saas-stack saas-empty-sites"><p>Todavía no hay sedes registradas.</p><p className="saas-hint">Crea una sede desde Perfil institucional para asignar personal.</p><Button type="button" variant="outline" size="sm" disabled={!profile} onClick={() => setCreatingSite(true)}>Crear primera sede</Button></div>}
+      {(sites.length > 0 || values.siteIds.length > 0) && <div className={sites.length > 1 ? "saas-grid" : "saas-stack"}>
+      <SaasSelect label="Sede principal" id="mainSiteId" value={values.mainSiteId || "none"} error={errors.mainSiteId?.message}
+        items={{ none: "Pendiente de asignar sede", ...(values.mainSiteId && !sites.some(site => site.id === values.mainSiteId) ? { [values.mainSiteId]: "Sede no disponible" } : {}), ...Object.fromEntries(sites.map(site => [site.id, site.name])) }}
+        onChange={value => {
+          const selected = value === "none" ? "" : value
+          form.setValue("mainSiteId", selected, { shouldDirty: true, shouldValidate: true })
+          if (selected) {
+            form.setValue("siteIds", [...new Set([...values.siteIds, selected])], { shouldDirty: true, shouldValidate: true })
+            if (!values.schedules[selected]) form.setValue(`schedules.${selected}`, { days: [1, 2, 3, 4, 5], start: "08:00", end: "18:00" })
+          } else form.setValue("siteIds", [], { shouldDirty: true, shouldValidate: true })
+        }} />
+      {sites.length > 1 && <Field data-invalid={Boolean(errors.siteIds)}><FieldLabel>Sedes adicionales</FieldLabel>
         <div className="saas-checks">{sites.filter(site => site.id !== values.mainSiteId).map(site => <label className="saas-check" key={site.id}>
-          <Checkbox checked={values.siteIds.includes(site.id)} onCheckedChange={checked => form.setValue("siteIds", checked ? [...values.siteIds, site.id] : values.siteIds.filter(id => id !== site.id), { shouldDirty: true, shouldValidate: true })} />{site.name}
+          <Checkbox checked={values.siteIds.includes(site.id)} onCheckedChange={checked => {
+            form.setValue("siteIds", checked ? [...new Set([...values.siteIds, site.id])] : values.siteIds.filter(id => id !== site.id), { shouldDirty: true, shouldValidate: true })
+            if (checked && !values.schedules[site.id]) form.setValue(`schedules.${site.id}`, { days: [1, 2, 3, 4, 5], start: "08:00", end: "18:00" })
+          }} />{site.name}
         </label>)}</div><FieldError>{errors.siteIds?.message}</FieldError>
         {!sites.length && <p className="saas-hint">Configura las sedes desde Perfil institucional antes de asignar personal.</p>}
-      </Field>
+      </Field>}
+      </div>}
+      {values.siteIds.some(id => !sites.some(site => site.id === id)) && <div className="saas-stack">
+        <p className="saas-hint">Una sede asignada dejó de estar disponible. Revisa las asignaciones antes de guardar.</p>
+        <Button type="button" variant="outline" size="sm" onClick={() => {
+          form.setValue("siteIds", values.siteIds.filter(id => sites.some(site => site.id === id)), { shouldDirty: true, shouldValidate: true })
+          if (!sites.some(site => site.id === values.mainSiteId)) form.setValue("mainSiteId", "", { shouldDirty: true, shouldValidate: true })
+          form.clearErrors("mainSiteId")
+        }}>Quitar sedes no disponibles</Button>
+      </div>}
+      {errors.mainSiteId && !sites.length && <FieldError>{errors.mainSiteId.message}</FieldError>}
+      {clinical && !values.siteIds.length && <p className="saas-hint">Pendiente de asignar sede. No estará disponible para nuevas citas.</p>}
       {clinical && sites.filter(site => values.siteIds.includes(site.id)).map(site => {
-        const item = values.schedules[site.id], issues = errors.schedules?.[site.id]
+        const item = values.schedules[site.id] ?? { days: [1, 2, 3, 4, 5], start: "08:00", end: "18:00" }, issues = errors.schedules?.[site.id]
         return <fieldset key={site.id} className="saas-schedule">
           <legend>Horario · {site.name}</legend>
           <Field data-invalid={Boolean(issues?.days)}><FieldLabel>Días de atención</FieldLabel><div className="saas-checks">
@@ -159,7 +192,7 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user
       <div className="saas-grid">{text("profession", "Profesión")}{text("registration", "Registro profesional")}</div>
       <Field data-invalid={Boolean(errors.specialtyIds)}><FieldLabel>Especialidades asignadas *</FieldLabel>
         <div className="saas-checks">{data.specialties.filter(item => item.organizationId === organizationId && (item.active || values.specialtyIds.includes(item.id))).map(item => <label className="saas-check" key={item.id}>
-          <Checkbox checked={values.specialtyIds.includes(item.id)} onCheckedChange={checked => form.setValue("specialtyIds", checked ? [...values.specialtyIds, item.id] : values.specialtyIds.filter(id => id !== item.id), { shouldDirty: true, shouldValidate: true })} />{item.name}{!item.active && " (inactiva)"}
+          <Checkbox checked={values.specialtyIds.includes(item.id)} disabled={!item.active} onCheckedChange={checked => form.setValue("specialtyIds", checked ? [...values.specialtyIds, item.id] : values.specialtyIds.filter(id => id !== item.id), { shouldDirty: true, shouldValidate: true })} />{item.name}{!item.active && " (inactiva · asociación conservada)"}
         </label>)}</div><FieldError>{errors.specialtyIds?.message}</FieldError>
       </Field>
       <div className="saas-inline"><span>Estado profesional</span><ProfessionalStatusBadge state={user ? effectiveProfessionalState(user) : "ACTIVE"} /></div>
@@ -178,7 +211,7 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user
       <DialogBody ref={body}><form id="saas-user-form" noValidate onSubmit={event => { void form.handleSubmit(save, invalid => { const first = visibleGroups.flatMap(group => group.fields).find(key => key in invalid); if (first) reveal(first) })(event) }}>
         <fieldset disabled={form.formState.isSubmitting}>{visibleGroups.map(group => <section className="saas-accordion" key={group.id} data-modal-section={group.id}>
           <button type="button" data-modal-section-trigger onClick={() => accordion.request(accordion.open === group.id ? null : group.id)} aria-expanded={accordion.open === group.id} aria-controls={`staff-panel-${group.id}`}>
-            <span>{group.title}</span>{group.fields.some(field => field in errors) && <span className="text-destructive">Revisar</span>}<ChevronDown className="size-4" />
+            <span className="saas-section-label">{(() => { const Icon = ({ personal: UserRound, credentials: KeyRound, assignments: Building2, professional: Stethoscope, activation: ShieldCheck })[group.id]; return Icon && <Icon aria-hidden="true" /> })()}{group.title}</span>{group.fields.some(field => field in errors) && <span className="text-destructive">Revisar</span>}<ChevronDown className="size-4" />
           </button>
           <div id={`staff-panel-${group.id}`} className="saas-accordion-motion" data-open={accordion.open === group.id} data-validation-panel inert={accordion.open !== group.id} aria-hidden={accordion.open !== group.id || undefined}>
             <div><div className="saas-accordion-body">{contents[group.id as keyof typeof contents]}</div></div>
@@ -188,5 +221,6 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion" }: { user
       </form></DialogBody>
       <DialogFooter><Button variant="outline" disabled={form.formState.isSubmitting} onClick={close}>Cancelar</Button><Button type="submit" form="saas-user-form" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Guardando…" : "Guardar usuario"}</Button></DialogFooter>
     </DialogContent>
+    {creatingSite && profile && <InstitutionBranches branches={sites} editorOnly onEditorClose={() => setCreatingSite(false)} onCommit={async branches => { await saveInstitution.mutateAsync({ ...profile, branches }) }} />}
   </Dialog>
 }

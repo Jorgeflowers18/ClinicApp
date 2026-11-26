@@ -241,6 +241,26 @@
 
 #saas-user-form { overflow-anchor: none; }
 
+.staff-metric { grid-template-columns: minmax(0, 1fr) 20px; align-items: center; }
+.staff-management .saas-metrics { grid-auto-rows: 1fr; }
+.staff-metric strong { grid-column: 1; }
+.staff-metric > svg { width: 20px; height: 20px; color: var(--success); }
+.staff-metric[data-tone="info"] > svg { color: var(--info); }
+.staff-metric[data-tone="warning"] > svg { color: var(--warning); }
+.saas-section-label { display: inline-flex; align-items: center; gap: 8px; }
+.saas-section-label > svg { width: 18px; height: 18px; flex: none; color: var(--primary); }
+.saas-empty-sites { gap: 8px; justify-items: start; }
+.staff-specialties-table [data-slot="table"] { min-width: 650px; width: 100%; }
+.staff-specialties-table [data-column="name"] { width: 26%; white-space: normal; overflow-wrap: anywhere; }
+.staff-specialties-table [data-column="description"] { width: 35%; white-space: normal; overflow-wrap: anywhere; }
+.staff-specialties-table [data-column="professionals"] { text-align: right; }
+.staff-specialties-table [data-column="actions"] { width: 1%; }
+.staff-specialty-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.staff-specialty-actions [data-slot="button"] { flex-shrink: 0; }
+.staff-state-action[data-active="false"] { color: var(--success); }
+.staff-state-action[data-active="true"] { color: var(--muted-foreground); }
+@container (min-width: 448px) { .staff-specialty-actions { flex-wrap: nowrap; } }
+
 .saas-status-badge[data-slot="badge"] { height: auto; }
 .staff-users-table [data-slot="table"] { width: 100%; min-width: 960px; table-layout: fixed; }
 .staff-users-table [data-slot="table"] :is(th, td) { white-space: normal; overflow-wrap: anywhere; padding-inline: 10px; }

@@ -19,7 +19,7 @@ import styles from "./institution-branches.module.css"
 
 type BranchDraft = Pick<InstitutionBranch, "name" | "address" | "phone" | "hours">
 type Editor = { original: InstitutionBranch | null; draft: BranchDraft }
-type Props = { branches: InstitutionBranch[]; onCommit: (branches: InstitutionBranch[]) => Promise<void> }
+type Props = { branches: InstitutionBranch[]; onCommit: (branches: InstitutionBranch[]) => Promise<void>; editorOnly?: boolean; onEditorClose?: () => void }
 
 
 function BranchActions({ branch, onEdit, onDelete }: {
@@ -41,8 +41,8 @@ function BranchActions({ branch, onEdit, onDelete }: {
   )
 }
 
-export function InstitutionBranches({ branches, onCommit }: Props) {
-  const [editor, setEditor] = useState<Editor | null>(null)
+export function InstitutionBranches({ branches, onCommit, editorOnly = false, onEditorClose }: Props) {
+  const [editor, setEditor] = useState<Editor | null>(editorOnly ? { original: null, draft: { name: "Nueva sede", address: "", phone: "", hours: "" } } : null)
   const [deleting, setDeleting] = useState<InstitutionBranch | null>(null)
   const [error, setError] = useState("")
   const busyRef = useRef(false)
@@ -82,6 +82,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
         : [...branches, { ...editor.draft, id: "", isMain: branches.length === 0 }]
       await onCommit(next)
       setEditor(null)
+      onEditorClose?.()
       setError("")
       toast.success(editor.original ? "Sede actualizada" : "Sede creada")
     } catch (cause) {
@@ -120,21 +121,21 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
 
   return (
     <>
-      <Card className={styles.section} data-institution-branches>
+      {!editorOnly && <Card className={styles.section} data-institution-branches>
         <CardHeader className={styles.header}>
           <div className={styles.heading}>
             <CardTitle role="heading" aria-level={2}>Sedes <span className={styles.count}>{branches.length}</span></CardTitle>
             <p>Consulta y administra las ubicaciones de tu institución.</p>
           </div>
-          <Button ref={createRef} variant="outline" onClick={(event) => openCreate(event.currentTarget)}><Plus />Crear sede</Button>
+          {branches.length > 0 && <Button ref={createRef} variant="outline" onClick={(event) => openCreate(event.currentTarget)}><Plus />Crear sede</Button>}
         </CardHeader>
         <CardContent className={styles.content}>
           {branches.length === 0 ? (
             <div className={styles.empty}>
               <Building2 aria-hidden="true" />
-              <h3>Aún no hay sedes registradas</h3>
+              <h3>Todavía no hay sedes registradas.</h3>
               <p>Crea la primera sede para gestionar sus datos de contacto, ubicación y horarios.</p>
-              <Button onClick={(event) => openCreate(event.currentTarget)}><Plus />Crear primera sede</Button>
+              <Button ref={createRef} onClick={(event) => openCreate(event.currentTarget)}><Plus />Crear primera sede</Button>
             </div>
           ) : <>
             <div className={styles.desktop}>
@@ -167,9 +168,9 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
             </ul>
           </>}
         </CardContent>
-      </Card>
+      </Card>}
 
-      <Dialog open={editor !== null} onOpenChange={(open) => { if (!open) { setEditor(null); setError("") } }}>
+      <Dialog open={editor !== null} onOpenChange={(open) => { if (!open && !busy) { setEditor(null); setError(""); onEditorClose?.() } }}>
         <DialogContent variant="medium" className={styles.editor} finalFocus={returnFocus}>
           <DialogHeader className={styles.editorHeader}>
             <DialogTitle>{editor?.original ? "Editar sede" : "Nueva sede"}</DialogTitle>
@@ -188,7 +189,7 @@ export function InstitutionBranches({ branches, onCommit }: Props) {
               {error && <p role="alert" className={styles.error}>{error}</p>}
             </div>
             <div className={styles.editorFooter} data-institution-editor-actions>
-              <Button type="button" variant="outline" onClick={() => { setEditor(null); setError("") }}>Cancelar</Button>
+              <Button type="button" variant="outline" disabled={busy} onClick={() => { setEditor(null); setError(""); onEditorClose?.() }}>Cancelar</Button>
               <Button type="submit" disabled={busy}>Guardar sede</Button>
             </div>
           </form>}
