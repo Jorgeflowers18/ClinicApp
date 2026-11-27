@@ -51,7 +51,7 @@ export function PatientForm({ patientId: id, presentation = "page", initialSecti
   const focusedSection = useRef<string | null>(null)
   const submitLock = useRef(false)
   const { openSectionId, requestSection, onValueChange } = usePatientAccordion(form)
-  const { register, control, handleSubmit, reset, setError, formState: { errors, isSubmitting, isDirty } } = useForm({
+  const { register, control, handleSubmit, reset, setError, trigger, formState: { errors, isSubmitting, isDirty } } = useForm({
     resolver: zodResolver(patientEditorSchema),
     shouldFocusError: false,
     shouldUnregister: false,
@@ -108,7 +108,7 @@ export function PatientForm({ patientId: id, presentation = "page", initialSecti
     const issue = errors[name]
     return <Field key={name} data-patient-field={name} data-invalid={!!issue} data-patient-short={name === "birthDate" || name === "nationality" || undefined}>
       <FieldLabel htmlFor={name}>{label}{required && <span aria-hidden="true" className="text-destructive">*</span>}</FieldLabel>
-      <Input id={name} type={type} {...register(name)} aria-required={required} aria-invalid={!!issue} aria-describedby={issue ? `${name}-error` : undefined} max={type === "date" ? new Date().toLocaleDateString("en-CA") : undefined} />
+      <Input id={name} type={type} {...register(name, name === "documentId" ? { onBlur: () => { void trigger("documentId") } } : undefined)} aria-required={required} aria-invalid={!!issue} aria-describedby={issue ? `${name}-error` : undefined} max={type === "date" ? new Date().toLocaleDateString("en-CA") : undefined} />
       <FieldError id={`${name}-error`} errors={issue ? [issue] : undefined} />
     </Field>
   }

@@ -191,7 +191,7 @@ function InstitutionProfileForm({ initial }: { initial: InstitutionProfile }) {
         </Card>
       </div>
     </form>
-    <InstitutionBranches branches={profile.branches} onCommit={handleCommitBranches} />
+    <InstitutionBranches branches={profile.branches} onCommit={handleCommitBranches} readOnly />
     {saveError && <p role="alert" className={styles.error}>{saveError}</p>}
     <div className={styles.actions}>
       <div>

@@ -9,7 +9,7 @@ export function OrganizationSelector() {
   const context = useDemoContext(), data = useSaasData(), profile = useInstitutionProfile()
   if (!context.userId) return null
   const member = data.users.find(user => user.id === context.userId)
-  const sites = profile.branches.filter(site => member?.roles.includes("admin") || member?.assignments.some(item => item.organizationId === context.organizationId && item.siteId === site.id && item.active))
+  const sites = profile.branches.filter(site => data.branchStates?.[context.organizationId]?.[site.id] !== false && (member?.roles.includes("admin") || member?.assignments.some(item => item.organizationId === context.organizationId && item.siteId === site.id && item.active)))
   const label = sites.find(site => site.id === context.siteId)?.name || profile.name.trim() || "Institución sin configurar"
   if (!sites.length || sites.length === 1 && sites[0].id === context.siteId) return <span className="saas-context-label">{label}</span>
   return <DropdownMenu>

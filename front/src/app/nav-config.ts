@@ -9,6 +9,8 @@ import {
   Stethoscope,
   UsersRound,
   UserRoundCog,
+  Building2,
+  Settings2,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -19,6 +21,7 @@ export interface NavItem {
   to: string
   icon: LucideIcon
   roles?: Role[]
+  module?: string
 }
 
 export const navItems: NavItem[] = [
@@ -56,5 +59,13 @@ export const navItems: NavItem[] = [
     icon: ChartNoAxesCombined,
     roles: ["admin"],
   },
-  { label: "Personal y accesos", to: "/personal-accesos", icon: UserRoundCog, roles: ["admin"] },
+  { label: "Usuarios y profesionales", to: "/accesos", icon: UserRoundCog, roles: ["admin"], module: "Personal y accesos" },
+  { label: "Sedes", to: "/administracion/sedes", icon: Building2, roles: ["admin"], module: "Administración" },
+  { label: "Roles y tipos de profesionales", to: "/administracion/roles-tipos", icon: Settings2, roles: ["admin"], module: "Administración" },
 ]
+
+/** The permission catalog is derived from actual navigation, including the existing profile menu. */
+export const navigationSections = [...new Map([
+  ...navItems.map(item => [item.module ?? (item.to === "/historial-clinico" ? "Historia clínica" : item.label), { id: item.module ?? (item.to === "/historial-clinico" ? "Historia clínica" : item.label), label: item.module === "Administración" ? item.module : item.label }] as const),
+  ["Perfil institucional", { id: "Perfil institucional", label: "Perfil institucional" }] as const,
+]).values()]

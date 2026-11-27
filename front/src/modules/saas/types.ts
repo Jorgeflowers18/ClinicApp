@@ -20,6 +20,10 @@ export interface SiteAssignment {
     end: string;
 }
 export interface StaffUser {
+    accessRoleIds?: string[];
+    roleAssignments?: Record<string, string[]>;
+    professionalTypeId?: string | null;
+    hasAccount?: boolean;
     id: string;
     firstName: string;
     lastName: string;
@@ -93,6 +97,10 @@ export interface CommercialPlan {
     countStates: ProfessionalState[];
 }
 export interface SaasData {
+    accessRoles?: AccessRole[];
+    professionalTypes?: ProfessionalType[];
+    serverStaffSettings?: Record<string, Record<string, StaffSettings>>;
+    branchStates?: Record<string, Record<string, boolean>>;
     version: 1;
     users: StaffUser[];
     organizations: Organization[];
@@ -107,6 +115,32 @@ export interface SaasData {
         recordId: string;
         action: string;
     }[];
+}
+export interface StaffSettings {
+    username?: string;
+    email?: string;
+    accessRoleIds: string[];
+    professionalTypeId: string | null;
+    specialtyIds?: string[];
+    siteIds?: string[];
+    documentType?: string;
+    documentNumber?: string;
+}
+export interface AccessRole {
+    id: string;
+    organizationId: string;
+    name: string;
+    description: string;
+    active: boolean;
+    sections: string[];
+    builtin?: Role;
+}
+export interface ProfessionalType {
+    id: string;
+    organizationId: string;
+    name: string;
+    description: string;
+    active: boolean;
 }
 export interface StaffAdapter {
     read(): SaasData;

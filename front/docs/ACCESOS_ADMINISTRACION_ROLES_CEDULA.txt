@@ -1,0 +1,237 @@
+CLINICAPP — ACCESOS, ADMINISTRACIÓN, ROLES Y CÉDULA
+Fecha de validación: 26 de noviembre de 2026 (America/Guayaquil).
+
+IMPLEMENTACIÓN
+Se auditó la aplicación existente y se reutilizaron sus componentes y adaptadores.
+Publicación solicitada en la rama main el 27 de noviembre de 2026.
+
+1. NAVEGACIÓN
+Accesos → Usuarios y profesionales: /accesos.
+Administración → Sedes: /administracion/sedes.
+Administración → Roles y tipos de profesionales: /administracion/roles-tipos.
+Especialidades: /administracion/especialidades.
+Consultorios: /administracion/consultorios.
+La ruta /personal-accesos redirige a /accesos.
+La entrada /administracion y sus rutas existentes conservan un destino válido.
+Perfil institucional continúa en el menú personal del Header.
+Se conservaron el diseño, el ancho, los iconos existentes y el comportamiento
+responsive del Sidebar. Solo se reorganizaron los accesos administrativos.
+Los componentes del Header, su switch y las notificaciones no se modificaron.
+
+2. USUARIOS Y PROFESIONALES
+Una misma persona vinculada por professionalId o userId aparece una sola vez.
+Nunca se fusionan registros por coincidencia de nombres.
+Se conservan las entidades internas de usuario y profesional de la API.
+Los profesionales sin cuenta disponen de Crear acceso; se reutiliza su ID.
+Las cuentas administrativas pueden existir sin perfil clínico ni especialidad.
+Se mantienen las acciones de consulta, edición, acceso y estado disponibles.
+En demostración se conservan filtros por especialidad y estado profesional,
+vista de tarjetas/lista, revisión de solicitudes y creación desde sus datos.
+Las solicitudes se muestran exclusivamente en su institución conocida.
+Los estados de cuenta y profesionales permanecen independientes y utilizan
+los badges semánticos existentes.
+Los alias de usuario de la administración y Mi perfil se sincronizan.
+
+3. SEDES Y CONSULTORIOS
+Administración reutiliza InstitutionBranches y la fuente confirmada de Perfil
+institucional. Perfil institucional muestra ese catálogo con acceso a su gestión.
+Crear y editar sedes actualiza las consultas existentes sin recarga manual.
+No se inventan sedes, instituciones ni relaciones entre consultorio y sede.
+El estado activo/inactivo de una sede se guarda como configuración frontend
+separada porque el contrato actual de la API no incluye ese campo.
+Una sede inactiva deja de ofrecerse para nuevas asignaciones, pero se conservan
+las referencias existentes. Editar una persona no borra esas asignaciones.
+Crear una sede desde un formulario tampoco elimina las sedes inactivas.
+Se conserva la gestión real de consultorios y se habilita su adaptador local
+en demostración. No se cancelan citas automáticamente.
+
+4. TIPOS PROFESIONALES Y ESPECIALIDADES
+Catálogo por institución, con nombre, descripción, estado y acciones compactas.
+Permite crear, editar, activar y desactivar, con validación de nombres duplicados.
+Desactivar un tipo conserva sus asociaciones; no se ofrece para nuevas selecciones.
+La edición de un profesional vinculado conserva el tipo asignado.
+Las especialidades mantienen su catálogo independiente y sus IDs.
+Mi perfil no adquiere permisos para editar catálogos clínicos.
+
+5. ROLES Y VISIBILIDAD
+Se reutilizan Administrador, Recepción y Personal médico, sin duplicarlos.
+Los roles adicionales contienen módulos visibles derivados de la navegación
+actual, mediante casillas sencillas. No se introduce otra matriz de operaciones.
+Un usuario puede tener varios roles; la visibilidad es la unión de los activos
+en su institución. Las asignaciones se conservan al desactivar un rol.
+Se comprueban tanto el Sidebar como la entrada directa a rutas frontend.
+Se impide desactivar o vaciar el rol Administrador y perder el acceso de la
+propia cuenta administrativa o dejar la demostración sin administrador.
+La tabla de roles cuenta las identidades asignadas: utiliza usuarios reales
+en la sesión API y usuarios locales en la demostración.
+Las reglas detalladas previas de las operaciones se mantienen internamente.
+
+6. EDICIÓN Y CONSERVACIÓN DE DATOS
+StaffEditor reutiliza los acordeones exclusivos, la transición de 220 ms,
+la conservación del borrador y el enfoque del primer campo inválido.
+Permite roles múltiples, tipo profesional, especialidades y sedes.
+Cambiar temporalmente un rol no borra los datos del perfil clínico.
+Retirar un perfil clínico existente requiere confirmación y conserva su registro.
+Los formularios de la API conservan sus campos y operaciones originales.
+Se reutiliza el profesional existente al crear su acceso.
+Si la cuenta se creó en la API y falla el guardado local posterior, el reintento
+reutiliza la cuenta creada en lugar de crear otra.
+Se conservan el enlace de contraseña, la activación y los alias existentes.
+
+7. VALIDACIÓN ECUATORIANA
+Validador compartido en src/shared/lib/ecuadorian-cedula.ts.
+Comprueba campo vacío, caracteres numéricos, 10 dígitos, provincia, tercer
+dígito, secuencias inválidas y dígito verificador módulo 10.
+Coeficientes: 2,1,2,1,2,1,2,1,2; reducción de productos mayores a 9.
+Se conservó el código consular 30, ya admitido en el proyecto, con tercer
+dígito 4 o 5, además de las provincias 01–24.
+La validación es estructural; no certifica emisión ni identidad de una persona.
+Se aplica condicionalmente a Cédula ecuatoriana. Pasaporte, RUC, documento
+extranjero y otros documentos no se someten al algoritmo de cédula.
+Integración: crear/editar personal de demostración, crear/editar cuenta API,
+y crear/editar pacientes mediante su formulario compartido.
+Se valida al salir del campo y al guardar; al corregir se revalida según el
+patrón existente. Los errores se muestran junto al campo.
+En los acordeones de personal/pacientes se abre y enfoca la sección inválida
+sin borrar el resto del formulario.
+Los formularios de primera configuración/Mi perfil y el profesional de la API
+que no solicitan documento conservan sus campos; no se inventaron entradas.
+
+Referencias consultadas para conservar el código consular:
+https://www.registrocivil.gob.ec/informativo/
+https://www.registrocivil.gob.ec/preguntas-frecuentes-cedulacion/
+https://gitlab.gobiernoelectronico.gob.ec/mintel/ge/rutr/gobec/-/issues/597
+
+8. PERSISTENCIA Y LÍMITES DE INTEGRACIÓN
+Roles configurables, tipos profesionales, asignaciones extendidas, alias y
+estados de sedes se guardan en el repositorio frontend existente.
+No se añadieron endpoints ni se cambió el contrato de autenticación.
+La API conserva un único rol base de cuenta; los roles adicionales controlan
+la presentación frontend y no amplían la autorización del servidor.
+Los controles frontend no sustituyen la autorización del backend.
+La API actual no expone ID de institución: su configuración local utiliza
+frontend-institution-current, separado de las organizaciones de demostración.
+Las sesiones reales conservan sus consultas y operaciones HTTP existentes.
+La integración definitiva de los catálogos y campos nuevos con el servidor
+queda a cargo del propietario según el alcance solicitado.
+No se almacenan contraseñas reales en localStorage.
+
+9. COMPONENTES REUTILIZADOS
+AppLayout, configuración de navegación, ProtectedRoute, DataTable, PageHeader,
+AdaptiveTabs/Tabs, Dialog/ScheduleFormDialog, ConfirmDialog, Button, Input,
+Textarea, Select en modo múltiple, Checkbox, Switch, Field/FieldError,
+AdministrativeStatusBadge, SearchInput, ResetFiltersButton, DropdownMenu,
+InstitutionBranches, StaffEditor, UserFormDialog y ProfessionalFormDialog.
+Se reutilizaron useValidatedForm, useModalAccordion, los servicios de usuarios,
+profesionales e institución, y el repositorio frontend de demostración.
+No se instalaron dependencias ni se modificó package-lock.json.
+Los estilos añadidos están limitados a los componentes administrativos.
+
+10. PRUEBAS EJECUTADAS
+- npm.cmd run build: correcto; incluye TypeScript tsc -b y compilación Vite.
+- npm.cmd run lint: sin errores, con 4 advertencias previas:
+  exportaciones Fast Refresh en button.tsx, badge.tsx y tabs.tsx;
+  escape innecesario en api-problem.ts.
+- Vite conserva su advertencia de chunks mayores de 500 kB.
+- npm.cmd run test:unit: 18/18 aprobadas.
+  13 casos del validador, con datos sintéticos calculados.
+  5 casos de vinculación de personas por IDs, sin unión por nombres.
+  Los tests unitarios quedan en tests/unit y no requieren backend ni fixtures
+  clínicos reales. El script usa el soporte TypeScript de Node 24 instalado.
+- Chrome headless, integración demostración: 14/14 grupos aprobados.
+  Incluye catálogos, roles múltiples, aislamiento por institución, rutas,
+  protección del administrador, acceso sin duplicación, conservación de sedes,
+  filtros/directorio/solicitudes y validación de documento.
+- Chrome headless, integración con API interceptada: 9/9 grupos aprobados.
+  Incluye contratos originales de creación/edición, enlace de contraseña,
+  profesionales vinculados, alias y límites de autorización del servidor.
+- Chrome headless, regresiones de autenticación: 5/5 grupos aprobados.
+  Login por usuario/correo, Mi perfil, recuperación y solicitud de acceso.
+- Chrome headless, regresiones de modales: 12/12 grupos aprobados.
+  Pacientes en ambos temas; tratamientos; compras; esterilización; pasos
+  clínicos de signos vitales, examen, diagnóstico y tratamientos; carga de
+  archivos, reintentos y movimiento reducido.
+Total: 18 pruebas unitarias y 40 grupos de verificaciones en Chrome.
+Todas las peticiones API de estas pruebas se interceptaron: no se escribieron
+datos reales ni se ejecutaron migraciones.
+El runner test:e2e de API, que prepara backend/base de datos, no se ejecutó.
+Las comprobaciones frontend se ejecutaron de forma aislada.
+
+11. RESPONSIVE Y REVISIÓN VISUAL
+Verificados 320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px en ambos temas.
+Se comprobó acceso, administración y modal; sin overflow horizontal global.
+Capturas revisadas en escritorio claro/oscuro y modal móvil.
+Los filtros conservan anchuras compactas y el aviso de demostración no se duplica.
+Las tablas conservan su adaptación existente y su desplazamiento local cuando
+corresponde; los modales mantienen una sola sección abierta.
+
+12. INTEGRIDAD
+Comparación SHA-256 de los 187 archivos protegidos de la auditoría:
+187 sin cambios, 0 diferencias.
+Backend, endpoints, migraciones y archivos de base de datos no se modificaron.
+No se modificó el código de Historia clínica, el odontograma, el periodontograma,
+el paquete clínico local ni sus componentes internos.
+Header, notificaciones, mensajería y sus funcionalidades no se rediseñaron.
+
+13. EVIDENCIA LOCAL
+Resultados y capturas:
+%TEMP%\clinicapp-access-qa\demo-results.json
+%TEMP%\clinicapp-access-qa\real-results.json
+%TEMP%\clinicapp-access-qa\access-light.png
+%TEMP%\clinicapp-access-qa\access-dark.png
+%TEMP%\clinicapp-access-qa\access-modal-light-320.png
+%TEMP%\clinicapp-access-qa\access-modal-dark-320.png
+Scripts frontend de QA aislado:
+%TEMP%\clinicapp-access-demo-qa.cjs
+%TEMP%\clinicapp-access-real-qa.cjs
+%TEMP%\clinicapp-simplificacion-auth.cjs
+%TEMP%\clinicapp-simplificacion-modals.cjs
+
+Revisión local:
+http://localhost:5173/login
+Demostración aislada:
+http://localhost:5173/login?demo=1
+
+14. ARCHIVOS MODIFICADOS
+- front/package.json
+- front/src/app/layout/app-layout.tsx
+- front/src/app/nav-config.ts
+- front/src/app/pages/administration-page.tsx
+- front/src/app/routes.tsx
+- front/src/modules/appointments/components/professional-form-dialog.tsx
+- front/src/modules/auth/components/protected-route.tsx
+- front/src/modules/auth/components/user-form-dialog.tsx
+- front/src/modules/auth/pages/login-page.tsx
+- front/src/modules/institution/components/institution-branches.tsx
+- front/src/modules/institution/pages/institution-profile-page.tsx
+- front/src/modules/patients/components/patient-form.tsx
+- front/src/modules/patients/lib/patient-validation.ts
+- front/src/modules/saas/adapters/demo-repository.ts
+- front/src/modules/saas/adapters/operational-demo.ts
+- front/src/modules/saas/components/account-identity-fields.tsx
+- front/src/modules/saas/components/context-selector.tsx
+- front/src/modules/saas/components/scope-boundary.tsx
+- front/src/modules/saas/components/staff-editor.tsx
+- front/src/modules/saas/lib/institution-scope.ts
+- front/src/modules/saas/lib/permissions.ts
+- front/src/modules/saas/lib/professional-policy.ts
+- front/src/modules/saas/pages/staff-page.tsx
+- front/src/modules/saas/saas.css
+- front/src/modules/saas/services.ts
+- front/src/modules/saas/state.ts
+- front/src/modules/saas/types.ts
+- front/src/shared/lib/administrative-status.ts
+
+15. ARCHIVOS NUEVOS
+- front/src/modules/institution/components/institution-branches-admin.tsx
+- front/src/modules/saas/catalog-services.ts
+- front/src/modules/saas/components/access-catalog-management.tsx
+- front/src/modules/saas/components/role-selection.tsx
+- front/src/modules/saas/lib/access-catalogs.ts
+- front/src/modules/saas/lib/demo-landing.ts
+- front/src/modules/saas/lib/server-people.ts
+- front/src/modules/saas/pages/unified-access-page.tsx
+- front/src/shared/lib/ecuadorian-cedula.ts
+- front/tests/unit/ecuadorian-cedula.test.mjs
+- front/tests/unit/server-people.test.mjs
+- front/docs/ACCESOS_ADMINISTRACION_ROLES_CEDULA.txt

@@ -17,6 +17,10 @@ export const administrativeStatuses = {
     active: { label: "Activo", tone: "success" },
     inactive: { label: "Inactivo", tone: "muted" },
   },
+  resource: {
+    active: { label: "Activo", tone: "success" },
+    inactive: { label: "Inactivo", tone: "muted" },
+  },
   specialty: {
     active: { label: "Activa", tone: "success" },
     inactive: { label: "Inactiva", tone: "muted" },

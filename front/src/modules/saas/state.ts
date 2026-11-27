@@ -5,6 +5,7 @@ import { queryClient } from "@/shared/lib/query-client";
 import { setDemonstrationActive } from "@/shared/lib/demonstration-boundary";
 import type { AuthUser } from "@/modules/auth/types/auth.types";
 import { nameOf } from "./lib/identity";
+import { isInstitutionAdministrator } from "./lib/access-catalogs";
 import { readDemoData, safeDemoSnapshot, subscribeDemoData } from "./adapters/demo-repository";
 interface DemoContext {
     userId: string | null;
@@ -21,7 +22,7 @@ function restoreContext() { try {
     if (!value)
         return emptyContext;
     const data = readDemoData(), user = data.users.find(item => item.id === value.userId), org = data.organizations.find(item => item.id === value.organizationId);
-    if (value.userId && (!user || ["blocked", "inactive"].includes(user.state) || !user.organizationIds.includes(value.organizationId)))
+    if (value.userId && (!user || user.hasAccount === false || ["blocked", "inactive"].includes(user.state) || !user.organizationIds.includes(value.organizationId)))
         return emptyContext;
     const branches = org?.profile?.branches ?? [];
     return org ? { userId: user?.id ?? null, organizationId: org.id, siteId: branches.some(item => item.id === value.siteId) ? value.siteId : branches[0]?.id ?? "" } : emptyContext;
@@ -39,7 +40,7 @@ export const useDemoContext = create<DemoContext>((set) => ({
     ...restored,
     enter: userId => {
         const user = readDemoData().users.find(item => item.id === userId);
-        if (!user || ["blocked", "inactive"].includes(user.state))
+        if (!user || user.hasAccount === false || ["blocked", "inactive"].includes(user.state))
             throw new Error("Esta cuenta de demostración no está activa.");
         const branches = readDemoData().organizations.find(org => org.id === user.organizationIds[0])?.profile?.branches ?? [];
         const assignment = user.assignments.find(item => item.active && branches.some(branch => branch.id === item.siteId));
@@ -65,13 +66,13 @@ export function useSaasData() {
 export function useSessionUser(): AuthUser | null {
     const real = useAuthStore(state => state.user), demoId = useDemoContext(state => state.userId), data = useSaasData();
     const demo = data.users.find(item => item.id === demoId);
-    return demoId ? demo && !["blocked", "inactive"].includes(demo.state) ? { id: demo.id, name: nameOf(demo), email: demo.email, role: demo.roles.includes("admin") ? "admin" : demo.roles[0], professionalId: demo.professionalId, profile: demo.profile } : null : real;
+    return demoId ? demo && demo.hasAccount !== false && !["blocked", "inactive"].includes(demo.state) ? { id: demo.id, name: nameOf(demo), email: demo.email, role: isInstitutionAdministrator(demo, data, useDemoContext.getState().organizationId) ? "admin" : demo.roles[0] ?? "recepcion", professionalId: demo.professionalId, profile: demo.profile } : null : real;
 }
 export function currentActor() {
     const id = useDemoContext.getState().userId;
     if (id) {
         const user = readDemoData().users.find(item => item.id === id);
-        return user && !["blocked", "inactive"].includes(user.state) ? { id, role: user.roles.includes("admin") ? "admin" : user.roles[0] } : null;
+        return user && user.hasAccount !== false && !["blocked", "inactive"].includes(user.state) ? { id, role: isInstitutionAdministrator(user, readDemoData(), useDemoContext.getState().organizationId) ? "admin" : user.roles[0] ?? "recepcion" } : null;
     }
     return useAuthStore.getState().user;
 }

@@ -1,5 +1,7 @@
 import { useRef, useState } from "react"
-import { Building2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { Building2, MoreHorizontal, Pencil, Plus, Trash2, Power } from "lucide-react"
+import { Link } from "react-router-dom"
+import { AdministrativeStatusBadge } from "@/shared/components/administrative-status-badge"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -19,13 +21,15 @@ import styles from "./institution-branches.module.css"
 
 type BranchDraft = Pick<InstitutionBranch, "name" | "address" | "phone" | "hours">
 type Editor = { original: InstitutionBranch | null; draft: BranchDraft }
-type Props = { branches: InstitutionBranch[]; onCommit: (branches: InstitutionBranch[]) => Promise<void>; editorOnly?: boolean; onEditorClose?: () => void }
+type Props = { branches: InstitutionBranch[]; onCommit: (branches: InstitutionBranch[]) => Promise<void>; editorOnly?: boolean; onEditorClose?: () => void; readOnly?: boolean; states?: Record<string, boolean>; onToggle?: (branch: InstitutionBranch) => void }
 
 
-function BranchActions({ branch, onEdit, onDelete }: {
+function BranchActions({ branch, onEdit, onDelete, active = true, onToggle }: {
   branch: InstitutionBranch
   onEdit: (branch: InstitutionBranch, trigger: HTMLButtonElement | null) => void
   onDelete: (branch: InstitutionBranch, trigger: HTMLButtonElement | null) => void
+  active?: boolean
+  onToggle?: (branch: InstitutionBranch) => void
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   return (
@@ -35,13 +39,14 @@ function BranchActions({ branch, onEdit, onDelete }: {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={styles.menu}>
         <DropdownMenuItem onClick={() => onEdit(branch, triggerRef.current)}><Pencil />Editar sede</DropdownMenuItem>
+        {onToggle && <DropdownMenuItem onClick={() => onToggle(branch)}><Power />{active ? "Desactivar sede" : "Activar sede"}</DropdownMenuItem>}
         <DropdownMenuItem variant="destructive" onClick={() => onDelete(branch, triggerRef.current)}><Trash2 />Eliminar sede</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
-export function InstitutionBranches({ branches, onCommit, editorOnly = false, onEditorClose }: Props) {
+export function InstitutionBranches({ branches, onCommit, editorOnly = false, onEditorClose, readOnly = false, states, onToggle }: Props) {
   const [editor, setEditor] = useState<Editor | null>(editorOnly ? { original: null, draft: { name: "Nueva sede", address: "", phone: "", hours: "" } } : null)
   const [deleting, setDeleting] = useState<InstitutionBranch | null>(null)
   const [error, setError] = useState("")
@@ -105,7 +110,7 @@ export function InstitutionBranches({ branches, onCommit, editorOnly = false, on
   const condition = (branch: InstitutionBranch) => branch.isMain
     ? <Badge variant="secondary" className={styles.principal}>Principal</Badge>
     : <span className={styles.secondary}>Sucursal</span>
-  const actions = (branch: InstitutionBranch) => <BranchActions branch={branch} onEdit={openEdit} onDelete={openDelete} />
+  const actions = (branch: InstitutionBranch) => readOnly ? null : <BranchActions branch={branch} onEdit={openEdit} onDelete={openDelete} onToggle={onToggle} active={states?.[branch.id] !== false} />
   const editorField = (key: keyof BranchDraft, label: string) => editor && (
     <div className={styles.field}>
       <label htmlFor={`sede-${key}`}>{label}</label>
@@ -127,7 +132,7 @@ export function InstitutionBranches({ branches, onCommit, editorOnly = false, on
             <CardTitle role="heading" aria-level={2}>Sedes <span className={styles.count}>{branches.length}</span></CardTitle>
             <p>Consulta y administra las ubicaciones de tu institución.</p>
           </div>
-          {branches.length > 0 && <Button ref={createRef} variant="outline" onClick={(event) => openCreate(event.currentTarget)}><Plus />Crear sede</Button>}
+          {readOnly ? <Button variant="outline" render={<Link to="/administracion/sedes" />}>Administrar sedes</Button> : branches.length > 0 && <Button ref={createRef} variant="outline" onClick={(event) => openCreate(event.currentTarget)}><Plus />Crear sede</Button>}
         </CardHeader>
         <CardContent className={styles.content}>
           {branches.length === 0 ? (
@@ -135,7 +140,7 @@ export function InstitutionBranches({ branches, onCommit, editorOnly = false, on
               <Building2 aria-hidden="true" />
               <h3>Todavía no hay sedes registradas.</h3>
               <p>Crea la primera sede para gestionar sus datos de contacto, ubicación y horarios.</p>
-              <Button ref={createRef} onClick={(event) => openCreate(event.currentTarget)}><Plus />Crear primera sede</Button>
+              {!readOnly && <Button ref={createRef} onClick={(event) => openCreate(event.currentTarget)}><Plus />Crear primera sede</Button>}
             </div>
           ) : <>
             <div className={styles.desktop}>
@@ -143,14 +148,14 @@ export function InstitutionBranches({ branches, onCommit, editorOnly = false, on
                 <TableHeader><TableRow>
                   <TableHead scope="col">Sede</TableHead><TableHead scope="col">Dirección</TableHead>
                   <TableHead scope="col">Teléfono</TableHead><TableHead scope="col">Horarios</TableHead>
-                  <TableHead scope="col">Tipo</TableHead><TableHead scope="col"><span className="sr-only">Acciones</span></TableHead>
+                  <TableHead scope="col">Tipo</TableHead>{states && <TableHead scope="col">Estado</TableHead>}{!readOnly && <TableHead scope="col"><span className="sr-only">Acciones</span></TableHead>}
                 </TableRow></TableHeader>
                 <TableBody>{branches.map((branch) => <TableRow key={branch.id}>
                   <TableCell className={styles.name}>{branchLabel(branch)}</TableCell>
                   <TableCell>{branch.address || "Sin dirección"}</TableCell>
                   <TableCell>{branch.phone || "Sin teléfono"}</TableCell>
                   <TableCell>{branch.hours || "Sin horarios"}</TableCell>
-                  <TableCell>{condition(branch)}</TableCell><TableCell>{actions(branch)}</TableCell>
+                  <TableCell>{condition(branch)}</TableCell>{states && <TableCell><AdministrativeStatusBadge kind="resource" state={states[branch.id] === false ? "inactive" : "active"} /></TableCell>}{!readOnly && <TableCell>{actions(branch)}</TableCell>}
                 </TableRow>)}</TableBody>
               </Table>
             </div>
@@ -163,6 +168,7 @@ export function InstitutionBranches({ branches, onCommit, editorOnly = false, on
                   <div><dt>Dirección</dt><dd>{branch.address || "Sin dirección"}</dd></div>
                   <div><dt>Teléfono</dt><dd>{branch.phone || "Sin teléfono"}</dd></div>
                   <div><dt>Horarios</dt><dd>{branch.hours || "Sin horarios"}</dd></div>
+                  {states && <div><dt>Estado</dt><dd><AdministrativeStatusBadge kind="resource" state={states[branch.id] === false ? "inactive" : "active"} /></dd></div>}
                 </dl>
               </li>)}
             </ul>

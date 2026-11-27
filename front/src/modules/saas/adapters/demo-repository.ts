@@ -82,7 +82,8 @@ export function assertUsernameAvailable(username: string, id?: string) {
     if (!parsed.success)
         throw new ApiError("Revisa el nombre de usuario.", 422, [{ field: "username", message: parsed.error.issues[0].message }]);
     const data = readDemoData(), normalized = normalizeUsername(username);
-    if ([...data.users, ...data.identities].some(user => user.id !== id && normalizeUsername(user.username) === normalized))
+    const serverNames = Object.values(data.serverStaffSettings ?? {}).flatMap(scope => Object.entries(scope).map(([id, value]) => ({ id, username: value.username ?? "" })));
+    if ([...data.users, ...data.identities, ...serverNames].some(user => user.id !== id && normalizeUsername(user.username) === normalized))
         throw new ApiError("El nombre de usuario ya está registrado en esta demostración.", 409, [{ field: "username", message: "Este nombre de usuario ya está registrado localmente." }]);
 }
 export function recordAudit(data: SaasData, actorId: string, recordId: string, action: string) {

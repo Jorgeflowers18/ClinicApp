@@ -5,6 +5,7 @@ import type { Role } from "../types/auth.types"
 import { SessionChecking } from "./session-checking"
 import { useDemoContext,useSaasData,useSessionUser } from "@/modules/saas/state"
 import { demoCan, permissionModuleForPath } from "@/modules/saas/lib/permissions"
+import { assignedRoles } from "@/modules/saas/lib/access-catalogs"
 
 interface ProtectedRouteProps {
   allowedRoles?: Role[]
@@ -29,15 +30,18 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     if(member.state==="pending")return location.pathname==="/activar-cuenta" ? <Outlet/> : <Navigate to="/activar-cuenta" replace/>
     if(member.mustChangePassword)return location.pathname==="/cambio-inicial-contrasena" ? <Outlet/> : <Navigate to="/cambio-inicial-contrasena" replace/>
     const module=permissionModuleForPath(location.pathname)
-    if(module&&!demoCan(member,data,module,"view"))return <Navigate to="/403" replace/>
+    if(module&&!demoCan(member,data,module,"view",useDemoContext.getState().organizationId))return <Navigate to="/403" replace/>
   }
 
   const profileNeedsSetup = !user.profile || !user.profile.fullName?.trim()
   if (location.pathname !== "/perfil-usuario" && profileNeedsSetup) {
     return <Navigate to="/perfil-usuario" replace state={{ from: location.pathname }} />
   }
+  const settings = !member ? data.serverStaffSettings?.["frontend-institution-current"]?.[user.id] : undefined
+  const module = permissionModuleForPath(location.pathname)
+  if (settings && module && !assignedRoles({ roles: [user.role], accessRoleIds: settings.accessRoleIds }, data, "frontend-institution-current").some(role => role.active && role.sections.includes(module))) return <Navigate to="/403" replace />
 
-  if (allowedRoles && !(member ? member.roles.some(role => allowedRoles.includes(role)) : allowedRoles.includes(user.role))) {
+  if (allowedRoles && !member && !allowedRoles.includes(user.role)) {
     return <Navigate to="/403" replace />
   }
 

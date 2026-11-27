@@ -9,7 +9,7 @@ export function effectiveProfessionalState(user: StaffUser, day = clinicDay()): 
     return user.professionalState === "VACATION" || user.professionalState === "LEAVE" ? "ACTIVE" : user.professionalState;
 }
 export function professionalAvailability(user: StaffUser, siteId: string, day: string, start = "09:00", end = "09:30") {
-    if (user.state !== "active")
+    if (user.hasAccount !== false && user.state !== "active")
         return "La cuenta del profesional no está activa para nuevas citas.";
     const state = effectiveProfessionalState(user, day);
     if (state !== "ACTIVE")

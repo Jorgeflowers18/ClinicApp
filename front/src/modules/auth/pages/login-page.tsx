@@ -1,3 +1,4 @@
+import { demoLandingPath } from "@/modules/saas/lib/demo-landing"
 import { useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Controller } from "react-hook-form"
@@ -48,7 +49,7 @@ export function LoginPage() {
 
   if (user && (!demo || demoUserId)) {
     const redirectTo = (location.state as { from?: string } | null)?.from ?? "/"
-    const nextTarget = user.profile && user.profile.fullName.trim() ? demoUserId ? user.role==="admin"?"/personal-accesos":"/citas" : redirectTo : "/perfil-usuario"
+    const nextTarget = user.profile && user.profile.fullName.trim() ? demoUserId ? demoLandingPath() : redirectTo : "/perfil-usuario"
     return <Navigate to={nextTarget} replace />
   }
 

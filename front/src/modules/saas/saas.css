@@ -264,3 +264,12 @@
 .staff-users-table [data-slot="table"] [data-column="state"] { width: 14%; }
 .staff-users-table [data-slot="table"] [data-column="actions"] { width: 6%; text-align: right; }
 .staff-users-table [data-column="roles"] [data-slot="badge"] { white-space: normal; height: auto; }
+
+.saas-compact { gap: 4px; justify-items: start; }
+.saas-module-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+.unified-staff-table [data-slot="table"] { min-width: 760px; width: 100%; }
+.unified-staff-table [data-column="person"] { width: 25%; white-space: normal; overflow-wrap: anywhere; }
+.unified-staff-table [data-column="roles"] { white-space: normal; }
+.unified-staff-table [data-column="actions"] { width: 1%; text-align: right; }
+@media (min-width: 640px) { .staff-management .saas-filters > .saas-field { flex: 0 1 170px; } }
+@media (max-width: 600px) { .saas-module-checks { grid-template-columns: 1fr; } }

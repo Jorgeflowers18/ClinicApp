@@ -17,12 +17,15 @@ import { useDemoContext,useSessionUser,useSaasData } from "@/modules/saas/state"
 import { demoCan, permissionModuleForPath } from "@/modules/saas/lib/permissions"
 import { DemoSidebarIdentity,OrganizationSelector } from "@/modules/saas/components/context-selector"
 import { SaasScopeBoundary } from "@/modules/saas/components/scope-boundary"
+import { assignedRoles } from "@/modules/saas/lib/access-catalogs"
 import "@/modules/saas/saas.css"
 
 const navigationGroups = [
   { label: "General", paths: ["/"] },
   { label: "Atención clínica", paths: ["/pacientes", "/citas", "/historial-clinico", "/tratamientos"] },
-  { label: "Gestión", paths: ["/inventario", "/finanzas", "/reportes", "/personal-accesos"] },
+  { label: "Gestión", paths: ["/inventario", "/finanzas", "/reportes"] },
+  { label: "Accesos", paths: ["/accesos"] },
+  { label: "Administración", paths: ["/administracion/sedes", "/administracion/roles-tipos"] },
   { label: "Comunicación", paths: ["/notificaciones"] },
 ]
 
@@ -53,14 +56,16 @@ export function AppLayout() {
   const visibleItems = navItems.filter(item => {
     const allowed = !item.roles || (member ? member.roles.some(role => item.roles!.includes(role)) : user && item.roles.includes(user.role))
     const module = permissionModuleForPath(item.to)
-    return allowed && (!member || !module || demoCan(member, saas, module, "view"))
+    const settings = user ? saas.serverStaffSettings?.["frontend-institution-current"]?.[user.id] : undefined
+    const localVisible = !settings || !module || assignedRoles({ roles: user ? [user.role] : [], accessRoleIds: settings.accessRoleIds }, saas, "frontend-institution-current").some(role => role.active && role.sections.includes(module))
+    return member ? !module || demoCan(member, saas, module, "view", useDemoContext.getState().organizationId) : allowed && localVisible
   })
   const isClinicalRoute = pathname.startsWith("/historial-clinico")
   const isPilotRoute = pathname === "/" || pathname === "/pacientes" || pathname.startsWith("/pacientes/")
   const isAdminVisualRoute = !isClinicalRoute
   const currentSection = pathname === "/" ? navItems[0] : navItems.find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))
   const currentSectionLabel = pathname === "/perfil-institucion" ? "Perfil institucional"
-    : pathname === "/perfil-usuario" ? "Mi perfil" : currentSection?.label ?? "Página no encontrada"
+    : pathname === "/perfil-usuario" ? "Mi perfil" : pathname.startsWith("/administracion") ? "Administración" : currentSection?.label ?? "Página no encontrada"
 
   // Preserve ProtectedRoute's existing first-login setup and redirects.
   if (pathname === "/perfil-usuario" && (!user?.profile || !user.profile.fullName?.trim())) return <Outlet />

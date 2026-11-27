@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom"
+import { Navigate, Route, Routes } from "react-router-dom"
 import { lazy, Suspense } from "react"
 
 import { ProtectedRoute } from "@/modules/auth/components/protected-route"
@@ -27,7 +27,7 @@ import { InstitutionProfilePage } from "@/modules/institution/pages/institution-
 import { NotificationsReportPage } from "@/modules/notifications/pages/notifications-report-page"
 import { FinancePage } from "@/modules/finance/pages/finance-page"
 import { ReportsPage } from "@/modules/reports/pages/reports-page"
-import { StaffManagementPage } from "@/modules/saas/pages/staff-page"
+import { UnifiedAccessPage } from "@/modules/saas/pages/unified-access-page"
 import { ActivationPage } from "@/modules/saas/pages/activation-page"
 
 import { AppLayout } from "./layout/app-layout"
@@ -113,9 +113,10 @@ export function AppRoutes() {
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-            <Route path="/personal-accesos" element={<StaffManagementPage/>}/>
+            <Route path="/personal-accesos" element={<Navigate to="/accesos" replace />} />
+            <Route path="/accesos" element={<UnifiedAccessPage />} />
             <Route path="/perfil-institucion" element={<InstitutionProfilePage />} />
-            <Route path="/administracion" element={<AdministrationPage />} />
+            <Route path="/administracion/*" element={<AdministrationPage />} />
             <Route path="/reportes" element={<ReportsPage />} />
           </Route>
         </Route>
