@@ -1,6 +1,6 @@
 import type { CommercialPlan, ProfessionalState, StaffUser } from "../types";
 export function clinicDay(date = new Date()) { return date.toLocaleDateString("sv-SE", { timeZone: "America/Guayaquil" }); }
-export function effectiveProfessionalState(user: StaffUser, day = clinicDay()): ProfessionalState {
+export function effectiveProfessionalState(user: Pick<StaffUser, "professionalState" | "absences">, day = clinicDay()): ProfessionalState {
     if (["INACTIVE", "RETIRED"].includes(user.professionalState))
         return user.professionalState;
     const absence = user.absences.find(item => item.from <= day && item.to >= day);

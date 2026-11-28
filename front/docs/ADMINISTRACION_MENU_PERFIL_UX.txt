@@ -1,0 +1,148 @@
+CLINICAPP — ADMINISTRACIÓN EN EL MENÚ DE PERFIL Y CONSERVACIÓN DE MEJORAS UX/UI
+Fecha: 27 de noviembre de 2026 — America/Guayaquil
+Ámbito: frontend actual. Cambios locales conservados; sin commit ni push.
+
+RESULTADO
+Administración está dentro del menú de perfil del Header, con un panel anidado:
+Sedes, Consultorios, Especialidades y Tipos de profesionales.
+El Sidebar conserva General, Atención clínica, Gestión, Accesos y Comunicación.
+No contiene el grupo Administración ni sus cuatro enlaces.
+Las pantallas actuales y sus rutas se reutilizan sin pestañas duplicadas.
+
+NAVEGACIÓN Y COMPONENTES REUTILIZADOS
+Se conserva HeaderUserMenu, su avatar, nombre, rol, posición y apariencia del botón.
+Mi perfil sigue siendo la primera opción personal y Cerrar sesión la última.
+Perfil institucional conserva su enlace independiente en ese mismo menú.
+Se utilizan DropdownMenu, Trigger, Content, Group e Item de Base UI ya existentes,
+además de NavLink y los iconos originales.
+No se creó otro Header, Sidebar, menú de usuario ni página intermedia.
+El catálogo navItems sigue siendo único: placement indica los cuatro enlaces de
+perfil, sin duplicar rutas ni eliminar sus metadatos de permisos/iconos.
+Accesos mantiene Usuarios y profesionales, Roles y Solicitudes de acceso.
+
+PANEL ADMINISTRACIÓN
+Se expande y contrae por clic, toque, Enter o Espacio, sin depender de hover.
+Permanece dentro del mismo menú, también en escritorio, para conservar el acceso
+a las acciones principales y evitar popups laterales fuera del viewport.
+La transición del panel y la flecha es de 200 ms y respeta movimiento reducido.
+Se utilizan aria-expanded, aria-controls, roles de menú y grupo de Base UI y foco visible.
+Escape cierra el menú y devuelve el foco al botón.
+Las flechas recorren los enlaces abiertos y omiten las filas contraídas.
+Durante el cierre, las filas de presentación conservan la animación, pero no quedan
+enlaces ocultos registrados en la navegación por teclado.
+Seleccionar un destino cierra el menú incluso si se elige la página actual.
+
+VISIBILIDAD Y PERMISOS
+canViewNavigationItem reutiliza las reglas vigentes para Sidebar y menú de perfil.
+Se comprueba cada enlace del catálogo; no se muestra Administración por disponer
+solo de Accesos o de Perfil institucional.
+Los roles inactivos no conceden visibilidad.
+En la sesión real se conserva el límite del rol base del servidor.
+En demostración se conserva el requisito existente de acceso administrativo y
+Administración. Perfil institucional se comprueba por separado.
+No se modificó ProtectedRoute ni los guards de rutas actuales.
+La visibilidad frontend no sustituye la autorización del servidor.
+
+Las cuatro páginas administrativas comparten actualmente el módulo Administración.
+No existen permisos separados de Sedes/Consultorios/Especialidades/Tipos en el
+modelo actual: no se inventaron nuevos permisos ni contratos. El filtrado por
+enlace utiliza sus roles y módulo reales. La granularidad definitiva del servidor
+seguirá dependiendo de la integración posterior.
+
+PANTALLAS Y DATOS
+Se reutilizan Sedes, Consultorios, Especialidades y Tipos de profesionales con sus
+encabezados, botones, búsquedas, filtros, tablas y modales actuales.
+No se reintrodujeron pestañas horizontales ni se duplicaron páginas.
+Perfil institucional y Sedes mantienen el mismo catálogo institucional.
+No se modificaron datos, asignaciones, sedes principales, horarios ni historiales.
+
+MODALES Y DESCRIPCIONES
+Se conservaron los ajustes aprobados de roles (900 px), tipos/especialidades
+(620 px), sedes (600 px) y perfiles extensos (960 px), adaptados al viewport.
+Nuevo usuario, Crear cuenta y Gestionar acceso utilizan ahora el tamaño de 620 px,
+mediante Dialog y los estilos existentes.
+Cancelar y Guardar siguen siendo accesibles. Solo hay scroll vertical interno
+cuando el contenido no cabe, sin desplazamiento horizontal del formulario.
+Las descripciones administrativas conservan resize:none y altura compacta de 88 px.
+No se modificaron textareas ni acordeones clínicos.
+
+CONTRASEÑAS Y ROLES
+Se conserva PasswordInput, su padding, Eye/EyeOff integrados y transición de 160 ms.
+Se verificaron valor, cursor, foco, teclado, disabled y movimiento reducido.
+No se añadieron campos de contraseña.
+Nuevo/Editar rol mantienen los tres grupos, iconos, switches y contadores dinámicos.
+Se conservaron la precarga, el guardado y la protección del Administrador.
+El catálogo de módulos conserva los mismos IDs aunque cambie la ubicación de navegación.
+
+TABLAS
+Se conserva DataTable, sus columnas, filtros, responsive, badges y acciones.
+Se corrigió localmente la anchura intrínseca del contenido de Estado en el
+directorio: los badges y sus etiquetas no invaden la columna de acciones.
+Se verificó geométricamente con un estado largo y en ambos temas.
+No se cambió CSS global ni el diseño de otras tablas.
+
+PRUEBAS EJECUTADAS
+- npm.cmd run test:unit: 43/43 aprobadas.
+- npm.cmd run lint: 0 errores; cuatro advertencias preexistentes.
+  El script usa Oxlint; no se instalaron herramientas ni se alteraron reglas.
+- npm.cmd run build: correcto, incluye tsc -b y Vite.
+  Permanece la advertencia previa de chunks mayores de 500 kB.
+- Chrome headless / Playwright: 86/86 grupos de comprobaciones aprobados:
+  16 del nuevo menú, teclado, navegación, permisos reales, toque, Escape y logout.
+  7 del menú en demostración con roles completos, parciales e inactivos.
+  2 de geometría de estados/acciones y ausencia de escrituras reales.
+  14 de contraseñas, roles, modales y responsive.
+  3 complementarios de foco/scroll móvil, roles adicionales y menú de acciones.
+  16 de regresión de cuentas, perfiles, catálogos, solicitudes, sedes y consultorios.
+  11 de regresión equivalente en demostración.
+  5 de autenticación, recuperación, Mi perfil y Solicitar acceso.
+  12 de modales de pacientes, tratamientos, inventario, atención clínica y archivo clínico.
+- Sin errores de ejecución en los resultados finales.
+- Anchos comprobados: 320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px,
+  ambos temas. Las regresiones incluyen también 375 px.
+- Se probó uso táctil en contexto móvil 390 × 844 y un viewport corto 320 × 480.
+- Se revisaron capturas de ambos temas en móvil y escritorio.
+- git diff --check: correcto.
+- Escaneo UTF-8 y revisión de los archivos cambiados.
+- SHA-256: los 187 archivos protegidos permanecen intactos.
+- No se ejecutó el runner test:e2e que inicializa API/DB. Se probaron los flujos
+  frontend mediante API interceptada y adaptadores demo, sin escrituras al servidor.
+
+ARCHIVOS PROTEGIDOS Y CONFIRMACIONES
+Sin cambios en backend, base de datos, migraciones, endpoints ni contratos HTTP.
+Sin cambios en odontograma, periodontograma, SVG, librerías clínicas o dependencias.
+Sin reconstrucción de Header/Sidebar ni cambios en sus colores, tamaños o iconos.
+Las modificaciones del Header se limitan al menú solicitado y su filtrado.
+Se mantuvieron las funcionalidades y mejoras de los prompts anteriores.
+No quedan fallos conocidos de esta fase en las comprobaciones realizadas.
+Persisten las limitaciones de backend ya documentadas para permisos extendidos,
+recibos locales de solicitudes y relaciones administrativas aún no expuestas por API.
+
+LOCALHOST
+http://localhost:5173/login?demo=1
+Usuarios demo: amorales, avega, ltorres. Contraseña pública: Demo12345!.
+
+EVIDENCIA LOCAL
+%TEMP%\clinicapp-profile-admin-qa\results.json
+%TEMP%\clinicapp-profile-admin-qa\demo-menu-results.json
+%TEMP%\clinicapp-profile-admin-qa\table-layout-results.json
+%TEMP%\clinicapp-profile-admin-ui-regression\results.json
+%TEMP%\clinicapp-profile-admin-ui-regression\supplemental-results.json
+%TEMP%\clinicapp-profile-admin-regression\real-results.json
+%TEMP%\clinicapp-profile-admin-regression\demo-results.json
+%TEMP%\clinicapp-profile-admin-regression\authentication-regression-results.json
+%TEMP%\clinicapp-profile-admin-regression\modals-results.json
+Capturas finales: %TEMP%\clinicapp-profile-admin-qa\profile-admin-*.png y
+directory-status-dark.png.
+Las fixtures y scripts de navegador permanecen fuera del código de producción.
+
+INVENTARIO DE ESTA FASE
+Se compara con el estado local al recibir este último prompt.
+Nuevo: front/docs/ADMINISTRACION_MENU_PERFIL_UX.txt
+Modificado: front/src/app/layout/app-layout.tsx
+Modificado: front/src/app/layout/header-user-menu.module.css
+Modificado: front/src/app/layout/header-user-menu.tsx
+Modificado: front/src/app/nav-config.ts
+Modificado: front/src/modules/saas/components/account-access-dialog.tsx
+Modificado: front/src/modules/saas/components/administrative-ui.module.css
+Nuevo: front/src/modules/saas/lib/navigation-visibility.ts

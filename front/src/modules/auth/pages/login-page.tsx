@@ -1,14 +1,15 @@
 import { demoLandingPath } from "@/modules/saas/lib/demo-landing"
-import { useRef, useState } from "react"
+import { useRef } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Controller } from "react-hook-form"
 import { useValidatedForm as useForm } from "@/shared/hooks/use-validated-form"
 import { Link, Navigate, useLocation } from "react-router-dom"
-import { Eye, EyeOff, LoaderCircle } from "lucide-react"
+import { LoaderCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { ApiError } from "@/shared/types/common"
 import { getErrorMessage } from "@/shared/lib/error-message"
@@ -27,7 +28,6 @@ export function LoginPage() {
   const location = useLocation()
   const demo = new URLSearchParams(location.search).get("demo")==="1"
   const login = useLogin(demo)
-  const [showPassword, setShowPassword] = useState(false)
   const submitting = useRef(false)
 
   const {
@@ -80,10 +80,8 @@ export function LoginPage() {
 
           <Field data-invalid={!!errors.password}>
             <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-            <div className="auth-password">
-              <Input
+              <PasswordInput
                 id="password"
-                type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 placeholder="••••••••"
                 required
@@ -91,17 +89,6 @@ export function LoginPage() {
                 aria-describedby={errors.password ? "password-error" : undefined}
                 {...register("password")}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="auth-password-toggle"
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                aria-pressed={showPassword}
-                aria-controls="password"
-              >
-                {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
-              </button>
-            </div>
             <FieldError id="password-error" errors={errors.password ? [errors.password] : undefined} />
           </Field>
         </FieldGroup>

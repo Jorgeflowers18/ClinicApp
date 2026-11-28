@@ -4,7 +4,7 @@ import { addMinutes, format } from "date-fns"
 import { Controller,useWatch } from "react-hook-form"
 import { useValidatedForm as useForm } from "@/shared/hooks/use-validated-form"
 import { useDemoContext,useSaasData } from "@/modules/saas/state"
-import { professionalAvailability } from "@/modules/saas/lib/professional-policy"
+import { professionalAvailability, effectiveProfessionalState } from "@/modules/saas/lib/professional-policy"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -105,7 +105,16 @@ export function AppointmentFormDialog({
     }
   }, [open, appointment, initialSlot, initialPatientId, reset])
   const [selectedDate,selectedStart,selectedEnd,selectedProfessional]=useWatch({control,name:["date","startTime","endTime","professionalId"]})
-  const availability=(id:string)=>{const member=saas.users.find(user=>user.professionalId===id);return demo.userId&&selectedDate&&member?professionalAvailability(member,demo.siteId,selectedDate,selectedStart||"09:00",selectedEnd||"09:30"):null}
+  const availability=(id:string)=>{
+    const member=saas.users.find(user=>user.professionalId===id)
+    if(demo.userId&&selectedDate&&member)return professionalAvailability(member,demo.siteId,selectedDate,selectedStart||"09:00",selectedEnd||"09:30")
+    const professional=professionals?.find(item=>item.id===id)
+    const settings=saas.serverStaffSettings?.["frontend-institution-current"]
+    const known=settings?.[professional?.userId??""]??settings?.["professional:"+id]
+    if(!selectedDate||!known)return null
+    const state=effectiveProfessionalState({professionalState:known.professionalState??"ACTIVE",absences:known.absences??[]},selectedDate)
+    return state!=="ACTIVE"?"El profesional no está disponible en esa fecha según su estado o ausencia registrada.":null
+  }
   const eligible=(professionals??[]).filter(item=>!availability(item.id)||item.id===selectedProfessional)
 
   function handleTreatmentChange(treatmentId: string | null, onChange: (value: string) => void) {
@@ -122,6 +131,8 @@ export function AppointmentFormDialog({
 
   async function onSubmit(values: AppointmentFormValues) {
     try {
+      const issue=availability(values.professionalId)
+      if(issue){setError("professionalId",{message:issue});return}
       if (isEditMode && appointment) {
         await updateAppointment.mutateAsync(values)
         toast.success("Cita actualizada")

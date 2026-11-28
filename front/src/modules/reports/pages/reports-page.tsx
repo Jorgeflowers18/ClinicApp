@@ -1,8 +1,8 @@
 import { useState } from "react"
 import { CalendarDays, ChartNoAxesCombined, Stethoscope, Package } from "lucide-react"
 
-import { AdaptiveTabs } from "@/components/ui/adaptive-tabs"
-import { TabsContent } from "@/components/ui/tabs"
+import { SectionNavigationTabs, SectionNavigationPanel } from "@/shared/components/section-navigation"
+import { useSectionQueryState } from "@/shared/hooks/use-section-query-state"
 import { PageHeader } from "@/shared/components/page-header"
 
 import { AgendaReportTab } from "../components/agenda-report-tab"
@@ -15,7 +15,15 @@ import { getPresetPeriod, periodError, serverPeriodError } from "../lib/period"
 import type { ReportPeriod, ReportPeriodState } from "../types/report.types"
 import "../reports.css"
 
+const sections = [
+  { value: "agenda", title: "Agenda", description: "Citas y asistencia", icon: CalendarDays },
+  { value: "productividad", title: "Productividad", description: "Actividad por profesional", icon: ChartNoAxesCombined },
+  { value: "tratamientos", title: "Tratamientos", description: "Procedimientos realizados", icon: Stethoscope },
+  { value: "inventario", title: "Inventario", description: "Existencias y consumo de insumos", icon: Package },
+]
+
 export function ReportsPage() {
+  const [section, setSection] = useSectionQueryState(sections, "agenda")
   const [state, setState] = useState<ReportPeriodState>({
     preset: "last30",
     period: getPresetPeriod("last30"),
@@ -43,29 +51,25 @@ export function ReportsPage() {
 
       <PeriodSelector value={state} onChange={changePeriod} error={error} />
 
-      <AdaptiveTabs
-        variant="line"
-        defaultValue="agenda"
-        items={[
-          { value: "agenda", label: <><CalendarDays aria-hidden="true" />Agenda</>, accessibleLabel: "Agenda" },
-          { value: "productividad", label: <><ChartNoAxesCombined aria-hidden="true" />Productividad</>, accessibleLabel: "Productividad" },
-          { value: "tratamientos", label: <><Stethoscope aria-hidden="true" />Tratamientos</>, accessibleLabel: "Tratamientos" },
-          { value: "inventario", label: <><Package aria-hidden="true" />Inventario</>, accessibleLabel: "Inventario" },
-        ]}
+      <SectionNavigationTabs
+        label="Categorías de Reportes"
+        value={section}
+        onValueChange={setSection}
+        items={sections}
       >
-        <TabsContent value="agenda" className="pt-4">
+        <SectionNavigationPanel value="agenda" className="pt-4">
           <AgendaReportTab period={applied} />
-        </TabsContent>
-        <TabsContent value="productividad" className="pt-4">
+        </SectionNavigationPanel>
+        <SectionNavigationPanel value="productividad" className="pt-4">
           <ProductivityReportTab period={applied} />
-        </TabsContent>
-        <TabsContent value="tratamientos" className="pt-4">
+        </SectionNavigationPanel>
+        <SectionNavigationPanel value="tratamientos" className="pt-4">
           <TreatmentsReportTab period={applied} />
-        </TabsContent>
-        <TabsContent value="inventario" className="pt-4">
+        </SectionNavigationPanel>
+        <SectionNavigationPanel value="inventario" className="pt-4">
           <InventoryReportTab period={applied} />
-        </TabsContent>
-      </AdaptiveTabs>
+        </SectionNavigationPanel>
+      </SectionNavigationTabs>
     </div>
   )
 }

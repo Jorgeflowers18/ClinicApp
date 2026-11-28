@@ -1,0 +1,136 @@
+CLINICAPP — SELECCIÓN GENERAL, POR GRUPOS E INDIVIDUAL DE MÓDULOS
+Fecha: 28 de noviembre de 2026
+
+RESULTADO
+
+El componente existente Acceso a módulos de Nuevo rol y Editar rol conserva
+sus tres categorías, iconos y switches individuales. Ahora incorpora:
+
+- Habilitar todos y Quitar todos: botones secundarios compactos en el encabezado.
+- Una acción Ghost por categoría: Habilitar grupo o Quitar grupo según
+  el estado de sus módulos editables.
+- Contador general «N de M módulos habilitados», con el tamaño real del
+  catálogo y los contadores originales de cada categoría.
+
+No se agregó un switch maestro, checkboxes visibles, matriz ni tarjetas.
+Los botones son type="button": no envían el formulario ni guardan cambios.
+Las acciones sin cambios aplicables se deshabilitan.
+
+ESTADO Y PERSISTENCIA
+
+Las acciones generales, por categoría e individuales usan el mismo array
+sections de React Hook Form. No existe un estado de selección masiva aparte.
+Los contadores y etiquetas se derivan de ese valor en cada render.
+
+Habilitar un grupo con selección parcial completa únicamente sus módulos
+editables. Quitar grupo conserva las otras categorías y los permisos bloqueados.
+Desactivar Inventario después de Habilitar todos actualiza el total, el
+contador de Operación y vuelve a habilitar las acciones correspondientes.
+
+Nuevo rol conserva su selección inicial vacía. Editar rol precarga los
+módulos existentes. Se mantienen las validaciones y la confirmación de
+descarte al cancelar un formulario modificado. El repositorio frontend
+solo cambia al pulsar Guardar o Guardar cambios.
+
+Los identificadores reales se conservan, incluidos Historia clínica y
+Personal y accesos, cuyas etiquetas visibles son Historial clínico y Accesos.
+No se modificó el contrato de datos ni se añadieron campos persistidos.
+
+RESTRICCIONES
+
+El editor determina los módulos asignables con canViewNavigationItem y
+los permisos actuales del usuario/institución, reutilizando la validación
+existente de navegación. Las acciones individuales y masivas comparten
+exactamente el mismo conjunto editable.
+
+En el rol Administrador protegido, Administración y Personal y accesos
+permanecen bloqueados y conservan su valor real. Los módulos no asignables
+tampoco se modifican. Se muestran candados con explicación y texto
+asociado mediante aria-describedby.
+
+Los permisos asignados que no sean editables se conservan, tanto al
+habilitar como al quitar. Durante un guardado, los controles se deshabilitan
+sin alterar contadores ni falsear la etiqueta de la acción contextual.
+
+Los guards existentes de catalogService.saveRole y protectAdministration
+no se modificaron. Se comprobó que rechazan el guardado de una retirada
+masiva que dejaría la institución sin administrador o quitaría ese acceso
+al administrador actual, incluso cuando utiliza un rol personalizado.
+
+Esta validación es frontend y no sustituye la autorización definitiva
+del servidor. No se creó un sistema de permisos paralelo.
+
+DISEÑO Y RESPONSIVE
+
+Se reutilizan Button y Switch del proyecto. Los botones generales usan
+variant secondary y las acciones de grupo Ghost. Los títulos, contadores
+y botones se reorganizan dentro del ancho disponible; en contenedores
+estrechos, las cabeceras de categoría ocupan dos filas sin superponerse.
+Se mantienen las columnas adaptables de switches, los colores aprobados
+y el scroll vertical del modal únicamente cuando su contenido lo requiere.
+No se añadieron paneles, separadores decorativos ni cambios al tamaño del modal.
+
+ARCHIVOS MODIFICADOS
+
+- src/modules/saas/components/role-module-selector.tsx
+  Controles, contadores dinámicos, restricciones y explicaciones de bloqueo.
+- src/modules/saas/components/access-catalog-management.tsx
+  Cálculo del conjunto asignable con el usuario y la institución actuales.
+- src/modules/saas/components/administrative-ui.module.css
+  Distribución compacta del encabezado, acciones y candados del selector.
+- src/modules/saas/lib/role-module-groups.ts
+  Helpers compartidos para obtener destinos editables y actualizar la selección
+  sin mutar el borrador ni modificar módulos ajenos al grupo.
+- tests/unit/role-module-groups.test.mjs
+  Siete pruebas adicionales de selección, protección, aislamiento de grupos,
+  permisos restringidos, contadores, idempotencia y ausencia de duplicados.
+- docs/MEJORA_SELECCION_MODULOS_ROLES.txt
+  Este informe.
+
+PRUEBAS EJECUTADAS
+
+npm run test:unit: 50/50 aprobadas (43 existentes y 7 nuevas).
+npm run lint: cero errores; cuatro advertencias preexistentes.
+El proyecto configura Oxlint, sin ESLint instalado/configurado.
+npm run build: aprobado, incluido tsc -b y Vite.
+Se conserva la advertencia existente de chunks superiores a 500 kB.
+git diff --check: sin errores.
+
+Chrome mediante Playwright, con datos sintéticos aislados y API interceptada:
+
+- Nuevo/Editar rol, selección masiva/grupal/individual, validaciones,
+  cancelación, guardado explícito, rol protegido, administrador parcial,
+  responsive y formulario de tipo profesional sin cambios: 13/13 grupos.
+- Demostración: persistencia local al guardar, protección del último
+  administrador mediante rol personalizado y ausencia de escrituras API: 3/3.
+- Componente: guardado pendiente, conjunto sin opciones editables,
+  conservación de accesos no editables y teclado sin envío del formulario: 4/4.
+
+Total: 20 grupos de comprobación de navegador aprobados, sin errores de ejecución.
+
+Nuevo rol y Editar rol protegido se comprobaron en ambos temas a
+320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px. Se midieron límites,
+texto completo, acceso a los botones y ausencia de solapamiento entre
+títulos, contadores y acciones. Se inspeccionaron capturas de escritorio
+y móvil. Todos los módulos siguen representados por switches individuales.
+
+Evidencia local, fuera del código de producción:
+%TEMP%\clinicapp-role-bulk-qa\results.json
+%TEMP%\clinicapp-role-bulk-demo-qa\results.json
+%TEMP%\clinicapp-role-bulk-component-qa\results.json
+Las carpetas contienen también las capturas. No se añadieron variables
+ni datos QA al código de la aplicación.
+
+No se ejecutó la suite E2E que levanta el backend y crea/elimina una base
+PostgreSQL. Los recorridos anteriores validan frontend con respuestas API
+simuladas y repositorios locales de contextos de navegador aislados.
+
+INTEGRIDAD
+
+Se conservaron Sidebar, Header, rutas, temas y dependencias.
+No se modificaron backend, base de datos, endpoints, modelos ni guards.
+Los 187 archivos protegidos de backend, librería clínica e integraciones
+siguen idénticos por SHA-256. Odontograma y periodontograma intactos.
+Los cambios de tareas anteriores se conservaron. No se hicieron commits ni pushes.
+
+Ruta local: http://localhost:5173/accesos/roles

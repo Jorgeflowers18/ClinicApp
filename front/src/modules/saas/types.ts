@@ -57,6 +57,7 @@ export interface Organization {
     logo: string | null;
 }
 export interface Specialty {
+    professionalTypeIds?: string[];
     id: string;
     organizationId: string;
     name: string;
@@ -65,6 +66,8 @@ export interface Specialty {
 }
 export type PermissionAction = "view" | "create" | "edit" | "deactivate" | "approve" | "export" | "manage";
 export interface AccessRequest {
+    createdAt?: string;
+    personId?: string;
     /** Only requests with a known scope may be reviewed in that institution. */
     organizationId?: string;
     id: string;
@@ -73,7 +76,7 @@ export interface AccessRequest {
     username: string;
     email: string;
     institution: string;
-    state: "pending" | "reviewed" | "approved" | "created";
+    state: "pending" | "reviewed" | "approved" | "created" | "rejected";
     userId?: string;
 }
 export interface IdentityProfile {
@@ -117,6 +120,15 @@ export interface SaasData {
     }[];
 }
 export interface StaffSettings {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    professionalState?: ProfessionalState;
+    absences?: Absence[];
+    state?: AccountState;
+    activation?: "invitation" | "temporary" | "active";
+    mustChangePassword?: boolean;
+    accessConfiguredAt?: string;
     username?: string;
     email?: string;
     accessRoleIds: string[];

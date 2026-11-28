@@ -32,6 +32,8 @@ import { ActivationPage } from "@/modules/saas/pages/activation-page"
 
 import { AppLayout } from "./layout/app-layout"
 import { AdministrationPage } from "./pages/administration-page"
+import { AccessRolesPage } from "@/modules/saas/pages/access-roles-page"
+import { AccessRequestsPage } from "@/modules/saas/pages/access-requests-page"
 import { DashboardPage } from "./pages/dashboard-page"
 import { ForbiddenPage } from "./pages/forbidden-page"
 import { NotFoundPage } from "./pages/not-found-page"
@@ -115,6 +117,8 @@ export function AppRoutes() {
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route path="/personal-accesos" element={<Navigate to="/accesos" replace />} />
             <Route path="/accesos" element={<UnifiedAccessPage />} />
+            <Route path="/accesos/roles" element={<AccessRolesPage />} />
+            <Route path="/accesos/solicitudes" element={<AccessRequestsPage />} />
             <Route path="/perfil-institucion" element={<InstitutionProfilePage />} />
             <Route path="/administracion/*" element={<AdministrationPage />} />
             <Route path="/reportes" element={<ReportsPage />} />

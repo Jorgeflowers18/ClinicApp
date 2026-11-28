@@ -57,6 +57,6 @@ export function useAccessRequest(demo = false) {
   return useMutation({ mutationFn: async (values: AccessRequestFormValues) => {
     const {requestedUsername,firstName:proposedFirstName,lastName:proposedLastName,...contract}=values
     if(!demo)await authApi.requestAccess(contract)
-    if(demo||requestedUsername){const [firstName,...last]=values.fullName.split(" ");identityService.request({firstName:proposedFirstName??firstName,lastName:proposedLastName??last.join(" "),username:requestedUsername??"",email:values.email,institution:values.institution})}
+    {const [firstName,...last]=values.fullName.split(" ");identityService.request({organizationId:demo?useDemoContext.getState().organizationId:undefined,firstName:proposedFirstName??firstName,lastName:proposedLastName??last.join(" "),username:requestedUsername??"",email:values.email,institution:values.institution})}
   } })
 }

@@ -1,0 +1,313 @@
+CLINICAPP — NAVEGACIÓN INTERNA GLOBAL DEFINITIVA
+28 de noviembre de 2026
+
+1. RESULTADO Y ALCANCE
+
+Se conserva el diseño compartido aprobado y se aplica el mismo comportamiento
+de tarjetas-pestañas a los cinco espacios con secciones principales equivalentes:
+Administración, ficha del paciente, Inventario, Reportes y Mensajería.
+
+Administración ya no es una pantalla de enlaces. Muestra Sedes al entrar y
+permite cambiar entre sus cuatro secciones sin abandonar el espacio de trabajo.
+Las tarjetas y el encabezado permanecen visibles. No hay un botón Volver para
+alternar entre ellas, ni una segunda fila de pestañas.
+
+Este informe actualiza el comportamiento de Administración descrito en el
+informe histórico ESTANDARIZACION_NAVEGACION_INTERNA.txt, donde todavía se
+conservaban enlaces a páginas independientes.
+
+La selección inicial respeta este orden: sección solicitada válida y permitida,
+predeterminada disponible, primera habilitada. Sin opciones disponibles se
+muestra el estado de acceso restringido y no se montan los paneles.
+
+No se modificaron rutas declaradas, servicios, endpoints ni reglas de negocio.
+Los cambios locales anteriores se conservaron. No se realizaron commits/pushes.
+
+2. INVENTARIO COMPLETO DE PÁGINAS AUDITADAS
+
+Se contrastaron las 40 declaraciones de rutas, los 32 archivos de páginas,
+los componentes compartidos y los formularios asociados.
+Rutas de archivos relativas a src/.
+
+A: navegación principal interna, tarjetas-pestañas compartidas.
+B: navegación global, controles secundarios o vista sin apartados equivalentes.
+C: formulario, proceso o herramienta clínica especializada; formato conservado.
+
+01 app/pages/administration-page.tsx — A.
+   /administracion y sus cuatro subrutas: único espacio con selección interna.
+02 app/pages/dashboard-page.tsx — B.
+   /: indicadores y gráficos simultáneos, sin nuevas pestañas.
+03 app/pages/forbidden-page.tsx — B. /403: estado de acceso y retorno auxiliar.
+04 app/pages/not-found-page.tsx — B. *: página de error conservada.
+05 modules/appointments/pages/appointments-calendar-page.tsx — B/C.
+   /citas: Mes/Semana/Día, fechas, filtros y modales especializados conservados.
+06 modules/auth/pages/login-page.tsx — C. /login: formulario conservado.
+07 modules/auth/pages/recover-password-page.tsx — C.
+   /recuperar-contrasena: formulario conservado.
+08 modules/auth/pages/request-access-page.tsx — C.
+   /solicitar-acceso: formulario conservado.
+09 modules/auth/pages/reset-password-page.tsx — C.
+   /restablecer-contrasena, /cambio-inicial-contrasena, /cambiar-contrasena.
+10 modules/auth/pages/user-profile-page.tsx — C.
+   /perfil-usuario: un formulario de perfil, sin navegación artificial.
+11 modules/clinical-history/pages/clinical-history-list-page.tsx — B.
+   /historial-clinico: listado, búsqueda, filtros y acciones conservados.
+12 modules/clinical-history/pages/clinical-history-redirects.tsx — B.
+   Alias odontologia/nuevo/:id/:id/editar conservados.
+13 modules/clinical-history/pages/patient-clinical-history-page.tsx — C.
+   /historial-clinico/paciente/:patientId: RecordWorkspace es un formulario
+   clínico único. Su selector Ver secciones y Anterior/Siguiente coordinan
+   errores, cambios sin guardar y herramientas clínicas. No se sustituyen.
+14 modules/clinical-history/pages/register-encounter-page.tsx — C.
+   .../atencion/nueva: seis pasos y acordeones clínicos conservados.
+15 modules/finance/pages/finance-page.tsx — B.
+   /finanzas: indicadores, cartera y filtros simultáneos; no se inventan áreas.
+16 modules/institution/pages/institution-profile-page.tsx — C.
+   /perfil-institucion: identidad y datos de un formulario. Las sedes siguen
+   consultables; su enlace existente abre la pestaña Sedes de Administración.
+17 modules/inventory/pages/inventory-item-detail-page.tsx — B.
+   /inventario/:id: información, lotes y movimientos simultáneos conservados.
+18 modules/inventory/pages/inventory-item-form-page.tsx — C.
+   /inventario/nuevo y /inventario/:id/editar: modales existentes conservados.
+19 modules/inventory/pages/inventory-list-page.tsx — A.
+   /inventario: cinco secciones compartidas, Insumos por defecto.
+20 modules/notifications/pages/notifications-report-page.tsx — A.
+   /notificaciones: Mensajería, Historial de envíos por defecto.
+21 modules/patients/pages/patient-detail-page.tsx — A.
+   /pacientes/:id: Resumen por defecto y secciones originales según el rol.
+22 modules/patients/pages/patient-form-page.tsx — C.
+   /pacientes/nuevo y /pacientes/:id/editar: formularios existentes conservados.
+23 modules/patients/pages/patients-list-page.tsx — B/C.
+   /pacientes: listado, filtros, acciones y modales conservados.
+24 modules/reports/pages/reports-page.tsx — A.
+   /reportes: cuatro categorías compartidas, Agenda por defecto.
+25 modules/saas/pages/access-requests-page.tsx — B/C.
+   /accesos/solicitudes: página global del Sidebar; no se duplica en tarjetas.
+26 modules/saas/pages/access-roles-page.tsx — B/C.
+   /accesos/roles: página global del Sidebar y edición de roles conservadas.
+27 modules/saas/pages/activation-page.tsx — C.
+   /activar-cuenta: activación existente conservada.
+28 modules/saas/pages/staff-page.tsx — B/C.
+   Vista de demostración de /accesos: Lista/Tarjetas, filtros y modales.
+29 modules/saas/pages/unified-access-page.tsx — B/C.
+   /accesos: usuarios/profesionales. Alias /personal-accesos conservado.
+30 modules/treatments/pages/treatment-detail-page.tsx — B.
+   /tratamientos/:id: resumen, descripción/insumos y pacientes simultáneos.
+31 modules/treatments/pages/treatment-form-page.tsx — C.
+   /tratamientos/nuevo y /tratamientos/:id/editar: modales conservados.
+32 modules/treatments/pages/treatments-list-page.tsx — B/C.
+   /tratamientos: listado, filtros y modales conservados.
+
+Componentes internos adicionales revisados:
+- ClinicalFileManager: Lista/Galería, filtros, visor, comparador y carga
+  de archivos continúan siendo herramientas secundarias del mismo paciente.
+- GlobalNotificationCenter: No leídas/Todas/Importantes siguen compactas.
+- ClinicalNavigation y RegisterEncounter conservan su navegación clínica.
+- AccessCatalogManagement es un export antiguo sin consumidores activos;
+  no se agrega su navegación obsoleta a Accesos ni a Administración.
+- InstitutionBranchesAdmin, RoomsAdmin, SpecialtyManagement, SpecialtyEditor
+  y CatalogManagement se reutilizan en sus paneles, sin duplicarlos.
+
+3. COMPONENTES COMPARTIDOS
+
+src/shared/components/section-navigation.tsx:
+- SectionNavigationCard: diseño existente de icono, título y descripción.
+- SectionNavigationGrid: cuadrícula adaptable y semántica tablist.
+- SectionNavigationTabs: estado controlado/no controlado, valor válido inicial,
+  opciones permitidas, estados deshabilitados, teclado y asociación de paneles.
+- SectionNavigationPanel: monta contenido al visitarlo por primera vez y lo
+  conserva al ocultarlo. Evita perder filtros/borradores y elimina contenido
+  retenido si deja de estar permitido. No monta secciones sin visitar.
+
+src/shared/lib/section-selection.ts centraliza la prioridad de selección.
+src/shared/hooks/use-section-query-state.ts conecta esa prioridad con React
+Router, conservando otros parámetros y actualizando mediante replace.
+
+Los permisos se reciben desde las políticas existentes del módulo; no se
+inventan roles ni permisos granulares. Actualmente los cuatro catálogos
+administrativos comparten el permiso Administración. No se afirma que existan
+autorizaciones independientes por sede/consultorio/especialidad/tipo.
+
+Se reutilizan Card, Tabs/TabsContent y Base UI, Lucide, PageHeader, DataTable,
+sus estados vacíos y los formularios, diálogos y confirmaciones existentes.
+PageHeader acepta headingLevel=2 para los apartados administrativos; su valor
+predeterminado y la apariencia de los demás encabezados siguen iguales.
+Administración tiene un solo h1 y un h2 para el apartado activo.
+
+4. COMPORTAMIENTO POR MÓDULO
+
+Administración:
+- Sedes predeterminada; Consultorios, Especialidades y Tipos de profesionales
+  cambian el contenido inferior sin pantalla de regreso.
+- Búsquedas/estados independientes conservados entre pestañas visitadas.
+- Reutiliza las fuentes y operaciones existentes, sin catálogos alternativos.
+- Los modales se abren sobre el panel activo. Crear/editar no cambia de pestaña.
+- Al cambiar de institución se renueva el espacio para no conservar filtros
+  ni contenido de una institución anterior.
+
+Pacientes:
+- Resumen predeterminado, Citas, Historial clínico, Tratamientos, Finanzas y
+  Archivo clínico conservados con sus condiciones originales por rol.
+- Se mantienen las seis secciones del administrador; no se eliminan las dos
+  adicionales porque los ejemplos del prompt mencionen solo cuatro.
+- Se conserva el ID del paciente en consultas y enlaces clínicos/calendario.
+- Los paneles visitados se retienen; cambiar de paciente renueva los paneles
+  para evitar reutilizar el estado del paciente anterior.
+- Los modales de edición y cita existentes no se reconstruyen.
+
+Inventario:
+- Insumos predeterminada; Compras, Proveedores, Esterilización y Stock crítico.
+- Misma política existente de paneles keepMounted, búsquedas y paginación.
+- El botón existente de stock crítico usa el mismo cambio de sección/URL.
+- No cambian cálculos de stock, movimientos ni formularios.
+
+Reportes:
+- Agenda predeterminada; Productividad, Tratamientos e Inventario.
+- El período válido aplicado permanece fuera de las pestañas y se conserva.
+- Paneles visitados retenidos, sin cambiar métricas ni validaciones del período.
+
+Mensajería:
+- Historial de envíos predeterminado; Plantillas de mensajes.
+- El enlace directo a plantilla carga su editor real inmediatamente.
+- La plantilla conserva su borrador incluso si se abrió inicialmente mediante
+  URL y luego se visita el historial.
+- Búsqueda, filtros y parámetro envio conservados al alternar secciones.
+- Se conserva la confirmación existente al abandonar Mensajería con cambios.
+- Editor, variables, vista previa, guardado y WhatsApp permanecen intactos.
+
+Finanzas, perfil institucional y otras páginas:
+- No contienen una navegación principal equivalente adicional que homologar.
+- Se conservan composición, cálculos, fuentes institucionales, formularios,
+  filtros y herramientas especializadas. No se crean pestañas decorativas.
+- Accesos conserva sus tres destinos globales del Sidebar sin duplicaciones.
+
+5. URL, COMPATIBILIDAD E HISTORIAL
+
+Todos los espacios principales admiten ?seccion= con el identificador actual:
+- /administracion?seccion=sedes|consultorios|especialidades|tipos-profesionales
+- /pacientes/:id?seccion=resumen|citas|historial|tratamientos|finanzas|documentos
+- /inventario?seccion=insumos|compras|proveedores|esterilizacion|stock-critico
+- /reportes?seccion=agenda|productividad|tratamientos|inventario
+- /notificaciones?seccion=history|template
+
+Los valores de la ficha se limitan a los disponibles para el rol actual.
+Una sección desconocida o no permitida muestra la predeterminada disponible.
+No se cambia el pathname del módulo al pulsar una tarjeta.
+Se utiliza replace y preventScrollReset: no se agrega una entrada al historial
+por cada selección ni se fuerza el desplazamiento de toda la pantalla.
+La selección inicial predeterminada funciona sin exigir parámetros en la URL.
+
+Compatibilidad:
+/administracion/sedes, /consultorios, /especialidades y /tipos-profesionales
+redirigen al mismo espacio con la selección solicitada. El alias roles-tipos
+abre Tipos de profesionales. Se conservan parámetros ajenos y fragmentos.
+No se cambian las declaraciones de React Router ni los guards existentes.
+
+6. DISEÑO, RESPONSIVE Y ACCESIBILIDAD
+
+Se conserva section-navigation.module.css y el diseño aprobado:
+- Padding 16 px, gap 12 px, iconos 20 px, título 14 px y descripción 13 px.
+- Bordes, radios y colores proceden de tokens existentes.
+- Selección sin crecimiento ni cambio de posición de otras tarjetas.
+- Sin chevrons de enlace en las pestañas de los cinco módulos.
+- Una columna en contenedores pequeños, dos desde 540 px y hasta cuatro
+  desde 1100 px; grupos de cinco/seis usan tres columnas amplias.
+- Transiciones existentes de 160 ms y movimiento reducido conservados.
+- tablist/tab/tabpanel, aria-selected, aria-controls, descripciones accesibles
+  y foco visible del mismo componente compartido.
+- Flechas/Home/End mueven el foco; Enter/Espacio seleccionan, respetando
+  el comportamiento de teclado existente de Base UI.
+
+No se alteran temas globales, Sidebar, Header, AppLayout ni notificaciones.
+
+7. ARCHIVOS MODIFICADOS EN ESTA TAREA
+
+Adaptados:
+01 src/app/pages/administration-page.tsx
+02 src/app/pages/administration-page.module.css
+03 src/shared/components/section-navigation.tsx
+04 src/shared/components/page-header.tsx
+05 src/modules/institution/components/institution-branches.tsx
+   Solo headingLevel=2 en el encabezado de Sedes independiente.
+06 src/modules/saas/components/access-catalog-management.tsx
+   Solo admite la opción de encabezado h2; editor y servicios intactos.
+07 src/modules/patients/pages/patient-detail-page.tsx
+08 src/modules/inventory/pages/inventory-list-page.tsx
+09 src/modules/reports/pages/reports-page.tsx
+10 src/modules/notifications/pages/notifications-report-page.tsx
+
+Nuevos:
+11 src/shared/hooks/use-section-query-state.ts
+12 src/shared/lib/section-selection.ts
+13 tests/unit/section-selection.test.mjs
+14 docs/NAVEGACION_INTERNA_GLOBAL_DEFINITIVA.txt
+
+8. PRUEBAS EJECUTADAS
+
+Chrome mediante Playwright, con datos sintéticos aislados y API interceptada:
+- Cinco módulos, navegación real, filtros, contexto, permisos del paciente,
+  borradores, teclado y controles secundarios: 20/20 grupos.
+- Administración: inicio, cuatro paneles, rutas antiguas, historial, filtros
+  independientes, creación/edición, confirmación de borrador, recarga, acceso
+  restringido y estados vacíos: 12/12 grupos.
+- Enlaces directos de los cinco módulos, parámetros coexistentes, plantilla
+  abierta desde URL y secciones no autorizadas del paciente: 3/3 grupos.
+- Componente: selección inválida, permisos, carga diferida, borrador retenido,
+  revocación de permiso y ausencia de opciones: 4/4 grupos.
+- Regresión del componente compartido: semántica, deshabilitado, teclado,
+  selección controlada, tres columnas y movimiento reducido: 6/6 grupos.
+- Recorrido global de las demás rutas, procesos de acceso, alias, formularios,
+  perfiles y páginas de error: 6/6 grupos.
+- Regresión de modales reales: pacientes claro/oscuro, tratamientos, compras,
+  esterilización, pasos clínicos 2–5 y carga múltiple de archivos: 12/12 grupos.
+
+Total: 63/63 grupos de navegador aprobados, sin errores de ejecución detectados.
+Las pruebas de operaciones administrativas/guardado usan respuestas simuladas;
+no acreditan una conexión real con el servidor ni modifican datos reales.
+
+Responsive: los cinco módulos y el grupo de tres tarjetas se comprobaron en
+claro/oscuro a 320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px. Se midieron
+límites, texto, alturas por fila, alineación, tamaño de iconos y ausencia de
+overflow horizontal global. Se verificó que seleccionar no altera la geometría.
+Se inspeccionaron capturas de Administración en oscuro/escritorio y claro/móvil.
+El recorrido adicional de páginas conservadas se hizo a 390/1440 en ambos temas.
+No hay comparación automática de píxeles configurada: se usaron capturas y DOM.
+
+Comprobaciones técnicas:
+- npx tsc -b: aprobado.
+- npm run build (tsc -b y Vite): aprobado.
+  Permanece la advertencia previa de chunks superiores a 500 kB.
+- npm run lint: cero errores, cuatro advertencias preexistentes.
+  El proyecto usa Oxlint y no tiene ESLint instalado/configurado.
+- npm run test:unit: 54/54 aprobadas.
+- git diff --check: sin errores.
+- Codificación UTF-8 revisada en los archivos modificados.
+
+No se ejecutó test:e2e de API: su script crea/elimina una base PostgreSQL y
+arranca el backend. La validación de esta tarea fue exclusivamente frontend.
+
+Evidencias locales fuera del código de producción:
+%TEMP%/clinicapp-navigation-final-qa/results.json
+%TEMP%/clinicapp-navigation-final-admin/results.json
+%TEMP%/clinicapp-navigation-final-urls/results.json
+%TEMP%/clinicapp-navigation-final-component/results.json
+%TEMP%/clinicapp-navigation-final-global/results.json
+%TEMP%/clinicapp-section-navigation-component-qa/results.json
+%TEMP%/clinicapp-section-navigation-regression/modals-results.json
+Las mismas carpetas conservan capturas. No se añadieron variables QA al frontend.
+
+9. INTEGRIDAD Y PENDIENTES
+
+Comparación con el estado local al iniciar esta tarea:
+- Rutas, guards, políticas de permisos y catálogo de navegación: intactos.
+- Sidebar, Header, menú del avatar y AppLayout: intactos.
+- Temas y estilos globales: intactos.
+- Presentación CSS aprobada de las tarjetas: intacta.
+- Paquetes, versiones y dependencias: intactos.
+- Los 187 archivos protegidos de backend/librería clínica e integraciones
+  coinciden mediante SHA-256. Odontograma y periodontograma intactos.
+- Base de datos, endpoints e infraestructura: sin operaciones ni cambios.
+
+Sin incidencias introducidas pendientes en los escenarios ejecutados.
+La integración real con el servidor queda fuera de esta validación frontend.
+Frontend disponible en http://localhost:5173.

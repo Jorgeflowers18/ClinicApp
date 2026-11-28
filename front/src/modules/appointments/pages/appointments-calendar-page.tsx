@@ -35,6 +35,7 @@ import { calendarEventClass, calendarStateClass } from "../components/calendar-e
 import { CalendarMonthContent, MonthDateHeader, MonthEvent, type CalendarEvent } from "../components/calendar-month-content"
 import { CalendarEventLegend, DayDateHeader, TimeEvent, TimeEventWrapper, WeekDateHeader } from "../components/calendar-time-content"
 import { AppointmentFormDialog } from "../components/appointment-form-dialog"
+import { BranchHoursHint } from "../components/branch-hours-hint"
 import { ScheduleBlockFormDialog } from "../components/schedule-block-form-dialog"
 import { appointmentStatusLabels, type Appointment, type ScheduleBlock } from "../types/appointment.types"
 
@@ -266,6 +267,7 @@ export function AppointmentsCalendarPage() {
       />
 
       <div className="clinic-calendar-workspace">
+      <BranchHoursHint />
       {isError && (
         <Alert variant="destructive">
           <AlertTitle>No se pudieron cargar las citas</AlertTitle>

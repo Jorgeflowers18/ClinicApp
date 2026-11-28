@@ -1,0 +1,297 @@
+CLINICAPP — REORGANIZACIÓN DEFINITIVA DE ACCESOS Y ADMINISTRACIÓN
+Fecha: 27 de noviembre de 2026 — America/Guayaquil
+Ámbito: frontend existente de ClinicApp. Cambios locales, sin commit ni push.
+
+1. ARCHIVOS MODIFICADOS
+El inventario completo aparece al final de este informe. Todos pertenecen a front/.
+No se modificaron archivos del backend, contratos HTTP, esquema OpenAPI, migraciones,
+dependencias, librerías clínicas ni estilos globales.
+
+2. COMPONENTES REUTILIZADOS
+AppLayout y su Sidebar, PageHeader, DataTable y su presentación móvil, AdaptiveTabs,
+Dialog/Body/Footer, ConfirmDialog, Field/FieldError, Select, Checkbox, Input,
+AdministrativeStatusBadge, SearchInput, ResetFiltersButton, UsernameField,
+RoleSelection, PasswordLinkDialog y useModalAccordion.
+Se mantienen los repositorios y adaptadores de demostración existentes.
+
+3. NUEVOS COMPONENTES
+StaffDirectory: listado/tarjetas y filtros compartidos por ambos entornos.
+AccountAccessDialog: credenciales y autorizaciones, sin duplicar el perfil.
+ServerProfileDialog: perfil personal/profesional compatible con los endpoints actuales.
+SpecialtySelection: selección desde catálogo y revisión de compatibilidad.
+BranchHoursEditor: días e intervalos de atención.
+BranchHoursHint: contexto de horarios en Citas.
+AccessRolesPage y AccessRequestsPage reutilizan los componentes anteriores.
+UserFormDialog, ProfessionalFormDialog y AccessManagementDialog conservan sus
+entradas existentes como adaptadores a los flujos compartidos.
+
+4. RUTAS REORGANIZADAS
+/accesos — Usuarios y profesionales.
+/accesos/roles — Roles.
+/accesos/solicitudes — Solicitudes de acceso.
+/administracion/sedes — Sedes.
+/administracion/consultorios — Consultorios.
+/administracion/especialidades — Especialidades.
+/administracion/tipos-profesionales — Tipos de profesionales.
+Se conserva /perfil-institucion y su acceso en el menú personal del Header.
+/personal-accesos redirige a /accesos; /administracion/roles-tipos redirige al
+catálogo de tipos. Las demás rutas conservan sus destinos.
+
+5. SIDEBAR
+Accesos contiene Usuarios y profesionales, Roles y Solicitudes de acceso.
+Administración contiene Sedes, Consultorios, Especialidades y Tipos de profesionales.
+Se conserva el componente, estilo, agrupaciones ajenas al alcance y comportamiento
+responsive. El enlace /accesos solo se activa en su destino exacto.
+El breadcrumb identifica la ruta administrativa correspondiente sin rediseñar el Header.
+No se añadieron planes, licencias comerciales ni herramientas del proveedor.
+
+6. IDENTIDAD UNIFICADA
+La relación se determina por ID de usuario, professionalId y userId existentes.
+Los nombres coincidentes no fusionan identidades.
+El profesional sin cuenta conserva su registro al recibir una cuenta.
+El directorio muestra datos reales más configuración local extendida, o el repositorio
+demo cuando ese entorno está activo. No mezcla identidades entre instituciones.
+Las filas de detalle se resuelven por ID sobre los datos actuales.
+
+7. EDITAR PERFIL
+Nombres y Apellidos independientes; documento, teléfono, tipo profesional,
+especialidades del catálogo, registro, estado/ausencias y sedes.
+No incluye credenciales ni cambios de roles.
+Mantiene imágenes, datos de acceso, asignaciones y horarios existentes.
+Un perfil administrativo no adquiere un perfil clínico por editar sus datos.
+Los acordeones conservan valores, abren el primer campo con error y usan la
+animación existente. Las fechas de vacaciones/permiso no cancelan citas históricas.
+
+8. GESTIONAR ACCESO
+Modal propio: usuario, correo, varios roles, estado y activación.
+Acciones de invitación, restablecimiento, cambio de contraseña y bloqueo.
+En la integración real se reutiliza la API existente de enlaces de contraseña;
+no se afirma que se haya enviado un correo.
+Los cambios del perfil profesional no reemplazan credenciales ni roles modificados.
+La cuenta administradora propia conserva un rol administrador activo; la comprobación
+se realiza antes de enviar una modificación incompatible al servidor.
+
+9. CREAR CUENTA
+Desde un profesional pide únicamente usuario, correo, roles, estado y activación.
+Conserva la relación con su ID profesional y no envía otro POST de profesional.
+Un profesional ya vinculado ofrece Gestionar acceso.
+La creación conserva el resultado recibido para que un reintento posterior no cree
+otra cuenta si falla el guardado de su configuración frontend.
+
+10. FILTROS
+Búsqueda por nombre, usuario, correo, registro y especialidad.
+Estado de cuenta, estado profesional, sede, especialidad, rol y tipo combinables.
+Restablecimiento mediante RotateCcw y tooltip existentes.
+Los controles se distribuyen según el espacio, sin una fila horizontal desbordada.
+
+11. LISTA Y TARJETAS
+Una misma fuente, filtrado, estados, IDs y acciones en ambos modos.
+La tabla prioriza Persona, Usuario, Tipo/especialidades, Rol y Estado.
+Las sedes y el registro se consultan dentro de las celdas y el detalle.
+Se conserva la adaptación móvil del DataTable.
+
+12. TIPOS PROFESIONALES
+Catálogo independiente, reutilizado en Administración y Editar perfil.
+Nuevo/Editar con nombre, descripción opcional y estado.
+Se conserva validación de duplicados y relaciones por ID.
+
+13. ESPECIALIDADES
+Se seleccionan desde un catálogo central. No hay ingreso libre en perfiles.
+Las etiquetas que ya devuelve la API se proyectan con IDs estables para conservar
+la información existente; no se inventan especialidades al elegir un tipo.
+La asociación con tipos se configura en Administración.
+Los nombres se comparan normalizando mayúsculas, acentos y espacios exteriores.
+Los registros históricos o inactivos se conservan; cambios nuevos incompatibles
+muestran error y no borran asignaciones silenciosamente.
+La renombración mantiene la identidad de la especialidad.
+La API actual recibe su campo specialty original; no se añadieron campos al DTO.
+
+14. ROLES
+Gestión separada en Accesos: nombre, descripción, estado y secciones visibles.
+Selección sencilla de módulos derivada de la navegación real, sin matriz de acciones.
+Se asignan desde Gestionar acceso y se mantienen separados del tipo profesional.
+
+15. VISIBILIDAD POR ROL
+Se reutiliza el control frontend por secciones, con unión de roles activos y
+restricciones del rol base real. Sidebar y rutas respetan esas reglas.
+No se cambia la autenticación del servidor ni se considera este control una
+autorización efectiva del backend. Mi perfil no permite concederse roles.
+
+16. SEDES
+DataTable compartido con nombre, dirección, contacto, horario, estado y principal.
+Búsqueda por nombre, filtro de estado y de ubicación cuando existen datos distintos.
+Nueva sede inicia con nombre vacío y placeholder Nombre de la sede.
+Validación de nombre obligatorio y duplicado; foco en el primer error.
+Perfil institucional y Administración utilizan la misma fuente de sedes.
+
+17. SEDE PRINCIPAL
+Acción confirmada Establecer como principal.
+Solo una sede institucional queda marcada y las demás pierden esa marca.
+No cambia las asignaciones ni las sedes preferidas de profesionales.
+Se impide establecer como principal una sede inactiva.
+
+18. DESACTIVACIÓN Y ELIMINACIÓN
+Desactivar conserva IDs, asignaciones e historial y evita nuevas selecciones según
+las reglas existentes. Las asignaciones antiguas no se borran por guardar otro dato.
+La eliminación demo comprueba asignaciones y referencias operativas conocidas,
+requiere confirmación y exige cambiar primero la principal si existen otras sedes.
+La eliminación real queda bloqueada hasta disponer de validación del backend.
+Guardar un perfil real desactualizado tampoco puede retirar sedes conocidas del
+caché: se solicita sincronizarlo. No se ejecutan eliminaciones clínicas en cascada.
+
+19. HORARIOS
+Se configuran los siete días abiertos/cerrados y varios intervalos por día.
+Se validan horas incompletas, cierre anterior/igual a apertura, duplicados y solapes.
+Un tramo nocturno debe dividirse entre días; no se acepta silenciosamente.
+Los días cerrados no requieren horas.
+Se conserva el horario previo no estructurado hasta editarlo expresamente.
+Los intervalos se serializan en el campo hours existente, sin modificar contratos.
+Citas muestra el contexto de sede conocida sin prometer disponibilidad del profesional.
+
+20. CONSULTORIOS
+Se conservan alta, edición, nombre, estado, ID y relaciones actuales.
+Se agregó filtro de estado y restablecimiento; se mantiene el feedback de duplicados.
+El DTO real no contiene sede: no se inventó siteId ni un filtro de sede ficticio.
+No se añadió eliminación de consultorios ni alteración de citas relacionadas.
+
+21. MODALES
+Nuevo tipo usa el tamaño pequeño existente; roles usan un tamaño proporcionado a
+la selección de secciones. Ambos tienen Cancelar/Guardar y errores por campo.
+Perfil y cuenta son operaciones distintas. El scroll permanece dentro del modal.
+Se conserva la animación del acordeón exclusivo de aproximadamente 220 ms y
+la preferencia de movimiento reducido. No se aplica a otros formularios clínicos.
+
+22. CÉDULA
+Se reutiliza sin cambiar su algoritmo la función TypeScript compartida.
+Se comprueban diez dígitos numéricos, provincia, tercer dígito y módulo 10.
+Se muestran errores específicos al salir del campo y al guardar.
+Pasaporte y otros documentos no se someten al algoritmo de cédula.
+Las acciones de credenciales no obligan a revalidar documentos históricos intactos.
+
+23. ERRORES Y DUPLICACIONES CORREGIDOS
+Se separaron los formularios antes equivalentes de perfil/acceso.
+Crear cuenta ya no vuelve a pedir ni crea el profesional.
+Se evita añadir perfil clínico a un administrador al editarlo.
+Se preserva una sede principal personal inactiva en ediciones no relacionadas.
+Se impiden duplicados por doble vínculo profesional y por aprobación repetida.
+Se preservan cambios actuales de acceso al guardar un perfil abierto anteriormente.
+Se evita borrar sedes del servidor al guardar un perfil institucional desactualizado.
+Los estados de vacaciones y de cuenta activa se mantienen independientes.
+Las pruebas verifican duplicados de catálogos, consultorios y relaciones por ID.
+
+24. TEXTOS, CODIFICACIÓN Y RESPONSIVE
+Se conserva UTF-8; escaneo de todos los archivos frontend cambiados sin mojibake
+ni caracteres de reemplazo. No se usaron espacios manuales para separar etiquetas.
+Comprobados 320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px en ambos temas:
+directorio, formularios, catálogos y sedes sin desbordamiento horizontal global.
+Se revisaron capturas finales de tabla, Nuevo tipo, perfil, cuenta y horarios.
+Se comprobó el estado final de los acordeones después de la transición.
+
+25. PRUEBAS EJECUTADAS
+- npm.cmd run test:unit: 39/39.
+  13 de cédula, 5 de identidad estable y 21 de políticas administrativas.
+- npm.cmd run lint: 0 errores, 4 advertencias preexistentes.
+  El script actual utiliza Oxlint; no se instaló ni sustituyó el linter.
+- Chrome headless / Playwright: 57/57 grupos de comprobaciones:
+  16 administrativos con API interceptada.
+  11 en demostración.
+  5 de autenticación, recuperación, Mi perfil y Solicitar acceso.
+  12 de modales: pacientes, tratamientos, compras, esterilización, atención clínica,
+     archivo clínico, conservación de borradores y movimiento reducido.
+  12 de navegación/pestañas y revisión visual de modales: Mi perfil, Perfil
+     institucional, Pacientes, Citas, Historial clínico, Tratamientos, Inventario,
+     Finanzas, Reportes y Mensajería.
+  1 de capturas y acordeón demo estabilizado en ambos temas.
+- Sin errores de ejecución del navegador en los resultados finales.
+- Sin escrituras contra una API real: todas las llamadas del navegador interceptadas.
+- git diff --check: correcto.
+- Comparación SHA-256 de 187 archivos protegidos: 187 intactos, 0 cambios.
+  Incluye backend, archivo de librería y componentes protegidos de odontograma.
+- No se ejecutó npm run test:e2e: ese runner inicializa API/DB y migraciones.
+  Se ejecutaron flujos frontend aislados con Playwright en su lugar.
+La navegación con respuestas simuladas no constituye una prueba de integración
+con datos persistidos en el servidor.
+
+26. TYPE CHECKING Y BUILD
+npm.cmd run build: correcto. Ejecuta tsc -b y la compilación Vite.
+Se conserva la advertencia previa de chunks superiores a 500 kB.
+Las cuatro advertencias del linter corresponden a Fast Refresh en button/badge/tabs
+y un escape innecesario en api-problem; no se ocultaron ni cambiaron reglas.
+Frontend disponible en http://localhost:5173.
+
+27. LIMITACIONES PARA LA INTEGRACIÓN CON BACKEND
+Se mantienen los endpoints y sus contratos actuales.
+- La API almacena nombre completo y una especialidad string de hasta 80 caracteres.
+  Los nombres separados, IDs múltiples y tipo se conservan en configuración local.
+  Una selección cuyo resumen excede ese límite muestra error, sin truncar contenido.
+- El backend mantiene su rol base y activo/inactivo. Roles adicionales, usuario
+  local, invitación/activación y estados extendidos requieren integración posterior.
+- Los períodos de ausencia, asignaciones y clasificaciones se guardan en el
+  repositorio frontend existente. No son autorización ni integridad de servidor.
+- La institución real no expone ID: se conserva el ámbito frontend existente.
+  No se adivina la institución de solicitudes históricas sin ámbito conocido.
+- Solicitudes de acceso muestra recibos locales de este navegador. Consulta global,
+  aprobación/rechazo del servidor y entrega de invitaciones requerirán API.
+  El envío original de Solicitar acceso sigue utilizando su endpoint existente.
+- El modelo real de consultorio no expone sede; sus relaciones no se alteran.
+- El estado activo/inactivo de sede es configuración frontend. La eliminación real
+  permanece restringida hasta comprobar dependencias en el servidor.
+- Los horarios estructurados usan el string existente; su interpretación operativa
+  definitiva y los turnos nocturnos completos corresponden a integración posterior.
+- No se modificaron backend, base de datos, librerías clínicas, Header ni diseño
+  del Sidebar. Se reutilizaron las pantallas y patrones existentes.
+- No se realizaron commits ni pushes de esta implementación.
+
+EVIDENCIA LOCAL DE QA
+%TEMP%\clinicapp-final-admin-qa\real-results.json
+%TEMP%\clinicapp-final-admin-qa\demo-results.json
+%TEMP%\clinicapp-final-admin-qa\module-navigation-results.json
+%TEMP%\clinicapp-final-admin-qa\settled-demo-visual-results.json
+%TEMP%\clinicapp-saas-qa\authentication-regression-results.json
+%TEMP%\clinicapp-simplificacion-qa\modals-results.json
+Capturas finales: %TEMP%\clinicapp-final-admin-qa\directory-*.png,
+type-*.png, profile-*.png, demo-profile-*.png, account-*.png y hours-*.png.
+Las fixtures y scripts de navegador permanecen fuera del código de producción.
+
+INVENTARIO COMPLETO DE ARCHIVOS LOCALES
+Nuevo: front/docs/REORGANIZACION_DEFINITIVA_ACCESOS_ADMINISTRACION.txt
+Modificado: front/src/app/layout/app-layout.tsx
+Modificado: front/src/app/nav-config.ts
+Modificado: front/src/app/pages/administration-page.tsx
+Modificado: front/src/app/routes.tsx
+Modificado: front/src/modules/appointments/api/appointments.queries.ts
+Modificado: front/src/modules/appointments/components/agenda-catalogs-admin.tsx
+Modificado: front/src/modules/appointments/components/appointment-form-dialog.tsx
+Nuevo: front/src/modules/appointments/components/branch-hours-hint.tsx
+Modificado: front/src/modules/appointments/components/professional-form-dialog.tsx
+Modificado: front/src/modules/appointments/pages/appointments-calendar-page.tsx
+Modificado: front/src/modules/auth/api/auth.queries.ts
+Modificado: front/src/modules/auth/components/user-form-dialog.tsx
+Modificado: front/src/modules/institution/api/institution.demo.ts
+Modificado: front/src/modules/institution/api/institution.queries.ts
+Nuevo: front/src/modules/institution/components/branch-hours-editor.module.css
+Nuevo: front/src/modules/institution/components/branch-hours-editor.tsx
+Modificado: front/src/modules/institution/components/institution-branches.module.css
+Modificado: front/src/modules/institution/components/institution-branches.tsx
+Nuevo: front/src/modules/institution/lib/branch-hours.ts
+Modificado: front/src/modules/saas/catalog-services.ts
+Modificado: front/src/modules/saas/components/access-catalog-management.tsx
+Modificado: front/src/modules/saas/components/access-management-dialog.tsx
+Nuevo: front/src/modules/saas/components/account-access-dialog.tsx
+Nuevo: front/src/modules/saas/components/server-profile-dialog.tsx
+Modificado: front/src/modules/saas/components/specialties.tsx
+Nuevo: front/src/modules/saas/components/specialty-selection.tsx
+Nuevo: front/src/modules/saas/components/staff-directory.tsx
+Modificado: front/src/modules/saas/components/staff-editor.tsx
+Modificado: front/src/modules/saas/lib/professional-policy.ts
+Nuevo: front/src/modules/saas/lib/server-person-settings.ts
+Nuevo: front/src/modules/saas/lib/specialty-catalog.ts
+Nuevo: front/src/modules/saas/lib/specialty-policy.ts
+Nuevo: front/src/modules/saas/pages/access-requests-page.tsx
+Nuevo: front/src/modules/saas/pages/access-roles-page.tsx
+Modificado: front/src/modules/saas/pages/staff-page.tsx
+Modificado: front/src/modules/saas/pages/unified-access-page.tsx
+Modificado: front/src/modules/saas/services.ts
+Modificado: front/src/modules/saas/types.ts
+Modificado: front/src/shared/lib/administrative-status.ts
+Nuevo: front/tests/unit/administrative-policies.test.mjs

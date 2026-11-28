@@ -1,0 +1,2 @@
+.home { display: grid; gap: var(--space-4); min-width: 0; }
+.panel { padding-top: var(--space-3); min-width: 0; }

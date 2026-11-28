@@ -1,0 +1,129 @@
+CLINICAPP — ACORDEONES EN ACCESO A MÓDULOS
+Fecha: 28 de noviembre de 2026
+
+RESULTADO
+
+Nuevo rol y Editar rol reutilizan el mismo RoleModuleSelector con tres
+acordeones compactos: Atención clínica (4 módulos), Operación (5) y
+Configuración (3), usando los doce identificadores reales del catálogo.
+
+Atención clínica aparece abierta inicialmente. Abrir otra categoría cierra
+la anterior; también se permite contraerlas todas. Las selecciones permanecen
+montadas y su única fuente de estado sigue siendo el formulario existente.
+
+Cada encabezado conserva icono, nombre, contador visible y chevron.
+Los botones Habilitar todos/Quitar todos y el contador general permanecen
+fuera de los acordeones. Actualizan los valores y contadores aunque estén
+cerrados, sin guardar automáticamente.
+
+Dentro de la categoría abierta hay una sola acción contextual:
+Habilitar grupo o Quitar grupo. Los switches individuales y las restricciones
+de módulos protegidos o no asignables utilizan la misma lógica anterior.
+No se añadieron switches maestros ni se cambiaron los permisos.
+
+IMPLEMENTACIÓN
+
+Se reutilizan Accordion de Base UI, ya utilizado por ClinicApp, y el hook
+compartido useModalAccordion sin modificarlo. Ambos coordinan apertura única,
+retención de controles, animación y desplazamiento dentro del modal.
+
+La expansión, contracción y el chevron tienen transiciones de 200 ms.
+Se respeta prefers-reduced-motion. Los paneles cerrados son inert y se
+excluyen del árbol accesible; no reciben foco mientras están contraídos.
+Los encabezados se operan con Tab y Enter/Espacio.
+
+Los switches se distribuyen en dos columnas cuando hay espacio y una en
+contenedores pequeños. Se mantienen los temas violeta y oscuro existentes,
+el ancho de 900 px del modal, el textarea sin redimensionado y el footer.
+La altura insuficiente utiliza el scroll interno existente del modal.
+
+VALIDACIONES Y CONSERVACIÓN
+
+Abrir/cerrar no cambia nombre, descripción, estado ni módulos del rol.
+Editar precarga la selección existente; Cancelar conserva la confirmación
+y descarta el borrador. Solo Guardar persiste la selección final.
+Los roles sin accesos continúan permitidos por las reglas existentes.
+
+Los errores de sections y de sus índices se presentan sin cambiar el
+contrato ni las reglas de validación. Un error de módulo abre su categoría,
+cierra la anterior y muestra el mensaje junto al switch correspondiente.
+El enfoque se coordina con el validador existente para terminar en el
+control visible, respetando errores anteriores de Nombre/Descripción.
+Los demás valores y mensajes se conservan.
+
+ARCHIVOS MODIFICADOS
+
+1. src/modules/saas/components/role-module-selector.tsx
+   Acordeón compartido por ambos modales, contadores, contenido retenido,
+   acciones existentes y revelado/enfoque de errores.
+2. src/modules/saas/components/administrative-ui.module.css
+   Estilos locales de encabezados, paneles, chevron, distribución adaptable
+   y movimiento reducido. Los estilos de tablas no se modificaron.
+3. src/modules/saas/components/access-catalog-management.tsx
+   Pasa los errores existentes y el intento de validación al selector.
+   Se mantienen formulario, esquema, servicio, guardado y cancelación.
+4. docs/ACORDEONES_ACCESO_MODULOS_ROLES.txt
+   Este informe.
+
+PRUEBAS EJECUTADAS
+
+Chrome mediante Playwright, en contextos aislados y con API simulada:
+
+- Modales reales y responsive: 16/16 grupos aprobados.
+  Apertura exclusiva y cierre completo; conservación de nombre, descripción,
+  estado y permisos; acciones generales con todos los paneles cerrados;
+  acciones por grupo; switches individuales; validación y guardado explícito;
+  precarga y cancelación en Editar; roles sin accesos; rol protegido;
+  administradores parciales; footer con poca altura; formulario de tipos
+  profesionales conservado y ausencia de escrituras API inesperadas.
+
+- Componente compartido: 9/9 grupos aprobados.
+  Guardado pendiente, selección totalmente bloqueada, permisos de solo lectura,
+  errores en categorías cerradas, varios errores, prioridad del primer campo,
+  transiciones de 200 ms, teclado, cambios rápidos y movimiento reducido.
+
+- Integración con el adaptador real de errores del formulario: 4/4 aprobados.
+  Se simularon errores sections.N, errores de Nombre y módulo simultáneos,
+  error general de sections y reintento de guardado tras corregirlos.
+  El foco termina en el control correcto y los datos ingresados se conservan.
+
+Total: 29/29 grupos de navegador aprobados, sin errores de ejecución detectados.
+Los escenarios de error utilizan errores sintéticos del servicio existente
+dentro del navegador de prueba, sin modificar código de producción ni servidor.
+
+Nuevo rol y Editar rol protegido se comprobaron en ambos temas a
+320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px.
+Se revisaron las tres categorías en cada ancho: alineación, columnas,
+contenido completo y ausencia de overflow horizontal.
+También se comprobaron viewports de 390/1440 px con solo 480 px de altura,
+scroll interno y acciones visibles. Se inspeccionaron capturas de ambos temas
+en escritorio y móvil. No hay comparación automática de píxeles configurada.
+
+- TypeScript: aprobado mediante tsc -b y el build.
+- npm run build: aprobado; persiste la advertencia previa de chunks grandes.
+- npm run lint: sin errores, cuatro advertencias preexistentes.
+  El proyecto usa Oxlint; no tiene ESLint instalado/configurado.
+- npm run test:unit: 54/54 aprobadas.
+- git diff --check: sin errores.
+
+Evidencias locales:
+%TEMP%/clinicapp-role-accordion-qa/results.json
+%TEMP%/clinicapp-role-accordion-component-qa/results.json
+%TEMP%/clinicapp-role-accordion-errors-qa/results.json
+Las mismas carpetas contienen las capturas; los scripts de prueba están en TEMP.
+No se añadieron variables QA, dependencias ni pruebas nuevas al frontend.
+
+INTEGRIDAD
+
+La comparación con el estado local inicial confirma solo los tres archivos
+de código indicados. Se conservaron los demás cambios locales anteriores.
+Backend, endpoints, base de datos, Sidebar, Header, AppLayout, rutas, temas,
+servicios, lógica de permisos y otras pantallas permanecen intactos.
+Los 187 archivos protegidos de backend/librerías clínicas e integraciones
+coinciden mediante SHA-256: odontograma y periodontograma intactos.
+
+No se ejecutó la suite e2e de API que crea/elimina una base PostgreSQL.
+Esta validación es exclusivamente frontend, con datos y servicios simulados.
+No se realizaron commits ni pushes.
+
+Disponible en http://localhost:5173/accesos/roles.

@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from "react"
 import { Check, ChevronDown, type LucideIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AdaptiveTabs } from "@/components/ui/adaptive-tabs"
+import { SectionNavigationTabs } from "@/shared/components/section-navigation"
 import { Accordion } from "@base-ui/react/accordion"
 
 export function PatientSectionCard({ title, icon: Icon, action, children, className = "" }: { title: string; icon: LucideIcon; action?: ReactNode; children: ReactNode; className?: string }) {
@@ -21,8 +21,8 @@ export function PatientFormSection({ id, title, icon: Icon, status, children, ha
   </Accordion.Item>
 }
 
-export function PatientTabs(props: ComponentProps<typeof AdaptiveTabs>) {
-  return <AdaptiveTabs {...props} className={`patient-detail-tabs ${props.className ?? ""}`} variant="line" />
+export function PatientTabs(props: ComponentProps<typeof SectionNavigationTabs>) {
+  return <SectionNavigationTabs {...props} className={`patient-detail-tabs ${props.className ?? ""}`} />
 }
 
 export function PatientStateBadge({ status, children }: { status: string; children: ReactNode }) {

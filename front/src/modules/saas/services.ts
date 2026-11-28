@@ -8,6 +8,11 @@ import { activeInstitutionScope, confirmedStaffInstitution } from "./lib/institu
 import { administrativeActor, protectAdministration } from "./catalog-services";
 import { accessRoles, assignedRoles } from "./lib/access-catalogs";
 import { documentValidationMessage } from "@/shared/lib/ecuadorian-cedula";
+import { normalizedCatalogName, specialtySelectionError } from "./lib/specialty-policy";
+import { professionalSpecialtyCatalog } from "./lib/specialty-catalog";
+import { queryClient } from "@/shared/lib/query-client";
+import type { Professional } from "@/modules/appointments/types/appointment.types";
+import { localInstitutionScope } from "./lib/institution-scope";
 function administrator() {
     return { id: administrativeActor(), role: "admin" as const };
 }
@@ -19,17 +24,21 @@ export const demoStaffAdapter: StaffAdapter = {
         const catalog = readDemoData();
         const scope = activeInstitutionScope(), profile = confirmedStaffInstitution();
         const previous = catalog.users.find(item => item.id === user.id);
+        if (user.professionalId && catalog.users.some(item => item.id !== user.id && item.professionalId === user.professionalId)) throw new ApiError("Este profesional ya pertenece a una identidad. Utiliza su registro existente.", 409);
         const roles = accessRoles(catalog, scope);
         if (user.hasAccount !== false && user.accessRoleIds?.some(id => !roles.some(role => role.id === id && (role.active || previous && assignedRoles(previous, catalog, scope).some(item => item.id === id))))) throw new ApiError("Revisa los roles.", 422, [{ field: "accessRoleIds", message: "Selecciona roles activos de esta institución." }]);
         if (user.professionalTypeId && user.professionalTypeId !== previous?.professionalTypeId && !catalog.professionalTypes?.some(type => type.id === user.professionalTypeId && type.organizationId === scope && type.active)) throw new ApiError("Revisa el tipo profesional.", 422, [{ field: "professionalTypeId", message: "Selecciona un tipo profesional activo de esta institución." }]);
         const documentError = documentValidationMessage(user.documentType, user.documentNumber);
-        if (documentError) throw new ApiError("Revisa el documento.", 422, [{ field: "documentNumber", message: documentError }]);
+        if (documentError && (!previous || previous.documentType !== user.documentType || previous.documentNumber !== user.documentNumber)) throw new ApiError("Revisa el documento.", 422, [{ field: "documentNumber", message: documentError }]);
         if (!user.organizationIds.includes(scope) || previous && !previous.organizationIds.includes(scope)) throw new ApiError("Esta identidad no pertenece a la institución actual.", 403);
         if (JSON.stringify(user.assignments) !== JSON.stringify(previous?.assignments) && user.assignments.some(assignment => assignment.active && assignment.organizationId === scope && !profile?.branches.some(site => site.id === assignment.siteId)))
             throw new ApiError("Revisa las sedes de la identidad.", 422, [{ field: "mainSiteId", message: "La sede seleccionada ya no está disponible." }]);
         if (user.specialtyIds.some(id => !catalog.specialties.some(item => item.id === id && user.organizationIds.includes(item.organizationId))))
             throw new ApiError("Revisa las especialidades.", 422, [{ field: "specialtyIds", message: "Selecciona especialidades de las organizaciones asignadas." }]);
         if (user.specialtyIds.some(id => !previous?.specialtyIds.includes(id) && catalog.specialties.some(item => item.id === id && !item.active))) throw new ApiError("Revisa las especialidades.", 422, [{ field: "specialtyIds", message: "La especialidad seleccionada ya no está activa para nuevas asignaciones." }]);
+        const scopedSpecialties = catalog.specialties.filter(item => item.organizationId === scope);
+        const specialtyIssue = specialtySelectionError(scopedSpecialties, user.specialtyIds.filter(id => scopedSpecialties.some(item => item.id === id)), user.professionalTypeId, previous?.specialtyIds, previous?.professionalTypeId);
+        if (specialtyIssue) throw new ApiError("Revisa las especialidades.", 422, [{ field: "specialtyIds", message: specialtyIssue }]);
         if (user.email && readDemoData().users.some(item => item.id !== user.id && item.email.toLowerCase() === user.email.toLowerCase()))
             throw new ApiError("Este correo ya pertenece a una identidad.", 409, [{ field: "email", message: "El correo ya está registrado en la demostración." }]);
         updateDemoData(data => { const index = data.users.findIndex(item => item.id === user.id); if (index < 0)
@@ -46,7 +55,9 @@ export const demoStaffAdapter: StaffAdapter = {
     async saveSpecialty(specialty) {
         const actor = administrator();
         if (specialty.organizationId !== activeInstitutionScope()) throw new ApiError("Esta especialidad no pertenece a la institución actual.", 403);
-        updateDemoData(data => { if (data.specialties.some(item => item.id !== specialty.id && item.organizationId === specialty.organizationId && item.name.trim().toLowerCase() === specialty.name.trim().toLowerCase()))
+        if (professionalSpecialtyCatalog(readDemoData(), specialty.organizationId, queryClient.getQueryData<Professional[]>(["professionals"]) ?? []).some(item => item.id !== specialty.id && normalizedCatalogName(item.name) === normalizedCatalogName(specialty.name))) throw new ApiError("Ya existe esta especialidad.", 409, [{ field: "name", message: "El nombre ya está registrado en el catálogo." }]);
+        if (specialty.professionalTypeIds?.some(id => !readDemoData().professionalTypes?.some(type => type.id === id && type.organizationId === specialty.organizationId))) throw new ApiError("Revisa los tipos profesionales.", 422, [{ field: "professionalTypeIds", message: "Selecciona tipos de esta institución." }]);
+        updateDemoData(data => { if (data.specialties.some(item => item.id !== specialty.id && item.organizationId === specialty.organizationId && normalizedCatalogName(item.name) === normalizedCatalogName(specialty.name)))
             throw new ApiError("Ya existe esta especialidad.", 409, [{ field: "name", message: "El nombre ya está registrado." }]); const index = data.specialties.findIndex(item => item.id === specialty.id); if (index < 0)
             data.specialties.push(specialty);
         else
@@ -92,12 +103,18 @@ export const identityService = {
         return user;
     },
     request(values: {
+        organizationId?: string;
         firstName: string;
         lastName: string;
         username: string;
         email: string;
         institution: string;
-    }) { updateDemoData(data => data.requests.push({ ...values, organizationId: useDemoContext.getState().userId ? useDemoContext.getState().organizationId : undefined, id: demoId(), state: "pending" })); },
+    }) { updateDemoData(data => {
+        const organizationId = values.organizationId ?? (useDemoContext.getState().userId ? useDemoContext.getState().organizationId : localInstitutionScope);
+        const previous = data.requests.find(item => item.organizationId === organizationId && item.email.toLowerCase() === values.email.toLowerCase());
+        if (previous) { if (previous.state !== "created") Object.assign(previous, values, { state: "pending", createdAt: new Date().toISOString() }); }
+        else data.requests.push({ ...values, organizationId, id: demoId(), state: "pending", createdAt: new Date().toISOString() });
+    }); },
     async updateDemoProfile(profile: AuthUser["profile"]) { const id = useDemoContext.getState().userId; if (!id || !profile)
         throw new Error("Sesión de demostración no disponible."); updateDemoData(data => { const user = data.users.find(item => item.id === id)!; user.profile = profile; }); },
     async completeDemoActivation(id: string) { const selected = useDemoContext.getState().userId; if (id !== selected)

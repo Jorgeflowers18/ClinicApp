@@ -50,11 +50,12 @@ export function useAppointmentsByPatient(patientId: string | undefined) {
 }
 
 /** Todos los profesionales, también los inactivos (para mostrar nombres). Los selectores usan `selectable`. */
-export function useProfessionals() {
+export function useProfessionals(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: appointmentsKeys.professionals,
     queryFn: ({ signal }) => appointmentsApi.listProfessionals(signal),
     staleTime: 5 * 60_000,
+    enabled: options.enabled,
   })
 }
 

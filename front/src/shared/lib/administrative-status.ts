@@ -1,5 +1,12 @@
 /** Presentation only. Account access and clinical availability remain independent. */
 export const administrativeStatuses = {
+  request: {
+    pending: { label: "Pendiente", tone: "warning" },
+    reviewed: { label: "Revisada", tone: "muted" },
+    approved: { label: "Aprobada", tone: "success" },
+    created: { label: "Cuenta vinculada", tone: "success" },
+    rejected: { label: "Rechazada", tone: "danger" },
+  },
   account: {
     active: { label: "Activa", tone: "success" },
     inactive: { label: "Inactiva", tone: "muted" },

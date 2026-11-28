@@ -6,7 +6,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { useLogout } from "@/modules/auth/api/auth.queries"
 import { UserAvatar } from "@/modules/auth/components/user-avatar"
 import { userDisplayName } from "@/modules/auth/components/user-identity"
-import { useSessionUser,useSaasData } from "@/modules/saas/state"
+import { useDemoContext,useSessionUser,useSaasData } from "@/modules/saas/state"
+import { canViewNavigationItem } from "@/modules/saas/lib/navigation-visibility"
+import { navItems } from "../nav-config"
 import { roleLabels } from "@/modules/auth/types/user-admin.types"
 import styles from "./header-user-menu.module.css"
 
@@ -14,12 +16,17 @@ import styles from "./header-user-menu.module.css"
 export function HeaderUserMenu() {
   const user = useSessionUser()
   const data=useSaasData(),username=[...data.identities,...data.users].find(item=>item.id===user?.id)?.username
+  const demo = useDemoContext(), member = data.users.find(item => item.id === demo.userId)
+  const visibility = { user, member, data, organizationId: member ? demo.organizationId : "frontend-institution-current" }
+  const administrationItems = navItems.filter(item => item.placement === "profile" && canViewNavigationItem(item, visibility))
+  const institutionVisible = canViewNavigationItem({ to: "/perfil-institucion", roles: ["admin"] }, visibility)
   const name = userDisplayName(user) || "Usuario"
   const logout = useLogout()
   const { pathname } = useLocation()
   const [menu, setMenu] = useState({ open: false, path: pathname })
+  const closeMenu = () => setMenu({ open: false, path: pathname })
   const role = user ? roleLabels[user.role] : ""
-  const link = (to: string, label: string, icon: React.ReactNode) => <DropdownMenuItem render={<NavLink to={to} />}>
+  const link = (to: string, label: string, icon: React.ReactNode) => <DropdownMenuItem render={<NavLink to={to} />} onClick={closeMenu}>
     {icon}{label}
   </DropdownMenuItem>
 
@@ -36,8 +43,8 @@ export function HeaderUserMenu() {
       </div>
       <DropdownMenuSeparator />
       {link("/perfil-usuario", "Mi perfil", <UserRound />)}
-      {user?.role === "admin" && link("/perfil-institucion", "Perfil institucional", <Building2 />)}
-      {user?.role === "admin" && link("/administracion", "Administración", <Settings2 />)}
+      {institutionVisible && link("/perfil-institucion", "Perfil institucional", <Building2 />)}
+      {administrationItems.length > 0 && link("/administracion", "Administración", <Settings2 />)}
       <DropdownMenuSeparator />
       <DropdownMenuItem disabled={logout.isPending} onClick={() => { if (!logout.isPending) logout.mutate() }}>
         <LogOut />{logout.isPending ? "Cerrando sesión…" : "Cerrar sesión"}

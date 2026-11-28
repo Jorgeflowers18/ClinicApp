@@ -1,0 +1,17 @@
+.layout { min-width: 0; container: section-navigation / inline-size; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); min-width: 0; }
+.card { display: block; min-width: 0; height: 100%; padding: 0; border-radius: var(--radius-card); transition: background-color 160ms ease, border-color 160ms ease; }
+.control { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: var(--space-3); width: 100%; height: 100%; padding: var(--space-4); border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer; outline: none; }
+.control[data-indicator="true"] { grid-template-columns: 20px minmax(0, 1fr) 16px; }
+.text { display: block; min-width: 0; }
+.title { display: block; font-size: 14px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+.description { display: block; margin-top: 6px; color: var(--muted-foreground); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.icon { color: var(--primary); margin-top: 1px; transition: color 160ms ease; }
+.indicator { color: var(--muted-foreground); margin-top: 3px; }
+.card:not([data-disabled="true"]):hover, .card[data-selected="true"] { background: var(--accent); border-color: var(--primary); }
+.card:has(.control:focus-visible) { outline: 2px solid var(--primary); outline-offset: 3px; }
+.card[data-disabled="true"] .control { color: var(--muted-foreground); cursor: not-allowed; }
+.card[data-disabled="true"] .icon { color: var(--muted-foreground); }
+@container section-navigation (min-width: 540px) { .grid { grid-template-columns: repeat(var(--section-navigation-tablet-columns), minmax(0, 1fr)); } }
+@container section-navigation (min-width: 1100px) { .grid { grid-template-columns: repeat(var(--section-navigation-columns), minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .card, .icon { transition: none; } }

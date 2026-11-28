@@ -33,6 +33,7 @@ interface DataTableProps<T> {
   getRowLabel?: (row: T) => string
   mobileTitleKey?: string
   className?: string
+  tableBreakpoint?: "default" | "wide"
 }
 
 export function DataTable<T>({
@@ -48,6 +49,7 @@ export function DataTable<T>({
   getRowLabel,
   mobileTitleKey,
   className,
+  tableBreakpoint = "default",
 }: DataTableProps<T>) {
   const titleColumn = columns.find((column) => column.key === mobileTitleKey) ?? columns[0]
   const detailColumns = columns.filter((column) => column !== titleColumn && column.header)
@@ -55,7 +57,7 @@ export function DataTable<T>({
 
   return (
     <div className={cn("clinic-data-table @container min-w-0", className)}>
-      <div className="hidden rounded-lg @md:block">
+      <div className={tableBreakpoint === "wide" ? "hidden rounded-lg @2xl:block" : "hidden rounded-lg @md:block"}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -136,7 +138,7 @@ export function DataTable<T>({
         </Table>
       </div>
 
-      <div className="space-y-3 @md:hidden">
+      <div className={tableBreakpoint === "wide" ? "space-y-3 @2xl:hidden" : "space-y-3 @md:hidden"}>
         {isLoading &&
           Array.from({ length: 3 }).map((_, index) => (
             <div key={`card-skeleton-${index}`} className="space-y-3 rounded-lg border p-4">

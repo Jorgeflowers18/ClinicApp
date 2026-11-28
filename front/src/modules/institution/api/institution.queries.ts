@@ -3,6 +3,8 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useAuthStore } from "@/modules/auth/store/auth-store"
 import { queryClient } from "@/shared/lib/query-client"
 import { useDemoContext, useSaasData } from "@/modules/saas/state"
+import { ApiError } from "@/shared/types/common"
+import { hasRemovedKnownBranch } from "../lib/branch-hours"
 
 import { institutionApi } from "./institution.api"
 import { initialInstitutionProfile, type InstitutionProfile, type PublicInstitution } from "../types/institution.types"
@@ -93,7 +95,11 @@ export function useSaveInstitutionProfile() {
   const context = useDemoContext()
   const scope = context.userId ? context.organizationId : "frontend-institution-current"
   return useMutation({
-    mutationFn: (profile: InstitutionProfile) => institutionApi.saveProfile(profile),
+    mutationFn: (profile: InstitutionProfile) => {
+      const confirmed = queryClient.getQueryData<InstitutionProfile>(institutionKeys.profileFor(scope))
+      if (!context.userId && confirmed && hasRemovedKnownBranch(confirmed.branches, profile.branches)) throw new ApiError("Se conservan las sedes conocidas del servidor. Recarga el perfil para sincronizarlo; la eliminación requiere validación del backend.", 409)
+      return institutionApi.saveProfile(profile)
+    },
     onSuccess: (saved) => {
       queryClient.setQueryData(institutionKeys.profileFor(scope), saved)
       queryClient.setQueryData(institutionKeys.publicFor(scope), publicPart(saved))

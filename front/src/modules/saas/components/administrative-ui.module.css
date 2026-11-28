@@ -1,0 +1,79 @@
+.catalogDialog[data-slot="dialog-content"] { min-width: 0; max-height: min(90dvh, calc(100dvh - 32px)); }
+.typeDialog[data-slot="dialog-content"] { --dialog-width: 620px; }
+.roleDialog[data-slot="dialog-content"] { --dialog-width: 900px; }
+.catalogBody[data-slot="dialog-body"] { min-width: 0; padding: 2px; }
+.catalogForm { display: grid; gap: 16px; min-width: 0; }
+.catalogForm > * { min-width: 0; }
+.description[data-slot="textarea"] { height: 88px; min-height: 80px; field-sizing: fixed; resize: none; }
+.state[data-slot="field"] { gap: 10px; padding: 4px 12px; }
+.state > [data-slot="field-label"] { flex: 1; }
+.state > [data-slot="switch"], .state > [data-slot="badge"] { flex: 0 0 auto; }
+.permissions { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; container: role-modules / inline-size; }
+.permissions:focus { outline: none; }
+.permissions[aria-invalid="true"] { border-radius: var(--radius-control); outline: 2px solid var(--destructive); outline-offset: 3px; }
+.permissionsTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; width: 100%; font-weight: 600; }
+.permissionsSummary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 0; }
+.permissionsSummary > span:last-child { color: var(--muted-foreground); font-size: 12px; font-weight: 400; }
+.bulkActions { display: flex; flex-wrap: wrap; gap: 4px; margin-inline-start: auto; }
+.permissionGroups { display: grid; gap: 6px; min-width: 0; overflow-anchor: none; }
+.permissionGroup { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-control); }
+.groupHeading { margin: 0; }
+.groupTrigger { display: grid; grid-template-columns: 17px minmax(0, 1fr) auto 16px; align-items: center; gap: 8px; width: 100%; min-height: 42px; padding: 9px 12px; border-radius: var(--radius-control); font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; transition: background-color 200ms ease; }
+.groupTrigger:hover, .permissionGroup[data-open] .groupTrigger { background: var(--muted); }
+.groupTrigger:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.groupTrigger > svg { flex-shrink: 0; color: var(--muted-foreground); }
+.permissionGroup[data-open] .groupTrigger > svg:first-child { color: var(--primary); }
+.groupLabel { min-width: 0; overflow-wrap: anywhere; }
+.groupCounter { color: var(--muted-foreground); font-size: 12px; font-weight: 400; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.groupChevron { transition: transform 200ms ease; }
+.permissionGroup[data-open] .groupChevron { transform: rotate(180deg); }
+.groupPanel { height: var(--accordion-panel-height); overflow: hidden; opacity: 1; transition: height 200ms ease-in-out, opacity 200ms ease-in-out; }
+.groupPanel:is([data-starting-style], [data-ending-style]) { height: 0; opacity: 0; }
+.groupPanel[hidden] { display: none; }
+.groupContent { min-width: 0; padding: 0 12px 8px; }
+.groupActions { display: flex; justify-content: flex-end; padding-block: 4px; }
+.groupAction { min-width: 108px; }
+.moduleEntry { min-width: 0; }
+.moduleRows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 24px; }
+.moduleRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 40px; padding: 6px 12px 6px 0; }
+.moduleRow > label { display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; cursor: pointer; font-size: 13px; }
+.moduleRow > label > svg { flex-shrink: 0; color: var(--muted-foreground); }
+.moduleRow > label > span { overflow-wrap: anywhere; }
+.moduleControl { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.moduleLock { color: var(--muted-foreground); }
+.moduleRow:has([data-checked]) > label > svg { color: var(--primary); }
+.table [data-slot="table"] { width: 100%; table-layout: auto; }
+.table :is(th,td)[data-column] { padding: 10px 12px; vertical-align: middle; }
+.table :is(th,td)[data-column="name"], .table :is(th,td)[data-column="description"], .table :is(th,td)[data-column="types"] { white-space: normal; overflow-wrap: anywhere; }
+.table :is(th,td)[data-column="name"] { width: 24%; }
+.table :is(th,td)[data-column="users"], .table :is(th,td)[data-column="professionals"] { width: 1%; text-align: right; }
+.table :is(th,td)[data-column="state"], .table :is(th,td)[data-column="active"], .table :is(th,td)[data-column="principal"] { width: 1%; white-space: nowrap; }
+.table :is(th,td)[data-column="actions"] { width: 1%; text-align: right; }
+.table td[data-column="actions"] > div { justify-content: flex-end; }
+.table td[data-column="actions"] button { white-space: nowrap; }
+.requests.table [data-slot="table"] { width: 100%; min-width: 0; table-layout: fixed; }
+.requests.table :is(th,td)[data-column] { padding-inline: 8px; white-space: normal; overflow-wrap: anywhere; }
+.requests.table :is(th,td)[data-column="name"] { width: 18%; }
+.requests.table :is(th,td)[data-column="username"] { width: 15%; }
+.requests.table :is(th,td)[data-column="email"] { width: 22%; }
+.requests.table :is(th,td)[data-column="date"] { width: 15%; }
+.requests.table :is(th,td)[data-column="state"] { width: auto; }
+.requests.table :is(th,td)[data-column="actions"] { width: 104px; }
+.requests.table td[data-column="actions"] > div { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; gap: 4px; }
+.requests.table td[data-column="actions"] button { width: 100%; height: auto; min-height: 32px; white-space: normal; overflow-wrap: anywhere; }
+.requests.table [data-slot="badge"] { height: auto; min-height: 24px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.roleSummary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.roleSummary summary { cursor: pointer; list-style: none; }
+.roleSummary summary::-webkit-details-marker { display: none; }
+.roleSummary details > div { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 4px; }
+@container role-modules (max-width: 540px) { .moduleRows { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 639px) {
+  .catalogDialog[data-slot="dialog-content"] { max-height: calc(100dvh - 24px); width: calc(100vw - 24px); max-width: calc(100vw - 24px); }
+  .catalogDialog > .catalogBody[data-slot="dialog-body"] { padding: 2px; }
+  .moduleRows { grid-template-columns: minmax(0, 1fr); }
+  .moduleRow { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .groupPanel { transition-duration: 0s !important; }
+  .groupTrigger, .groupChevron { transition: none; }
+}

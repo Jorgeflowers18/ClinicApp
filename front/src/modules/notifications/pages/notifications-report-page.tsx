@@ -1,10 +1,11 @@
 import { useState } from "react"
-import { useLocation, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { CheckCheck, FileText, Filter, History, MailWarning, MessagesSquare, ChartNoAxesColumnIncreasing } from "lucide-react"
 import { ResetFiltersButton } from "@/shared/components/reset-filters-button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AdaptiveTabs } from "@/components/ui/adaptive-tabs"
+import { SectionNavigationTabs, SectionNavigationPanel } from "@/shared/components/section-navigation"
+import { useSectionQueryState } from "@/shared/hooks/use-section-query-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,11 +31,13 @@ import { notificationChannelLabels, notificationTypeLabels, type NotificationCha
 import "../messaging.css"
 
 const statuses = { enviada: "Enviado", fallida: "Fallido" }
+const sections = [
+  { value: "history", title: "Historial de envíos", description: "Mensajes y estados de envío", icon: History },
+  { value: "template", title: "Plantillas de mensajes", description: "Contenido y vista previa", icon: FileText },
+]
 export function NotificationsReportPage() {
-  const location = useLocation(), [params, setParams] = useSearchParams()
-  const [selection, setSelection] = useState({ key: location.key, tab: "history" })
-  const [templateVisited, setTemplateVisited] = useState(false)
-  const activeTab = selection.key === location.key ? selection.tab : "history"
+  const [params, setParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useSectionQueryState(sections, "history")
   const table = useTableQueryState()
   const [channel, setChannel] = useState("all"), [status, setStatus] = useState("all"), [type, setType] = useState("all")
   const [dateFrom, setDateFrom] = useState(""), [dateTo, setDateTo] = useState(""), [filterOpen, setFilterOpen] = useState(false)
@@ -72,10 +75,7 @@ export function NotificationsReportPage() {
       <KpiCard label="Tasa de envío exitoso" value={total ? formatPercent(sent / total) : "—"} icon={ChartNoAxesColumnIncreasing} isLoading={summary.isPending} />
     </div>}
     <p className="messaging-hint">Todos los registros disponibles. Enviado no significa entregado o leído.</p>
-    <AdaptiveTabs value={activeTab} onValueChange={tab => { setSelection({key: location.key, tab}); if(tab === "template") setTemplateVisited(true) }} variant="line" items={[
-      { value: "history", label: <><History aria-hidden="true" />Historial de envíos</>, accessibleLabel: "Historial de envíos" },
-      { value: "template", label: <><FileText aria-hidden="true" />Plantillas de mensajes</>, accessibleLabel: "Plantillas de mensajes" },
-    ]}>
+    <SectionNavigationTabs label="Secciones de Mensajería" value={activeTab} onValueChange={setActiveTab} items={sections}>
       <TabsContent value="history" keepMounted className="pt-4 space-y-3">
         {!selectedId && <div className="messaging-toolbar"><SearchInput value={table.search} onChange={table.setSearch} ariaLabel="Buscar mensajes por paciente o identificación" placeholder="Buscar por nombre o identificación…" />
           <Popover open={filterOpen} onOpenChange={setFilterOpen}><PopoverTrigger render={<Button variant="outline" />}><Filter aria-hidden="true" />Filtros{activeFilters.length > 0 && <Badge variant="secondary">{activeFilters.length}</Badge>}</PopoverTrigger>
@@ -97,7 +97,7 @@ export function NotificationsReportPage() {
           isLoading={messages.isPending} isError={messages.isError} errorMessage={getErrorMessage(messages.error)} emptyTitle={activeFilters.length ? "Sin mensajes coincidentes" : "Sin mensajes registrados"} emptyDescription={activeFilters.length ? "No hay mensajes con estos criterios." : "Todavía no hay envíos registrados a pacientes."} />
         {!messages.isError && messages.data && <PaginationBar page={messages.data.page} pageSize={messages.data.pageSize} totalItems={messages.data.totalItems} totalPages={messages.data.totalPages} onPageChange={table.setPage} />}
       </TabsContent>
-      <TabsContent value="template" keepMounted className="pt-4">{templateVisited && <NotificationTemplateEditor />}</TabsContent>
-    </AdaptiveTabs>
+      <SectionNavigationPanel value="template" className="pt-4"><NotificationTemplateEditor /></SectionNavigationPanel>
+    </SectionNavigationTabs>
   </div>
 }

@@ -26,28 +26,31 @@ import { InstitutionBranches } from "@/modules/institution/components/institutio
 import { accountStates, type StaffUser } from "../types"
 import { activationLabels } from "@/shared/lib/administrative-status"
 import { ProfessionalStatusBadge, SaasSelect, UsernameField } from "./controls"
+import { SpecialtySelection } from "./specialty-selection"
+import { specialtySelectionError } from "../lib/specialty-policy"
+import { ProfessionalStatusDialog } from "./professional-status-dialog"
 
 const schedule = z.object({ days: z.array(z.number()), start: z.string(), end: z.string() })
 const schema = z.object({
   firstName: z.string().trim().min(1, "Ingresa los nombres."), lastName: z.string().trim().min(1, "Ingresa los apellidos."),
   username: z.string(), email: z.string().trim(),
-  hasAccount: z.boolean(), clinicalProfile: z.boolean(), accessRoleIds: z.array(z.string()), professionalTypeId: z.string(),
+  profileOnly: z.boolean(), hasAccount: z.boolean(), clinicalProfile: z.boolean(), accessRoleIds: z.array(z.string()), professionalTypeId: z.string(),
   phone: z.string().trim().refine(value => !value || /^\+?[\d ()-]{7,20}$/.test(value), "Ingresa un teléfono válido."),
   documentType: z.string(), documentNumber: z.string(), role: z.enum(roles),
-  siteIds: z.array(z.string()), mainSiteId: z.string(),
+  siteIds: z.array(z.string()), mainSiteId: z.string(), retainedMain: z.boolean(),
   schedules: z.record(schedule), profession: z.string(), registration: z.string(), specialtyIds: z.array(z.string()),
   state: z.enum(["active", "inactive", "blocked", "pending"]), activation: z.enum(["invitation", "temporary", "active"]),
 }).superRefine((value, context) => {
   const documentError = documentValidationMessage(value.documentType, value.documentNumber)
   if (documentError) context.addIssue({ code: "custom", path: ["documentNumber"], message: documentError })
-  if (value.hasAccount) {
+  if (value.hasAccount && !value.profileOnly) {
     const username = usernameSchema.safeParse(value.username)
     if (!username.success) context.addIssue({ code: "custom", path: ["username"], message: username.error.issues[0].message })
     if (!value.accessRoleIds.length) context.addIssue({ code: "custom", path: ["accessRoleIds"], message: "Selecciona al menos un rol." })
   }
-  if ((value.hasAccount || value.email) && !z.string().email().safeParse(value.email).success) context.addIssue({ code: "custom", path: ["email"], message: "Ingresa un correo válido." })
+  if (!value.profileOnly && (value.hasAccount || value.email) && !z.string().email().safeParse(value.email).success) context.addIssue({ code: "custom", path: ["email"], message: "Ingresa un correo válido." })
   if (value.mainSiteId && !value.siteIds.includes(value.mainSiteId)) context.addIssue({ code: "custom", path: ["mainSiteId"], message: "La sede principal debe estar asignada." })
-  if (value.siteIds.length && !value.mainSiteId) context.addIssue({ code: "custom", path: ["mainSiteId"], message: "Selecciona la sede principal." })
+  if (value.siteIds.length && !value.mainSiteId && !value.retainedMain) context.addIssue({ code: "custom", path: ["mainSiteId"], message: "Selecciona la sede principal." })
   if (!value.clinicalProfile) return
   if (!value.profession.trim()) context.addIssue({ code: "custom", path: ["profession"], message: "Indica la profesión." })
   if (value.role === "medico" && !value.specialtyIds.length) context.addIssue({ code: "custom", path: ["specialtyIds"], message: "Asigna al menos una especialidad." })
@@ -66,25 +69,28 @@ const groups = [
   { id: "professional", title: "Perfil profesional", fields: ["professionalTypeId", "profession", "registration", "specialtyIds"] },
   { id: "activation", title: "Activación", fields: ["activation"] },
 ]
-export function StaffEditor({ user, onClose, initialRole = "recepcion", accountMode }: { user: StaffUser | null; onClose: () => void; initialRole?: Role; accountMode?: boolean }) {
+export function StaffEditor({ user, onClose, initialRole = "recepcion", accountMode, profileOnly = false }: { user: StaffUser | null; onClose: () => void; initialRole?: Role; accountMode?: boolean; profileOnly?: boolean }) {
   const data = useSaasData(), { organizationId, organization, profile } = useStaffInstitution(), body = useRef<HTMLDivElement>(null), lock = useRef(false)
   const roleCatalog = accessRoles(data, organizationId), initialAccount = accountMode ?? user?.hasAccount !== false
   const draftId = useRef(user?.id ?? demoId())
   const sites = organization.branches, saveInstitution = useSaveInstitutionProfile()
   const [creatingSite, setCreatingSite] = useState(false)
+  const [editingState, setEditingState] = useState(false)
   const accordion = useModalAccordion(body, "personal")
   const [failure, setFailure] = useState("")
   const existingRole = user?.roles.includes("admin") ? "admin" : user?.roles[0] ?? initialRole
   const form = useValidatedForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
-      hasAccount: initialAccount, clinicalProfile: Boolean(user?.professionalId) || !initialAccount || initialRole === "medico",
+      profileOnly,
+      hasAccount: initialAccount, clinicalProfile: Boolean(user?.professionalId) || !initialAccount || !user && initialRole === "medico",
       accessRoleIds: user ? assignedRoles(user, data, organizationId).map(role => role.id) : roleCatalog.filter(role => role.builtin === initialRole).map(role => role.id),
       professionalTypeId: user?.professionalTypeId ?? "",
       firstName: user?.firstName ?? "", lastName: user?.lastName ?? "", username: user?.username ?? "", email: user?.email ?? "", phone: user?.phone ?? "",
       documentType: user?.documentType ?? "cedula", documentNumber: user?.documentNumber ?? "", role: existingRole,
       siteIds: user?.assignments.filter(item => item.active && item.organizationId === organizationId && sites.some(site => site.id === item.siteId)).map(item => item.siteId) ?? [],
       mainSiteId: user?.assignments.find(item => item.active && item.main && item.organizationId === organizationId && sites.some(site => site.id === item.siteId))?.siteId ?? "",
+      retainedMain: Boolean(user?.assignments.some(item => item.active && item.main && item.organizationId === organizationId && profile?.branches.some(site => site.id === item.siteId) && !sites.some(site => site.id === item.siteId))),
       schedules: Object.fromEntries(sites.map(site => {
         const previous = user?.assignments.find(item => item.siteId === site.id && item.organizationId === organizationId)
         return [site.id, { days: previous?.days ?? [1, 2, 3, 4, 5], start: previous?.start ?? "08:00", end: previous?.end ?? "18:00" }]
@@ -95,7 +101,7 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion", accountM
     },
   }, body)
   const values = form.watch(), errors = form.formState.errors, clinical = values.clinicalProfile
-  const visibleGroups = groups.filter(group => (group.id !== "professional" || clinical) && (values.hasAccount || !["credentials", "activation"].includes(group.id)))
+  const visibleGroups = groups.filter(group => (group.id !== "professional" || clinical) && ((!profileOnly && values.hasAccount) || !["credentials", "activation"].includes(group.id)))
   function reveal(field: string) {
     const group = visibleGroups.find(group => group.fields.some(key => key === field || field.startsWith(key + ".")))
     if (group) accordion.request(group.id, `[name="${CSS.escape(field)}"],[data-validation-field="${CSS.escape(field)}"],#staff-${CSS.escape(field)}`)
@@ -115,6 +121,8 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion", accountM
         return
       }
       const previous = data.users.find(item => item.id === user?.id) ?? user
+      const specialtyError = clinical ? specialtySelectionError(data.specialties.filter(item => item.organizationId === organizationId), next.specialtyIds, next.professionalTypeId || null, previous?.specialtyIds, previous?.professionalTypeId) : ""
+      if (specialtyError) { form.setError("specialtyIds", { message: specialtyError }); reveal("specialtyIds"); return }
       if (!clinical && previous?.professionalId && !confirm("Se conservará el perfil profesional y quedará inactivo. ¿Continuar?")) return
       const currentAssignments = sites.filter(site => next.siteIds.includes(site.id)).map(site => ({
         organizationId, siteId: site.id, main: next.mainSiteId === site.id, active: true,
@@ -123,7 +131,7 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion", accountM
       const assignments = [
         ...(previous?.assignments ?? []).filter(item => item.organizationId !== organizationId),
         ...(previous?.assignments ?? []).filter(item => item.organizationId === organizationId && !next.siteIds.includes(item.siteId)).map(item =>
-          profile?.branches.some(branch => branch.id === item.siteId) && !sites.some(site => site.id === item.siteId) ? item : { ...item, active: false, main: false }),
+          profile?.branches.some(branch => branch.id === item.siteId) && !sites.some(site => site.id === item.siteId) ? { ...item, main: next.mainSiteId ? false : item.main } : { ...item, active: false, main: false }),
         ...currentAssignments,
       ]
       await demoStaffAdapter.saveUser({
@@ -138,6 +146,7 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion", accountM
         absences: previous?.absences ?? [], activation: next.activation,
         mustChangePassword: next.activation === previous?.activation ? previous.mustChangePassword : next.activation === "temporary",
         profile: previous?.profile ? { ...previous.profile, fullName: nameOf(next) } : null, createdAt: previous?.createdAt ?? new Date().toISOString(),
+        ...(profileOnly && previous ? { hasAccount: previous.hasAccount, username: previous.username, email: previous.email, roles: previous.roles, accessRoleIds: previous.accessRoleIds, roleAssignments: previous.roleAssignments, state: previous.state, activation: previous.activation, mustChangePassword: previous.mustChangePassword } : {}),
       })
       onClose()
     } catch (error) {
@@ -149,7 +158,7 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion", accountM
     personal: <div className="saas-grid">
       {text("firstName", "Nombres")}{text("lastName", "Apellidos")}
       <SaasSelect label="Tipo de documento" items={{ cedula: "Cédula ecuatoriana", pasaporte: "Pasaporte", ruc: "RUC", extranjero: "Documento extranjero", otro: "Otro documento" }} value={values.documentType} onChange={value => form.setValue("documentType", value, { shouldDirty: true })} />
-      {text("documentNumber", "Número de documento")}{text("email", "Correo de acceso", "email")}{text("phone", "Teléfono", "tel")}
+      {text("documentNumber", "Número de documento")}{!profileOnly && text("email", "Correo de acceso", "email")}{text("phone", "Teléfono", "tel")}
     </div>,
     credentials: <div className="saas-stack">
       <UsernameField value={values.username} onChange={value => form.setValue("username", value, { shouldDirty: true, shouldValidate: form.formState.isSubmitted })} firstName={values.firstName} lastName={values.lastName} accountId={user?.id} error={errors.username?.message} required />
@@ -158,20 +167,21 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion", accountM
     assignments: <div className="saas-stack">
       <label className="saas-check"><Checkbox checked={clinical} onCheckedChange={checked => form.setValue("clinicalProfile", Boolean(checked), { shouldDirty: true })} />Cuenta con perfil profesional</label>
       <div className="saas-grid">
-        {values.hasAccount ? <RoleSelection roles={roleCatalog} value={values.accessRoleIds} error={errors.accessRoleIds?.message} onChange={ids => {
+        {values.hasAccount && !profileOnly ? <RoleSelection roles={roleCatalog} value={values.accessRoleIds} error={errors.accessRoleIds?.message} onChange={ids => {
           form.setValue("accessRoleIds", ids, { shouldDirty: true, shouldValidate: form.formState.isSubmitted })
           const builtin = roleCatalog.find(role => ids.includes(role.id) && role.builtin)?.builtin
           if (builtin) form.setValue("role", builtin)
           if (ids.some(id => roleCatalog.find(role => role.id === id)?.builtin === "medico")) form.setValue("clinicalProfile", true)
-        }} /> : <p className="saas-readonly">Profesional sin cuenta de acceso</p>}
+        }} /> : <p className="saas-readonly">{values.hasAccount ? "Las credenciales y los roles se administran en Gestionar acceso." : "Profesional sin cuenta de acceso"}</p>}
         <div className="saas-field"><span>Institución</span><p className="saas-readonly">{organization.name}</p></div>
       </div>
       {!sites.length && <div className="saas-stack saas-empty-sites"><p>Todavía no hay sedes registradas.</p><p className="saas-hint">Crea una sede desde Administración para asignar personal.</p><Button type="button" variant="outline" size="sm" disabled={!profile} onClick={() => setCreatingSite(true)}>Crear primera sede</Button></div>}
       {(sites.length > 0 || values.siteIds.length > 0) && <div className={sites.length > 1 ? "saas-grid" : "saas-stack"}>
       <SaasSelect label="Sede principal" id="mainSiteId" value={values.mainSiteId || "none"} error={errors.mainSiteId?.message}
-        items={{ none: "Pendiente de asignar sede", ...(values.mainSiteId && !sites.some(site => site.id === values.mainSiteId) ? { [values.mainSiteId]: "Sede no disponible" } : {}), ...Object.fromEntries(sites.map(site => [site.id, site.name])) }}
+        items={{ none: values.retainedMain ? "Principal anterior conservada (inactiva)" : "Pendiente de asignar sede", ...(values.mainSiteId && !sites.some(site => site.id === values.mainSiteId) ? { [values.mainSiteId]: "Sede no disponible" } : {}), ...Object.fromEntries(sites.map(site => [site.id, site.name])) }}
         onChange={value => {
           const selected = value === "none" ? "" : value
+          form.setValue("retainedMain", false)
           form.setValue("mainSiteId", selected, { shouldDirty: true, shouldValidate: true })
           if (selected) {
             form.setValue("siteIds", [...new Set([...values.siteIds, selected])], { shouldDirty: true, shouldValidate: true })
@@ -216,12 +226,9 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion", accountM
     professional: <div className="saas-stack">
       <SaasSelect label="Tipo de profesional" id="professionalTypeId" value={values.professionalTypeId || "none"} items={{ none: "Sin tipo asignado", ...Object.fromEntries((data.professionalTypes ?? []).filter(type => type.organizationId === organizationId && (type.active || type.id === user?.professionalTypeId)).map(type => [type.id, type.name + (!type.active ? " (inactivo)" : "")])) }} error={errors.professionalTypeId?.message} onChange={id => form.setValue("professionalTypeId", id === "none" ? "" : id, { shouldDirty: true })} />
       <div className="saas-grid">{text("profession", "Profesión")}{text("registration", "Registro profesional")}</div>
-      <Field data-invalid={Boolean(errors.specialtyIds)}><FieldLabel>Especialidades asignadas *</FieldLabel>
-        <div className="saas-checks">{data.specialties.filter(item => item.organizationId === organizationId && (item.active || values.specialtyIds.includes(item.id))).map(item => <label className="saas-check" key={item.id}>
-          <Checkbox checked={values.specialtyIds.includes(item.id)} disabled={!item.active} onCheckedChange={checked => form.setValue("specialtyIds", checked ? [...values.specialtyIds, item.id] : values.specialtyIds.filter(id => id !== item.id), { shouldDirty: true, shouldValidate: true })} />{item.name}{!item.active && " (inactiva · asociación conservada)"}
-        </label>)}</div><FieldError>{errors.specialtyIds?.message}</FieldError>
-      </Field>
+      <SpecialtySelection catalog={data.specialties.filter(item => item.organizationId === organizationId)} value={values.specialtyIds} typeId={values.professionalTypeId} onChange={ids => form.setValue("specialtyIds", ids, { shouldDirty: true, shouldValidate: form.formState.isSubmitted })} error={errors.specialtyIds?.message} />
       <div className="saas-inline"><span>Estado profesional</span><ProfessionalStatusBadge state={user ? effectiveProfessionalState(user) : "ACTIVE"} /></div>
+      {user?.professionalId && <Button type="button" variant="outline" size="sm" onClick={() => setEditingState(true)}>Cambiar estado profesional</Button>}
       {user?.professionalId && <p className="saas-hint">Gestiona el estado, las vacaciones y los permisos desde el directorio de profesionales.</p>}
     </div>,
     activation: <div className="saas-stack">
@@ -233,11 +240,11 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion", accountM
   function close() { if (!form.formState.isSubmitting && (!form.formState.isDirty || confirm("¿Descartar los cambios del usuario?"))) onClose() }
   return <Dialog open onOpenChange={open => !open && close()}>
     <DialogContent variant="wide" className="saas-scope">
-      <DialogHeader><DialogTitle>{accountMode === true && user?.hasAccount === false ? "Crear acceso" : !values.hasAccount ? user ? "Editar profesional" : "Registrar profesional" : user && data.users.some(item => item.id === user.id) ? "Editar usuario" : "Nuevo usuario"}</DialogTitle><DialogDescription>Datos personales, rol, sedes y acceso a la clínica.</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>{profileOnly ? user ? "Editar perfil" : "Registrar profesional" : accountMode === true && user?.hasAccount === false ? "Crear acceso" : !values.hasAccount ? user ? "Editar profesional" : "Registrar profesional" : user && data.users.some(item => item.id === user.id) ? "Editar usuario" : "Nuevo usuario"}</DialogTitle><DialogDescription>{profileOnly ? "Datos personales, perfil profesional y sedes. Gestiona las credenciales por separado." : "Datos personales, rol, sedes y acceso a la clínica."}</DialogDescription></DialogHeader>
       <DialogBody ref={body}><form id="saas-user-form" noValidate onSubmit={event => { void form.handleSubmit(save, invalid => { const first = visibleGroups.flatMap(group => group.fields).find(key => key in invalid); if (first) reveal(first) })(event) }}>
         <fieldset disabled={form.formState.isSubmitting}>{visibleGroups.map(group => <section className="saas-accordion" key={group.id} data-modal-section={group.id}>
           <button type="button" data-modal-section-trigger onClick={() => accordion.request(accordion.open === group.id ? null : group.id)} aria-expanded={accordion.open === group.id} aria-controls={`staff-panel-${group.id}`}>
-            <span className="saas-section-label">{(() => { const Icon = ({ personal: UserRound, credentials: KeyRound, assignments: Building2, professional: Stethoscope, activation: ShieldCheck })[group.id]; return Icon && <Icon aria-hidden="true" /> })()}{group.title}</span>{group.fields.some(field => field in errors) && <span className="text-destructive">Revisar</span>}<ChevronDown className="size-4" />
+            <span className="saas-section-label">{(() => { const Icon = ({ personal: UserRound, credentials: KeyRound, assignments: Building2, professional: Stethoscope, activation: ShieldCheck })[group.id]; return Icon && <Icon aria-hidden="true" /> })()}{profileOnly && group.id === "assignments" ? "Sedes asignadas" : group.title}</span>{group.fields.some(field => field in errors) && <span className="text-destructive">Revisar</span>}<ChevronDown className="size-4" />
           </button>
           <div id={`staff-panel-${group.id}`} className="saas-accordion-motion" data-open={accordion.open === group.id} data-validation-panel inert={accordion.open !== group.id} aria-hidden={accordion.open !== group.id || undefined}>
             <div><div className="saas-accordion-body">{contents[group.id as keyof typeof contents]}</div></div>
@@ -245,8 +252,9 @@ export function StaffEditor({ user, onClose, initialRole = "recepcion", accountM
         </section>)}</fieldset>
         {failure && <p role="alert" className="text-destructive">{failure}</p>}
       </form></DialogBody>
-      <DialogFooter><Button variant="outline" disabled={form.formState.isSubmitting} onClick={close}>Cancelar</Button><Button type="submit" form="saas-user-form" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Guardando…" : "Guardar usuario"}</Button></DialogFooter>
+      <DialogFooter><Button variant="outline" disabled={form.formState.isSubmitting} onClick={close}>Cancelar</Button><Button type="submit" form="saas-user-form" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Guardando…" : profileOnly ? "Guardar perfil" : "Guardar usuario"}</Button></DialogFooter>
     </DialogContent>
     {creatingSite && profile && <InstitutionBranches branches={profile.branches} editorOnly onEditorClose={() => setCreatingSite(false)} onCommit={async branches => { await saveInstitution.mutateAsync({ ...profile, branches }) }} />}
+    {editingState && user && <ProfessionalStatusDialog user={data.users.find(item => item.id === user.id) ?? user} onClose={() => setEditingState(false)} />}
   </Dialog>
 }

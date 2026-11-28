@@ -11,6 +11,9 @@ import {
   UserRoundCog,
   Building2,
   Settings2,
+  ShieldCheck,
+  Inbox,
+  DoorOpen,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -22,6 +25,7 @@ export interface NavItem {
   icon: LucideIcon
   roles?: Role[]
   module?: string
+  placement?: "profile"
 }
 
 export const navItems: NavItem[] = [
@@ -60,12 +64,16 @@ export const navItems: NavItem[] = [
     roles: ["admin"],
   },
   { label: "Usuarios y profesionales", to: "/accesos", icon: UserRoundCog, roles: ["admin"], module: "Personal y accesos" },
-  { label: "Sedes", to: "/administracion/sedes", icon: Building2, roles: ["admin"], module: "Administración" },
-  { label: "Roles y tipos de profesionales", to: "/administracion/roles-tipos", icon: Settings2, roles: ["admin"], module: "Administración" },
+  { label: "Roles", to: "/accesos/roles", icon: ShieldCheck, roles: ["admin"], module: "Personal y accesos" },
+  { label: "Solicitudes de acceso", to: "/accesos/solicitudes", icon: Inbox, roles: ["admin"], module: "Personal y accesos" },
+  { label: "Sedes", to: "/administracion/sedes", icon: Building2, roles: ["admin"], module: "Administración", placement: "profile" },
+  { label: "Consultorios", to: "/administracion/consultorios", icon: DoorOpen, roles: ["admin"], module: "Administración", placement: "profile" },
+  { label: "Especialidades", to: "/administracion/especialidades", icon: Stethoscope, roles: ["admin"], module: "Administración", placement: "profile" },
+  { label: "Tipos de profesionales", to: "/administracion/tipos-profesionales", icon: Settings2, roles: ["admin"], module: "Administración", placement: "profile" },
 ]
 
 /** The permission catalog is derived from actual navigation, including the existing profile menu. */
 export const navigationSections = [...new Map([
-  ...navItems.map(item => [item.module ?? (item.to === "/historial-clinico" ? "Historia clínica" : item.label), { id: item.module ?? (item.to === "/historial-clinico" ? "Historia clínica" : item.label), label: item.module === "Administración" ? item.module : item.label }] as const),
+  ...navItems.map(item => [item.module ?? (item.to === "/historial-clinico" ? "Historia clínica" : item.label), { id: item.module ?? (item.to === "/historial-clinico" ? "Historia clínica" : item.label), label: item.module === "Personal y accesos" ? "Accesos" : item.module ?? item.label }] as const),
   ["Perfil institucional", { id: "Perfil institucional", label: "Perfil institucional" }] as const,
 ]).values()]

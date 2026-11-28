@@ -1,0 +1,36 @@
+.root { display: grid; gap: 12px; min-width: 0; container: staff-directory / inline-size; }
+.filters { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: end; gap: 12px; min-width: 0; }
+.search { grid-column: 1; grid-row: 1; width: 100%; max-width: none; min-width: 0; }
+.selects { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.selects > * { min-width: 0; }
+.reset { grid-column: 2; grid-row: 1; display: flex; justify-content: end; align-self: end; }
+.views { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
+.root .table [data-slot="table"] { width: 100%; min-width: 0; max-width: 100%; table-layout: fixed; }
+.root .table :is(th,td)[data-column] { padding: 10px 8px; white-space: normal; overflow-wrap: anywhere; vertical-align: middle; }
+.root .table :is(th,td)[data-column="person"] { width: 26%; }
+.root .table :is(th,td)[data-column="username"] { width: 13%; }
+.root .table :is(th,td)[data-column="type"] { width: 17%; }
+.root .table :is(th,td)[data-column="roles"] { width: 16%; }
+.root .table :is(th,td)[data-column="state"] { width: auto; }
+.root .table :is(th,td)[data-column="actions"] { width: 56px; text-align: right; }
+.person { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.person > span { flex-shrink: 0; }
+.person > div { flex: 1; min-width: 0; }
+.person strong, .person p { white-space: normal; overflow-wrap: anywhere; }
+.roles { min-width: 0; }
+.root .roles [data-slot="badge"] { max-width: 100%; height: auto; min-height: 24px; white-space: normal; overflow-wrap: anywhere; }
+.statuses { display: grid; justify-items: start; gap: 4px; min-width: 0; max-width: 100%; }
+.statusLine { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 5px; min-width: 0; max-width: 100%; }
+.statusLine > small { flex-shrink: 0; }
+.root .statusLine [data-slot="badge"] { max-width: 100%; height: auto; min-height: 24px; white-space: normal; overflow-wrap: anywhere; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; min-width: 0; }
+.card { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.card > div { min-width: 0; overflow-wrap: anywhere; }
+@container staff-directory (min-width: 480px) { .selects { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container staff-directory (min-width: 672px) { .selects { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container staff-directory (min-width: 920px) {
+  .filters { grid-template-columns: repeat(4, minmax(0, 1fr)) 44px; }
+  .selects { display: contents; }
+  .search { grid-column: span 2; grid-row: auto; }
+  .reset { grid-column: 5; grid-row: 1 / span 2; }
+}

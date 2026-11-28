@@ -1,13 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft, LoaderCircle } from "lucide-react"
 import { useState } from "react"
-import { Eye,EyeOff } from "lucide-react"
 import { useValidatedForm as useForm } from "@/shared/hooks/use-validated-form"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { getErrorMessage } from "@/shared/lib/error-message"
 import { ApiError } from "@/shared/types/common"
 
@@ -21,7 +20,7 @@ import { identityService } from "@/modules/saas/services"
 export function ResetPasswordPage({demoPurpose}:{demoPurpose?:"first-login"|"profile"}) {
   const [params] = useSearchParams()
   const token = params.get("token")?.trim() ?? ""
-  const demo=Boolean(demoPurpose)||params.get("demo")==="1",[done,setDone]=useState(false),[show,setShow]=useState(false),[demoError,setDemoError]=useState("")
+  const demo=Boolean(demoPurpose)||params.get("demo")==="1",[done,setDone]=useState(false),[demoError,setDemoError]=useState("")
   const navigate = useNavigate()
   const reset = usePasswordReset()
   const { register, handleSubmit, formState: { errors } } = useForm<PasswordResetFormValues>({
@@ -54,7 +53,7 @@ export function ResetPasswordPage({demoPurpose}:{demoPurpose?:"first-login"|"pro
           <FieldGroup>
             <Field data-invalid={!!errors.password}>
               <FieldLabel htmlFor="reset-password">Contraseña nueva</FieldLabel>
-              <Input id="reset-password" type={show?"text":"password"} autoComplete="new-password" required
+              <PasswordInput id="reset-password" autoComplete="new-password" required
                 aria-invalid={!!errors.password} aria-describedby={errors.password ? "reset-password-error" : "reset-password-hint"} {...register("password")} />
               {errors.password
                 ? <FieldError id="reset-password-error" errors={[errors.password]} />
@@ -62,12 +61,11 @@ export function ResetPasswordPage({demoPurpose}:{demoPurpose?:"first-login"|"pro
             </Field>
             <Field data-invalid={!!errors.confirmation}>
               <FieldLabel htmlFor="reset-confirmation">Repite la contraseña</FieldLabel>
-              <Input id="reset-confirmation" type={show?"text":"password"} autoComplete="new-password" required
+              <PasswordInput id="reset-confirmation" autoComplete="new-password" required
                 aria-invalid={!!errors.confirmation} aria-describedby={errors.confirmation ? "reset-confirmation-error" : undefined} {...register("confirmation")} />
               <FieldError id="reset-confirmation-error" errors={errors.confirmation ? [errors.confirmation] : undefined} />
             </Field>
           </FieldGroup>
-          <Button type="button" variant="ghost" onClick={()=>setShow(!show)}>{show?<EyeOff/>:<Eye/>}{show?"Ocultar contraseñas":"Mostrar contraseñas"}</Button>
           {demoError&&<AuthNotice error>{demoError}</AuthNotice>}
           {reset.isError && <AuthNotice error>{getErrorMessage(reset.error)}</AuthNotice>}
           <Button type="submit" className="auth-submit" disabled={reset.isPending}>

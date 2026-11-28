@@ -1,0 +1,11 @@
+.week { display:grid; gap:12px; min-width:0; }
+.day { min-width:0; border-top:1px solid var(--border); padding-top:10px; }
+.day legend { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; font-size:13px; }
+.day legend label { display:flex; align-items:center; gap:8px; font-weight:500; }
+.day legend span { color:var(--muted-foreground); font-size:12px; }
+.intervals { display:grid; gap:8px; padding-top:8px; }
+.interval { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 28px; align-items:end; gap:8px; }
+.interval label { display:grid; gap:4px; color:var(--muted-foreground); font-size:12px; min-width:0; }
+.interval input { min-width:0; width:100%; }
+.add { justify-self:start; }
+@media(max-width:380px){.interval { column-gap:4px; }.interval input { padding-inline:5px; font-size:12px; }}

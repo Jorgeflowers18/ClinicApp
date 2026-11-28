@@ -1,0 +1,168 @@
+CLINICAPP — ADMINISTRACIÓN COMO PÁGINA Y CORRECCIÓN DE DESBORDAMIENTO
+Fecha: 28 de noviembre de 2026
+
+RESULTADO
+
+La opción Administración del menú del avatar es un enlace normal a
+/administracion. Cierra el menú y navega dentro de ClinicApp. Se eliminó
+el submenú y su estado/animación, sin reconstruir el Header ni el Sidebar.
+
+El inicio reutiliza PageHeader, Card, React Router y Lucide. Muestra cuatro
+tarjetas compactas: Sedes, Consultorios, Especialidades y Tipos de
+profesionales. La cuadrícula se adapta al espacio disponible: una, dos o
+cuatro columnas. Los colores proceden de los tokens existentes.
+
+Cada sección conserva su componente funcional, encabezado y botón de
+creación. Se añadió únicamente el enlace Volver a Administración.
+No se duplicaron pantallas, formularios, catálogos ni fuentes de sedes.
+
+RUTAS REUTILIZADAS
+
+/administracion                         Inicio con las tarjetas
+/administracion/sedes                   InstitutionBranchesAdmin
+/administracion/consultorios            RoomsAdmin
+/administracion/especialidades          SpecialtyManagement / SpecialtyEditor
+/administracion/tipos-profesionales     CatalogManagement
+
+Se conserva el alias existente /administracion/roles-tipos.
+Se reutiliza la ruta protegida /administracion/*; no fue necesario crear
+otro router ni modificar sus guards.
+
+Accesos mantiene sus tres enlaces en el Sidebar: /accesos,
+/accesos/roles y /accesos/solicitudes. Las cuatro opciones administrativas
+ya estaban excluidas del Sidebar y continúan excluidas. Mi perfil,
+Perfil institucional y Cerrar sesión conservan sus rutas y acciones.
+
+PERMISOS: ALCANCE REAL DEL MODELO ACTUAL
+
+El enlace del avatar y cada tarjeta consultan canViewNavigationItem usando
+el catálogo navItems, el usuario y la institución actuales. Se conserva
+la validación de roles activos y los guards existentes, sin ampliar accesos.
+
+El catálogo actual agrupa las cuatro secciones bajo el permiso
+Administración; no contiene permisos independientes para cada una.
+Por tanto, no se inventaron permisos ni se presenta como comprobado un
+caso de autorización granular Consultorios/Especialidades que el modelo
+actual no puede expresar. Se verificó la separación real entre Accesos,
+Perfil institucional y Administración, las restricciones del rol base
+del servidor y los roles inactivos, tanto en sesión API simulada como demo.
+
+CAUSAS Y CORRECCIONES DE LAS TABLAS
+
+Usuarios y profesionales combinaba restricciones heredadas de ancho con
+table-layout automático y estados max-content que no podían ajustarse.
+La distribución flexible de filtros también comprimía los selectores.
+
+Con nombres, usuarios y roles largos, a 1024 px el contenedor disponible
+medía 706 px y la tabla necesitaba aproximadamente 713 px. Solicitudes
+de acceso necesitaba aproximadamente 846 px en ese mismo espacio.
+
+El directorio utiliza ahora CSS modular exclusivo, table-layout: fixed,
+columnas proporcionales, texto ajustable y una columna de acciones visible.
+Los roles y estados conservan todo su texto y sus colores semánticos.
+Los filtros emplean Grid con filas adaptadas al ancho; se conservan los
+seis selectores, búsqueda, restablecimiento y las vistas Lista/Tarjetas.
+Ambas vistas siguen usando las mismas filas, filtros y acciones.
+
+DataTable incorpora la opción tableBreakpoint="wide" solamente para el
+directorio y Solicitudes. Cuando el contenedor tiene menos de 672 px,
+utiliza sus tarjetas adaptables existentes. El comportamiento predeterminado
+de las demás tablas permanece igual. No se ocultó el desbordamiento con CSS.
+
+Solicitudes utiliza proporciones adecuadas para nombres, usuarios,
+correos, fechas y estados. Sus acciones se distribuyen dentro de la celda
+sin recortarse. Se comprobó también el caso de solicitudes aprobadas y
+vinculadas: antes de ese ajuste sus botones requerían 733 px en un
+contenedor de 706 px; después la tabla y todas sus celdas caben en 706 px.
+Las fechas completas y los textos de los badges se revisaron visualmente.
+
+Se auditaron Roles, Sedes, Consultorios, Especialidades y Tipos: no
+presentaron el mismo desbordamiento en los escenarios comprobados y no
+se cambiaron sus columnas ni formularios.
+
+ARCHIVOS DE FRONTEND MODIFICADOS EN ESTA CORRECCIÓN
+
+1. src/app/layout/header-user-menu.tsx
+   Administración como enlace; eliminación del submenú y su estado.
+2. src/app/layout/header-user-menu.module.css
+   Eliminación exclusiva de los estilos del submenú retirado.
+3. src/app/pages/administration-page.tsx
+   Inicio administrativo, tarjetas y regreso a Administración.
+4. src/app/pages/administration-page.module.css (nuevo)
+   Cuadrícula y estados hover/focus adaptativos con tokens existentes.
+5. src/modules/saas/components/staff-directory.tsx
+   Distribución de filtros y clases locales; misma lógica de datos.
+6. src/modules/saas/components/staff-directory.module.css (nuevo)
+   Ajuste exclusivo de columnas, filtros, roles, estados y tarjetas.
+7. src/modules/saas/components/administrative-ui.module.css
+   Eliminación de reglas obsoletas del directorio y ajuste de Solicitudes.
+8. src/modules/saas/pages/access-requests-page.tsx
+   Aplicación del estilo local y breakpoint adaptable de la tabla.
+9. src/shared/components/data-table.tsx
+   Breakpoint opcional; comportamiento predeterminado conservado.
+10. docs/CORRECCION_ADMINISTRACION_Y_DESBORDAMIENTO.txt
+    Este informe.
+
+Los cambios locales anteriores se conservaron. Este documento sustituye,
+para la navegación actual, la descripción histórica del submenú incluida
+en ADMINISTRACION_MENU_PERFIL_UX.txt.
+
+VALIDACIÓN EJECUTADA
+
+Chrome mediante Playwright, con capturas inspeccionadas y respuestas HTTP
+interceptadas en contextos aislados. Se ejecutaron 90 grupos de comprobación:
+
+- Navegación de Administración, tarjetas, permisos, teclado, touch,
+  Atrás/Adelante, perfiles y cierre de sesión: 15/15.
+- Permisos y navegación de Administración en demostración: 7/7.
+- Directorio, seis filtros combinados, Lista/Tarjetas, badges,
+  acciones y tablas administrativas: 7/7.
+- Solicitudes pendientes, aprobadas y vinculadas con todas sus acciones:
+  3/3.
+- Regresión de directorio, perfiles, cuentas y catálogos con API simulada:
+  16/16.
+- Regresión funcional de demostración: 11/11.
+- Login, recuperación y solicitud de acceso: 5/5.
+- Modales de pacientes, tratamientos, compras, esterilización,
+  atenciones y archivo clínico: 12/12.
+- Ojo de contraseña, foco/cursor, roles con tres grupos de switches,
+  contadores, protección administrativa y modales adaptativos: 14/14.
+
+La navegación central, el directorio y Solicitudes se comprobaron en
+320, 360, 390, 430, 768, 1024, 1280, 1440 y 1920 px, en ambos temas.
+Se revisaron capturas claras/oscuras en móvil, tablet y escritorio,
+incluidos los nombres largos y los estados pendientes del directorio.
+Las regresiones administrativas también incluyeron 375 px.
+No se detectaron errores de ejecución en los escenarios comprobados.
+
+npm run test:unit: 43/43 pruebas aprobadas.
+npm run lint: aprobado, cero errores y cuatro advertencias existentes.
+El proyecto utiliza Oxlint; no hay ESLint instalado/configurado.
+npm run build: aprobado; incluye tsc -b y compilación Vite.
+Vite conserva su advertencia de chunks superiores a 500 kB.
+git diff --check: sin errores de espacios en los cambios comprobados.
+
+La suite test:e2e que crea/elimina una base PostgreSQL y levanta el backend
+no se ejecutó: esta tarea se mantuvo exclusivamente en frontend. Las
+comprobaciones de navegador anteriores no escribieron en un servidor ni
+validan su autorización o persistencia definitivas.
+
+EVIDENCIA LOCAL (fuera del código de producción)
+
+%TEMP%\clinicapp-administration-hub-qa
+%TEMP%\clinicapp-directory-overflow-qa
+%TEMP%\clinicapp-hub-regression
+%TEMP%\clinicapp-hub-ui-regression
+
+Contienen los resultados JSON y capturas. Los scripts de estas
+comprobaciones se guardaron en TEMP, sin añadir datos de prueba a la app.
+
+INTEGRIDAD Y ESTADO LOCAL
+
+Se compararon por SHA-256 187 archivos protegidos de backend, librería
+clínica y sus integraciones: ninguno cambió.
+No se modificaron endpoints, base de datos, dependencias, temas globales,
+odontograma ni periodontograma. No se realizaron commits ni pushes.
+
+Frontend disponible en http://localhost:5173
+Inicio administrativo: http://localhost:5173/administracion

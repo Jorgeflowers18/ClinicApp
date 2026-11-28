@@ -3,6 +3,7 @@ import { initialInstitutionProfile, type InstitutionProfile } from "../types/ins
 import { useDemoContext } from "@/modules/saas/state"
 import { demoId, readDemoData, updateDemoData } from "@/modules/saas/adapters/demo-repository"
 import { ApiError } from "@/shared/types/common"
+import { isInstitutionAdministrator } from "@/modules/saas/lib/access-catalogs"
 
 export function demoInstitutionProfile(): InstitutionProfile {
   const org = readDemoData().organizations.find(item => item.id === useDemoContext.getState().organizationId)
@@ -15,7 +16,7 @@ export const demoInstitutionApi: InstitutionApi = {
   async saveProfile(profile) {
     const context = useDemoContext.getState()
     const user = readDemoData().users.find(item => item.id === context.userId)
-    if (!user?.roles.includes("admin") || !user.organizationIds.includes(context.organizationId)) throw new ApiError("No puedes configurar esta institución.", 403)
+    if (!user || !isInstitutionAdministrator(user, readDemoData(), context.organizationId)) throw new ApiError("No puedes configurar esta institución.", 403)
     const saved = { ...profile, branches: profile.branches.map(branch => ({ ...branch, id: branch.id || demoId() })), updatedAt: new Date().toISOString() }
     updateDemoData(data => { data.organizations.find(item => item.id === context.organizationId)!.profile = saved })
     return saved

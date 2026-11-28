@@ -1,4 +1,15 @@
 .section { min-width: 0; gap: 16px; padding-block: 16px; container: branches / inline-size; box-shadow: none; }
+.standalone[data-slot="card"] { min-width: 0; gap: 16px; padding: 0; border: 0; background: transparent; box-shadow: none; container: branches / inline-size; }
+.standaloneContent[data-slot="card-content"] { min-width: 0; padding: 0; }
+.standalone .catalog :global(table) { min-width: 640px; }
+.catalog { min-width:0; margin-top:14px; }
+.catalog :global(table) { min-width:800px; }
+.catalog :global(td), .catalog :global(th) { white-space:normal; vertical-align:middle; font-size:13px; }
+.catalog :global([data-column="name"]) { min-width:130px; }
+.catalog :global([data-column="hours"]) { min-width:150px; }
+.catalog :global([data-column="actions"]) { width:1%; }
+.hours { white-space:pre-wrap; overflow-wrap:anywhere; font-size:13px; line-height:1.5; }
+.catalog details summary { cursor:pointer; color:var(--muted-foreground); font-size:13px; }
 .header { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .header, .content { min-width: 0; padding-inline: 16px; }
 .heading { min-width: 0; }

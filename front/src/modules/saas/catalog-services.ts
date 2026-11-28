@@ -7,6 +7,10 @@ import { activeInstitutionScope, confirmedStaffInstitution } from "./lib/institu
 import { documentValidationMessage } from "@/shared/lib/ecuadorian-cedula"
 import { accessRoles, isInstitutionAdministrator } from "./lib/access-catalogs"
 import type { AccessRole, ProfessionalType, SaasData, StaffSettings } from "./types"
+import { queryClient } from "@/shared/lib/query-client"
+import type { Professional } from "@/modules/appointments/types/appointment.types"
+import { professionalSpecialtyCatalog } from "./lib/specialty-catalog"
+import { specialtySelectionError } from "./lib/specialty-policy"
 
 export function administrativeActor() {
   const context = useDemoContext.getState(), data = readDemoData()
@@ -57,12 +61,45 @@ export const catalogService = {
     if (settings.professionalTypeId && settings.professionalTypeId !== old?.professionalTypeId && !data.professionalTypes?.some(type => type.id === settings.professionalTypeId && type.organizationId === scope && type.active)) throw new ApiError("Revisa el tipo profesional.", 422, [{ field: "professionalTypeId", message: "Selecciona un tipo profesional activo de esta institución." }])
     if (settings.username) assertUsernameAvailable(settings.username, id)
     const documentError = documentValidationMessage(settings.documentType ?? "otro", settings.documentNumber ?? "")
-    if (documentError) throw new ApiError("Revisa el documento.", 422, [{ field: "documentNumber", message: documentError }])
+    if (documentError && (!old || old.documentType !== settings.documentType || old.documentNumber !== settings.documentNumber)) throw new ApiError("Revisa el documento.", 422, [{ field: "documentNumber", message: documentError }])
+    if (settings.specialtyIds) {
+      const catalog = professionalSpecialtyCatalog(data, scope, queryClient.getQueryData<Professional[]>(["professionals"]) ?? [])
+      const issue = specialtySelectionError(catalog, settings.specialtyIds, settings.professionalTypeId, old?.specialtyIds, old?.professionalTypeId)
+      if (issue) throw new ApiError("Revisa las especialidades.", 422, [{ field: "specialtyIds", message: issue }])
+    }
+    if (useAuthStore.getState().user?.id === id && settings.state && settings.state !== "active") throw new ApiError("Tu cuenta debe conservar el acceso administrativo.", 409)
     updateDemoData(next => {
       next.serverStaffSettings ??= {}; next.serverStaffSettings[scope] ??= {}; next.serverStaffSettings[scope][id] = settings
+      for (const specialtyId of settings.specialtyIds ?? []) {
+        const specialty = professionalSpecialtyCatalog(data, scope, queryClient.getQueryData<Professional[]>(["professionals"]) ?? []).find(item => item.id === specialtyId)
+        if (specialty && !next.specialties.some(item => item.id === specialty.id)) next.specialties.push(specialty)
+      }
       const identity = next.identities.find(item => item.id === id)
       if (identity) { if (settings.username !== undefined) identity.username = settings.username; if (settings.email !== undefined) identity.email = settings.email }
       recordAudit(next, actor, id, "Guardar configuración frontend de personal")
+    })
+  },
+  async reviewRequest(id: string, action: "reviewed" | "approved" | "rejected", personId?: string) {
+    const actor = administrativeActor(), scope = activeInstitutionScope()
+    updateDemoData(next => {
+      const item = next.requests.find(item => item.id === id && item.organizationId === scope)
+      if (!item) throw new ApiError("La solicitud no está disponible en esta institución.", 404)
+      if (item.state === "created") throw new ApiError("La solicitud ya está vinculada a una cuenta.", 409)
+      if (item.state === "rejected" && action !== "reviewed") throw new ApiError("Revisa primero la solicitud rechazada.", 409)
+      if (action === "approved" && personId) item.personId = personId
+      item.state = action
+      recordAudit(next, actor, id, "Solicitud: " + action)
+    })
+  },
+  async completeRequest(id: string, userId: string) {
+    const actor = administrativeActor(), scope = activeInstitutionScope()
+    updateDemoData(next => {
+      const item = next.requests.find(item => item.id === id && item.organizationId === scope)
+      if (!item) throw new ApiError("La solicitud no está disponible.", 404)
+      if (item.userId && item.userId !== userId) throw new ApiError("La solicitud ya pertenece a otra cuenta.", 409)
+      if (!["approved", "created"].includes(item.state)) throw new ApiError("Aprueba la solicitud antes de crear el acceso.", 409)
+      item.state = "created"; item.userId = userId; item.personId = userId
+      recordAudit(next, actor, id, "Vincular solicitud con cuenta existente")
     })
   },
   async setBranchActive(id: string, active: boolean) {
